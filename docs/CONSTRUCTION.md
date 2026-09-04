@@ -542,8 +542,26 @@ the owner's recollection that such a block existed; the block is real for `idaac
 > is a deliberate act. It is **not** a bug fix — `impala` and `default` are different models and
 > must never share a column.
 >
-> **Default unchanged (keep 64x64 and the `default` trunk, declared), and now for a stated reason
-> rather than inertia**:
+> ### DEFAULT CHANGED, 2026-09-04 — `runnable/_launch/ibac_sni.sh` now passes `--model_type impala`
+>
+> Recording the defect and leaving the defect running is not a default, it is a deferral. The
+> launcher already overrides this repository's shipped defaults for exactly this reason —
+> `--use_bottleneck --sni_type vib`, because the repo defaults to both off, which is plain PPO and
+> not IBAC-SNI at all. **Selecting the authors' pixel architecture for a pixel task is the same act
+> by the same precedent**, and it *removes* an authored hybrid rather than adding one: 64x64 with
+> the MiniGrid trunk is a configuration neither branch of the paper ever ran.
+>
+> `--model_type default` restores the old pairing for anyone who wants the comparison.
+>
+> **This supersedes every ibac_sni measurement taken on the hybrid**, including [C61](#c61)'s
+> entropy collapse (`boundary_fraction` 0.580 at 100k). That finding stands *for the configuration
+> it was measured on* and must be re-measured here — and the re-measurement is now the experiment
+> that separates "the entropy coefficient is wrong for this head" from "a 6.9M-parameter model is
+> wrong for this input", which were previously inseparable.
+>
+> The reasoning below is kept because it is what led here:
+>
+> **Superseded default (keep 64x64 and the `default` trunk, declared), stated at the time as**:
 > (a) is the only one of the three that adds no authored deviation, and the owner's own standard is
 > that the algorithms and models stay fidelity-bound. But this materially strengthens the
 > C61 suspicion — **a 3.46M-parameter FC head trained on a few thousand frames is a strong
@@ -4716,6 +4734,13 @@ not a choice anyone is free to make differently.
 > and `boundary_fraction` at σ=1 is **0.3173**, the 0.317 this entry states. Neither was arranged.
 >
 > ### THE TRIP-WIRE FIRED. `ibac_sni`, measured 2026-09-04, and the default above does not survive it
+>
+> **Configuration note added later the same day**: this was measured with `model_type=default`,
+> the MiniGrid trunk at 64x64 — a 6,900,671-parameter model. [C3](#c3) has since made
+> `--model_type impala` (360,399 parameters, the paper's own pixel network) the launcher's
+> selection, so **this measurement describes a configuration we no longer run by default** and
+> the escalation below must be re-tested there. It is not withdrawn: it was correct for what
+> it measured, and it is the reason the architecture was examined at all.
 >
 > `bt1cj6rgeptsu9f3v0o6`, 100k frames — the same budget as idaac's, so this comparison needs no
 > extrapolation:

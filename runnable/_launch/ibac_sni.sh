@@ -42,5 +42,25 @@ PY="${PYTHON_BIN:-${PYTHON:-python3}}"
 cd "$BASE"
 # --use_bottleneck --sni_type vib IS the paper's method (IBAC-SNI); the repo's own defaults are
 # both off, which is plain PPO. Pass `--sni_type ''` for IBAC without SNI.
+#
+# [Claude 2026-09-04] --model_type impala, for the same reason and by the same precedent as the
+# line above: the repository's default is not what its authors ran on this kind of input, and the
+# launcher's job is to select the paper's configuration.
+#
+# IBAC-SNI ships TWO implementations. `coinrun/` (TensorFlow) is the PIXEL one and pairs 64x64
+# frames with `impala_cnn`. `torch_rl/` (PyTorch, what we run) is the MiniGrid one, whose trunk
+# downsamples ONCE because MiniGrid is 7x7. This project took 64x64 from the pixel branch and left
+# the architecture behind, producing a configuration **nobody has ever run**: neither MiniGrid's
+# (7x7 + MiniGrid trunk) nor the paper's pixel one (64x64 + impala). At 64x64 the MiniGrid trunk
+# flattens to 53,824 and the model is 6,900,671 parameters against the paper's 360,399 -- see
+# docs/CONSTRUCTION.md#c3.
+#
+# `model_type impala` is that architecture, ported into `torch_rl/model.py` from IBAC-SNI's OWN
+# coinrun branch, and it completes the pairing rather than inventing one. Verified locally: 64x64
+# gives an 8x8x32 = 2,048 embedding, the paper's own figure.
+#
+# **This supersedes measurements taken on the hybrid**, including the C61 entropy-collapse run
+# (boundary_fraction 0.580 at 100k) -- that finding stands for the configuration it was measured
+# on, and must be re-measured here. Pass `--model_type default` to get the old hybrid back.
 exec "$PY" scripts/train.py --algo ppo --env "robosuite:$TASK" --procs "$PROCS" \
-  --use_bottleneck --sni_type vib "$@"
+  --use_bottleneck --sni_type vib --model_type impala "$@"
