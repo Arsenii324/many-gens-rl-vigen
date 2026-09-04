@@ -31,6 +31,17 @@ preference — a container-trained policy read 12-14x low when evaluated locally
 | **Compute** | **1-2 V100, not the grant.** The grant arithmetic in `plan_production.py` is therefore a bound on *that* route, not on this one; what carries over is the per-cell hours and the archive sizes. |
 | Storage | Checkpoints stay remote, records come back (§6). A 6e5 cell is ~1.5 GB of archive; twelve baselines × three seeds is ~53 GB, against ~30 GB free locally. |
 
+**The limitation to state in the write-up, not bury.** RL-ViGen **equalises** the observation
+across its own five — `robo_config.yaml` drives `camera_heights`/`camera_widths` from one value and
+all five read 84 — which is the standard benchmark move, since resolution is a property of the
+environment rather than of the algorithm. **We do not equalise across the twelve**: the seven
+imported baselines keep their own native sizes (Procgen's 64, dmc_gb's 100→84 crop) because each
+architecture derives its width from its input, so equalising would mean authoring an encoder change
+in seven clones — which the clone-era null forbids. **So this table compares algorithms at their
+own design points, not at a common observation.** That is right for a porting exercise and is *not*
+the same claim as a benchmark result. The size of the confound is unmeasured and cheap to measure:
+one baseline, two resolutions, one seed.
+
 **What is deliberately excluded**, so it is a decision rather than a gap: the **camera axis**
 (`cam-easy`/`cam-hard`) — viewpoint rather than appearance generalisation, unreachable from our
 harness without a patch, and 1.5x the grid. See §2.

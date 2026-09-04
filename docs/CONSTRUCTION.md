@@ -503,6 +503,28 @@ the owner's recollection that such a block existed; the block is real for `idaac
 > resolution, which deviates from both branches and is ours either way; (c) author a downsampling
 > front-end, i.e. port the CoinRun architecture — a genuine architectural deviation.
 >
+> **The option space closes analytically, 2026-09-04 — option (b) is not available.** The default
+> trunk is `Conv(3,16,2) → ReLU → MaxPool(2) → Conv(16,32,2) → ReLU → Conv(32,64,2) → ReLU`
+> (`model.py:73-83`): **exactly one 2x downsample in the whole network**, so spatial size is
+> `(n-1)//2 - 2` and the embedding is that squared, times 64:
+>
+> | input | spatial | embedding |
+> |---|---|---|
+> | 7 (MiniGrid native) | 1 | **64** |
+> | 15 | 5 | 1,600 |
+> | 17 | 6 | 2,304 |
+> | 21 | 8 | 4,096 |
+> | **64 (ours)** | 29 | **53,824** |
+> | 84 | 39 | 97,344 |
+>
+> The paper's pixel network, `impala_cnn` with depths 16/32/32, pools three times: 64 → 32 → 16 → 8,
+> giving **8x8x32 = 2,048** — the same order as `ppg`'s and `idaac`'s. To reach ~2,048 through the
+> MiniGrid trunk you would need **n ≈ 17**, and a 17x17 frame cannot show a door handle when every
+> other baseline gets 64 or 84. **So no resolution satisfies both constraints at once**: sane
+> embedding and usable view are incompatible for this trunk, because it downsamples once. Lowering
+> the resolution is therefore not a repair, and the only real one is architectural — add
+> downsampling, which is what `impala_cnn` is.
+>
 > **Default unchanged (keep 64x64, declared), and now for a stated reason rather than inertia**:
 > (a) is the only one of the three that adds no authored deviation, and the owner's own standard is
 > that the algorithms and models stay fidelity-bound. But this materially strengthens the
