@@ -37,10 +37,10 @@ term is identified and nobody has checked it; this is the column that matters.
 |---|---|---|---|
 | 1 | **Checkpoint frame** | **OPEN, and newly constrained** — the intersection of checkpoint frames across the twelve is the **endpoint alone**; four families save terminal-only. A cross-baseline *curve* is not producible. | [`EVAL-PROTOCOL`](EVAL-PROTOCOL.md) §4, measured 2026-09-04 |
 | 2 | **Checkpoint integrity** | UNIFORM — every cell runs `family.py check-finite`; [C57](CONSTRUCTION.md#c57) is the run that motivated it (NaN training continued for 70k frames). | per-cell gate |
-| 3 | **Which modules act** (online vs EMA / target / momentum) | **VERIFIED for the RL-ViGen five** — `act()` uses the *online* encoder and actor, and `save_snapshot` pickles the whole agent, so the object restored offline is the object that acted. **UNEXAMINED for the other seven.** | `algos/drqv2.py:164-172`, `train.py:352-357` |
+| 3 | **Which modules act** (online vs EMA / target / momentum) | **VERIFIED, all twelve (2026-09-04).** Every baseline acts with its *online* actor/encoder; no EMA, target or momentum network is on any action path. **And nothing normalises OBSERVATIONS at eval** — the one place it could have bitten is `idaac`, whose checkpoint literally stores `[actor_critic, envs.ob_rms]`; `VecNormalize` is built with `ob=False` (`envs.py`, and `ctrl/vec_env.py:44,611` likewise), so the saved statistics were never applied and dropping them is correct rather than lucky. | `algos/drqv2.py:164-172`, `train.py:352-357`; `idaac/train.py:251-254`; `tests/test_record_conventions.py::test_no_baseline_normalises_observations_at_eval` |
 | 4 | **Action rule** (mode vs sample) | DECLARED SPLIT — **4 sample** (`idaac`, `ibac_sni`, `ppg`, `ctrl`) / **8 mode**. | seam audit, `reported estimator` |
-| 5 | **Module train/eval state at action time** | **PARTIAL** — the five use `utils.eval_mode`; `rad`/`soda` now do too (fixed 2026-09-04, previously a bare `no_grad`). **UNEXAMINED for `alda`, `idaac`, `ppg`, `ctrl`, `ibac_sni`.** Inert unless a train/eval-sensitive layer sits on the action path — `modules.SODAMLP`'s `BatchNorm1d` shows that is one instantiation away. | [`EVALUATOR-DELTA`](EVALUATOR-DELTA.md) |
-| 6 | **Step-dependence of the action rule** | **VERIFIED inert for `drqv2`** — `act()` computes `stddev = schedule(step)`, but `eval_mode` returns `dist.mean`, so the schedule cannot reach an eval action. **UNEXAMINED for the rest**; any baseline whose eval action depends on a training-step schedule would make "evaluate this checkpoint" ill-defined without also fixing the step. | `algos/drqv2.py:167-171` |
+| 5 | **Module train/eval state at action time** | **VERIFIED INERT, all twelve (2026-09-04)** — and inert is not the same as identical, so the conditions are pinned by tests rather than trusted. No train/eval-sensitive layer is instantiated on *any* action path: `ppg`'s `ImpalaCNN` takes `batch_norm=False` and is never passed True; `ibac_sni`'s `nn.BatchNorm2d` sits behind `--use_bn` (default False) under `model_type='default2'` (default `'default'`); `rad`/`soda`/`alda` have `BatchNorm1d` only inside SODA's aux `SODAMLP`; `idaac`, `ctrl` and the RL-ViGen five instantiate none. `idaac` additionally shares one `evaluate()` between `train.py` and `test.py`, so its two evaluators cannot disagree. | `tests/test_record_conventions.py::test_batchnorm_stays_off_the_action_path_in_ppg_and_ibac_sni`; [`EVALUATOR-DELTA`](EVALUATOR-DELTA.md) |
+| 6 | **Step-dependence of the action rule** | **VERIFIED inert, all twelve (2026-09-04).** Only the RL-ViGen five take a step at all — `act(obs, step, eval_mode=True)` computes `stddev = schedule(step)` and then returns `dist.mean`, so the schedule cannot reach an eval action. The other seven take no step in their action signatures (`select_action(obs)`, `act(inputs)`, `get_actions`, `select_action(params, ...)`), so "evaluate this checkpoint" is well-defined without also fixing a step. | `algos/drqv2.py:167-171`; the seven action calls in `scripts/eval_grid.py` |
 
 ## II. The environment — what the policy acts in
 
@@ -88,12 +88,21 @@ term is identified and nobody has checked it; this is the column that matters.
 
 ## What this derivation says that the accreted lists did not
 
-**The gaps are concentrated, not scattered.** Terms 3, 5, 6 and 17 — *which weights act, in what
-mode, with what step-dependence, in what env* — are **verified for the RL-ViGen five and partly for
-`dmc_gb`, and unexamined for `alda`, `idaac`, `ppg`, `ctrl`, `ibac_sni`.** That is one coherent
-piece of work on five families, not five unrelated questions, and it is the same five whose
-evaluator rows in `EVALUATOR-DELTA` are thin. **It is also the cheapest remaining work in this
-project: it is reading, not compute.**
+**The gaps were concentrated, and three of the four are now closed.** This file first reported
+terms 3, 5, 6 and 17 — *which weights act, in what mode, with what step-dependence, in what env* —
+as verified only for the RL-ViGen five. Naming them as one block made them one afternoon's reading
+rather than five unrelated questions, and **3, 5 and 6 are now verified across all twelve**: online
+weights everywhere, no observation normalisation at eval, no mode-sensitive layer on any action
+path, no step-dependence outside the five where it is inert. **Term 17 remains open for
+`alda`, `ppg`, `ctrl`, `ibac_sni` and `dmc_gb`** — verified so far for the RL-ViGen five (the
+training env falls back to `robo_config.yaml`'s `mode: train`, `scene_id: 0`, which is exactly the
+denominator) and for `idaac` (same `make_rlvigen_venv` constructor, different mode string).
+
+**Two of those verifications found the answer was "safe for a reason, not by luck", which is the
+distinction worth keeping.** `idaac`'s checkpoint carries observation statistics that our evaluator
+ignores — correct only because `ob=False`. `ppg` and `ibac_sni` ship BatchNorm that would break a
+batch-size-1 evaluator — off only because two flags default False. Both facts are now asserted by
+tests, because a verification that rests on a default is a verification with an expiry date.
 
 **One term is a UNITS split and it is the deliverable's blocker.** Term 9 alone is why R3 reads NOT
 MET. Everything else either agrees or is declarable.

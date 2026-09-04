@@ -304,3 +304,47 @@ def test_wandb_sink_finds_the_step_when_it_is_a_data_field(tmp_path):
     for key in ("Door/total_loss", "Door/ep_return_200", "Door/ep_return_all"):
         assert key in native, f"{key} missing; the data-field step was not used to merge"
     assert rows[0]["frame"] == 4112, "the data-field step must also become the record's frame"
+
+
+# --- the conditions our evaluators' correctness rests on ---------------------------------------
+# EVAL-DECOMPOSITION terms 3 and 5: our offline evaluators do not toggle module train/eval state
+# for most families, and that is only safe because no train/eval-sensitive layer sits on any
+# action path, and because nothing normalises OBSERVATIONS at eval. Both were verified by reading
+# on 2026-09-04 across all twelve. Neither is guaranteed by anything -- each is one default flag
+# away from being false, and the failure would be silent: BatchNorm at batch size 1 in train mode
+# normalises a sample by its own statistics and still returns an action.
+
+def test_batchnorm_stays_off_the_action_path_in_ppg_and_ibac_sni():
+    """Both ship BatchNorm behind a default-off flag. If a default flips, our evaluators break."""
+    impala = (ROOT / "runnable" / "ppg" / "phasic_policy_gradient" / "impala_cnn.py")
+    if impala.exists():
+        assert "batch_norm=False" in impala.read_text(encoding="utf-8"), (
+            "ppg's ImpalaCNN no longer defaults batch_norm to False; its BatchNorm2d layers would "
+            "be constructed and our evaluator does not put the model in eval mode")
+    train = (ROOT / "runnable" / "ibac_sni" / "torch_rl" / "scripts" / "train.py")
+    if train.exists():
+        body = train.read_text(encoding="utf-8")
+        assert 'default=False' in body and "use_bn" in body, (
+            "ibac_sni's --use_bn no longer defaults to False; model_type 'default2' would build "
+            "nn.BatchNorm2d on the acting CNN")
+
+
+def test_no_baseline_normalises_observations_at_eval():
+    """`ob=False` is why a checkpoint's saved `ob_rms` can be ignored by our evaluators.
+
+    idaac's checkpoint literally stores `[actor_critic, envs.ob_rms]`. Restoring the weights and
+    silently dropping the observation statistics would be a textbook silent eval bug -- it is
+    harmless here only because `VecNormalize` is constructed with `ob=False`, so the statistics
+    were never applied. That is the fact this pins.
+    """
+    for rel in (("runnable", "idaac", "ppo_daac_idaac", "envs.py"),
+                ("runnable", "ctrl", "vec_env.py")):
+        path = ROOT.joinpath(*rel)
+        if not path.exists():
+            continue
+        body = path.read_text(encoding="utf-8")
+        if "VecNormalize(" not in body:
+            continue
+        assert "ob=False" in body, (
+            f"{path.name} constructs VecNormalize without ob=False; observations would be "
+            "normalised during training and our offline evaluator restores no statistics")
