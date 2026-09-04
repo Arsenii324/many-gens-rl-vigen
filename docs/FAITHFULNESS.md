@@ -1002,10 +1002,26 @@ value against the off-policy family and reported a gap that did not exist in any
    trainer key** (`configs/vigen.yaml:32`) that one value had to satisfy for everybody — the
    shared-base problem item 2 above records. The clone has no shared trainer, so the knob is not
    shared and there is nothing to decide.
-5. **`ctrl_clusters` → 200, or confirm 32 as the deliberate choice.** Less forced than previously
-   stated (§ `ctrl` above: 256 real embeddings/update, not 32), so this is now a genuine choice
-   between "thin at 32" and "thinner at 200," not "8 is the only workable number."
-6. **Answer Q5 once**: faithful to paper, or to repo. It changes `curl`, `soda` and `rad`.
+5. ~~**`ctrl_clusters` → 200, or confirm 32 as the deliberate choice.**~~ **DISSOLVED IN THE CLONE
+   ERA, 2026-09-04 — same shape as item 4 above.** The choice existed because the port read
+   `configs/vigen.yaml`'s `ctrl_clusters: 32` against the paper's 200. **The clone has no such
+   config**, and `runnable/ctrl/train_ppo.py:91` declares `flags.DEFINE_integer("num_clusters",
+   200, ...)` — so upstream's own default *is* the paper's value, our launcher overrides nothing,
+   and `scripts/eval_grid.py`'s `CTRL_DEFAULTS` reconstructs at 200 to match. Nothing to decide and
+   no deviation to declare; the 32 was the port's. (Checked because a mismatch here would not be
+   cosmetic: flax `from_bytes` fills a *target*, so reconstructing the cluster head at the wrong
+   count would fail to load or load mis-shaped.)
+   The prior analysis stands on its own terms and is kept: 256 real embeddings/update, so 200
+   clusters is thin (~1.3 points each) rather than degenerate.
+6. ~~**Answer Q5 once**: faithful to paper, or to repo. It changes `curl`, `soda` and `rad`.~~
+   **ANSWERED BY CONSTRUCTION IN THE CLONE ERA, 2026-09-04.** The port had to choose, because it
+   re-implemented and every constant was therefore authored. **The clone era's null is each
+   original repository running its own `train.py`**, so the repo's value is what runs unless
+   someone changes it — and any move toward a paper value is an authored deviation that
+   `INTEGRATION-DELTA.md` would have to carry and justify one by one. The question is not open, it
+   is settled the other way by the decision to stop porting. What remains is the *reporting*
+   obligation: where a repo value differs from its paper, that is a fact about the baseline worth
+   stating beside its number, not a knob for us to turn.
 7. ~~`ibac_sni`'s value network never sees the information bottleneck.~~ **WRONG DIAGNOSIS,
    CORRECTED 2026-08-14 — see §`ibac_sni` below for the full account.** `cfg.algo="ppo"` means
    IBAC-SNI never constructs a separate `ValueNet` at all; the critic already shared the identical
@@ -1040,6 +1056,16 @@ value against the off-policy family and reported a gap that did not exist in any
    exists to make visible.
 
 10. **Say what `ctrl` and `ppg` rows can be, given neither can produce a checkpoint as published.**
+    > **Evidence added 2026-09-04, decision still the owner's.** Both now DO produce a loadable
+    > checkpoint, by a terminal save this project added and declared — so the question shifts from
+    > *can a row exist* to *what may it be called*. `ppg`'s was verified to hold **trained** weights,
+    > not the construction-time file this item's premise warns about: `pi_logstd` mean 0.00090310
+    > against its own `progress.csv` logging 0.000819 at the same frame, i.e. one update further on,
+    > which is what a save taken after the last update looks like. `ctrl`'s terminal save loads and
+    > was evaluated offline (36.699 on its 2,560-frame checkpoint). **What is still true** is the
+    > part that makes this a fidelity item rather than logistics: neither upstream would have
+    > produced these files, so a `ctrl` or `ppg` row rests on our save, and `ctrl`'s reported number
+    > remains a different estimand (`COMPARABILITY_CONTRACT` §5d) until `evaluate_ppo.py` is adapted.
     `ctrl/train_ppo.py:12` is `# from flax.training import checkpoints`, commented out — and it is
     **upstream's own line**, confirmed identical in `git show HEAD:train_ppo.py` at the pinned
     `ctrl_public @ 7a118c8`; it also ships an `evaluate_ppo.py` that restores a checkpoint its
