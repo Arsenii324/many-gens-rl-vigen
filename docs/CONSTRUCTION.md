@@ -356,6 +356,16 @@ then a different experiment with a different null.
 
 ### C2 — Frame stack: 3 frames for eight, 1 frame for four {#c2}
 
+> **DEFAULT SET, 2026-09-04 — declare, do NOT equalise, and the reason is that no single answer is
+> right.** Equalising the stack points four different ways for the four single-frame baselines:
+> `idaac` is *incoherent* with stacking (its adversarial head exists to destroy the temporal signal
+> a stack supplies), `ctrl` would double-count temporal information it already encodes,
+> `ibac_sni` would be mis-calibrated against a width chosen for a single frame, and `ppg`'s single
+> frame is pure Procgen lineage. A uniform intervention is therefore wrong whichever way it points,
+> and the honest instrument is the declaration: the seam audit carries it as a CONDITIONS split,
+> which makes a difference *attributable* rather than removed. Overturn this only with evidence
+> that the split explains a specific result, which no measurement here yet does.
+
 **Class** INHERITED · **Status** OPEN
 
 `rad soda alda` + the RL-ViGen five receive a 3-frame stack. `ppg idaac ibac_sni ctrl` receive a
@@ -454,6 +464,18 @@ the owner's recollection that such a block existed; the block is real for `idaac
 
 ### C3 — `ibac_sni` at 64×64 is a 227× model {#c3}
 
+> **DEFAULT SET, 2026-09-04 — keep 64x64 and keep saying it is ours.** This is the one resolution in
+> the project taken from **no reference for this target**, and that is exactly why it should not be
+> changed on judgement: swapping it would replace an unjustified number with a differently
+> unjustified number while silently altering the model's width (the embedding is
+> `((n-1)//2-2) * ((m-1)//2-2) * 64`, so 64x64 gives 53,824 against MiniGrid's 64). Keeping it holds
+> the baseline stable across every run already recorded.
+> **A reason to revisit now exists and is written here rather than acted on**: `ibac_sni`'s entropy
+> collapse ([C61](#c61), measured 2026-09-04, `boundary_fraction` 0.580) is on the baseline this
+> entry calls handicapped, and a 227x model is a plausible contributor. Distinguishing "the
+> coefficient is wrong for this head" from "the model is too wide for this task" needs a run at a
+> second width — which is a real experiment, not a default.
+
 **Class** OURS · **Status** OPEN
 
 **Handicap — affects:** ibac_sni
@@ -506,6 +528,14 @@ referent and should replace 64 immediately.
 
 ### C4 — float64 vs float32 alpha, visible only on CUDA {#c4}
 
+> **DEFAULT SET, 2026-09-04 — declare, do not harmonise.** The difference is each repository's own:
+> `drq.py:213` builds log-alpha in float32 (patch P5) and `dmc_gb` uses the torch default. Both are
+> upstream behaviour, the divergence is visible only on CUDA, and no reported quantity has been
+> shown to move with it. Harmonising would author a change in one clone to match another for
+> aesthetic uniformity — the exact move the clone-era null forbids. It stays a declared,
+> per-baseline numerical fact; it is promoted to a decision only if a measurement is ever traced to
+> it.
+
 **Class** UNDECLARED · **Status** OPEN · **Cross-ref** blind audit D4
 
 | | |
@@ -549,6 +579,14 @@ measured divergence between two `drq` runs traced to alpha precision — at whic
 float32 and record it as a deviation.
 
 ### C16 — `ctrl` ships the authors' plaintext W&B key {#c16}
+
+> **DEFAULT SET, 2026-09-04 — done, and this entry's status was the stale part.** Option 1 was taken
+> on 2026-09-03: the literal was blanked in the clone. The residual risk is zero functionally
+> (launchers pass `--wandb_mode=disabled`, and `runnable/_shim/wandb.py` opens no socket at all, so
+> even a live key could not leave the box) and the secret is the original authors' committed one,
+> arriving with a faithful clone rather than created by us. **No further action**: the remaining
+> item is not a decision but a courtesy — that the key is theirs to rotate, not ours to publicise,
+> which is why it is named here and not quoted anywhere.
 
 **Class** OURS (inherited risk) · **Status** OPEN · **Cross-ref** audit category 50
 
