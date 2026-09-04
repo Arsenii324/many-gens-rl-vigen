@@ -6675,6 +6675,42 @@ reachable through that path at all**. A NaN would have printed as `nan`, not `0.
 gives `-1`, which rescales to `-10`, not to an underflow. **I cannot account for the observed value
 from reading the code**, and the honest entry says so rather than supplying a mechanism that fits.
 
+> ### DEFAULT SET, 2026-09-04 — this is an MPS-EXECUTION event, it cannot reach a production number, and it stays open on those terms
+>
+> Two things were established today, both by reading and one earlier by measurement, and together
+> they change what this entry is:
+>
+> **1. The code path provably cannot produce 0 in exact arithmetic.** `drq.py:143-151` is
+> `tanh → rescale → exp` with no branch: `torch.tanh` bounds to `[-1, 1]`, the rescale maps that
+> onto `log_std_bounds`, and `log_std_bounds` is `[-10, 2]` in **all three** drq-family configs
+> (`drq_config.yaml:54`, `sgqn_drq_config.yaml:53`, `svea_drq_config.yaml:52`) and is passed
+> straight to `Actor.__init__` (`drq.py:203`) with nothing between. So `std ∈ [4.54e-5, 7.39]`.
+> Reaching exactly 0 through `exp` needs `log_std ≲ -88` in float32, which the rescale forbids;
+> `tanh(-inf) = -1` gives −10, not underflow, and a NaN would have printed `nan`. Earlier this
+> session the MPS-underflow story was also refuted experimentally — 200 trials at the real (256, 7)
+> shape on both devices, no zeros, minimum std exactly 4.539993e-5.
+>
+> **So the observed value implicates the EXECUTION, not the algorithm.** That is a narrowing, not
+> an explanation: a kernel returning a wrong result is consistent with everything here and is not
+> demonstrated by any of it.
+>
+> **2. It has only ever been seen on MPS, and no production number can come from MPS.** The
+> traceback reads `device='mps:0'`. [C95](#c95) forces every reported number to be produced in the
+> container on CUDA, and `drq` completed its CUDA pre-production cell (`docs/dated/preprod-table-2026-09-03.md`,
+> return 1.100 at 10k) with no such failure; the crash string appears in no CUDA log in the corpus.
+>
+> **Default: keep C84 OPEN as an unexplained MPS-correctness event, and stop treating it as a
+> production risk.** What it endangers is *local rehearsal* — which is real, because a rehearsal
+> that dies at frame 5,000 costs a person an afternoon. **The one observation that would overturn
+> this is a CUDA sighting**, and it is worth naming precisely because nothing currently looks for
+> it: the string to watch is `Expected parameter scale`. Not fixed, not explained, and no longer
+> blocking.
+>
+> **Why not simply set `torch.use_deterministic_algorithms(True)` in training and see.** It would
+> make MPS training reproducible ([C70](#c70) does exactly this for the evaluator) — and it would
+> also change what training does, on all five RL-ViGen baselines, to chase a failure that cannot
+> affect the deliverable. That trade is bad while production is CUDA-only.
+
 **The leading hypothesis, held as one.** Training sets no `torch.use_deterministic_algorithms`
 — that call lives in the evaluator only ([C70](#c70)) — so kernel selection varies run to run, and
 [C81](#c81) already records divergence behaving as a lottery for `drqv2` at a fixed seed. Same
