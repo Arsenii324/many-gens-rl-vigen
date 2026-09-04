@@ -71,7 +71,7 @@ STATE = {
               "obs_scaling": "stateless",
               "running_stats": "none",
               "reusable": "yes in principle -- upstream keeps evaluation in scripts/evaluate.py by design",
-              "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:206", "expect": "if update % args.log_interval == 0:"},
+              "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:211", "expect": "if update % args.log_interval == 0:"},
     "ctrl":  {"policy_mode": "STOCHASTIC (samples) IN THE PATH THAT REPORTS -- train_ppo.py:244 "
                          "and :217 both pass sample=True for the ID and OOD test envs, and "
                          "those are the calls behind Eprew200/Eprew0. algo.select_action CAN "

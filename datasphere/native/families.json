@@ -235,7 +235,9 @@
       "--num_steps",
       "{num_steps}",
       "--num_mini_batch",
-      "{num_mini_batch}"
+      "{num_mini_batch}",
+      "--save_interval_frames",
+      "{save_every}"
     ],
     "artifact_root": "{run_dir}",
     "required_curves": [
@@ -246,6 +248,7 @@
     ],
     "optional_directories": [],
     "checkpoint": "models/agent-robosuite:{task}-{baseline}-s{seed}.pt",
+    "intermediate_checkpoints": "models/agent-robosuite:{task}-{baseline}-s{seed}_*.pt",
     "places365_baselines": [],
     "places365_flavor": "none",
     "baselines": [
@@ -280,8 +283,8 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
-      "save_every": null,
-      "save_every_reason": "upstream saves on the final update only (C60). Left alone: an intermediate cadence is an ENABLES change and the terminal checkpoint is what the offline evaluator needs.",
+      "save_every": 50000,
+      "save_every_reason": "[Claude 2026-09-04] Intermediate checkpoints enabled at the owner's request; see the clone edit for the mechanism. Previously: upstream saves on the final update only (C60). Left alone: an intermediate cadence is an ENABLES change and the terminal checkpoint is what the offline evaluator needs.",
       "tier": "gt4.1",
       "cells_per_job": 2,
       "eval_every_reason": "no eval cadence flag exists. Evaluation rides inside `j % args.log_interval == 0`, in UPDATES of num_processes x num_steps = 1024 frames. log_interval 25 puts it at 25,600 frames, which is the nearest expressible value to the 25,000 the other families use.",
@@ -404,7 +407,11 @@
       "--seed",
       "{seed}",
       "--log_dir",
-      "{run_dir}"
+      "{run_dir}",
+      "--save_mode",
+      "all",
+      "--ic_per_save",
+      "{save_every}"
     ],
     "artifact_root": "{run_dir}",
     "required_curves": [
@@ -416,6 +423,13 @@
     ],
     "optional_directories": [],
     "checkpoint": "model_terminal.jd",
+    "intermediate_checkpoints": "model[0-9]*.jd",
+    "intermediate_note": [
+      "[Claude 2026-09-04] LogSaveHelper writes model<NNN>.jd per save under save_mode=all",
+      "(log_save_helper.py:129). Upstream train.py hardcoded save_mode=last, one overwritten",
+      "file, which is why ppg was endpoint-only. model_terminal.jd is still OUR terminal save",
+      "and remains the checkpoint of record; these are the curve."
+    ],
     "places365_baselines": [],
     "places365_flavor": "none",
     "baselines": [
@@ -464,8 +478,8 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
-      "save_every": null,
-      "save_every_reason": "C60 records ppg as never saving: ic_per_save is never set by any launcher. Our clone writes a terminal checkpoint, and a completed cell proves it -- retain() fails closed on an absent checkpoint and ppg's cell passed.",
+      "save_every": 50000,
+      "save_every_reason": "[Claude 2026-09-04] 50000, now that ppg CAN keep intermediate checkpoints: train.py exposes --save_mode/--ic_per_save (defaults unchanged) and options pass save_mode=all, so LogSaveHelper writes model<NNN>.jd per save instead of overwriting one file. Previously: C60 records ppg as never saving: ic_per_save is never set by any launcher. Our clone writes a terminal checkpoint, and a completed cell proves it -- retain() fails closed on an absent checkpoint and ppg's cell passed.",
       "tier": "gt4.1",
       "cells_per_job": 2,
       "training_time_eval": "NONE. train.py evaluates nothing at any point -- there is no eval call, no test env, no cadence. Its curve is training return only.",
@@ -512,7 +526,9 @@
       "1",
       "--tb",
       "--frames-per-proc",
-      "{frames_per_proc}"
+      "{frames_per_proc}",
+      "--save_interval_frames",
+      "{save_every}"
     ],
     "artifact_root": "{run_dir}/{model_name}",
     "required_curves": [
@@ -524,6 +540,7 @@
     ],
     "optional_directories": [],
     "checkpoint": "model.pt",
+    "intermediate_checkpoints": "model_[0-9]*.pt",
     "places365_baselines": [],
     "places365_flavor": "none",
     "baselines": [
@@ -559,8 +576,8 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
-      "save_every": null,
-      "save_every_reason": "--save-interval 1, upstream's own cadence. [Claude 2026-09-04: this key is null because the cadence is NOT set through it -- `options` above passes `--save-interval 1` literally, so ibac_sni saves EVERY UPDATE. It nevertheless yields one checkpoint per run, because torch_rl's utils/save.py writes to a fixed `model.pt` and overwrites it each time -- the same save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five. So a per-frame CURVE for ibac_sni needs preserved COPIES, not a different interval, and changing this key would only fight the literal flag.]",
+      "save_every": 50000,
+      "save_every_reason": "[Claude 2026-09-04] Intermediate checkpoints enabled at the owner's request; see the clone edit for the mechanism. Previously: --save-interval 1, upstream's own cadence. [Claude 2026-09-04: this key is null because the cadence is NOT set through it -- `options` above passes `--save-interval 1` literally, so ibac_sni saves EVERY UPDATE. It nevertheless yields one checkpoint per run, because torch_rl's utils/save.py writes to a fixed `model.pt` and overwrites it each time -- the same save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five. So a per-frame CURVE for ibac_sni needs preserved COPIES, not a different interval, and changing this key would only fight the literal flag.]",
       "tier": "gt4.1",
       "cells_per_job": 3,
       "training_time_eval": "NONE in training. Evaluation is a separate script (scripts/evaluate.py) by upstream's own design -- the same separation this project's offline evaluator uses.",
@@ -614,7 +631,8 @@
       "--n_steps={n_steps}",
       "--n_minibatch={n_minibatch}",
       "--cluster_len={cluster_len}",
-      "--n_minibatch_ctrl={n_minibatch_ctrl}"
+      "--n_minibatch_ctrl={n_minibatch_ctrl}",
+      "--checkpoint_interval={save_every}"
     ],
     "artifact_root": "{run_dir}",
     "required_curves": [
@@ -700,8 +718,8 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
-      "save_every": null,
-      "save_every_reason": "C60: upstream CANNOT checkpoint -- train_ppo.py:12 has the flax checkpoint import commented out. Our clone writes a terminal msgpack via flax.serialization.to_bytes. UNVERIFIED: ctrl has no successful CUDA run yet.",
+      "save_every": 50000,
+      "save_every_reason": "[Claude 2026-09-04] 50000, wired to the repository's OWN declared-but-unread checkpoint_interval (train_ppo.py:98); train_ppo.py now writes checkpoint_<frames>.msgpack on each boundary as well as at the end. Previously: C60: upstream CANNOT checkpoint -- train_ppo.py:12 has the flax checkpoint import commented out. Our clone writes a terminal msgpack via flax.serialization.to_bytes. UNVERIFIED: ctrl has no successful CUDA run yet.",
       "tier": "gt4.1",
       "cells_per_job": 1,
       "cells_per_job_reason": "co_schedulable false -- its jax[cuda12] stack cannot share an environment with the torch families",

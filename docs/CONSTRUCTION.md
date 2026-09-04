@@ -475,6 +475,41 @@ the owner's recollection that such a block existed; the block is real for `idaac
 > entry calls handicapped, and a 227x model is a plausible contributor. Distinguishing "the
 > coefficient is wrong for this head" from "the model is too wide for this task" needs a run at a
 > second width — which is a real experiment, not a default.
+>
+> ### Researched 2026-09-04 at the owner's request — the 64 IS referenced, and that makes it worse, not better
+>
+> The owner's guess was *"maybe the original number was explicitly scoped to the original env it was
+> run at and its scale."* It was, and the scoping includes the **network**, which is the part that
+> was dropped:
+>
+> * IBAC-SNI ships **two** branches. `coinrun/` is **TensorFlow** (`import tensorflow as tf`,
+>   `baselines.a2c.utils`) and carries the paper's *pixel* architectures — `impala_cnn`
+>   (depths 16/32/32) and `nature_cnn`, selected by `arch` in `policies.py:106-116`. Those
+>   downsample, and **64x64 is their input**.
+> * `torch_rl/` is **PyTorch** and is the MiniGrid branch. Its `ACModel` derives width from the
+>   input at `model.py:57, 83, 109` — three variants, **all MiniGrid-shaped**. At 64x64 they give
+>   28,800 / 53,824 / 26,912; at MiniGrid's native 7x7 the intended 64.
+> * **Our launcher runs `torch_rl/scripts/train.py`.**
+>
+> So 64 came from the paper's CoinRun branch and was paired with the MiniGrid branch's
+> architecture. **The paper never put a 64x64 frame through this network**; it put 64x64 through
+> impala/nature. Option 1 above — *"justify 64 against the paper's CoinRun branch"* — is therefore
+> **weaker than it looked**: the justification only transfers if the architecture transfers with it.
+>
+> **And no option inside the PyTorch branch repairs it**, which is the useful negative result: all
+> three `model_type` variants blow up at 64x64 because none downsamples enough, so switching
+> variant buys nothing. The real choices are (a) keep 64x64 and declare that `ibac_sni`'s model is
+> FC-dominated *by construction* because a MiniGrid architecture is being fed pixels; (b) lower the
+> resolution, which deviates from both branches and is ours either way; (c) author a downsampling
+> front-end, i.e. port the CoinRun architecture — a genuine architectural deviation.
+>
+> **Default unchanged (keep 64x64, declared), and now for a stated reason rather than inertia**:
+> (a) is the only one of the three that adds no authored deviation, and the owner's own standard is
+> that the algorithms and models stay fidelity-bound. But this materially strengthens the
+> C61 suspicion — **a 3.46M-parameter FC head trained on a few thousand frames is a strong
+> alternative explanation for the entropy collapse**, and it means "lower the entropy coefficient"
+> and "this model is wrong for this input" are not competing hypotheses so much as two symptoms of
+> the same transplant.
 
 **Class** OURS · **Status** OPEN
 

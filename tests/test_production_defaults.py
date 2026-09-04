@@ -160,9 +160,21 @@ def test_a_declared_cap_with_no_lever_would_be_reported_not_dropped():
         "the branch this guards requires a capacity with no option")
 
 
-def test_families_with_no_runtime_dial_resolve_empty():
+def test_families_with_no_eval_dial_expose_only_a_save_cadence():
+    """These four have no training-time EVAL cadence to set, and that is still the point.
+
+    [Claude 2026-09-04] This asserted `production_env(...) == {}` -- literally nothing to dial --
+    which was true while all four also had `save_every: null`. At the owner's request they now
+    keep INTERMEDIATE CHECKPOINTS, so each exposes a save cadence and nothing else. The test is
+    updated rather than deleted because the property worth pinning is unchanged: none of them
+    gains an EVAL_EVERY_FRAMES or EVAL_EPISODES, since none evaluates during training at all
+    (`scripts/audit_eval_cadence.py`), and inventing one would fabricate a cadence upstream has no
+    concept of.
+    """
     for baseline in ("ppg", "ibac_sni", "ctrl", "idaac"):
-        assert FAMILY.production_env(f"{baseline}:1") == {}, baseline
+        env = FAMILY.production_env(f"{baseline}:1")
+        assert set(env) <= {"SAVE_EVERY"}, f"{baseline} gained a dial it should not have: {env}"
+        assert env.get("SAVE_EVERY") == "50000", f"{baseline}: {env}"
 
 
 def test_cells_spanning_families_are_refused():
