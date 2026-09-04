@@ -27,9 +27,17 @@ _spec.loader.exec_module(rt)
 # that fails because a deliberately-absent asset is absent teaches the reader to ignore red, so
 # these skip. The two tests that do NOT render -- the refusal path and the denominator rule -- are
 # left running, because those are the ones that still say something in a tree with no results.
+# [Claude 2026-09-04] The guard now names the directory these tests ACTUALLY need
+# (results/regime-retention-c69, the retention grids), not the generic results/ parent. It was a
+# PROXY -- "does results/ exist" standing in for "has anything been tabulated here" -- and it held
+# only while results/ had exactly one use. On 2026-09-04 results/records/ and results/logs/ were
+# added to retain returned job artifacts (R7, EVAL-PROTOCOL section 6), the parent came into
+# existence for an unrelated reason, and these tests went from SKIPPED to FAILING against grids
+# that have never existed in this tree. The failure was real information about the guard, not
+# about the cells.
 needs_results = pytest.mark.skipif(
-    not (ROOT / "results").is_dir(),
-    reason="no results/ in this tree: the table has no rows to render")
+    not (ROOT / "results" / "regime-retention-c69").is_dir(),
+    reason="no retention grids in this tree: the table has no rows to render")
 
 
 @needs_results

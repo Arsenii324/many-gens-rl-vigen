@@ -94,8 +94,16 @@ def test_differing_scene_sets_are_caught(grids):
     assert any("scene sets differ" in b for b in vc.check("x", 0, "100k", "c"))
 
 
-@pytest.mark.skipif(not (ROOT / "results").is_dir(),
-                    reason="no results/ in this tree: nothing has been tabulated here")
+# [Claude 2026-09-04] The guard now names the directory these tests ACTUALLY need
+# (results/regime-retention-c69, the retention grids), not the generic results/ parent. It was a
+# PROXY -- "does results/ exist" standing in for "has anything been tabulated here" -- and it held
+# only while results/ had exactly one use. On 2026-09-04 results/records/ and results/logs/ were
+# added to retain returned job artifacts (R7, EVAL-PROTOCOL section 6), the parent came into
+# existence for an unrelated reason, and these tests went from SKIPPED to FAILING against grids
+# that have never existed in this tree. The failure was real information about the guard, not
+# about the cells.
+@pytest.mark.skipif(not (ROOT / "results" / "regime-retention-c69").is_dir(),
+                    reason="no retention grids in this tree: nothing has been tabulated here")
 def test_the_real_cells_pass_every_invariant():
     """The live claim: every tabulated number comes from the run it says it does."""
     bad = []
