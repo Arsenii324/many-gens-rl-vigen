@@ -56,7 +56,7 @@ term is identified and nobody has checked it; this is the column that matters.
 | 14 | **Action repeat** | UNIFORM at 1, reached four ways. | seam audit |
 | 15 | **Observation layout and scaling** | DECLARED SPLIT, 5 ways. | seam audit |
 | 16 | **Action bounds / clipping** | DECLARED SPLIT — 3 induced distributions. | seam audit, PART2 Finding 6 |
-| 17 | **Eval env vs train env construction** | **VERIFIED for the RL-ViGen five 2026-09-04** — `train_env = robo_make(...)` passes no `mode` and no `scene_id`, falling back to `robo_config.yaml` (`mode: train`, `scene_id: 0`), which is exactly what the retention denominator is built as. **The denominator's claim to be "the training distribution" holds.** **UNEXAMINED for the other seven.** | `train.py:78,92-95`; `robo_config.yaml:31` |
+| 17 | **Eval env vs train env construction** | **VERIFIED, all twelve (2026-09-04).** In every family the eval env comes from the *same constructor* as the training env and differs only in the regime/scene arguments: the five fall back to `robo_config.yaml` (`mode: train`, `scene_id: 0`) — so **the retention denominator really is the training distribution**; `ctrl` builds all three envs from one `_mk` lambda at one seed; `ibac_sni`'s `evaluate.py` and `train.py` use an identical `make_rlvigen_env(env, seed + 10000*i)`; `alda` uses one `_build(_mode)`; `idaac` one `make_rlvigen_venv`; `ppg`'s training call simply omits `mode`/`scene_id` and takes the same defaults ours passes explicitly. **One real difference found**: `dmc_gb`'s test env is seeded `args.seed + 42` against the train env's `args.seed`, a deliberate upstream offset that makes their eval regime a different visual draw — ours passes one seed, so our eval-easy instance is not theirs. | `train.py:78,92-95`; `robo_config.yaml:31`; `dmc_gb/src/train.py:78-95`; `ctrl/train_ppo.py:130-141`; `ibac_sni/.../evaluate.py:55-57` |
 
 ## III. The estimator — how episodes become a number
 
@@ -93,10 +93,10 @@ terms 3, 5, 6 and 17 — *which weights act, in what mode, with what step-depend
 as verified only for the RL-ViGen five. Naming them as one block made them one afternoon's reading
 rather than five unrelated questions, and **3, 5 and 6 are now verified across all twelve**: online
 weights everywhere, no observation normalisation at eval, no mode-sensitive layer on any action
-path, no step-dependence outside the five where it is inert. **Term 17 remains open for
-`alda`, `ppg`, `ctrl`, `ibac_sni` and `dmc_gb`** — verified so far for the RL-ViGen five (the
-training env falls back to `robo_config.yaml`'s `mode: train`, `scene_id: 0`, which is exactly the
-denominator) and for `idaac` (same `make_rlvigen_venv` constructor, different mode string).
+path, no step-dependence outside the five where it is inert. **Term 17 is now closed too**: every family builds its eval env from the same constructor as its
+training env, differing only in regime and scene — which is the property the whole comparison
+assumes and nothing had checked. It surfaced one real difference, `dmc_gb`'s `seed + 42` eval
+offset, now declared.
 
 **Two of those verifications found the answer was "safe for a reason, not by luck", which is the
 distinction worth keeping.** `idaac`'s checkpoint carries observation statistics that our evaluator
