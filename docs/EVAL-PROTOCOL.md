@@ -8,6 +8,40 @@ owner records otherwise; a default is not a decision.
 
 ---
 
+## THE PROPOSAL IN ONE PAGE — written 2026-09-04 at the owner's request
+
+Everything below this section is the reasoning. This is the shape to approve or amend. **Bold**
+marks the four points the owner has already decided; the rest are defaults awaiting a yes.
+
+**What is measured.** Each baseline's *saved policy*, driven through **its own action path** by our
+offline harness (`scripts/eval_grid.py`), in the container on CUDA. The platform is not a
+preference — a container-trained policy read 12-14x low when evaluated locally
+([C95](CONSTRUCTION.md#c95)).
+
+| | |
+|---|---|
+| **Metrics reported** | **All three: return, success rate, and retention (eval ÷ train).** They rank differently — a random arm scores ~7.5 on Lift with zero successes — so the table carries all three and the reader picks. |
+| **Checkpoints** | **Endpoint is the headline; intermediate stamps are retained for the curve.** All seven families now write stamped intermediate checkpoints on a common **50k** grid, so *"best over the trajectory"* stays constructible from retained data rather than foreclosed by the endpoint. |
+| Regimes | `train`, `eval-easy`, `eval-medium`, `eval-hard`. `train` is the retention denominator and is scene 0, verified to be what the training env actually is (`robo_config.yaml` defaults `mode: train`, `scene_id: 0`). |
+| Scenes | Ten certified, per regime, **pending P-C76** — the one UNITS split and the only thing keeping R3 NOT MET. Our harness can sweep ten for all twelve at **zero clone deviations**, which is why option (1) is cheaper than the branch point assumes. |
+| Episodes | 10-20 per (regime, scene) cell. Per-scene rows always retained, never only the pooled mean. |
+| Eval seed | One fixed constant, shared across every baseline and training seed, so checkpoints are compared on identical door placements (a paired comparison; [C69](CONSTRUCTION.md#c69)). |
+| **Training seeds** | **Spent adaptively, not uniformly** — one everywhere to find who is competent, then concentrated where the comparison is live. §4b states what 1 / 2 / 3+ seeds each license; one seed licenses existence and floor claims only, never a ranking. |
+| Budget | 5e5 suffices for the internal comparison (`drqv2` reached success 1.00 at **75k**). 6e5 buys one extra thing: it is RL-ViGen's own published Door budget, so production seed 1 of `drqv2` doubles as the [C48](CONSTRUCTION.md#c48) external anchor at no extra training cost. |
+| **Compute** | **1-2 V100, not the grant.** The grant arithmetic in `plan_production.py` is therefore a bound on *that* route, not on this one; what carries over is the per-cell hours and the archive sizes. |
+| Storage | Checkpoints stay remote, records come back (§6). A 6e5 cell is ~1.5 GB of archive; twelve baselines × three seeds is ~53 GB, against ~30 GB free locally. |
+
+**What is deliberately excluded**, so it is a decision rather than a gap: the **camera axis**
+(`cam-easy`/`cam-hard`) — viewpoint rather than appearance generalisation, unreachable from our
+harness without a patch, and 1.5x the grid. See §2.
+
+**What is not yet earned.** Ten of twelve baselines have an **undischarged shared-evaluator
+burden** (`scripts/audit_shared_evaluator.py`): our harness has been shown to measure what their
+own evaluator measures for `drqv2` and `idaac` only. That is a statement about the instrument, not
+about the baselines, and it is the honest caveat on any number the other ten produce.
+
+---
+
 ## 0. The fact that determines the whole design
 
 `scripts/audit_eval_cadence.py`, run today:

@@ -1,0 +1,42 @@
+# [Claude 2026-09-04: hardware validation for the intermediate-checkpoint work. Five clone edits
+# went in today and NONE has executed -- this laptop has neither CUDA nor robosuite, so the only
+# thing that can falsify them is a run. Shipping them unvalidated into a production run is the
+# failure mode this probe exists to prevent.
+#
+# SAVE_EVERY=2000 rather than the declared 50000: a job env var beats the descriptor default
+# (run_probe.sh prints NATIVE_PRODUCTION_KEPT when it does), so a 10k cell crosses five boundaries
+# instead of none. Validating the MECHANISM does not require production cadence, and at 50k a 10k
+# probe would produce exactly zero stamps and look like a pass.
+#
+# WHAT MUST APPEAR, per cell, or the edit is wrong:
+#   idaac     models/agent-*_2000.pt, _4000.pt, ... beside the unstamped endpoint file
+#   ppg       model000.jd, model001.jd, ... (save_mode=all) beside our model_terminal.jd
+#   ibac_sni  model_2000.pt, model_4000.pt, ... beside the overwritten model.pt
+# and `retained.json` should list them under the declared intermediate_checkpoints globs.
+#
+# WHAT WOULD FALSIFY: a cell that fails outright (the edit breaks training); a cell that completes
+# with no stamped files (the flag is not reaching the code); or stamps at the wrong cadence (the
+# boundary arithmetic is wrong). ctrl is validated separately -- it cannot share a python
+# environment with torch families.]
+name: vigen-ckpt-ctrl-v77
+desc: Validate intermediate checkpointing for ctrl at a 2000-frame cadence.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  SAVE_EVERY=2000
+  CELLS=ctrl:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v65.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1
