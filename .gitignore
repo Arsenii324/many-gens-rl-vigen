@@ -54,7 +54,10 @@ datasphere/native/payload-*.tgz
 # Returned job archives and the flax/msgpack checkpoints inside them.
 *.jd
 *.npz
-/results/
+# NOTE: /results/ is deliberately NOT ignored -- scripts/requirements.py grades R7 on
+# results/**/*__train.json, so it is a DELIVERABLE location, not scratch. I ignored it on the
+# first pass without checking what the path means here; returned job archives are already
+# covered by *.tgz above.
 
 # The pinned upstream is already ignored above; third_party/ is fetched the same way.
 /third_party/

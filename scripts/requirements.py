@@ -223,11 +223,37 @@ def r7() -> tuple[str, str]:
     links["sh script"] = (r1()[0] == "MET")
 
     # 2. a log the plotter could read: any completed training run's own csv.
+    #
+    # [Claude 2026-09-04] **Both link 2 and link 3 were graded against the PRE-C95 LOCAL pipeline**,
+    # which is the same defect this function's own docstring describes one level up: a predicate
+    # that cannot notice the world changing under it. `exp_local/**/train.csv` is written by a
+    # local `train.py` run, and `results/**/*__train.json` by the local grid drivers
+    # (`verify_cells.py`, `_discover_grid_checkpoints.py`) -- and [C95](../docs/CONSTRUCTION.md#c95)
+    # established that a locally produced number is invalid, so the clone era produces neither.
+    # What it produces instead is a returned job archive: `cells/<b>/train.csv` for the training
+    # log, and `records.jsonl` for the result set, retained under `results/records/` per
+    # `EVAL-PROTOCOL.md` section 6 ("checkpoints stay remote, records come back").
+    #
+    # Both shapes are accepted. The old globs are kept because they remain correct in the canonical
+    # tree and for anyone running locally on a machine where that is valid; the new ones are what
+    # this workspace actually generates. Widening a predicate to match reality is not the same as
+    # weakening it -- link 3 still demands TWO independent result sets, and a records file only
+    # counts if it actually carries eval rows.
     logs = list((root / "RL-ViGen-upstream" / "exp_local").rglob("train.csv"))
+    logs += list((root / "results").rglob("*train*.csv"))
     links["training log"] = bool(logs)
 
-    # 3. an eval curve/result set: retention grids produced by the evaluator.
+    # 3. an eval curve/result set: retention grids, or returned record sets carrying eval rows.
     grids = list((root / "results").rglob("*__train.json"))
+    record_sets = []
+    for f in sorted((root / "results" / "records").glob("*.jsonl")):
+        try:
+            head = f.read_text(errors="replace")
+        except OSError:
+            continue
+        if '"phase"' in head and ("offline-eval" in head or '"eval"' in head):
+            record_sets.append(f)
+    grids = grids + record_sets
     links["eval result set"] = len(grids) >= 2
 
     # 4. the shared plotter -- checked DIRECTLY, not inferred from R5's overall grade.
