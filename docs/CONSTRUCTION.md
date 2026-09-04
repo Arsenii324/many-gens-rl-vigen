@@ -4923,7 +4923,7 @@ Figure 22's axes, and the `Robosuite` sheet's per-seed cells.*
 > **Added 2026-08-25: "success" here is our word, and it is more generous than the alternative.**
 > `door.py:423`'s `_check_success()` is `return hinge_qpos > 0.3` — a **live threshold, not a
 > latch**: it is true while the door is open and false again if it swings back. Our evaluator
-> latches it, `scripts/eval_across_scenes.py:166` doing `succeeded = succeeded or ...` at every
+> latches it, `scripts/eval_across_scenes.py:218` doing `succeeded = succeeded or ...` at every
 > step, so **our success count means "the door was open at some point during the episode"**, not
 > "at the end". An external reviewer flagged the end-only reading as a hazard; it does not apply to
 > us, but the definition is a choice and was never written down.
@@ -5816,7 +5816,7 @@ assumed was training — [C60](#c60) audits the checkpoint cadences and two base
 at all. **That is real and it is not the binding constraint.**
 
 **The binding constraint is that the retention instrument can only read native checkpoints.**
-`scripts/eval_across_scenes.py:328` does `agent = payload["agent"]` and drives it with
+`scripts/eval_across_scenes.py:342` does `agent = payload["agent"]` and drives it with
 `agent.act(ts.observation, step, eval_mode=True)` under `utils.eval_mode(agent)` (`:203-204`) —
 that is RL-ViGen's own agent interface, and only `drqv2`, `svea`, `sgqn`, `curl` and `drq` produce
 it. `idaac`'s checkpoint is `{"learner", "ret_rms", "config", …}` (`docs/REVIEW.md`:210); the

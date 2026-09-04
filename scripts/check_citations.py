@@ -268,6 +268,14 @@ def usable_anchor(span: str) -> bool:
     # "ABSENT" came from.
     if CITE.search(s):
         return False
+    # [Claude 2026-09-04] An ELLIPSIS means the writer abbreviated the line rather than quoting it:
+    # `succeeded = succeeded or ...` is a real line in eval_across_scenes.py with its tail elided.
+    # Such a span can never match source, so it reports ABSENT forever however correct the citation
+    # is -- and it did, in the STRICTEST stratum, where a permanent false positive is worst: this
+    # check's value is that a starred line is worth reading, and one that always fires trains the
+    # reader to skip them. Abbreviated spans are simply not evidence either way.
+    if "..." in s or "\u2026" in s:
+        return False
     # A path or filename is a pointer to somewhere else, not a quote of the cited file.
     # `nets.py`, `reward_normalizer.py`, `rlgen/envs.py::_assert_contract` were all being
     # tested for presence *inside the file they point away from*, which they never are.
