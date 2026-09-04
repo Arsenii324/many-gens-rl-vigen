@@ -39,8 +39,10 @@ imported baselines keep their own native sizes (Procgen's 64, dmc_gb's 100→84 
 architecture derives its width from its input, so equalising would mean authoring an encoder change
 in seven clones — which the clone-era null forbids. **So this table compares algorithms at their
 own design points, not at a common observation.** That is right for a porting exercise and is *not*
-the same claim as a benchmark result. The size of the confound is unmeasured and cheap to measure:
-one baseline, two resolutions, one seed.
+the same claim as a benchmark result. **The size of the confound is unmeasured and is not cheap to
+measure**: every one of the twelve hardcodes its input size — `drqv2`'s encoder fixes
+`repr_dim = 32 * 35 * 35`, which is what 84 yields and 64 does not — so even running one baseline at
+a second resolution needs an encoder edit. Equalising across the twelve would need seven.
 
 **What is deliberately excluded**, so it is a decision rather than a gap: the **camera axis**
 (`cam-easy`/`cam-hard`) — viewpoint rather than appearance generalisation, unreachable from our
