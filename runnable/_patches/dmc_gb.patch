@@ -88,10 +88,10 @@ index e390dce..d707942 100644
  }
  
 diff --git a/src/train.py b/src/train.py
-index 793eb15..b6598a4 100644
+index 793eb15..2bce7b5 100644
 --- a/src/train.py
 +++ b/src/train.py
-@@ -13,22 +13,33 @@ from video import VideoRecorder
+@@ -13,27 +13,60 @@ from video import VideoRecorder
  
  def evaluate(env, agent, video, num_episodes, L, step, test_env=False):
  	episode_rewards = []
@@ -126,11 +126,91 @@ index 793eb15..b6598a4 100644
  		episode_rewards.append(episode_reward)
  	
  	return np.mean(episode_rewards)
+ 
+ 
++# [Claude 2026-09-02 03:55 MSK: endpoint hook for the native DataSphere contract.
++# This repository's loop evaluates and checkpoints only inside `if done:`, and only when the step
++# divides `eval_freq` / `save_freq`. `save_freq` defaults to 100k, so a 10k or 100k run finishes
++# with NO checkpoint at all, and an endpoint that does not divide the cadence gets no final
++# evaluation either. This hook runs AFTER the unchanged loop: it takes no environment step, runs
++# no update, touches no seed, and re-uses this file's own `evaluate` and the same
++# `torch.save(agent, ...)` the loop uses. It skips the evaluation when the loop already evaluated
++# at exactly this step, so it never double-counts.
++# ENABLES-class by the repository's own taxonomy (setup/apply_patches.py): it changes the
++# measurement and retention protocol, not the learning.]
++def finalize_run(env, test_env, agent, video, L, args, model_dir, last_eval_step):
++	if last_eval_step != args.train_steps:
++		evaluate(env, agent, video, args.eval_episodes, L, args.train_steps)
++		if test_env is not None:
++			evaluate(test_env, agent, video, args.eval_episodes, L, args.train_steps, test_env=True)
++		L.dump(args.train_steps)
++	terminal_checkpoint = os.path.join(model_dir, f'{args.train_steps}.pt')
++	if not os.path.exists(terminal_checkpoint):
++		torch.save(agent, terminal_checkpoint)
++	print(f'NATIVE_FINAL_EVALUATION_COMPLETED frame={args.train_steps}', flush=True)
++
++
+ def main(args):
+ 	# Set seed
+ 	utils.set_seed_everywhere(args.seed)
+@@ -88,6 +121,8 @@ def main(args):
+ 	)
+ 
+ 	start_step, episode, episode_reward, done = 0, 0, 0, True
++	# [Claude 2026-09-02 03:55 MSK: so the endpoint hook can tell whether the loop already evaluated here]
++	last_eval_step = None
+ 	L = Logger(work_dir)
+ 	start_time = time.time()
+ 	for step in range(start_step, args.train_steps+1):
+@@ -105,6 +140,7 @@ def main(args):
+ 				if test_env is not None:
+ 					evaluate(test_env, agent, video, args.eval_episodes, L, step, test_env=True)
+ 				L.dump(step)
++				last_eval_step = step
+ 
+ 			# Save agent periodically
+ 			if step > start_step and step % args.save_freq == 0:
+@@ -142,6 +178,7 @@ def main(args):
+ 
+ 		episode_step += 1
+ 
++	finalize_run(env, test_env, agent, video, L, args, model_dir, last_eval_step)
+ 	print('Completed training for', work_dir)
+ 
+ 
 diff --git a/src/utils.py b/src/utils.py
-index 7f90b52..6595632 100644
+index 7f90b52..5c6cacc 100644
 --- a/src/utils.py
 +++ b/src/utils.py
-@@ -129,8 +129,8 @@ class ReplayBuffer(object):
+@@ -44,10 +44,26 @@ def set_seed_everywhere(seed):
+     random.seed(seed)
+ 
+ 
++# [Claude 2026-09-02 04:55 MSK: `git describe` is provenance, not a precondition for training.
++# Upstream lets a CalledProcessError propagate, so this function is fatal wherever the source is
++# not a git checkout -- which is every DataSphere job, because the payload arrives as a tarball.
++# Reproduced 2026-09-02 on a local rad run: exit status 128 here, after both environments were
++# built and before the first step. The run's real provenance is the payload SHA-256, which the
++# native run manifest records; this only stops a missing checkout from being fatal.
++# PLATFORM-class by setup/apply_patches.py's taxonomy: nothing measured changes.]
++def _describe_checkout():
++    try:
++        return subprocess.check_output(
++            ["git", "describe", "--always"], stderr=subprocess.DEVNULL
++        ).strip().decode()
++    except (OSError, subprocess.SubprocessError):
++        return 'unavailable-not-a-git-checkout'
++
++
+ def write_info(args, fp):
+     data = {
+         'timestamp': str(datetime.now()),
+-        'git': subprocess.check_output(["git", "describe", "--always"]).strip().decode(),
++        'git': _describe_checkout(),
+         'args': vars(args)
+     }
+     with open(fp, 'w') as f:
+@@ -129,8 +145,8 @@ class ReplayBuffer(object):
          obses, next_obses = [], []
          for i in idxs:
              obs, next_obs = self._obses[i]

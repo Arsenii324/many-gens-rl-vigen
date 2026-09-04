@@ -386,10 +386,10 @@ index 67bd632..0459807 100644
          if self.embedding_type == "concat":
              z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
 diff --git a/train_ppo.py b/train_ppo.py
-index e18477e..2762426 100644
+index e18477e..691b715 100644
 --- a/train_ppo.py
 +++ b/train_ppo.py
-@@ -15,7 +15,43 @@ from jax.random import PRNGKey
+@@ -15,7 +15,60 @@ from jax.random import PRNGKey
  from algo import get_transition, select_action, update_ppo, update_daac, update_cluster, state_update
  from buffer import Batch
  from models import CTRLModel, CTRLDAACModel
@@ -416,6 +416,23 @@ index e18477e..2762426 100644
 +_policy_health = _m.gaussian_policy_health
 +
 +
++def _save_state(train_state, frames):
++    """[OURS 2026-09-04] Serialise a TrainState to `checkpoint_<frames>.msgpack`.
++
++    One msgpack file rather than `flax.training.checkpoints`: that API is deprecated in the flax
++    this repository pins and now writes an orbax DIRECTORY whose shape varies by version. One file
++    of the serialised TrainState is what an offline evaluator needs, and is stable.
++
++    Frame-stamped, so intermediate saves do not overwrite each other -- the failure that makes
++    `ibac_sni` endpoint-only despite saving every update.
++    """
++    from flax.serialization import to_bytes as _flax_to_bytes
++    _dir = os.path.abspath(os.path.join(FLAGS.model_dir, FLAGS.env_name))
++    os.makedirs(_dir, exist_ok=True)
++    with open(os.path.join(_dir, 'checkpoint_%d.msgpack' % frames), 'wb') as _fh:
++        _fh.write(_flax_to_bytes(train_state))
++
++
 +def _find_log_std(tree):
 +    """Depth-first search of the flax param tree for the `log_std` leaf.
 +
@@ -434,7 +451,7 @@ index e18477e..2762426 100644
  
  
  def safe_mean(x):
-@@ -66,7 +102,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
+@@ -66,7 +119,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
                      "Run ID. Change that to change W&B name")
  flags.DEFINE_string("wandb_mode", "disabled",
                      "W&B logging (disabled, online, offline)")
@@ -448,7 +465,7 @@ index e18477e..2762426 100644
                      "W&B key")
  flags.DEFINE_string("wandb_entity", "ssl_rl",
                      "W&B entity (username or team name)")
-@@ -82,28 +123,26 @@ def main(argv):
+@@ -82,28 +140,26 @@ def main(argv):
      key = PRNGKey(seed)
  
      # Clip rewards for training
@@ -496,7 +513,7 @@ index e18477e..2762426 100644
  
      os.environ["WANDB_API_KEY"] = FLAGS.wandb_key
      group_name = "%s_%s_%s" % (FLAGS.algo, FLAGS.env_name, FLAGS.run_id)
-@@ -121,28 +160,29 @@ def main(argv):
+@@ -121,28 +177,29 @@ def main(argv):
      if "ppo" in FLAGS.algo:
          model = CTRLModel(dims=(256, 256),
                            n_cluster=FLAGS.num_clusters,
@@ -531,7 +548,7 @@ index e18477e..2762426 100644
      params_model = model.init(key,
                                state=fake_args_cluster[0],
                                action=fake_args_cluster[1],
-@@ -175,7 +215,8 @@ def main(argv):
+@@ -175,7 +232,8 @@ def main(argv):
                    gae_lambda=FLAGS.gae_lambda,
                    n_steps=FLAGS.n_steps + 1,
                    num_envs=FLAGS.num_envs,
@@ -541,7 +558,7 @@ index e18477e..2762426 100644
  
      state = env.reset()
      state_id = env_test_ID.reset()
-@@ -183,6 +224,16 @@ def main(argv):
+@@ -183,6 +241,16 @@ def main(argv):
  
      epinfo_buf_id = deque(maxlen=100)
      epinfo_buf_ood = deque(maxlen=100)
@@ -558,7 +575,7 @@ index e18477e..2762426 100644
  
      returns_ood_acc = []
  
-@@ -208,15 +259,21 @@ def main(argv):
+@@ -208,15 +276,21 @@ def main(argv):
                                                sample=True)
          state_ood, _, _, infos_ood = env_test_OOD.step(action_ood)
  
@@ -582,7 +599,7 @@ index e18477e..2762426 100644
  
          if step % (FLAGS.n_steps + 1) == 0:
              data = batch.get()
-@@ -257,6 +314,17 @@ def main(argv):
+@@ -257,6 +331,17 @@ def main(argv):
              renamed_dict = {}
              for k, v in metric_dict.items():
                  renamed_dict["%s/%s" % (FLAGS.env_name, k)] = v
@@ -600,7 +617,7 @@ index e18477e..2762426 100644
              wandb.log(renamed_dict, step=FLAGS.num_envs * step)
  
              wandb.log({
-@@ -277,10 +345,35 @@ def main(argv):
+@@ -277,10 +362,53 @@ def main(argv):
                  returns_ood_acc.append(
                      safe_mean([info['r'] for info in epinfo_buf_ood]))
  
@@ -611,6 +628,28 @@ index e18477e..2762426 100644
 -                   safe_mean([info['r'] for info in epinfo_buf_ood])))
 +                   safe_mean([info['r'] for info in epinfo_buf_ood]),
 +                   safe_mean(list(succ_buf_id)), safe_mean(list(succ_buf_ood))))
++
++            # [OURS 2026-09-04] INTERMEDIATE CHECKPOINTS, so a curve over training is
++            # reconstructible offline and "best over the trajectory" is a question the retained
++            # data can answer rather than one the endpoint forecloses. Requested by the owner, who
++            # also set the standard it is written to: the algorithm and model stay fidelity-bound,
++            # while checkpointing and metric reporting may be ours where we are sure of them.
++            #
++            # This WIRES THE REPOSITORY'S OWN DECLARED KNOB rather than inventing one:
++            # `checkpoint_interval` is defined at train_ppo.py:98 and was never read, because
++            # upstream's `from flax.training import checkpoints` is commented out at line 12. So
++            # this is nearer RESTORES than ENABLES -- the parameter existed and did nothing.
++            #
++            # ENABLES-class regardless, on the strict reading: it changes what is RETAINED, never
++            # what is learned. No tensor here feeds an update; `_save_state` only serialises.
++            # Cadence is a frame boundary, not the logging cadence -- ctrl logs every 4,112 frames,
++            # and saving there would leave 146 files for a 6e5 run.
++            if FLAGS.checkpoint_interval > 0:
++                _frames_now = FLAGS.num_envs * step
++                _frames_prev = FLAGS.num_envs * (step - 1)
++                if (_frames_now // FLAGS.checkpoint_interval) > (
++                        _frames_prev // FLAGS.checkpoint_interval):
++                    _save_state(train_state, _frames_now)
 +    # [Claude 2026-09-02 09:35 MSK: terminal checkpoint and endpoint marker.
 +    # This file never saved a checkpoint: upstream's own `from flax.training import checkpoints` is
 +    # commented out at line 12 and `checkpoint_interval` is declared and never read, so the
@@ -624,15 +663,11 @@ index e18477e..2762426 100644
 +    # still procgen-only and discrete-action, so it cannot read this checkpoint on robosuite. CTRL's
 +    # native held-out measurement is the SR_OOD column printed above, computed online.
 +    # ENABLES-class: it changes what is retained, not what is learned.]
-+    from flax.serialization import to_bytes as _flax_to_bytes
 +    _executed = FLAGS.num_envs * int(FLAGS.train_steps // FLAGS.num_envs)
-+    _model_dir = os.path.abspath(os.path.join(FLAGS.model_dir, FLAGS.env_name))
-+    os.makedirs(_model_dir, exist_ok=True)
 +    # A single msgpack file rather than flax.training.checkpoints: that API is deprecated in the
 +    # flax this repository pins and now writes an orbax DIRECTORY, whose shape varies by version.
 +    # One file of the serialised TrainState is what an offline evaluator needs and is stable.
-+    with open(os.path.join(_model_dir, 'checkpoint_%d.msgpack' % _executed), 'wb') as _fh:
-+        _fh.write(_flax_to_bytes(train_state))
++    _save_state(train_state, _executed)
 +    print('NATIVE_FINAL_EVALUATION_COMPLETED frame=%d' % _executed, flush=True)
 +
      return (returns_ood_acc, safe_mean([info['r'] for info in epinfo_buf_ood]) )

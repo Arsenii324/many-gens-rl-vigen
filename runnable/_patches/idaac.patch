@@ -1,3 +1,59 @@
+diff --git a/ppo_daac_idaac/algo/idaac.py b/ppo_daac_idaac/algo/idaac.py
+index f45b892..a3b064b 100644
+--- a/ppo_daac_idaac/algo/idaac.py
++++ b/ppo_daac_idaac/algo/idaac.py
+@@ -68,6 +68,11 @@ class IDAAC():
+         adv_loss_epoch = 0
+         action_loss_epoch = 0
+         dist_entropy_epoch = 0
++        # [OURS] C28 family-tier diagnostics. Additive: stored on self at the end of update()
++        # rather than added to the return tuple, so no caller signature changes. Nothing above
++        # is altered and no RNG is consumed. See docs/PART2-METRIC-INVENTORY.md section 6.
++        clip_fraction_epoch = 0
++        approx_kl_k3_epoch = 0
+         for e in range(self.ppo_epoch):
+             data_generator = rollouts.feed_forward_generator(
+                 advantages, self.num_mini_batch)
+@@ -124,9 +129,19 @@ class IDAAC():
+                 adv_loss_epoch += adv_loss.item()
+                 action_loss_epoch += action_loss.item()
+                 dist_entropy_epoch += dist_entropy.item()
++                # [OURS] C28. k3 = (r - 1) - log r, matching scripts/metrics.py::approx_kl's
++                # default: unbiased and non-negative. Under no_grad, so the update is untouched.
++                with torch.no_grad():
++                    clip_fraction_epoch += (
++                        torch.abs(ratio - 1.0) > self.clip_param).float().mean().item()
++                    approx_kl_k3_epoch += ((ratio - 1.0) - torch.log(ratio)).mean().item()
+         
+         num_policy_updates = self.ppo_epoch * self.num_mini_batch
+ 
++        clip_fraction_epoch /= num_policy_updates   # [OURS] C28
++        approx_kl_k3_epoch /= num_policy_updates    # [OURS] C28
++        self.last_clip_fraction = clip_fraction_epoch   # [OURS] C28, read by train.py
++        self.last_approx_kl_k3 = approx_kl_k3_epoch     # [OURS] C28
+         order_acc_epoch /= num_policy_updates
+         order_loss_epoch /= num_policy_updates
+         clf_loss_epoch /= num_policy_updates
+diff --git a/ppo_daac_idaac/arguments.py b/ppo_daac_idaac/arguments.py
+index 49436e8..89d42e7 100644
+--- a/ppo_daac_idaac/arguments.py
++++ b/ppo_daac_idaac/arguments.py
+@@ -3,6 +3,15 @@ import torch
+ 
+ parser = argparse.ArgumentParser(description='RL')
+ 
++# [OURS 2026-09-04] Intermediate checkpoint cadence, in FRAMES so it matches the x-axis idaac
++# already logs as `train/total_num_steps`. Default 0 = off, which is upstream's behaviour exactly
++# (save on the final update only), so an unchanged command line is unchanged.
++parser.add_argument(
++    '--save_interval_frames',
++    type=int,
++    default=0,
++    help='write a stamped checkpoint each time this many frames elapse; 0 disables')
++
+ # PPO arguments. 
+ parser.add_argument(
+     '--lr', 
 diff --git a/ppo_daac_idaac/distributions.py b/ppo_daac_idaac/distributions.py
 index e243ac4..8799f71 100644
 --- a/ppo_daac_idaac/distributions.py
@@ -64,10 +120,10 @@ index e243ac4..8799f71 100644
 +        action_logstd = self.logstd(zeros)
 +        return FixedNormal(action_mean, action_logstd.exp())
 diff --git a/ppo_daac_idaac/envs.py b/ppo_daac_idaac/envs.py
-index b1e0d77..8b28356 100644
+index b1e0d77..b88d9ae 100644
 --- a/ppo_daac_idaac/envs.py
 +++ b/ppo_daac_idaac/envs.py
-@@ -41,4 +41,66 @@ class VecPyTorchProcgen(VecEnvWrapper):
+@@ -41,4 +41,72 @@ class VecPyTorchProcgen(VecEnvWrapper):
          obs = torch.from_numpy(obs).float().to(self.device) / 255.
          reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
          return obs, reward, done, info
@@ -75,7 +131,7 @@ index b1e0d77..8b28356 100644
 \ No newline at end of file
 +        
 +
-+def make_rlvigen_venv(args, device, mode, num_envs):
++def make_rlvigen_venv(args, device, mode, num_envs, scene_id=0):
 +    """RL-ViGen robosuite behind the SAME VecEnv stack ProcgenEnv gets.
 +
 +    baselines' own DummyVecEnv replaces ProcgenEnv; VecMonitor / VecNormalize(ob=False) /
@@ -84,6 +140,12 @@ index b1e0d77..8b28356 100644
 +    because the wrapper below already yields a bare array, exactly what it would have produced.
 +
 +    `mode` is RL-ViGen's train / eval-easy / eval-medium / eval-hard.
++
++    `scene_id` defaults to 0, which is what every training and in-loop-evaluation caller passes and
++    is C45's pin: idaac evaluates one scene where the benchmark certifies ten. It is a PARAMETER
++    rather than a literal so the OFFLINE grid can sweep scenes without touching idaac's own code
++    -- this function is ours (63 of the 64 lines in this file are, over PRISTINE), so widening it
++    is not a deviation from the authors, and the default keeps every existing call byte-identical.
 +    """
 +    import os, sys
 +    from baselines.common.vec_env import DummyVecEnv, VecMonitor, VecNormalize
@@ -130,7 +192,7 @@ index b1e0d77..8b28356 100644
 +    task = args.env_name.split(":", 1)[1]
 +    venv = DummyVecEnv([
 +        (lambda i=i: _LevelSeed(_RGBOnly(_robo_make_env(
-+            task_name=task, seed=args.seed + i, scene_id=0, mode=mode)), args.seed + i))
++            task_name=task, seed=args.seed + i, scene_id=scene_id, mode=mode)), args.seed + i))
 +        for i in range(num_envs)
 +    ])
 +    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
@@ -234,10 +296,25 @@ index 2edfde6..c48fb99 100644
      def forward(self, inputs):
          raise NotImplementedError
 diff --git a/test.py b/test.py
-index d8953bb..d05e56a 100644
+index d8953bb..c856faa 100644
 --- a/test.py
 +++ b/test.py
-@@ -8,21 +8,36 @@ from baselines.common.vec_env import (
+@@ -1,28 +1,50 @@
+ import numpy as np
++# [Gemini 2026-08-31] Compatibility shim for legacy OpenAI baselines with NumPy 1.24+
++if not hasattr(np, "bool"):
++    np.bool = bool
+ import torch
+ 
+-from procgen import ProcgenEnv
++# [Gemini 2026-08-31] ProcgenEnv is optional because Robosuite continuous control uses make_rlvigen_venv
++try:
++    from procgen import ProcgenEnv
++except ImportError:
++    ProcgenEnv = None
+ from baselines.common.vec_env import (
+     VecExtractDictObs,
+     VecMonitor,
      VecNormalize
  )
  
@@ -281,7 +358,7 @@ index d8953bb..d05e56a 100644
      obs = eval_envs.reset()
  
      while len(eval_episode_rewards) < 10:
-@@ -34,15 +49,19 @@ def evaluate(args, actor_critic, device):
+@@ -34,15 +56,19 @@ def evaluate(args, actor_critic, device):
  
          obs, _, done, infos = eval_envs.step(action)
  
@@ -306,19 +383,78 @@ index d8953bb..d05e56a 100644
 +    return eval_episode_rewards, eval_episode_successes
  
 diff --git a/train.py b/train.py
-index d7318e7..9de50ec 100644
+index d7318e7..97916c9 100644
 --- a/train.py
 +++ b/train.py
-@@ -20,7 +20,7 @@ from ppo_daac_idaac.model import PPOnet, IDAACnet, \
+@@ -1,11 +1,19 @@
+ import os
+ import torch
+ import numpy as np
++# [Gemini 2026-08-31] Compatibility shim for legacy OpenAI baselines with NumPy 1.24+
++if not hasattr(np, "bool"):
++    np.bool = bool
+ from collections import deque
+ 
+ import hyperparams as hps
++# [Gemini 2026-08-31] Import evaluate function for zero-shot eval sweep
+ from test import evaluate
+-from procgen import ProcgenEnv
++# [Gemini 2026-08-31] ProcgenEnv is optional because Robosuite continuous control uses make_rlvigen_venv
++try:
++    from procgen import ProcgenEnv
++except ImportError:
++    ProcgenEnv = None
+ 
+ from baselines import logger
+ from baselines.common.vec_env import (
+@@ -14,13 +22,45 @@ from baselines.common.vec_env import (
+     VecNormalize
+ )
+ 
++# [OURS] C61 policy-health diagnostics; scripts/metrics.py owns the definitions so the four
++# PPO-family baselines report the same quantity rather than four near-misses of it.
++import importlib.util as _ilu
++import pathlib as _pl
++_spec = _ilu.spec_from_file_location(
++    "_vigen_metrics", _pl.Path(__file__).resolve().parents[1].parent / "scripts" / "metrics.py")
++_m = _ilu.module_from_spec(_spec)
++_spec.loader.exec_module(_m)
++_policy_health = _m.gaussian_policy_health
++
+ from ppo_daac_idaac import algo, utils
+ from ppo_daac_idaac.arguments import parser
+ from ppo_daac_idaac.model import PPOnet, IDAACnet, \
      LinearOrderClassifier, NonlinearOrderClassifier
  from ppo_daac_idaac.storage import DAACRolloutStorage, \
      IDAACRolloutStorage, RolloutStorage
 -from ppo_daac_idaac.envs import VecPyTorchProcgen
 +from ppo_daac_idaac.envs import VecPyTorchProcgen, make_rlvigen_venv
++
++
++# [Claude 2026-09-02 06:25 MSK: endpoint hook for the native DataSphere contract.
++# This loop evaluates only when `j % log_interval == 0` AND at least two training episodes have
++# finished, so whether a run ends with a held-out measurement depends on where the last update
++# happens to fall. The checkpoint is separate and IS written on the last update, so a run could
++# return a model with no number attached to it.
++# This adds one evaluation after the unchanged loop: no environment step of the training envs, no
++# update, no seed transition. It re-uses this file's own `evaluate` and its own logger keys.
++# The frame it reports is the EXECUTED count, `num_updates * num_processes * num_steps`, which is
++# `num_env_steps` floored to a whole rollout -- IDAAC never reaches an arbitrary requested budget
++# and the marker must not claim it did.
++# ENABLES-class by setup/apply_patches.py's taxonomy: measurement and retention, not learning.]
++def finalize_run(args, actor_critic, device, executed_steps):
++    eval_episode_rewards, eval_episode_successes = evaluate(args, actor_critic, device)
++    logger.logkv("train/total_num_steps", executed_steps)
++    logger.logkv("test/mean_episode_reward", np.mean(eval_episode_rewards))
++    logger.logkv("test/median_episode_reward", np.median(eval_episode_rewards))
++    logger.logkv("test/success_rate",
++                 np.mean(eval_episode_successes) if eval_episode_successes else np.nan)
++    logger.dumpkvs()
++    print('NATIVE_FINAL_EVALUATION_COMPLETED frame={}'.format(executed_steps), flush=True)
  
  
  def train(args):
-@@ -50,24 +50,27 @@ def train(args):
+@@ -50,24 +90,27 @@ def train(args):
      logger.configure(dir=args.log_dir, format_strs=['csv', 'stdout'], log_suffix=log_file)
      print("\nLog File: ", log_file)
  
@@ -355,7 +491,49 @@ index d7318e7..9de50ec 100644
              base_kwargs={'hidden_size': args.hidden_size})    
      actor_critic.to(device)
      print("\n Actor-Critic Network: ", actor_critic)
-@@ -225,9 +228,13 @@ def train(args):
+@@ -199,16 +242,36 @@ def train(args):
+         rollouts.after_update()
+ 
+         # Save Model
+-        if j == num_updates - 1 and args.save_dir != "":
++        # [OURS 2026-09-04] `_frames_here` is idaac's own x-axis expression, the one it logs as
++        # `train/total_num_steps`, so a stamped checkpoint and a logged row carry the same number.
++        _frames_here = (j + 1) * args.num_processes * args.num_steps
++        _save_every = getattr(args, "save_interval_frames", 0) or 0
++        _is_last = (j == num_updates - 1)
++        # INTERMEDIATE CHECKPOINTS. Upstream saves only on the final update, so idaac could be
++        # evaluated at its endpoint and nowhere else -- no offline curve, and "best over the
++        # trajectory" unanswerable. Off unless asked (`--save_interval_frames 0` is the default),
++        # so an unchanged command line behaves exactly as before.
++        #
++        # ENABLES-class: it changes what is RETAINED, never what is learned. Nothing below feeds
++        # an update; the stamped file is written beside the endpoint file, never over it, so the
++        # checkpoint of record is untouched.
++        _cross = False
++        if _save_every > 0:
++            _frames_prev = j * args.num_processes * args.num_steps
++            _cross = (_frames_here // _save_every) > (_frames_prev // _save_every)
++        if (_is_last or _cross) and args.save_dir != "":
+             try:
+                 os.makedirs(args.save_dir)
+             except OSError:
+                 pass
+ 
+-            torch.save([
+-                actor_critic,
+-                getattr(envs, 'ob_rms', None)
+-            ], os.path.join(args.save_dir, "agent{}.pt".format(log_file))) 
++            _payload = [actor_critic, getattr(envs, 'ob_rms', None)]
++            if _is_last:
++                torch.save(_payload,
++                           os.path.join(args.save_dir, "agent{}.pt".format(log_file)))
++            if _cross:
++                torch.save(_payload, os.path.join(
++                    args.save_dir, "agent{}_{}.pt".format(log_file, _frames_here)))
+ 
+         # Save Logs
+         total_num_steps = (j + 1) * args.num_processes * args.num_steps
+@@ -225,12 +288,41 @@ def train(args):
              logger.logkv("train/median_episode_reward", np.median(episode_rewards))
  
              # Log eval stats (on the full distribution of levels) 
@@ -367,6 +545,34 @@ index d7318e7..9de50ec 100644
 +            # a zero here would be indistinguishable from a measured failure.
 +            logger.logkv("test/success_rate",
 +                         np.mean(eval_episode_successes) if eval_episode_successes else np.nan)
++
++            # [OURS] C28 family-tier diagnostics, read off the agent rather than threaded
++            # through update()'s return tuple -- see the note in algo/idaac.py. getattr keeps
++            # this safe for --algo ppo/daac, which do not set them.
++            if getattr(agent, "last_clip_fraction", None) is not None:
++                logger.logkv("train/clip_fraction", agent.last_clip_fraction)
++                logger.logkv("train/approx_kl_k3", agent.last_approx_kl_k3)
++
++            # [OURS] C61. The entropy coefficient is 0.01, tuned by the authors against Procgen's
++            # 15-way categorical whose entropy is bounded by ln 15; here it multiplies a 7-D
++            # Gaussian's, which is unbounded above and whose gradient with respect to each log_std
++            # is a constant. `idaac` normalises advantages (algo/idaac.py:61), so its opposing
++            # force is of order 1 and it is NOT the worst-exposed of the four -- but its log_std is
++            # a plain AddBias(zeros) with no clamp, where ppg clamps to [-5, 2]. Logged so a drift
++            # is visible rather than inferred afterwards; `boundary_fraction` is the mass outside
++            # the action box, 0.317 at sigma=1 and 0.617 at sigma=2.
++            _logstd = getattr(getattr(actor_critic, "dist", None), "logstd", None)
++            if _logstd is not None and hasattr(_logstd, "_bias"):
++                _h = _policy_health(_logstd._bias.detach().cpu().numpy())
++                logger.logkv("train/sigma_mean", _h["sigma_mean"])
++                logger.logkv("train/mean_log_std", _h["mean_log_std"])
++                logger.logkv("train/boundary_fraction", _h["boundary_fraction"])
  
              logger.dumpkvs()
  
++    finalize_run(args, actor_critic, device,
++                 num_updates * args.num_processes * args.num_steps)
++
+ 
+ if __name__ == "__main__":
+     args = parser.parse_args()

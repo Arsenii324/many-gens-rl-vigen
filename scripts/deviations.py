@@ -124,7 +124,21 @@ def main() -> int:
                 ignored_seen.setdefault(rel, why)
                 continue
             git(["add", "-N", "--", rel], c)
-        stat = git(["diff", "--numstat", base], c).strip()
+        # [Claude 2026-09-04] A clone whose working tree is slimmed reports its ABSENCES as
+        # deletions, which is authorship it never had. Rather than refusing to count such a clone
+        # at all -- which left four of six uncountable and the deviation record unregenerable --
+        # exclude deleted paths from the diff and SAY SO. Verified safe by inspection: every
+        # absent path is a non-source artifact (dmc_gb's `src/env/data/*.pt` and video assets,
+        # ppg's upstream `results/*/progress-*.csv`, ibac_sni's one stray `.gitignore`, since
+        # restored), so no authored change hides behind the filter.
+        #
+        # The one thing this cannot see is a deletion WE made. That is acceptable because this
+        # project's clone edits are additive by policy -- but it is a real limit, so the label
+        # below says PARTIAL rather than pretending the number is the same kind of fact.
+        missing = sum(1 for line in git(["status", "--porcelain"], c).splitlines()
+                      if line.startswith(" D"))
+        diff_args = ["diff"] + (["--diff-filter=d"] if missing else [])
+        stat = git(diff_args + ["--numstat", base], c).strip()
         # The PRISTINE subject names the ext/ commit it was taken from. That name is a CLAIM,
         # and it was wrong once already (ibac_sni was labelled 1678e4a -- the SHA of a
         # separately vendored base -- while ext/IBAC-SNI is at 6b3a58b). So re-derive it here
@@ -147,7 +161,7 @@ def main() -> int:
         # how much behaviour moved, while `code+` understates how much a reader has to read.
         # Deletions are not split -- a deleted comment is as gone as a deleted statement.
         code_ins = 0
-        for line in git(["diff", base], c).splitlines():
+        for line in git(diff_args + [base], c).splitlines():
             if line.startswith("+") and not line.startswith("+++"):
                 body = line[1:].strip()
                 if body and not body.startswith("#"):
@@ -158,24 +172,20 @@ def main() -> int:
         # `git diff` against PRISTINE reports those absences as changes, so ppg reads 456 files and
         # 684,101 lines where the whole tree reads 8 and 107. That is deletions, not authorship,
         # and a total containing it is worse than no total at all.
-        missing = sum(1 for line in git(["status", "--porcelain"], c).splitlines()
-                      if line.startswith(" D"))
         if missing:
             incomplete.append((c.name, missing))
-            print(f"{c.name:<16}{'--':>6}{'--':>7}{'--':>7}{'--':>7}   "
-                  f"INCOMPLETE: {missing} tracked files absent from this working tree")
-            continue
+            subj = f"PARTIAL ({missing} absent, deletions excluded) {subj}"[:60]
         print(f"{c.name:<16}{files:>6}{ins:>7}{dels:>7}{code_ins:>7}   {subj}")
         total_ins += ins; total_del += dels; total_files += files; total_code += code_ins
         if full and stat:
-            print(git(["diff", base], c))
+            print(git(diff_args + [base], c))
         if export:
             # The clones are ~200MB each and carry their own .git; they are NOT tracked in the
             # main repo. The PATCH is, so the change set is version-controlled and the clone is
             # reproducible from ext/ + this file.
             out = ROOT / "runnable" / "_patches"
             out.mkdir(parents=True, exist_ok=True)
-            (out / f"{c.name}.patch").write_text(git(["diff", base], c))
+            (out / f"{c.name}.patch").write_text(git(diff_args + [base], c))
     print("-" * 78)
     if incomplete:
         names = ", ".join(f"{n} (-{k})" for n, k in incomplete)

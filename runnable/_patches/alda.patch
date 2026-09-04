@@ -1,9 +1,88 @@
+diff --git a/dmcontrol_generalization_benchmark/src/utils.py b/dmcontrol_generalization_benchmark/src/utils.py
+index 3ab411e..10be87d 100644
+--- a/dmcontrol_generalization_benchmark/src/utils.py
++++ b/dmcontrol_generalization_benchmark/src/utils.py
+@@ -44,10 +44,26 @@ def set_seed_everywhere(seed):
+     random.seed(seed)
+ 
+ 
++# [Claude 2026-09-02 04:55 MSK: `git describe` is provenance, not a precondition for training.
++# Upstream lets a CalledProcessError propagate, so this function is fatal wherever the source is
++# not a git checkout -- which is every DataSphere job, because the payload arrives as a tarball.
++# Reproduced 2026-09-02 on a local rad run: exit status 128 here, after both environments were
++# built and before the first step. The run's real provenance is the payload SHA-256, which the
++# native run manifest records; this only stops a missing checkout from being fatal.
++# PLATFORM-class by setup/apply_patches.py's taxonomy: nothing measured changes.]
++def _describe_checkout():
++    try:
++        return subprocess.check_output(
++            ["git", "describe", "--always"], stderr=subprocess.DEVNULL
++        ).strip().decode()
++    except (OSError, subprocess.SubprocessError):
++        return 'unavailable-not-a-git-checkout'
++
++
+ def write_info(args, fp):
+     data = {
+         'timestamp': str(datetime.now()),
+-        'git': subprocess.check_output(["git", "describe", "--always"]).strip().decode(),
++        'git': _describe_checkout(),
+         'args': vars(args)
+     }
+     with open(fp, 'w') as f:
+diff --git a/scripts/train.py b/scripts/train.py
+index e1e658d..ee35580 100644
+--- a/scripts/train.py
++++ b/scripts/train.py
+@@ -92,6 +92,16 @@ def _setup_wandb(args: Dict[str, Any], spec: Dict[str, Any]) -> None:
+     )
+ 
+ 
++# [Codex 2026-09-01 21:45 MSK: make every finite ALDA run fail closed unless its existing three-regime evaluator and checkpoint writer reach the exact terminal step]
++def finalize_trainer(trainer) -> None:
++    final_step = int(trainer.env_steps)
++    trainer.evaluate(final_step)
++    trainer.evaluate(final_step, distracting_env=True)
++    trainer.evaluate(final_step, color_env=True)
++    trainer.save_checkpoint()
++    print(f'NATIVE_FINAL_EVALUATION_COMPLETED frame={final_step}', flush=True)
++
++
+ def main(cl_args: Optional[Sequence[str]] = None) -> None:
+     args = parse_command_line(cl_args)
+ 
+@@ -117,13 +127,25 @@ def main(cl_args: Optional[Sequence[str]] = None) -> None:
+     with open(log_dir / 'experiment_spec_final.yaml', 'w', encoding='utf-8') as w:
+         yaml.safe_dump(spec, w)
+ 
++    # [Claude 2026-09-03] STAGE MARKERS. Remotely this script has twice run for 29 seconds and
++    # exited 0 having produced nothing after its options dump -- no evaluation, no training line,
++    # no traceback. Locally the identical path completes: trains, finalises, writes a checkpoint.
++    # Something on the container ends it between here and the first logger call inside train(),
++    # and a bare resubmit cannot say where. These print to stdout with flush, so they survive
++    # whatever happens to the logger's handlers.
++    print('NATIVE_ALDA_STAGE build:begin', flush=True)
+     trainer.build(spec)
++    print('NATIVE_ALDA_STAGE build:done', flush=True)
+ 
+     if args['load_from_checkpoint']:
+         logger.info(f"Loading checkpoint from {args['load_from_checkpoint']}")
+         trainer.load_checkpoint(args['load_from_checkpoint'])
+ 
++    print('NATIVE_ALDA_STAGE train:begin steps=%s' % spec['trainer']['config']['n_train_steps'], flush=True)
+     trainer.train()
++    print('NATIVE_ALDA_STAGE train:done env_steps=%d' % int(trainer.env_steps), flush=True)
++    finalize_trainer(trainer)
++    print('NATIVE_ALDA_STAGE finalize:done', flush=True)
+ 
+     logger.info('All done')
+ 
 diff --git a/specs/train_alda_robosuite_door.yaml b/specs/train_alda_robosuite_door.yaml
 new file mode 100644
-index 0000000..83a2140
+index 0000000..182ea9c
 --- /dev/null
 +++ b/specs/train_alda_robosuite_door.yaml
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,25 @@
 +# RL-ViGen robosuite Door. A new spec is this repo's OWN configuration mechanism -- it ships one
 +# spec per task -- so this adds a file rather than modifying one. `domain_name: robosuite` selects
 +# the branch added to alda_trainer.initialize_env_dmc.
@@ -22,11 +101,15 @@ index 0000000..83a2140
 +      domain_name: robosuite
 +      task_name: Door
 +      frame_stack: 3
++      # DEAD KNOB (C71 #2): never read on the robosuite path. `trainers/alda_trainer.py`'s
++      # `domain_name == 'robosuite'` branch returns before the `dmc2gym.make(...,
++      # frame_skip=env_config['action_repeat'])` that is its only consumer. Effective value is 1
++      # because nothing repeats, not because of this line.
 +      action_repeat: 1
 +      episode_length: 500
 +      scene_id: 0
 diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
-index 20801e2..ed8d6b1 100644
+index 20801e2..5a419f0 100644
 --- a/trainers/alda_trainer.py
 +++ b/trainers/alda_trainer.py
 @@ -3,6 +3,7 @@ import os
@@ -101,7 +184,38 @@ index 20801e2..ed8d6b1 100644
              if distracting_env:
                  self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
              elif color_env:
-@@ -675,3 +714,19 @@ class ALDA(TrainerBase):
+@@ -621,6 +660,30 @@ class ALDA(TrainerBase):
+             episode_step += 1
+             self.env_steps += 1
+ 
++        # [Claude 2026-09-02] TERMINAL SAVE AND EVALUATION, after the unchanged loop.
++        #
++        # ALDA checkpoints at `step % checkpoint_n_steps == 0` with checkpoint_n_steps = 50_000 and
++        # evaluates at eval_n_steps = 10_000, both guarded by `step > start_step`. Any run shorter
++        # than those cadences therefore finishes having saved nothing and evaluated nothing: job
++        # bt15evs9066in8etvlt4 trained 2,560 frames to completion, exited 0, and returned a cell
++        # containing only a log -- retain() then failed it for an absent checkpoint, correctly and
++        # unhelpfully. The same shape as dmc_gb's (fixed earlier with finalize_run) and ppg's.
++        #
++        # This takes no environment step, runs no update and touches no seed. It re-uses the
++        # trainer's own save_checkpoint() and evaluate(), so the artifact is byte-identical in
++        # form to one the cadence would have written -- `retain` looks for
++        # checkpoints/sac_*_step_{endpoint}.pt and env_steps is the endpoint here.
++        #
++        # The evaluations are skipped when the loop already ran them at this exact step, so a run
++        # whose length divides the cadence is unchanged.
++        if self.env_steps % self.eval_n_steps != 0:
++            logger.info(f'Terminal evaluation at step {self.env_steps}')
++            self.evaluate(self.env_steps)
++            self.evaluate(self.env_steps, distracting_env=True)
++            self.evaluate(self.env_steps, color_env=True)
++        logger.info(f'Terminal checkpoint at step {self.env_steps}')
++        self.save_checkpoint()
++
+     def save_checkpoint(self):
+         filepath = self.cp_dir.joinpath(f'sac_{self.env_name}_step_{self.env_steps}.pt')
+         logger.info(f'Saving checkpoint to {filepath}')
+@@ -675,3 +738,19 @@ class ALDA(TrainerBase):
  
          # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
          # self.buffer.load(buffer_fp)

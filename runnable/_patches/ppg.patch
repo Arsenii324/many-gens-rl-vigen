@@ -43,10 +43,22 @@ index 41c447f..b368221 100644
          raise ValueError(f"Expected ScalarType, got {type(ac_space)}")
  
 diff --git a/phasic_policy_gradient/envs.py b/phasic_policy_gradient/envs.py
-index 0292a29..f6c9408 100644
+index 0292a29..5107737 100644
 --- a/phasic_policy_gradient/envs.py
 +++ b/phasic_policy_gradient/envs.py
-@@ -14,7 +14,41 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
+@@ -1,6 +1,10 @@
+ import numpy as np
+ import gym3
+-from procgen import ProcgenGym3Env
++# [Gemini 2026-08-31] ProcgenGym3Env is optional for Robosuite continuous control
++try:
++    from procgen import ProcgenGym3Env
++except ImportError:
++    ProcgenGym3Env = None
+ 
+ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
+     if rendering:
+@@ -14,7 +18,41 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
          env = gym3.ViewerWrapper(env, info_key="rgb")
      return env
  
@@ -140,6 +152,73 @@ index 69e951c..3566caf 100644
          pd = self.make_distr(pivec)
  
          aux = {}
+diff --git a/phasic_policy_gradient/ppo.py b/phasic_policy_gradient/ppo.py
+index 807c681..3d5f482 100644
+--- a/phasic_policy_gradient/ppo.py
++++ b/phasic_policy_gradient/ppo.py
+@@ -15,6 +15,18 @@ from .reward_normalizer import RewardNormalizer
+ import math
+ from . import logger
+ 
++# [OURS] C61/C28 policy-health diagnostics. `scripts/metrics.py` owns the definitions so the four
++# continuous PPO-family baselines report the SAME quantity rather than four near-misses of it;
++# `idaac` and `ibac_sni` already call it. Loaded by path because this clone runs with its own
++# repository root on sys.path and `scripts` is not importable from inside it.
++import importlib.util as _ilu
++import pathlib as _pl
++_spec = _ilu.spec_from_file_location(
++    "_vigen_metrics", _pl.Path(__file__).resolve().parents[2].parent / "scripts" / "metrics.py")
++_m = _ilu.module_from_spec(_spec)
++_spec.loader.exec_module(_m)
++_policy_health = _m.gaussian_policy_health
++
+ INPUT_KEYS = {"ob", "ac", "first", "logp", "vtarg", "adv", "state_in"}
+ 
+ def compute_gae(
+@@ -57,6 +69,30 @@ def compute_advantage(model, seg, γ, λ, comm=None):
+     vpredfinal = model.v(finalob, finalfirst, seg["finalstate"])
+     reward = seg["reward"]
+     logger.logkv("Misc/FrameRewMean", reward.mean())
++
++    # [OURS] C61. Once per iteration, beside the reward summary that is already here: the entropy
++    # coefficient multiplies a 7-D Gaussian's entropy, which is unbounded above, and nothing in a
++    # return curve shows a policy dissolving into saturated noise until it already has.
++    #
++    # **PPG is the one of the four that CLAMPS.** `distr_builder.py:31` applies
++    # `.clamp(-5.0, 2.0)` to the log-stdev before `.exp()`, so the parameter and the distribution
++    # the env actually sees are different objects once the clamp binds. Both are logged, and they
++    # are deliberately NOT the same key:
++    #   * `train/*` are computed on the CLAMPED values -- the policy that acted, and the only one
++    #     of the two comparable in kind to `idaac`'s and `ibac_sni`'s, which have no clamp.
++    #   * `train/log_std_raw_mean` and `train/log_std_clamped_fraction` describe the PARAMETER.
++    # A binding clamp is the failure C61 is about, silently: the entropy term keeps pushing
++    # log_std up, the clamp keeps cancelling it, the gradient is spent and no logged number moves.
++    # `clamped_fraction` is that event, made observable rather than inferred afterwards.
++    _logstd = getattr(model, "pi_logstd", None)
++    if _logstd is not None:
++        _raw = _logstd.detach().cpu().numpy().ravel()
++        _clamped = _raw.clip(-5.0, 2.0)
++        for _k, _v in _policy_health(_clamped).items():
++            logger.logkv(f"train/{_k}", _v)
++        logger.logkv("train/log_std_raw_mean", float(_raw.mean()))
++        logger.logkv("train/log_std_clamped_fraction",
++                     float((_raw != _clamped).mean()))
+     adv, vtarg = compute_gae(
+         γ=γ,
+         λ=λ,
+@@ -109,6 +145,12 @@ def compute_losses(
+     with th.no_grad():
+         diags["clipfrac"] = (th.abs(ratio - 1) > clip_param).float().mean()
+         diags["approxkl"] = 0.5 * (logratio ** 2).mean()
++        # [OURS] C28. The line above is the authors' own k2 estimator and is left exactly as it
++        # is -- it is their number under their name. k3 = (r - 1) - log r is added BESIDE it so
++        # the cross-baseline column is one estimator everywhere, matching
++        # scripts/metrics.py::approx_kl's default. Unbiased and non-negative, which k2 is not.
++        # Logged automatically as Opt/approx_kl_k3 by the logkv loop below.
++        diags["approx_kl_k3"] = ((ratio - 1) - logratio).mean()
+ 
+     return losses, diags
+ 
 diff --git a/phasic_policy_gradient/torch_util.py b/phasic_policy_gradient/torch_util.py
 index 8ad07ab..6931011 100644
 --- a/phasic_policy_gradient/torch_util.py
@@ -159,6 +238,128 @@ index 8ad07ab..6931011 100644
  
  @functools.lru_cache()
  def warn_no_gradient(model, task):
+diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
+index e32b3a1..170fb40 100644
+--- a/phasic_policy_gradient/train.py
++++ b/phasic_policy_gradient/train.py
+@@ -7,7 +7,18 @@ from . import logger
+ from .envs import get_venv
+ 
+ def train_fn(env_name="coinrun",
++    # [OURS 2026-09-04] checkpoint retention; defaults reproduce upstream exactly.
++    save_mode='last',
++    ic_per_save=100_000,
+     distribution_mode="hard",
++    # [Claude 2026-09-02 07:10 MSK: `seed` and `log_dir` were unreachable from the command line.
++    # `get_robosuite_venv` already takes a seed and `train_fn` never passed one, so every PPG run
++    # this project could launch was seed 0 with an unseeded network -- a three-seed comparison was
++    # not expressible. `log_dir` was fixed at /tmp/ppg, so two cells in one job would have written
++    # their curves and their saved model over each other. Neither changes what is computed for a
++    # given seed; both are the difference between a runnable schedule and one that silently
++    # collides. PLATFORM-class.]
++    seed=0,
+     arch="dual",  # 'shared', 'detach', or 'dual'
+     # 'shared' = shared policy and value networks
+     # 'dual' = separate policy and value networks
+@@ -32,13 +43,22 @@ def train_fn(env_name="coinrun",
+     if comm is None:
+         comm = MPI.COMM_WORLD
+     tu.setup_dist(comm=comm)
++    # seed the same three sources every other baseline in this project seeds
++    import random as _random
++    import numpy as _np
++    import torch as _th
++    _random.seed(seed)
++    _np.random.seed(seed)
++    _th.manual_seed(seed)
++    if _th.cuda.is_available():
++        _th.cuda.manual_seed_all(seed)
+     tu.register_distributions_for_tree_util()
+ 
+     if log_dir is not None:
+         format_strs = ['csv', 'stdout'] if comm.Get_rank() == 0 else []
+         logger.configure(comm=comm, dir=log_dir, format_strs=format_strs)
+ 
+-    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode)
++    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode, seed=seed)
+ 
+     enc_fn = lambda obtype: ImpalaEncoder(
+         obtype.shape,
+@@ -66,7 +86,13 @@ def train_fn(env_name="coinrun",
+             n_epoch_pi=n_epoch_pi,
+             clip_param=clip_param,
+             kl_penalty=kl_penalty,
+-            log_save_opts={"save_mode": "last"}
++            # [OURS 2026-09-04] `save_mode` was hardcoded "last", which writes one `model.jd`
++            # and overwrites it, so ppg could only ever be evaluated at its endpoint. The
++            # repository already supports the alternative -- `log_save_helper.py:129` writes
++            # `model{save_idx:03d}.jd` under `save_mode="all"` -- so intermediate checkpoints
++            # need no new mechanism, only the freedom to ask for one. Both knobs default to
++            # exactly the previous behaviour, so an unchanged command line is unchanged.
++            log_save_opts={"save_mode": save_mode, "ic_per_save": ic_per_save}
+         ),
+         aux_lr=aux_lr,
+         aux_mbsize=aux_mbsize,
+@@ -76,6 +102,29 @@ def train_fn(env_name="coinrun",
+         comm=comm,
+     )
+ 
++    # [Claude 2026-09-02] TERMINAL SAVE. Without this the retained checkpoint is whatever
++    # LogSaveHelper last wrote, and that is not the trained model at any budget this project runs.
++    #
++    # The helper saves once in its own __init__ -- before a single gradient step -- whenever
++    # `ic_per_save > 0`, and `ic_per_save` DEFAULTS to 100_000 (log_save_helper.py:34, :50-51).
++    # So a 4,096-interact probe crosses no boundary and the only save on disk is the untrained
++    # one; that is exactly what the 2026-09-02 ppg cell produced, and it was caught by arithmetic
++    # rather than by a gate: entropy of a diagonal Gaussian depends only on sigma, the run logged
++    # Opt/entropy 9.936886, and log_std = 0 gives exactly 9.932570. See C60's correction.
++    #
++    # At 600k the helper's cadence does produce a trained model -- but at the last 100,000
++    # boundary, not at the declared endpoint, while every other baseline here is evaluated at its
++    # endpoint. Both failures are fixed by saving once more, at the end, under a name of ours.
++    #
++    # Written beside the helper's output, never over it: `model.jd` stays whatever the helper
++    # decided, so this adds an artifact and removes none.
++    if comm.Get_rank() == 0:
++        import os as _os
++        import torch as _th
++        _dest = _os.path.join(log_dir or ".", "model_terminal.jd")
++        _th.save(model, _dest)
++        logger.log(f"NATIVE_PPG_TERMINAL_SAVE {_dest} interacts={interacts_total}")
++
+ def main():
+     parser = argparse.ArgumentParser(description='Process PPG training arguments.')
+     parser.add_argument('--env_name', type=str, default='coinrun')
+@@ -87,6 +136,17 @@ def main():
+     parser.add_argument('--clip_param', type=float, default=0.2)
+     parser.add_argument('--kl_penalty', type=float, default=0.0)
+     parser.add_argument('--arch', type=str, default='dual') # 'shared', 'detach', or 'dual'
++    # [Gemini 2026-08-31] Expose interacts_total CLI argument for custom budget control
++    parser.add_argument('--interacts_total', type=int, default=100_000_000)
++    # [Claude 2026-09-02 07:10 MSK: see train_fn's note]
++    parser.add_argument('--seed', type=int, default=0)
++    parser.add_argument('--log_dir', type=str, default='/tmp/ppg')
++    # [OURS 2026-09-04] Checkpoint retention, defaulting to upstream's effective behaviour.
++    parser.add_argument('--save_mode', type=str, default='last',
++                        help="'last' overwrites one model.jd (upstream); 'all' writes "
++                             "model<NNN>.jd per save, which is what an offline curve needs")
++    parser.add_argument('--ic_per_save', type=int, default=100_000,
++                        help='interactions between saves')
+ 
+     args = parser.parse_args()
+ 
+@@ -100,6 +160,11 @@ def main():
+         n_aux_epochs=args.n_aux_epochs,
+         n_pi=args.n_pi,
+         arch=args.arch,
++        interacts_total=args.interacts_total,
++        seed=args.seed,
++        log_dir=args.log_dir,
++        save_mode=args.save_mode,
++        ic_per_save=args.ic_per_save,
+         comm=comm)
+ 
+ if __name__ == '__main__':
 diff --git a/phasic_policy_gradient/vec_monitor2.py b/phasic_policy_gradient/vec_monitor2.py
 index 7eab369..d60743f 100644
 --- a/phasic_policy_gradient/vec_monitor2.py
