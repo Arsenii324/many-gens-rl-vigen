@@ -51,10 +51,10 @@ before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +144/−2 |
 | `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +207/−6 |
 | `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 7 files, +330/−37 |
-| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 8 files, +273/−24 |
+| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 8 files, +331/−24 |
 | `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 5 files, +402/−66 |
 
-**Totals: 38 files, +1,449 / −144 (861 non-comment), recomputed 2026-09-04.** The rise over the previous figure (34 / +917 / 602) is mostly the intermediate-checkpoint work of that date across `ctrl`, `idaac`, `ibac_sni` and `ppg`, plus the C61/C28 diagnostics; it is also the first count that includes the four clones `deviations.py` used to refuse, whose absent files turned out to be non-source assets. `python scripts/deviations.py` regenerates
+**Totals: 38 files, +1,507 / −144 (891 non-comment), recomputed 2026-09-04.** The rise over the previous figure (34 / +917 / 602) is mostly the intermediate-checkpoint work of that date across `ctrl`, `idaac`, `ibac_sni` and `ppg`, plus the C61/C28 diagnostics; it is also the first count that includes the four clones `deviations.py` used to refuse, whose absent files turned out to be non-source assets. `python scripts/deviations.py` regenerates
 this; `--export` writes `runnable/_patches/<name>.patch`, which IS version-controlled even though
 the clones are not.
 
@@ -186,7 +186,7 @@ instance" means. **Different from Procgen, and it bears on IDAAC specifically:**
 draws a new level every episode, so one rollout spans many instances; here each env is one
 instance for the whole run and instance diversity per batch is capped at `num_processes`.
 
-### `ibac_sni` — 8 files, +273 / −24
+### `ibac_sni` — 8 files, +331 / −24
 
 Drives `torch_rl/`, the authors' **own PyTorch** implementation, not the TF `coinrun/` branch.
 `utils/get_obss_preprocessor` already had a generic `Box([H,W,3])` branch — written for RGB envs,
