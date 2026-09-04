@@ -194,6 +194,14 @@ consistent with §2's principle.
 > deviation nearer RESTORES than ENABLES. `idaac` and `ppg` have no mechanism, so periodic saving
 > there is authored behaviour and a genuine deviation.
 >
+> **A second measured fact about the during-train curve, while reading the same code**: the
+> RL-ViGen five split `num_eval_episodes` *across* the ten scenes — `per = num_eval_episodes //
+> len(scenes)` (`train.py:152`). At the shipped default of `num_eval_episodes: 10` that is **one
+> episode per scene**, and the per-scene number in `eval.csv` is a single episode of a stochastic
+> task. Our probes pass `EVAL_EPISODES=20`, giving two. Nothing is wrong with the code; the point
+> is that a during-train per-scene value is far noisier than its presence in a CSV suggests, and
+> the pooled ten-scene mean is the only part of it worth reading at these settings.
+>
 > **DEFAULT SET, awaiting approval: report the cross-baseline table at the ENDPOINT**, the one
 > frame all twelve supply; take the two free configuration wins so `dmc_gb` and `ibac_sni` gain a
 > curve at no fidelity cost; leave `idaac`/`ppg` terminal-only rather than author saving into two
