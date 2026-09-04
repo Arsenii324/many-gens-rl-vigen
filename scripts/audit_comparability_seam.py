@@ -549,7 +549,8 @@ VALUE_OF = {"effective action repeat": lambda v: v.split(" ", 1)[0],
             "success definition and who computes it": lambda v: v.split(" | ", 1)[0],
             "reported estimator": lambda v: v.split(" | ", 1)[0],
             "evaluation scene set": lambda v: v.split(" | ", 1)[0],
-            "replay capacity and eviction at 6e5": lambda v: v.split(" | ", 1)[0]}
+            "replay capacity and eviction at 6e5": lambda v: v.split(" | ", 1)[0],
+            "x-axis accounting": lambda v: v.split(" | ", 1)[0]}
 
 #: (title, kind, fn). KIND is the distinction this script's first version lacked -- see the module
 #: docstring. It is not cosmetic: a UNITS split has to be removed or converted before the numbers
@@ -661,6 +662,46 @@ def replay_capacity() -> tuple[dict, str]:
                  "alda_trainer.py:53; eviction judged against the 6e5 budget")
 
 
+def x_axis_accounting() -> tuple[dict, str]:
+    """What ONE unit on the frame axis means, per baseline.
+
+    [Claude 2026-09-04.] `PART2-METRIC-INVENTORY.md` devotes its section 2 to the x-axis and this
+    audit had no axis for it — found by diffing that document's decomposition against this list
+    rather than by noticing something, and raised in practice by the `ppg` defect of the same day,
+    where `read_ppg` read a column the repo does not write and every `ppg` record carried
+    `frame: null`.
+
+    Each family writes a different counter; the question is whether they are the same UNIT. They
+    are — every one counts **environment transitions**:
+
+      * the five: `global_frame = global_step * action_repeat` (`train.py:134-135`)
+      * `rad`/`soda`, `alda`: `step` / `env_steps`
+      * `idaac`: `(j+1) * num_processes * num_steps`, multiplied across parallel envs
+      * `ppg`: `total_interact_count += ic_per_step` (`log_save_helper.py:58`), 2048 quantum
+      * `ctrl`: `FLAGS.num_envs * step`, multiplied across parallel envs
+      * `ibac_sni`: `num_frames += logs["num_frames"]` from its collector
+
+    The vector-env four multiply by their env count rather than counting vector steps, so one unit
+    is one transition and not N of them. **The single fragility is the five**: theirs is the only
+    counter carrying an `action_repeat` factor, and it agrees with the rest exactly because that
+    factor is uniformly 1. At `action_repeat=2` their x-axis would count env frames while their
+    agent took half as many decisions, and every curve would shift 2x against the other seven.
+    """
+    counter = {
+        **{b: "env transitions | global_step * action_repeat (=1)" for b in
+           ("drqv2", "drq", "svea", "sgqn", "curl")},
+        "rad": "env transitions | step", "soda": "env transitions | step",
+        "alda": "env transitions | env_steps",
+        "idaac": "env transitions | num_processes * num_steps",
+        "ppg": "env transitions | total_interact_count, 2048 quantum",
+        "ctrl": "env transitions | num_envs * step",
+        "ibac_sni": "env transitions | collector num_frames",
+    }
+    return {b: counter.get(b, "unread") for b in BASELINES}, (
+        "DERIVED from each family's own counter and from the column each reader in "
+        "normalize_curves.py takes as `frame`")
+
+
 AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("success definition and who computes it", UNITS, success_source),
         ("episode horizon", UNITS, horizon),
@@ -670,6 +711,7 @@ AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("render resolution", CONDITIONS, image_size),
         ("crop policy -- what the policy SEES", CONDITIONS, crop_policy),
         ("replay capacity and eviction at 6e5", CONDITIONS, replay_capacity),
+        ("x-axis accounting", UNITS, x_axis_accounting),
         ("frame-stack depth", CONDITIONS, frame_stack),
         ("effective action repeat", CONDITIONS, action_repeat),
         ("induced action distribution", CONDITIONS, action_distribution),
@@ -708,17 +750,7 @@ NOT_COVERED: list[str] = [
     # list, which left the list empty and the audit still printing "0 underived" -- the exact
     # recorded-but-not-mechanised failure this file exists to prevent, committed here while
     # describing it. It is a string now, so it is counted and printed.
-    # [Claude 2026-09-04] Found by diffing PART2's bottom-up decomposition against this list rather
-    # than by noticing something: PART2 devotes section 2 to "the x-axis: what the number is plotted
-    # against", and this audit has no axis for it at all. Every other PART2 section maps to one or
-    # more axes here; that one maps to none.
-    "x-axis accounting -- what ONE unit on the frame axis means per baseline. Each reader takes a "
-    "different counter (rlvigen `frame`, idaac `train/total_num_steps`, ppg `Misc/InteractCount` in "
-    "a 2048 quantum, ctrl `num_envs * step`, ibac_sni `frames`), and whether they are the same unit "
-    "turns on action_repeat (audited uniform at 1) AND on whether a vector env's parallel steps are "
-    "counted once each -- which nothing here has checked. PART2 section 2 covers this in prose; no "
-    "mechanical axis does. Raised by the ppg frame-axis defect of 2026-09-04, where the reader had "
-    "been reading a column the repo does not write.",
+# [x-axis accounting was named here and is now DERIVED above -- 2026-09-04]
 
 
 ]
