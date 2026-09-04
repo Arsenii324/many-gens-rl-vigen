@@ -174,12 +174,22 @@ consistent with §2's principle.
 > twelve — from `families.json` and confirmed against four returned archives rather than the
 > descriptor alone — the per-family save cadence is:
 >
-> | family | save cadence | mechanism |
+> **Corrected 2026-09-04, second pass.** The first version of this table asked the wrong question —
+> *does the family have a `save_every`* — and got four families wrong. The question that decides
+> whether a curve exists is **whether each stamp gets its own filename or overwrites one path**:
+>
+> | family | stamps | mechanism |
 > |---|---|---|
-> | `rlvigen` | 50k stamps + endpoint | `save_every` 50000, `RLVIGEN_PRESERVE_SNAPSHOTS` filters |
-> | `dmc_gb` | 100k | live `--save_freq`, set coarsely |
-> | `alda` | `save_every` 50000 configured, but the checkpoint pattern names only `{endpoint}` |
-> | `ctrl`, `ibac_sni`, `idaac`, `ppg` | **endpoint only** | no `save_every` at all |
+> | `rlvigen` | **distinct** | saves at hardcoded 50k boundaries and overwrites; patch **P18** preserves copies, `RLVIGEN_PRESERVE_SNAPSHOTS` filters which |
+> | `dmc_gb` | **distinct** | `model/{frames}.pt`, one file per stamp. `--save_freq` is passed by `families.json`'s `options`, not the launcher, and has always been live — now 50000, was 100000 |
+> | `alda` | **distinct** | `save_checkpoint` writes `sac_{env}_step_{env_steps}.pt` (`alda_trainer.py:688`), so its `save_every: 50000` yields a real curve |
+> | `ibac_sni` | one path | `--save-interval 1` is passed **literally** in `options`, so it saves every update — into `utils/save.py`'s fixed `model.pt`, overwritten each time. Frequent saving, one surviving file |
+> | `idaac` | one path | guarded by `if j == num_updates - 1` (`train.py:245`) — terminal by upstream design, not by configuration |
+> | `ppg`, `ctrl` | one path | terminal save, added by us; upstream saved nothing usable |
+>
+> So **eight of twelve can produce a checkpoint curve** and four cannot, which is a better position
+> than the first pass reported. The conclusion below is unchanged, because the *intersection* across
+> all twelve is still the endpoint alone.
 >
 > **So the intersection of checkpoint frames across the twelve is the endpoint alone.** The
 > `drqv2` 100k cell makes it concrete: **5 eval points, 2 checkpoints**, so three of its
