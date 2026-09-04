@@ -1,0 +1,201 @@
+diff --git a/phasic_policy_gradient/distr_builder.py b/phasic_policy_gradient/distr_builder.py
+index 41c447f..b368221 100644
+--- a/phasic_policy_gradient/distr_builder.py
++++ b/phasic_policy_gradient/distr_builder.py
+@@ -10,8 +10,26 @@ def _make_categorical(x, ncat, shape):
+ 
+ 
+ def _make_normal(x, shape):
+-    warnings.warn("Using stdev=1")
+-    return dis.Normal(loc=x.reshape(x.shape[:-1] + shape), scale=1.0)
++    """CONTINUOUS HEAD -- authored here, not descended from anything.
++
++    Upstream this function was UNREACHABLE: `tensor_distr_builder` raised on every non-Discrete
++    eltype, so nothing ever called it, and its body hardcoded `scale=1.0` under the authors' own
++    `warnings.warn("Using stdev=1")`. RL-ViGen's robosuite action space is Box(-1,1,(7,)), so a
++    real Gaussian head has to exist. It is authored; there is nothing in this repo to verify it
++    against.
++
++    `x` arrives as [loc | log_stdev] concatenated on the last axis. The log_stdev half is a
++    state-INDEPENDENT nn.Parameter held by PhasicValueModel and broadcast there -- that is what
++    PPO does for continuous control. Emitting it from the policy head instead would have needed
++    zero lines in ppg.py, and was rejected: a state-dependent stdev is a different algorithm,
++    not a cheaper spelling of this one.
++    """
++    loc, logstd = th.chunk(x, 2, dim=-1)
++    return dis.Normal(
++        loc=loc.reshape(loc.shape[:-1] + shape),
++        # Clamp only guards exp() overflow; the range is wide enough never to bind in practice.
++        scale=logstd.reshape(logstd.shape[:-1] + shape).clamp(-5.0, 2.0).exp(),
++    )
+ 
+ 
+ def _make_bernoulli(x, shape):  # pylint: disable=unused-argument
+@@ -31,6 +49,10 @@ def tensor_distr_builder(ac_space):
+             eltype.n * ac_space.size,
+             partial(_make_categorical, shape=ac_space.shape, ncat=eltype.n),
+         )
++    if isinstance(eltype, Real):
++        # Width is ac_space.size, NOT 2*size: PhasicValueModel concatenates the state-independent
++        # log_stdev onto this head's output before calling _make_normal. See _make_normal.
++        return (ac_space.size, partial(_make_normal, shape=ac_space.shape))
+     else:
+         raise ValueError(f"Expected ScalarType, got {type(ac_space)}")
+ 
+diff --git a/phasic_policy_gradient/envs.py b/phasic_policy_gradient/envs.py
+index 0292a29..f6c9408 100644
+--- a/phasic_policy_gradient/envs.py
++++ b/phasic_policy_gradient/envs.py
+@@ -14,7 +14,41 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
+         env = gym3.ViewerWrapper(env, info_key="rgb")
+     return env
+ 
++def get_robosuite_venv(*, env_id, num_envs, seed=0, scene_id=0, mode="train", **_ignored):
++    """RL-ViGen robosuite as a gym3 venv. `_ignored` swallows procgen-only kwargs."""
++    import os, sys, gym
++    _rlv = os.environ["RLVIGEN_ROOT"]
++    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
++        if _p not in sys.path:
++            sys.path.insert(0, _p)
++    from robosuitevgb.utils import make_env as _robo_make_env
++
++    class _HWCUint8(gym.ObservationWrapper):
++        """RL-ViGen yields {'rgb': (C,H,W) uint8} under a float64 Box it never fills.
++        ImpalaCNN takes (H,W,C) and gym3 typechecks against the space, so fix both."""
++        def __init__(self, env):
++            super().__init__(env)
++            c, h, w = env.observation_space["rgb"].shape
++            self.observation_space = gym.spaces.Box(0, 255, (h, w, c), dtype=np.uint8)
++
++        def observation(self, obs):
++            return np.asarray(obs["rgb"], dtype=np.uint8).transpose(1, 2, 0)
++
++        def seed(self, seed=None):
++            "gym3.FromGymEnv calls this unconditionally; RL-ViGen's `seed` is an int attribute,"
++            "not a method, and the env is already seeded by make_env(seed=...) above."
++            return []
++
++    return gym3.ConcatEnv([
++        gym3.FromGymEnv(_HWCUint8(_robo_make_env(
++            task_name=env_id, seed=seed + i, scene_id=scene_id, mode=mode)))
++        for i in range(num_envs)
++    ])
++
+ def get_venv(num_envs, env_name, **env_kwargs):
++    if env_name.startswith("robosuite:"):
++        return get_robosuite_venv(
++            env_id=env_name.split(":", 1)[1], num_envs=num_envs, **env_kwargs)
+     venv = get_procgen_venv(num_envs=num_envs, env_id=env_name, **env_kwargs)
+ 
+     return venv
+\ No newline at end of file
+diff --git a/phasic_policy_gradient/log_save_helper.py b/phasic_policy_gradient/log_save_helper.py
+index af09fe3..bd2028e 100644
+--- a/phasic_policy_gradient/log_save_helper.py
++++ b/phasic_policy_gradient/log_save_helper.py
+@@ -69,6 +69,11 @@ class LogSaveHelper:
+         self.roller_stats = {
+             "EpRewMean": self._nanmean([] if roller is None else roller.recent_eprets),
+             "EpLenMean": self._nanmean([] if roller is None else roller.recent_eplens),
++            # SUCCESS RATE -- see vec_monitor2.py. PPG has no eval env at all, so this is the
++            # TRAIN distribution's success rate, not a generalisation number.
++            "EpSuccessMean": self._nanmean(
++                [] if roller is None else
++                [float(i.get("episode_success", float("nan"))) for i in roller.recent_epinfos]),
+         }
+         if roller is not None and self.log_new_eps:
+             assert roller.has_non_rolling_eps, "roller needs keep_non_rolling"
+diff --git a/phasic_policy_gradient/ppg.py b/phasic_policy_gradient/ppg.py
+index 69e951c..3566caf 100644
+--- a/phasic_policy_gradient/ppg.py
++++ b/phasic_policy_gradient/ppg.py
+@@ -6,6 +6,7 @@ import itertools
+ from . import torch_util as tu
+ from torch import distributions as td
+ from .distr_builder import distr_builder
++from gym3.types import Real
+ from mpi4py import MPI
+ from .tree_util import tree_map, tree_reduce
+ import operator
+@@ -106,6 +107,13 @@ class PhasicValueModel(PhasicModel):
+         lastsize = self.get_encoder(self.pi_key).codetype.size
+         self.pi_head = tu.NormedLinear(lastsize, pi_outsize, scale=0.1)
+         self.aux_vf_head = tu.NormedLinear(lastsize, 1, scale=0.1)
++        # CONTINUOUS HEAD (authored; see distr_builder._make_normal). PPO holds the Gaussian's
++        # log-stdev as a state-independent parameter rather than emitting it from the policy
++        # head. Discrete action spaces are untouched -- this stays None and forward() skips it.
++        self.pi_logstd = (
++            th.nn.Parameter(th.zeros(pi_outsize))
++            if isinstance(actype.eltype, Real) else None
++        )
+ 
+     def compute_aux_loss(self, aux, seg):
+         vtarg = seg["vtarg"]
+@@ -142,6 +150,8 @@ class PhasicValueModel(PhasicModel):
+ 
+         pi_x = x_out[self.pi_key]
+         pivec = self.pi_head(pi_x)
++        if self.pi_logstd is not None:
++            pivec = th.cat([pivec, self.pi_logstd.expand_as(pivec)], dim=-1)
+         pd = self.make_distr(pivec)
+ 
+         aux = {}
+diff --git a/phasic_policy_gradient/torch_util.py b/phasic_policy_gradient/torch_util.py
+index 8ad07ab..6931011 100644
+--- a/phasic_policy_gradient/torch_util.py
++++ b/phasic_policy_gradient/torch_util.py
+@@ -507,6 +507,14 @@ def register_distributions_for_tree_util():
+         lambda d: ((d.logits,), None),
+         lambda _keys, xs: dis.Bernoulli(logits=xs[0]),
+     )
++    # CONTINUOUS HEAD (authored). aux_train stores `oldpd` inside the segment dict and slices it
++    # per minibatch, so the Normal returned by _make_normal must be a pytree too, or
++    # tu.tree_slice raises on it. Two leaves, unlike the one-leaf Categorical/Bernoulli above.
++    tree_util.register_pytree_node(
++        dis.Normal,
++        lambda d: ((d.loc, d.scale), None),
++        lambda _keys, xs: dis.Normal(loc=xs[0], scale=xs[1]),
++    )
+ 
+ @functools.lru_cache()
+ def warn_no_gradient(model, task):
+diff --git a/phasic_policy_gradient/vec_monitor2.py b/phasic_policy_gradient/vec_monitor2.py
+index 7eab369..d60743f 100644
+--- a/phasic_policy_gradient/vec_monitor2.py
++++ b/phasic_policy_gradient/vec_monitor2.py
+@@ -65,6 +65,13 @@ class VecMonitor2(PostActProcessing):
+             self.non_rolling_buf = None
+         self.eprets = np.zeros(self.num, "f")
+         self.eplens = np.zeros(self.num, "i")
++        # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). RL-ViGen patch P10 puts robosuite's
++        # own _check_success in `info`; Door's return is dense and scale-arbitrary and this is
++        # the only unit-free quantity. Convention shared with every baseline here: the episode
++        # counts as a success if the flag held at ANY step. Accumulated here rather than read off
++        # the recorded Episode's info, because that info is sampled when `first` is set -- i.e.
++        # AFTER the reset -- and so describes the next episode, not the one being recorded.
++        self.epsucc = np.zeros(self.num, bool)
+ 
+     def process(self):
+         lastrews, _obs, firsts = self.env.observe()
+@@ -72,9 +79,12 @@ class VecMonitor2(PostActProcessing):
+         self.eprets += lastrews
+         self.eplens += 1
+         for i in range(self.num):
++            self.epsucc[i] = self.epsucc[i] or bool((infos[i] or {}).get("success", False))
+             if firsts[i]:
+                 timefromstart = round(time.time() - self.tstart, 6)
+-                ep = Episode(self.eprets[i], self.eplens[i], timefromstart, infos[i])
++                epinfo = dict(infos[i] or {})
++                epinfo["episode_success"] = bool(self.epsucc[i])
++                ep = Episode(self.eprets[i], self.eplens[i], timefromstart, epinfo)
+                 if self.ep_buf is not None:
+                     self.ep_buf.append(ep)
+                 if self.per_env_buf is not None:
+@@ -84,6 +94,7 @@ class VecMonitor2(PostActProcessing):
+                 self.epcount += 1
+                 self.eprets[i] = 0
+                 self.eplens[i] = 0
++                self.epsucc[i] = False
+ 
+     def clear_episode_bufs(self):
+         if self.ep_buf:

@@ -1,0 +1,25 @@
+# [Claude 2026-09-02 05:15 MSK: the packing measurement. Serial production is roughly 48,000 RUB for
+# twelve baselines at three seeds and 500k frames -- about 24x the working target -- so the only
+# lever that changes the order of magnitude is how many runs share one instance. This measures it
+# directly: four DrQ-v2 cells at four seeds, started together, against the known serial 20.05
+# completed frames/s of the same command on the same tier (bt1rqm8tna3ttrmf1uee).
+#
+# Chosen because the envelope is known and comfortable, so a failure means contention and not an
+# overcommit: one cell measured 1.30 cores of 8, 3.42 GB RSS of 32, and 1.99 GiB VRAM of 23.
+# DrQ-v2 needs no private asset, so this job carries none.]
+name: vigen-native-drqv2-packing-v23
+desc: Four concurrent DrQ-v2 Door 10k cells on one gt4i.1; contention and packing-efficiency measurement.
+cmd: >-
+  timeout --foreground 5400s env
+  CELLS=drqv2:1,drqv2:2,drqv2:3,drqv2:4 NATIVE_CONCURRENT=1
+  FRAMES=10000 TASK=Door CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v23.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

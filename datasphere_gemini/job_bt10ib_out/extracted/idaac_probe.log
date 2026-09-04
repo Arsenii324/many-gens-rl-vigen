@@ -1,0 +1,213 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+
+Arguments:  Namespace(lr=0.0005, eps=1e-05, alpha=0.99, gamma=0.999, gae_lambda=0.95, entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, seed=1, num_processes=1, num_steps=256, ppo_epoch=1, num_mini_batch=8, clip_param=0.2, log_interval=10, num_env_steps=5000, env_name='robosuite:Door', algo='idaac', log_dir='logs', save_dir='models', no_cuda=False, hidden_size=256, use_best_hps=False, value_epoch=9, value_freq=1, adv_loss_coef=0.25, use_nonlinear_clf=False, order_loss_coef=0.001, clf_hidden_size=4, distribution_mode='easy', num_levels=200, start_level=0, cuda=True)
+Logging to logs
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/__init__.py:7: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead
+  ROBOSUITE_DEFAULT_LOGGER.warn("No private macro file found!")
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+
+Log File:  -robosuite:Door-idaac-s1
+Now the mode is train
+
+ Actor-Critic Network:  IDAACnet(
+  (base): PolicyResNetBase(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=263, out_features=1, bias=True)
+  )
+  (value_net): ValueResNet(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=256, out_features=1, bias=True)
+  )
+  (dist): DiagGaussian(
+    (fc_mean): Linear(in_features=256, out_features=7, bias=True)
+    (logstd): AddBias()
+  )
+)
+
+ Order Classifier:  LinearOrderClassifier(
+  (main): Sequential(
+    (0): Flatten()
+    (1): Linear(in_features=512, out_features=2, bias=True)
+    (2): Softmax(dim=1)
+  )
+)
+
+Update 10, step 2816:
+Last 5 training episodes, mean/median reward 2.89/2.55
+Now the mode is eval-easy
+Last 10 test episodes: mean/median reward 7.4/5.4 | success rate 0.000
+
+------------------------------------------
+| test/mean_episode_reward    | 7.36     |
+| test/median_episode_reward  | 5.37     |
+| test/success_rate           | 0        |
+| train/approx_kl_k3          | 0.00868  |
+| train/clip_fraction         | 0.125    |
+| train/mean_episode_reward   | 2.89     |
+| train/median_episode_reward | 2.55     |
+| train/total_num_steps       | 2.82e+03 |
+------------------------------------------
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5c43a54af0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5ba91d3e40>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5c43a54940>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5ba91d3e40>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5c43a54af0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5c4885a040>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5c43a54940>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5c4885a040>,
+	),
+	result = 0
+)

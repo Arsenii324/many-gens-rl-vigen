@@ -1,0 +1,10 @@
+In 'hydra/config': Could not find 'hydra/launcher/submitit_local'
+
+Available options in 'hydra/launcher':
+	basic
+Config search path:
+	provider=hydra, path=pkg://hydra.conf
+	provider=main, path=file:///tmp/w/RL-ViGen-upstream/cfgs
+	provider=schema, path=structured://
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

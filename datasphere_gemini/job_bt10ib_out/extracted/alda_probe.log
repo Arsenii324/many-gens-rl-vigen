@@ -1,0 +1,73 @@
+2026-08-31 12:50:54,253 [INFO] __main__: scripts/train.py --experiment_spec_file specs/train_alda_robosuite_door.yaml --results_dir results --use_wandb False --spec_overrides --spec.trainer.config.n_train_steps=5000 --spec.trainer.config.seed=1
+[37m[1m[2026-08-31 12:50:54,253] [INFO] __main__: scripts/train.py --experiment_spec_file specs/train_alda_robosuite_door.yaml --results_dir results --use_wandb False --spec_overrides --spec.trainer.config.n_train_steps=5000 --spec.trainer.config.seed=1[0m
+2026-08-31 12:50:54,254 [INFO] utils: ---- Options ----
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: ---- Options ----[0m
+2026-08-31 12:50:54,254 [INFO] utils: name   : alda_robosuite_door
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: name   : alda_robosuite_door[0m
+2026-08-31 12:50:54,254 [INFO] utils: trainer:
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: trainer:[0m
+2026-08-31 12:50:54,254 [INFO] utils:     class : ALDA
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils:     class : ALDA[0m
+2026-08-31 12:50:54,255 [INFO] utils:     module: trainers.alda_trainer
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:     module: trainers.alda_trainer[0m
+2026-08-31 12:50:54,255 [INFO] utils:     config:
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:     config:[0m
+2026-08-31 12:50:54,255 [INFO] utils:         batch_size       : 128
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         batch_size       : 128[0m
+2026-08-31 12:50:54,255 [INFO] utils:         beta             : 100
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         beta             : 100[0m
+2026-08-31 12:50:54,255 [INFO] utils:         debug            : False
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         debug            : False[0m
+2026-08-31 12:50:54,255 [INFO] utils:         device           : cuda:0
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         device           : cuda:0[0m
+2026-08-31 12:50:54,255 [INFO] utils:         exp_dir          : results/alda_robosuite_door/seed_1
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         exp_dir          : results/alda_robosuite_door/seed_1[0m
+2026-08-31 12:50:54,256 [INFO] utils:         n_train_steps    : 5000
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         n_train_steps    : 5000[0m
+2026-08-31 12:50:54,256 [INFO] utils:         num_latents      : 12
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         num_latents      : 12[0m
+2026-08-31 12:50:54,256 [INFO] utils:         seed             : 1
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         seed             : 1[0m
+2026-08-31 12:50:54,256 [INFO] utils:         use_wandb        : False
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         use_wandb        : False[0m
+2026-08-31 12:50:54,256 [INFO] utils:         values_per_latent: 12
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         values_per_latent: 12[0m
+2026-08-31 12:50:54,256 [INFO] utils:         env:
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         env:[0m
+2026-08-31 12:50:54,257 [INFO] utils:             action_repeat : 1
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             action_repeat : 1[0m
+2026-08-31 12:50:54,257 [INFO] utils:             domain_name   : robosuite
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             domain_name   : robosuite[0m
+2026-08-31 12:50:54,257 [INFO] utils:             episode_length: 500
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             episode_length: 500[0m
+2026-08-31 12:50:54,257 [INFO] utils:             frame_stack   : 3
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             frame_stack   : 3[0m
+2026-08-31 12:50:54,257 [INFO] utils:             scene_id      : 0
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             scene_id      : 0[0m
+2026-08-31 12:50:54,257 [INFO] utils:             task_name     : Door
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             task_name     : Door[0m
+2026-08-31 12:50:54,257 [INFO] utils: -----------------
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils: -----------------[0m
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+Traceback (most recent call last):
+  File "/tmp/w/runnable/alda/scripts/train.py", line 132, in <module>
+    main()
+  File "/tmp/w/runnable/alda/scripts/train.py", line 113, in main
+    trainer = create_instance_from_spec(spec['trainer'], name=spec['name'])
+  File "/tmp/w/runnable/alda/common/utils.py", line 100, in create_instance_from_spec
+    module = importlib.import_module(module_name)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/tmp/w/runnable/alda/trainers/alda_trainer.py", line 10, in <module>
+    from disentangle.utils.metrics import log_reconstruction_metrics, peak_signal_to_noise_ratio
+  File "/tmp/w/runnable/alda/disentangle/utils/metrics.py", line 6, in <module>
+    import sklearn
+ModuleNotFoundError: No module named 'sklearn'

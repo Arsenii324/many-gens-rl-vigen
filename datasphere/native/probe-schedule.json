@@ -1,0 +1,12 @@
+{
+  "status": "prepared-not-submitted",
+  "budget_rub": {"target": 2000, "flexibility_range": [500, 700]},
+  "serial_jobs": [
+    {"name": "preflight", "tier": "gt4i.1", "minutes": 20, "baseline": "svea", "frames": 0},
+    {"name": "drqv2-calibration-a", "tier": "gt4.1", "minutes": 30, "baseline": "drqv2", "frames": 10000},
+    {"name": "drqv2-calibration-b", "tier": "gt4i.1", "minutes": 30, "baseline": "drqv2", "frames": 10000},
+    {"name": "svea-asset-calibration", "tier": "select-after-a-b", "minutes": 30, "baseline": "svea", "frames": 10000}
+  ],
+  "production_gate": ["retention endpoint", "seed count", "checkpoint/divergence policy", "baseline readiness"],
+  "production_rows": ["drqv2", "svea", "sgqn", "curl", "drq"]
+}

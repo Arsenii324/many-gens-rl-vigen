@@ -1,0 +1,734 @@
+{
+  "_comment": [
+    "[Claude 2026-09-02 03:10 MSK] One descriptor per source family. A family is a repository that",
+    "brings its own train loop, its own logger and its own checkpoint format; the twelve baselines",
+    "fall into seven of them. This file exists so the runner does not grow a per-family branch: it",
+    "asks family.py for the argv and for the artifact list, and everything family-specific is data.",
+    "",
+    "It deliberately does NOT unify the metrics. Each family keeps its own curve files under its own",
+    "names, because 'train.csv' from RL-ViGen's logger and 'train.log' from dmcontrol-generalization",
+    "-benchmark's logger are different formats recording different columns, and forcing one schema",
+    "would either drop columns or invent them. The only thing normalised is the NAME of the retained",
+    "checkpoint, so a downstream evaluator has one path to open.",
+    "",
+    "places365_baselines is per-baseline, not per-family: sgqn calls utils.random_overlay and drq",
+    "does not, soda calls augmentations.random_overlay and rad does not.",
+    "import_gate is the cheap fail-fast that already caught termcolor, numba, matplotlib and h5py for RL-ViGen: import the family's real entry point before any timed cell, so a missing dependency costs a bootstrap and not a calibration.",
+    "payload_members is the per-family payload allowlist: a rad/soda job carries dmc_gb's source and no other clone, so one family's job can never contain another family's code.",
+    "endpoint states how the family's own loop rounds a requested budget. It is an exact rule computed from the family's own rollout quantum, not a tolerance: idaac floors to num_processes*num_steps and ppg can overshoot by one segment, and a run whose executed endpoint does not match its rule is a failure rather than a rounding.",
+    "baseline_module is imported by the gate for each cell in the job. The runner's own gate imported the entry point and the environment wrapper but never the agent, because hydra selects the agent at run time -- which is how sgqn reached a paid job before anyone noticed rl_utils.py imports captum.",
+    "intermediate_checkpoints is the budget curve a long run already writes and upstream then overwrites; it is retained only when the job asks, because ten snapshots are 1-5 GiB per cell."
+  ],
+  "rlvigen": {
+    "repository": "RL-ViGen-upstream",
+    "launcher": "runnable/_launch/rlvigen.sh",
+    "positional": [
+      "{baseline}",
+      "{task}"
+    ],
+    "options": [
+      "num_train_frames={frames}",
+      "eval_every_frames={eval_every}",
+      "num_eval_episodes={eval_episodes}",
+      "seed={seed}",
+      "use_wandb=False",
+      "save_snapshot=True",
+      "hydra.run.dir={run_dir}"
+    ],
+    "artifact_root": "{run_dir}",
+    "required_curves": [
+      "train.csv"
+    ],
+    "optional_curves": [
+      "eval.csv"
+    ],
+    "optional_directories": [
+      "tb"
+    ],
+    "checkpoint": "snapshot.pt",
+    "places365_baselines": [
+      "svea",
+      "sgqn"
+    ],
+    "places365_flavor": "rlvigen",
+    "baselines": [
+      "drqv2",
+      "svea",
+      "drq",
+      "sgqn",
+      "curl"
+    ],
+    "payload_members": [
+      "runnable/_launch/rlvigen.sh"
+    ],
+    "endpoint": {
+      "rule": "exact"
+    },
+    "baseline_module": "{baseline}",
+    "import_gate": {
+      "cwd": "RL-ViGen-upstream",
+      "pythonpath": [
+        "RL-ViGen-upstream",
+        "RL-ViGen-upstream/algos",
+        "RL-ViGen-upstream/envs/robosuiteVGB",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "train",
+        "wrappers.robo_wrapper"
+      ]
+    },
+    "intermediate_checkpoints": "snapshot_*.pt",
+    "intermediate_note": [
+      "[Claude 2026-09-02 11:35 MSK] Written only when RLVIGEN_PRESERVE_SNAPSHOTS is set in the job's",
+      "environment (patch P18). Upstream saves at every episode boundary where global_step % 50000 == 0",
+      "and overwrites the same file each time, so a 500k run performs ten saves and keeps one.",
+      "Off by default because ten DrQ-v2 snapshots are 1.0 GiB and ten DrQ ones 5.4 GiB, against 20.2",
+      "GiB free in the container, times the number of packed cells."
+    ],
+    "production": {
+      "replay_capacity": 300000,
+      "replay_capacity_option": "replay_buffer_size={replay_capacity}",
+      "replay_capacity_reason": "Uncapped, a cell reaches 38.8 GiB of worker-resident replay at 600k (63,504 B per retained transition, one 84x84x9 uint8 observation) and NO allowed tier holds it -- gt4i.1 gives about 27 GiB. At 300k a cell is 21.0 GiB and fits, at any budget up to 1M. This is the decision that makes these five runnable at all, not a tuning preference.",
+      "replay_semantics": "A cap turns the buffer into a recency ring: _try_fetch walks newest-first and breaks on the first episode already held, _store_episode evicts oldest-first and unlinks the file. Disk stays flat either way because _save_snapshot is hardcoded False (replay_buffer.py:94).",
+      "replay_capacity_floor": "max_size // num_workers must exceed the longest episode or that worker fetches nothing and starves -- _try_fetch breaks on `fetched_size + eps_len > max_size` before storing. At 300k over 4 workers that is 75,000 against a 500-step episode.",
+      "eval_every": 25000,
+      "eval_episodes": 20,
+      "save_every": 50000,
+      "eval_episodes_reason": "num_eval_episodes is a TOTAL divided by scenes: per = max(1, n // len(scenes)). 20 over ten certified scenes is 2 per scene. This is a progress curve, not a measurement -- 20 episodes PER scene is what the offline evaluator does on the saved checkpoint, and asking the training loop for it would roughly triple the cost of every run.",
+      "tier": "gt4i.1",
+      "cells_per_job": 1,
+      "eval_every_option": "eval_every_frames={eval_every}",
+      "training_time_eval": "periodic; eval-easy over ten certified scenes plus a train-regime denominator on scene 0 (P14). The only family that measures both regimes during training.",
+      "save_every_reason": "NOT a choice: train.py:309 gates on `global_step % int(5e4) == 0`, hardcoded, and the flag save_snapshot only decides whether that fires at all. Recorded as 50000 because that is what the code does; an earlier pass of this file said 100000, which was fiction.",
+      "preserve_snapshots": 100000,
+      "preserve_snapshots_reason": "P18 now reads this as a CADENCE. 100000 keeps six of the twelve saves a 600k run makes, plus the endpoint: about 1.7 GiB for drqv2 and 3.2 GiB for drq per cell, against 20.2 GiB free in the container. Keeping all twelve would double that for a curve twice as dense than any plot needs.",
+      "resume_note": "train.py:380 resumes automatically from a snapshot.pt found in the run directory, but keys_to_save is ['agent','timer','_global_step','_global_episode'] -- THE REPLAY BUFFER IS NOT SAVED. Resuming an off-policy run therefore restarts it with an empty buffer, which is a different experiment, so splitting a long run across jobs is not available to these five.",
+      "min_frames": 4001,
+      "min_frames_reason": "cfgs/*.yaml all set num_seed_frames: 4000, and train.csv gets its first row only after the seed phase ends. A budget at or below 4000 trains nothing, writes no training curve, and fails retain() -- after a full bootstrap and a full evaluation have already been paid for."
+    }
+  },
+  "dmc_gb": {
+    "repository": "runnable/dmc_gb",
+    "launcher": "runnable/_launch/dmc_gb.sh",
+    "positional": [
+      "{baseline}",
+      "{task}",
+      "{seed}"
+    ],
+    "options": [
+      "--train_steps",
+      "{frames}",
+      "--eval_freq",
+      "{eval_every}",
+      "--save_freq",
+      "{save_every}",
+      "--eval_episodes",
+      "{eval_episodes}",
+      "--eval_mode",
+      "eval-easy",
+      "--log_dir",
+      "{run_dir}"
+    ],
+    "artifact_root": "{run_dir}/robosuite_{task}/{baseline}/{seed}",
+    "required_curves": [
+      "train.log"
+    ],
+    "optional_curves": [
+      "eval.log",
+      "info.log"
+    ],
+    "optional_directories": [],
+    "checkpoint": "model/{frames}.pt",
+    "places365_baselines": [
+      "soda"
+    ],
+    "places365_flavor": "dmc_gb",
+    "baselines": [
+      "rad",
+      "soda"
+    ],
+    "import_gate": {
+      "cwd": "runnable/dmc_gb",
+      "pythonpath": [
+        "runnable/dmc_gb/src",
+        "runnable/dmc_gb/src/env/dmc2gym",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "train",
+        "algorithms.factory",
+        "env.wrappers",
+        "augmentations"
+      ]
+    },
+    "payload_members": [
+      "runnable/_launch/dmc_gb.sh",
+      "runnable/dmc_gb/src",
+      "runnable/dmc_gb/setup"
+    ],
+    "endpoint": {
+      "rule": "exact",
+      "note": "train.py loops `range(0, train_steps+1)` and takes one further environment step on the last iteration, so the executed transition count is train_steps+1 while the declared endpoint is train_steps. Recorded, not corrected: changing the loop would change the method."
+    },
+    "baseline_module": "algorithms.{baseline}",
+    "intermediate_checkpoints": "model/*.pt",
+    "production": {
+      "replay_capacity": null,
+      "replay_capacity_option": null,
+      "replay_capacity_reason": "DECIDED 2026-09-02: leave rad/soda UNCAPPED. utils.ReplayBuffer takes capacity=args.train_steps (train.py:111) with no flag and prefill_memory touches every slot at construction, so a cap needs a source change -- an ENABLES-class change to what two of twelve baselines measure. Priced both ways with plan_production.py at 600k x 3 seeds: uncapped is 103,350 RUB over 9.4 days with both on gt4i.1 alone; capped at 300k is 94,696 RUB over 10.0 days on gt4.1. The cap saves 8,654 RUB (8%) and COSTS 0.6 days, because gt4.1 is cheaper per hour and slower. Not worth a fidelity change. An earlier pass of this file declared 300000 here for symmetry with the RL-ViGen five; symmetry was the wrong reason -- their cap is what makes them runnable at all, and this one buys 8%.",
+      "eval_every": 25000,
+      "eval_episodes": 20,
+      "save_every": 100000,
+      "tier": "gt4i.1",
+      "cells_per_job": 1,
+      "training_time_eval": "periodic, TWO regimes: train.py:139-141 calls evaluate() on the training env and again on test_env (built at --eval_mode), logging them as episode_reward and episode_reward_test_env. Retention IS computable for rad/soda from training logs. An earlier pass of this file said one regime; the register entry of 2026-08-18 had it right and the source confirms it.",
+      "eval_episodes_reason": "--eval_episodes is per regime and literal here, not divided by scenes as RL-ViGen's is. Same number, different meaning; this is the integration tax, recorded rather than unified.",
+      "tier_reason": "uncapped, a 600k cell holds ~19.3 GiB (rad) to 20.4 GiB (soda) preallocated at 30,000 B per budgeted frame, which fits gt4i.1 alone and not gt4.1",
+      "min_frames": 1001,
+      "min_frames_reason": "train.py seeds the buffer for init_steps (1000) before the first update; below that train.log has no row and the curve is empty."
+    }
+  },
+  "idaac": {
+    "repository": "runnable/idaac",
+    "launcher": "runnable/_launch/idaac.sh",
+    "constants": {
+      "num_processes": "4",
+      "num_steps": "256",
+      "num_mini_batch": "8",
+      "log_interval": "25"
+    },
+    "constants_note": [
+      "[Claude 2026-09-02 06:30 MSK] num_processes is an OWNER DECISION recorded here as the current",
+      "best hypothesis, not a neutral default. IDAAC's paper uses 64 parallel procgen envs; 64",
+      "robosuite Door envs in one DummyVecEnv is not runnable on a T4 instance. 4 is the value this",
+      "project's own 2026-08-17 smoke used and the one FAITHFULNESS.md's analysis is written against.",
+      "The cost is stated rather than hidden: rollout is 4*256 = 1,024 samples against the paper's",
+      "64*256 = 16,384, and with num_mini_batch 8 that is 128 samples per minibatch against the",
+      "paper's 512. Raising num_steps instead would restore the rollout size but cut the number of",
+      "updates inside a 500k-transition budget from ~488 to ~30, which at that budget is worse.",
+      "See the production report's on-policy section.",
+      "",
+      "log_interval is 25 for a cost reason worth stating: upstream couples the training-stat log and",
+      "the held-out evaluation in one branch, and that evaluation runs 10 episodes of 500 steps = 5,000",
+      "environment steps against a 1,024-step rollout. At log_interval 1 the evaluation would cost five",
+      "times the training. 25 puts it at about 20% overhead and still gives ~19 curve points over a",
+      "500k-transition budget. Decoupling the two would be a source change with no scientific payoff."
+    ],
+    "positional": [
+      "{baseline}",
+      "{task}",
+      "{num_processes}"
+    ],
+    "options": [
+      "--num_env_steps",
+      "{frames}",
+      "--seed",
+      "{seed}",
+      "--log_dir",
+      "{run_dir}",
+      "--save_dir",
+      "{run_dir}/models",
+      "--log_interval",
+      "{log_interval}",
+      "--num_steps",
+      "{num_steps}",
+      "--num_mini_batch",
+      "{num_mini_batch}"
+    ],
+    "artifact_root": "{run_dir}",
+    "required_curves": [
+      "progress-robosuite:{task}-{baseline}-s{seed}.csv"
+    ],
+    "optional_curves": [
+      "log-robosuite:{task}-{baseline}-s{seed}.txt"
+    ],
+    "optional_directories": [],
+    "checkpoint": "models/agent-robosuite:{task}-{baseline}-s{seed}.pt",
+    "places365_baselines": [],
+    "places365_flavor": "none",
+    "baselines": [
+      "idaac"
+    ],
+    "endpoint": {
+      "rule": "floor_to_quantum",
+      "quantum_flags": [
+        "--num_steps",
+        "--num_processes"
+      ]
+    },
+    "payload_members": [
+      "runnable/_launch/idaac.sh",
+      "runnable/idaac",
+      "ext/baselines"
+    ],
+    "import_gate": {
+      "cwd": "runnable/idaac",
+      "pythonpath": [
+        "runnable/idaac",
+        "ext/baselines",
+        "runnable/_shim/no_tf",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "train",
+        "test",
+        "ppo_daac_idaac.envs"
+      ]
+    },
+    "production": {
+      "eval_every": null,
+      "eval_episodes": null,
+      "save_every": null,
+      "save_every_reason": "upstream saves on the final update only (C60). Left alone: an intermediate cadence is an ENABLES change and the terminal checkpoint is what the offline evaluator needs.",
+      "tier": "gt4.1",
+      "cells_per_job": 2,
+      "eval_every_reason": "no eval cadence flag exists. Evaluation rides inside `j % args.log_interval == 0`, in UPDATES of num_processes x num_steps = 1024 frames. log_interval 25 puts it at 25,600 frames, which is the nearest expressible value to the 25,000 the other families use.",
+      "training_time_eval": "periodic, one regime. evaluate() is described upstream as 'the full distribution of levels', which on Procgen is a held-out split; on this target the scene is a literal 0 (C45), so its train and test envs are the same distribution and the split is vacuous. Reported, not fixed.",
+      "min_frames": 1024,
+      "min_frames_reason": "one update is num_processes x num_steps = 1024 frames; below one update nothing is logged and no checkpoint is written."
+    }
+  },
+  "alda": {
+    "repository": "runnable/alda",
+    "launcher": "runnable/_launch/alda.sh",
+    "environment": {
+      "ALDA_RESULTS": "{run_dir}"
+    },
+    "positional": [],
+    "options": [
+      "--spec.trainer.config.n_train_steps={frames}",
+      "--spec.trainer.config.seed={seed}"
+    ],
+    "artifact_root": "{run_dir}/alda_robosuite_door/seed_{seed}",
+    "required_curves": [],
+    "optional_curves": [
+      "output_log_0.txt",
+      "experiment_spec_final.yaml"
+    ],
+    "optional_directories": [],
+    "checkpoint": "checkpoints/sac_*_step_{endpoint}.pt",
+    "checkpoint_note": [
+      "[Claude 2026-09-02 08:50 MSK] ALDA names its checkpoint after an env_name the trainer picks at",
+      "run time, so the pattern pins the step -- the part that must be right -- and globs the rest.",
+      "Exactly one match is required."
+    ],
+    "curve_note": [
+      "[Claude 2026-09-02 10:20 MSK] ALDA writes NO tensorboard and NO csv, and the output_log_0.txt it",
+      "creates is left EMPTY -- its metrics reach the python logger's stream handler and W&B, and W&B",
+      "does not run on DataSphere and is not worked around there. Its curve is therefore the console",
+      "log the runner captures, which does contain every eval/episode_reward line. Verified on a local",
+      "2,000-step run. The offline analysis needs a small parser for it; that is an accepted per-family",
+      "difference, not something to unify away."
+    ],
+    "places365_baselines": [],
+    "places365_flavor": "none",
+    "baselines": [
+      "alda"
+    ],
+    "endpoint": {
+      "rule": "exact"
+    },
+    "payload_members": [
+      "runnable/_launch/alda.sh",
+      "runnable/alda",
+      "third_party/alda/models"
+    ],
+    "import_gate": {
+      "cwd": "runnable/alda",
+      "pythonpath": [
+        "runnable/alda",
+        "runnable/alda/dmcontrol_generalization_benchmark/src/env/dmc2gym",
+        "runnable/_shim/alda_models",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "trainers.alda_trainer",
+        "models.sac"
+      ]
+    },
+    "intermediate_checkpoints": "checkpoints/sac_*_step_*.pt",
+    "pip_requirements": [
+      "scikit-learn==1.3.2",
+      "seaborn==0.13.2",
+      "colorlog==6.8.2"
+    ],
+    "dependency_note": [
+      "[Claude 2026-09-02 13:35 MSK] ALDA imports sklearn, seaborn and colorlog at module scope and",
+      "declares none of them. sklearn surfaced in job bt1q6jd096m3re2n7jp2 and seaborn in",
+      "bt1g0v04qmf0kci2lv7m, one per bootstrap. colorlog is added pre-emptively: Gemini's 2026-08-31",
+      "logs record the same three plus einops, and einops is already pinned in requirements-native.txt.",
+      "Guessing the rest of a list someone else already observed is cheaper than three more bootstraps."
+    ],
+    "production": {
+      "eval_every": 10000,
+      "eval_episodes": 10,
+      "save_every": 50000,
+      "save_every_reason": "its own cadence (trainers/alda_trainer.py:73,614), unchanged",
+      "tier": "gt4i.1",
+      "cells_per_job": 1,
+      "memory_note": "15.3 GiB fixed working set, independent of budget",
+      "eval_every_reason": "eval_n_steps, overridable through the spec",
+      "training_time_eval": "periodic and the richest of the twelve: alda_trainer.py:146-148 builds env='train', color_env='eval-easy' and distract_env='eval-hard', and 607-611 evaluates all three at 10 episodes each every eval_n_steps. IT IS THE ONLY BASELINE THAT CONSTRUCTS eval-hard. That is also why its throughput cannot be assumed from the others: 30 episodes every 10,000 steps, and it has no completed CUDA run to measure.",
+      "min_frames": 1001,
+      "min_frames_reason": "its trainer starts updating after init_steps and evaluates at eval_n_steps 10000; below the first update there is no curve."
+    },
+    "payload_members_note": "runnable/_shim/alda_models/models is declared explicitly because the package MUST be named `models` -- ALDA's trainer does `from models.sac import ...` -- and the payload builder forbids a `models` component in whatever part of a path a declaration does not name. Naming it exactly leaves `__init__.py` as the remainder. It replaced an absolute symlink that the builder silently wrote no entry for at all, which is why job bt18fm6ds7a1kpetgqpe failed its import gate on the container while passing locally."
+  },
+  "ppg": {
+    "repository": "runnable/ppg",
+    "launcher": "runnable/_launch/ppg_cell.sh",
+    "constants": {
+      "num_envs": "8",
+      "nstep": "256"
+    },
+    "constants_note": [
+      "[Claude 2026-09-02 08:50 MSK] num_envs 8 is the value this project's own smoke used and is an",
+      "OWNER DECISION recorded as the current best hypothesis. PPG's paper uses 256 parallel envs",
+      "(4 workers x 64); 256 robosuite Door environments in one process is not runnable on a T4.",
+      "The rollout is therefore 8*256 = 2,048 samples against the paper's 65,536, and with nminibatch",
+      "8 that is 256 per minibatch against the paper's 8,192. See the production report's on-policy",
+      "section: at a 500k-transition budget the smaller rollout also buys more updates, which is the",
+      "reason not to compensate by raising nstep."
+    ],
+    "positional": [
+      "{task}",
+      "{num_envs}",
+      "{endpoint}",
+      "{eval_episodes}"
+    ],
+    "options": [
+      "--interacts_total",
+      "{frames}",
+      "--seed",
+      "{seed}",
+      "--log_dir",
+      "{run_dir}"
+    ],
+    "artifact_root": "{run_dir}",
+    "required_curves": [
+      "progress.csv"
+    ],
+    "optional_curves": [
+      "log.txt",
+      "model.jd"
+    ],
+    "optional_directories": [],
+    "checkpoint": "model_terminal.jd",
+    "places365_baselines": [],
+    "places365_flavor": "none",
+    "baselines": [
+      "ppg"
+    ],
+    "endpoint": {
+      "rule": "ceil_to_quantum",
+      "quantum_flags": [
+        "--num_envs",
+        "--nstep"
+      ]
+    },
+    "payload_members": [
+      "runnable/_launch/ppg.sh",
+      "runnable/_launch/ppg_cell.sh",
+      "runnable/_launch/ppg_eval.py",
+      "runnable/ppg"
+    ],
+    "apt_packages": [
+      "libopenmpi-dev",
+      "openmpi-bin",
+      "python3-dev"
+    ],
+    "pip_requirements": [
+      "mpi4py==4.0.1",
+      "gym3==0.3.3",
+      "pandas==2.0.3"
+    ],
+    "import_gate": {
+      "cwd": "runnable/ppg",
+      "pythonpath": [
+        "runnable/ppg",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "phasic_policy_gradient.train"
+      ]
+    },
+    "dependency_note": [
+      "[Claude 2026-09-02 13:00 MSK] mpi4py 3.1.6 has no wheel for this image and its setup.py calls",
+      "distutils' new_compiler(dry_run=...), which the setuptools in this image no longer accepts:",
+      "'TypeError: new_compiler() got an unexpected keyword argument dry_run'. mpicc was present --",
+      "python3-dev and libopenmpi-dev both installed correctly. 4.0.1 builds against modern setuptools.",
+      "Observed in bt1a8q6ee090jh1k9npp and again in bt1q6jd096m3re2n7jp2."
+    ],
+    "production": {
+      "eval_every": null,
+      "eval_episodes": null,
+      "save_every": null,
+      "save_every_reason": "C60 records ppg as never saving: ic_per_save is never set by any launcher. Our clone writes a terminal checkpoint, and a completed cell proves it -- retain() fails closed on an absent checkpoint and ppg's cell passed.",
+      "tier": "gt4.1",
+      "cells_per_job": 2,
+      "training_time_eval": "NONE. train.py evaluates nothing at any point -- there is no eval call, no test env, no cadence. Its curve is training return only.",
+      "min_frames": 2048,
+      "min_frames_reason": "one iteration is num_envs x nstep = 2048 frames."
+    },
+    "checkpoint_note": "model_terminal.jd, NOT model.jd. `model.jd` is LogSaveHelper's output, and the helper saves once in its own __init__ before any gradient step whenever ic_per_save > 0 -- which it is, by a default of 100_000 (log_save_helper.py:34,50-51). A probe below 100k interacts therefore leaves ONLY the untrained construction save on disk, and the 2026-09-02 ppg cell retained exactly that: pi_logstd at its [0]*7 initialisation while the run's own Opt/entropy of 9.936886 implies 0.000617 (log_std=0 gives 9.932570). At 600k the helper does write a trained model, but at the last 100,000 boundary rather than the declared endpoint. train.py now writes model_terminal.jd after learn() returns; model.jd is left untouched beside it."
+  },
+  "ibac_sni": {
+    "repository": "runnable/ibac_sni",
+    "launcher": "runnable/_launch/ibac_sni_cell.sh",
+    "constants": {
+      "procs": "1",
+      "frames_per_proc": "128",
+      "model_name": "cell"
+    },
+    "constants_note": [
+      "[Claude 2026-09-02 13:00 MSK] procs is 1, and that is now MEASURED rather than assumed. With 2 it",
+      "dies at torch_rl.PPOAlgo's parallel env setup with EOFError -- a worker process that never came",
+      "up. The project's macOS smoke already used 1 because MuJoCo GL contexts do not survive a fork",
+      "there; job bt1q6jd096m3re2n7jp2 shows the same is true on Linux with EGL. So IBAC-SNI's rollout",
+      "is 1 x frames_per_proc = 128, against the repository's default 16 x 128 = 2,048, and that is an",
+      "environment constraint rather than a choice.",
+      "frames_per_proc 128 is torch_rl's own PPO default and is unchanged."
+    ],
+    "environment": {
+      "TORCH_RL_STORAGE": "{run_dir}"
+    },
+    "positional": [
+      "{task}",
+      "{procs}",
+      "{endpoint}",
+      "{eval_episodes}",
+      "{model_name}"
+    ],
+    "options": [
+      "--frames",
+      "{frames}",
+      "--seed",
+      "{seed}",
+      "--model",
+      "{model_name}",
+      "--save-interval",
+      "1",
+      "--tb",
+      "--frames-per-proc",
+      "{frames_per_proc}"
+    ],
+    "artifact_root": "{run_dir}/{model_name}",
+    "required_curves": [
+      "log.csv"
+    ],
+    "optional_curves": [
+      "log.txt",
+      "status.json"
+    ],
+    "optional_directories": [],
+    "checkpoint": "model.pt",
+    "places365_baselines": [],
+    "places365_flavor": "none",
+    "baselines": [
+      "ibac_sni"
+    ],
+    "endpoint": {
+      "rule": "ceil_to_quantum",
+      "quantum_flags": [
+        "--frames-per-proc",
+        "--procs"
+      ]
+    },
+    "payload_members": [
+      "runnable/_launch/ibac_sni.sh",
+      "runnable/_launch/ibac_sni_cell.sh",
+      "runnable/ibac_sni"
+    ],
+    "pip_requirements": [
+      "tensorboardX==2.6.2.2"
+    ],
+    "import_gate": {
+      "cwd": "runnable/ibac_sni/torch_rl",
+      "pythonpath": [
+        "runnable/ibac_sni/torch_rl",
+        "runnable/ibac_sni/torch_rl/torch_rl",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "torch_rl",
+        "utils"
+      ]
+    },
+    "production": {
+      "eval_every": null,
+      "eval_episodes": null,
+      "save_every": null,
+      "save_every_reason": "--save-interval 1, upstream's own cadence",
+      "tier": "gt4.1",
+      "cells_per_job": 3,
+      "training_time_eval": "NONE in training. Evaluation is a separate script (scripts/evaluate.py) by upstream's own design -- the same separation this project's offline evaluator uses.",
+      "min_frames": 128,
+      "min_frames_reason": "one update is procs x frames_per_proc = 128 frames."
+    }
+  },
+  "ctrl": {
+    "repository": "runnable/ctrl",
+    "launcher": "runnable/_launch/ctrl_cell.sh",
+    "constants": {
+      "num_envs": "16",
+      "n_steps": "256",
+      "n_minibatch": "8",
+      "cluster_len": "10",
+      "n_minibatch_ctrl": "8"
+    },
+    "constants_note": [
+      "[Claude 2026-09-02 12:20 MSK] CORRECTED. The first version of this descriptor carried the",
+      "project's smoke values -- n_steps 16, n_minibatch 2, cluster_len 4, n_minibatch_ctrl 1 -- which",
+      "exist to make a 2,600-step smoke finish quickly and are 16x, 4x, 2.5x and 8x away from the",
+      "released implementation's own defaults. cluster_len in particular is the length of the sequence",
+      "CTRL clusters, which is its method rather than its speed. Using them in a production run would",
+      "have been a silent retune of the baseline.",
+      "",
+      "Everything is now upstream's default except num_envs, which is 4 against upstream's 64 because",
+      "64 robosuite Door environments in one process is not runnable on a T4. That makes the rollout",
+      "4 x 256 = 1,024 against upstream's 16,384, and with n_minibatch 8 the minibatch is 128 samples",
+      "against upstream's 2,048. That divergence is infrastructure-bound and declared; the other four",
+      "were not and are gone.",
+      "[Claude 2026-09-03] num_envs 4 -> 16, FORCED BY AN UPSTREAM DIVISIBILITY CONSTRAINT, not chosen.",
+      "algo.py:517-520 computes size_batch = num_envs * (n_steps - cluster_len + 1) // 2 and then does",
+      "reshape(-1, size_batch // n_minibatch_ctrl), which is only valid when n_minibatch_ctrl divides",
+      "size_batch. At num_envs 4 that is 494 against 8, and attempt #11 (bt1qgrrl5dcpn07jcq40) died on",
+      "it AFTER training successfully: 'cannot reshape array of shape (494,) into shape (-1, 61)'.",
+      "PPO's own batch (num_envs * n_steps) divides at every num_envs, so this constraint is invisible",
+      "until the first cluster update. Scanning both constraints, 16 is the SMALLEST num_envs that",
+      "satisfies each with upstream's own n_steps 256, cluster_len 10 and n_minibatch_ctrl 8; 8 and 12",
+      "both fail the cluster one. Upstream's default is 64, so this moves TOWARD the released",
+      "configuration rather than away, and the remaining gap is a memory decision, not a method one."
+    ],
+    "positional": [
+      "{task}",
+      "{num_envs}",
+      "{run_dir}"
+    ],
+    "options": [
+      "--train_steps={frames}",
+      "--seed={seed}",
+      "--model_dir={run_dir}/models",
+      "--n_steps={n_steps}",
+      "--n_minibatch={n_minibatch}",
+      "--cluster_len={cluster_len}",
+      "--n_minibatch_ctrl={n_minibatch_ctrl}"
+    ],
+    "artifact_root": "{run_dir}",
+    "required_curves": [
+      "train_console.log"
+    ],
+    "optional_curves": [
+      "wandb_offline.jsonl"
+    ],
+    "optional_directories": [],
+    "checkpoint": "models/robosuite:{task}/checkpoint_{endpoint}.msgpack",
+    "places365_baselines": [],
+    "places365_flavor": "none",
+    "baselines": [
+      "ctrl"
+    ],
+    "endpoint": {
+      "rule": "floor_to_quantum",
+      "quantum_flags": [
+        "--num_envs"
+      ]
+    },
+    "payload_members": [
+      "runnable/_launch/ctrl.sh",
+      "runnable/_launch/ctrl_cell.sh",
+      "runnable/ctrl"
+    ],
+    "pip_requirements": [
+      "numpy==1.26.4",
+      "jax[cuda12]==0.4.35",
+      "procgen==0.10.7",
+      "flax==0.10.2",
+      "optax==0.2.3",
+      "distrax==0.1.5"
+    ],
+    "import_gate": {
+      "cwd": "runnable/ctrl",
+      "pythonpath": [
+        "runnable/ctrl",
+        "runnable/_shim"
+      ],
+      "modules": [
+        "models",
+        "algo",
+        "buffer",
+        "vec_env"
+      ]
+    },
+    "co_schedulable": false,
+    "dependency_note": [
+      "[Claude 2026-09-02 10:50 MSK] CTRL CANNOT SHARE A JOB with any torch family, and even alone it",
+      "needs the base requirements filtered. Two separate conflicts, both observed in job",
+      "bt1a8q6ee090jh1k9npp:",
+      "  * numpy -- jax[cuda12] resolved numpy 2.2.6, which matplotlib and numba (both needed by the",
+      "    robosuite environment CTRL steps) reject. Pinning numpy==1.26.4 in the same install command",
+      "    keeps it: jax 0.4.35 requires only numpy>=1.24.",
+      "  * cudnn -- jax[cuda12] requires nvidia-cudnn-cu12>=9 and torch 2.3.1+cu121 pins 8.9.2.26.",
+      "    There is no version of both. CTRL is a JAX baseline and never imports torch, so a CTRL job",
+      "    installs the base requirements with torch filtered out. That is why excluded_base_requirements",
+      "    exists and why it is not a general escape hatch: it applies only to a family that cannot",
+      "    share a job anyway.",
+   "[Claude 2026-09-04] A CTRL JOB MUST SET `CUDA_ROOT=/usr/local/cuda` IN ITS cmd ENV, or it",
+   "fails ctrl's import gate before any cell: flax -> jax -> jax/_src/lib `_cuda_path()` raises",
+   "`TypeError: expected str, bytes or os.PathLike object, not NoneType` from",
+   "`nvidia.cuda_nvcc.__file__` being None. jax consults CUDA_ROOT/CUDA_HOME first and returns",
+   "early when set; only when unset does it fall through to that broken branch. So the variable",
+   "does not merely help, it SKIPS the defect. cfg-preprod-ctrl-v52.yaml had it and succeeded;",
+   "probes derived from torch job configs (v68, v70) did not and failed.",
+   "TWO WRONG EXPLANATIONS WERE RULED OUT BY EVIDENCE, both recorded because each was plausible:",
+   "(1) dependency drift -- jax is pinned but its nvidia-*-cu12 wheels are not. WRONG: the",
+   "successful cell resolved a byte-identical 109-package set, nvidia-cuda-nvcc-cu12==12.9.86",
+   "included, with all five pip steps and their install order identical. (2) the tier -- the",
+   "successful cell ran on gt4i.1 and the first failure on gt4.1. WRONG: v70 re-ran on gt4i.1 and",
+   "failed identically. The `cuda: false` in environment.json is a CONSEQUENCE, not a clue: that",
+   "probe computes the flag by importing jax, so it fails for the same reason."
+    ],
+    "excluded_base_requirements": [
+      "torch",
+      "torchvision",
+      "captum",
+      "kornia"
+    ],
+    "intermediate_checkpoints": "models/robosuite:{task}/checkpoint_*.msgpack",
+    "production": {
+      "eval_every": null,
+      "eval_episodes": null,
+      "save_every": null,
+      "save_every_reason": "C60: upstream CANNOT checkpoint -- train_ppo.py:12 has the flax checkpoint import commented out. Our clone writes a terminal msgpack via flax.serialization.to_bytes. UNVERIFIED: ctrl has no successful CUDA run yet.",
+      "tier": "gt4.1",
+      "cells_per_job": 1,
+      "cells_per_job_reason": "co_schedulable false -- its jax[cuda12] stack cannot share an environment with the torch families",
+      "training_time_eval": "CONTINUOUS, not periodic: train_ppo.py:99-100 builds env_test_ID (train, 200 levels) and env_test_OOD (eval-easy) and steps both inside the training loop. There is no cadence and no episode count to set. It is the only baseline that reports both regimes continuously.",
+      "min_frames": 4112,
+      "min_frames_reason": "[Claude 2026-09-04] Raised from 1024. The old floor guaranteed one ROLLOUT (n_steps x num_envs = 256 x 4) and the gate's stated purpose is to refuse a budget too small to produce a CURVE -- which is a stronger condition, and ctrl is the family where they differ. bt14kc47s66282ic8ssb ran 2560 frames: it passed the gate, trained, retained a valid 7.4 MB checkpoint, and wrote ZERO curve rows -- no Eprew200 line in train_console.log and only the wandb `init` event in the sink. ctrl's logging branch fires every 4112 frames (observed at 4112 and 8224 in the 10k cell bt1fer7809i7bpob7g2f), so a budget under 4112 yields a successful job carrying no measurement at all -- the most expensive kind of empty result, because nothing about it looks failed."
+    },
+    "excluded_base_requirements_note": "captum and kornia are here because EXCLUDING torch BY NAME DOES NOTHING: both depend on it, so pip resolved torch transitively and -- with our pin removed -- took the newest, torch 2.14.0, dragging in CUDA 13 runtime wheels (nvidia-cublas-13.1.1.3, nvidia-cudnn-cu13-9.24, nvidia-cuda-runtime-13.0.96) onto a container whose driver is CUDA 12.2. Job bt1amu1210ol8ofufa16 then warned 'The NVIDIA driver on your system is too old (found version 12020)' and died without a traceback. captum is sgqn's attribution dependency and kornia is svea/soda's augmentation one; ctrl is JAX and uses neither.",
+    "pip_requirements_note": "Back to the pinned jax 0.4.35: bumping to 0.4.38 produced the IDENTICAL failure (bt1g0diufvr8jb26ctvj), so the version was never the cause and carrying the bump would be a deviation bought for nothing. The cause is in jax's `_cuda_path()`: it tries CUDA_ROOT first and only then `_try_cuda_nvcc_import()`, which walks `nvidia.cuda_nvcc.__path__` looking for `bin/ptxas`, leaves its result None when no path has one, and hands that to pathlib -- 'expected str, bytes or os.PathLike object, not NoneType'. Setting CUDA_ROOT in the job short-circuits it before the buggy branch. See the job config's env. procgen added 2026-09-03: ctrl's vec_env imports ProcgenVecEnvCustom at MODULE level, so the import runs even on the robosuite path where RLViGenVecEnvCustom is the class actually used. Job bt1pp3mv0c1l8c94ag2j reached that import -- which means CUDA_ROOT did fix jax's _cuda_path -- and failed with ModuleNotFoundError: No module named 'procgen'."
+  },
+  "_production_comment": [
+    "[Claude 2026-09-02] `production` is the resolved default configuration per family: what a",
+    "CORRECTED 2026-09-02 after scripts/audit_eval_cadence.py: a first pass set one eval_every and",
+    "one eval_episodes across all seven families. Five consume neither. Two (ppg, ibac_sni) run no",
+    "training-time evaluation at all and one (ctrl) runs it continuously rather than periodically.",
+    "A `null` below means the family has no such dial -- it is a finding, not an omission.",
+    "production submit uses unless deliberately overridden. Every value carries its reason.",
+    "",
+    "TRAINING-TIME EVALUATION IS A PROGRESS CURVE, NOT THE MEASUREMENT. The measurement is the",
+    "offline evaluator over saved checkpoints, four regimes x ten scenes x 20 episodes per scene.",
+    "The split is the owner's stated base version -- separate train and eval harnesses -- and it is",
+    "also what the arithmetic demands: 20 episodes per scene inside the training loop would cost",
+    "more wall-clock than the training it interrupts.",
+    "",
+    "THE SCENE AXIS IS NOT UNIFORM AT TRAINING TIME and this file does not pretend otherwise.",
+    "docs/CONSTRUCTION.md#c45 records that five baselines sweep ten scenes and seven do not:",
+    "idaac and ibac_sni pass a literal 0, and alda, ctrl, ppg, rad/soda thread a parameter nothing",
+    "moves. Extending that is seven clone deviations, a decision and not a slot. The offline",
+    "evaluator is what makes the axis uniform across twelve, downstream, without touching training."
+  ]
+}

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/train.py", line 27, in <module>
+    from logger import Logger
+  File "/tmp/w/RL-ViGen-upstream/logger.py", line 17, in <module>
+    import wandb
+ModuleNotFoundError: No module named 'wandb'

@@ -1,0 +1,654 @@
+<title>Twelve Baselines Audit</title>
+<style>
+:root{
+  --ground:#FBFCFD; --raise:#F2F5F7; --ink:#161A1D; --muted:#5A646C; --rule:#DFE4E8;
+  --accent:#1F5C8B; --accent-soft:#E8F0F6; --add:#2F6F4F; --del:#9B3A32; --warn:#8A6212;
+  --serif:Charter,"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101417; --raise:#171C20; --ink:#E6EBEE; --muted:#94A0A8; --rule:#242C31;
+  --accent:#6FA8D4; --accent-soft:#16232E; --add:#6FBF95; --del:#D98A82; --warn:#D6AC57;
+}}
+:root[data-theme="dark"]{
+  --ground:#101417; --raise:#171C20; --ink:#E6EBEE; --muted:#94A0A8; --rule:#242C31;
+  --accent:#6FA8D4; --accent-soft:#16232E; --add:#6FBF95; --del:#D98A82; --warn:#D6AC57;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.62;margin:0;padding:0 5vw 6rem;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:70rem;margin:0 auto}
+.col{max-width:38rem}
+header.mast{border-bottom:2px solid var(--ink);padding:3.5rem 0 1.25rem;margin-bottom:2.5rem}
+.kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .9rem}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2rem,4.4vw,3rem);line-height:1.1;
+  margin:0 0 .6rem;text-wrap:balance;letter-spacing:-.015em}
+.dek{font-size:1.06rem;color:var(--muted);margin:0;max-width:40rem}
+h2{font-family:var(--serif);font-weight:600;font-size:1.6rem;line-height:1.25;
+  margin:3.4rem 0 .3rem;text-wrap:balance;letter-spacing:-.01em;
+  padding-top:1.6rem;border-top:1px solid var(--rule)}
+h2 .q{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--accent);
+  display:block;text-transform:uppercase;margin-bottom:.5rem;font-weight:500}
+h3{font-family:var(--sans);font-weight:650;font-size:1rem;margin:2rem 0 .35rem;
+  letter-spacing:.005em}
+p,li{max-width:38rem}
+p{margin:.7rem 0}
+ul,ol{padding-left:1.1rem;margin:.7rem 0}
+li{margin:.3rem 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--raise);
+  padding:.1em .32em;border-radius:3px;border:1px solid var(--rule)}
+pre{font-family:var(--mono);font-size:.78rem;line-height:1.5;background:var(--raise);
+  border:1px solid var(--rule);border-left:3px solid var(--accent);
+  padding:.85rem 1rem;overflow-x:auto;margin:1rem 0;max-width:100%}
+pre code{background:none;border:none;padding:0;font-size:1em}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:0;
+  border:1px solid var(--rule);margin:2rem 0 0}
+.verdict div{padding:1rem 1.1rem;border-right:1px solid var(--rule);
+  border-bottom:1px solid var(--rule)}
+.verdict dt{font-family:var(--mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 .4rem}
+.verdict dd{margin:0;font-size:.95rem;font-weight:600}
+.tw{overflow-x:auto;margin:1.1rem 0;border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;font-size:.83rem;
+  font-variant-numeric:tabular-nums;min-width:34rem}
+th{text-align:left;font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:.6rem .75rem;border-bottom:1px solid var(--ink);white-space:nowrap;
+  background:var(--raise)}
+td{padding:.52rem .75rem;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.n{text-align:right;font-family:var(--mono)}
+.add{color:var(--add);font-family:var(--mono)}
+.del{color:var(--del);font-family:var(--mono)}
+.warnc{color:var(--warn)}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:.9rem 1.1rem;margin:1.3rem 0;font-size:.94rem;max-width:40rem}
+.note p{margin:.35rem 0;max-width:none}
+.note strong{color:var(--accent)}
+.corr{border-left:3px solid var(--del)}
+.corr strong{color:var(--del)}
+.tag{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--rule);padding:.13em .45em;border-radius:2px;color:var(--muted);
+  white-space:nowrap}
+footer{margin-top:4rem;padding-top:1.5rem;border-top:1px solid var(--rule);
+  font-size:.82rem;color:var(--muted)}
+a{color:var(--accent)}
+</style>
+<div class="wrap">
+<header class="mast">
+  <p class="kicker">Provenance audit &middot; 17 Aug 2026 &middot; twelve baselines, six clones</p>
+  <h1>What was changed, and what only looks changed</h1>
+  <p class="dek">A hunk-by-hunk audit of every line this project altered in twelve original
+  research repositories &mdash; and a separate accounting of the differences between baselines
+  that we inherited rather than introduced.</p>
+  <dl class="verdict">
+    <div><dt>Training harnesses merged</dt><dd>None. Twelve baselines, seven entry points.</dd></div>
+    <div><dt>Eval harnesses merged</dt><dd>None merged; one authored (<code>ppg</code>), outside the clone.</dd></div>
+    <div><dt>Code removed</dt><dd>No file, class or function. Zero deletions.</dd></div>
+    <div><dt>Optimiser hyperparameters changed</dt><dd>None &mdash; every lr, coefficient and batch size is the repo&rsquo;s own.</dd></div>
+    <div><dt>Input/output format changed</dt><dd class="warnc">Yes, necessarily &mdash; and it propagates. See &sect;4.</dd></div>
+    <div><dt>Algorithms altered</dt><dd class="warnc">Four continuous heads, one repair. See &sect;3.</dd></div>
+  </dl>
+</header>
+
+<div class="col">
+<div class="note">
+<p><strong>This page is a snapshot.</strong> The canonical audit is <a href="AUDIT-2026-08-17.md"><code>docs/AUDIT-2026-08-17.md</code></a>, which is what gets edited; this file carries the presentation and is regenerated from it when the artifact is republished. Verified identical in content 2026-08-17. If the two disagree, the Markdown wins and this page is stale.</p>
+</div>
+<div class="note corr">
+<p><strong>A correction to my own earlier summary.</strong> I reported &ldquo;no learning rates,
+coefficients, or network sizes anywhere.&rdquo; The first two hold. The third does not, and you
+were right to push on it. I checked <em>scalar hyperparameters passed by launchers</em> and
+reported that as if it covered network size. It does not: several of these architectures
+<em>define</em> their layer widths as a function of the input shape, so choosing an input
+resolution sets a network size without anyone typing one. &sect;4 is that class of change, which I
+had under-weighted.</p>
+</div>
+</div>
+
+<h2><span class="q">Question 1</span>Were training or evaluation harnesses merged?</h2>
+<div class="col">
+<p><strong>No training harness was merged.</strong> Each baseline is launched through its own
+entry point, and that is checkable rather than asserted:</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Baseline</th><th>Entry point &mdash; the authors&rsquo;</th><th>Loop, buffer, logger, eval</th></tr></thead>
+<tbody>
+<tr><td>rad, soda</td><td><code>dmc_gb/src/train.py</code></td><td>theirs, unmodified control flow</td></tr>
+<tr><td>alda</td><td><code>alda/scripts/train.py</code> + its own spec mechanism</td><td>theirs</td></tr>
+<tr><td>ppg</td><td><code>python -m phasic_policy_gradient.train</code></td><td>theirs</td></tr>
+<tr><td>idaac</td><td><code>idaac/train.py</code></td><td>theirs</td></tr>
+<tr><td>ibac_sni</td><td><code>torch_rl/scripts/train.py</code></td><td>theirs</td></tr>
+<tr><td>ctrl</td><td><code>ctrl/train_ppo.py</code></td><td>theirs (JAX)</td></tr>
+<tr><td>drqv2, svea, sgqn, curl, drq</td><td><code>RL-ViGen/train.py</code> &mdash; which <em>is</em> their original</td><td>theirs</td></tr>
+</tbody></table></div>
+<div class="col">
+<p>Seven distinct training loops for twelve baselines, which is the number the references
+themselves ship: RL-ViGen shares one loop across its own five, and <code>dmc_gb</code> shares one
+across <code>rad</code> and <code>soda</code>. That sharing is the authors&rsquo;, not ours.</p>
+
+<h3>Evaluation, where there is one real exception</h3>
+<ul>
+<li><strong>Ten baselines evaluate through their own code.</strong> Success-rate accumulation was
+added <em>inside</em> each repo&rsquo;s existing eval loop; no loop was replaced.</li>
+<li><strong><code>ibac_sni</code> uses its own <code>scripts/evaluate.py</code></strong> to measure
+a saved policy in a held-out regime &mdash; the same one-line env seam as its <code>train.py</code>,
+6 added lines, no evaluation loop authored.</li>
+<li><strong><code>ppg</code> is the exception.</strong> It ships no evaluation entry point at all
+&mdash; <code>train.py</code> trains, <code>graph.py</code> plots CSVs, and the only
+<code>load</code> in the package is a comment. <code>runnable/_launch/ppg_eval.py</code> is
+therefore ours. It lives <em>outside</em> the clone (zero deviations on the ledger) and reuses
+everything that could bias a number: <code>get_venv</code>, their <code>Roller</code>, their
+<code>VecMonitor2</code>, their <code>PpoModel.act</code>. Ours is the loop that stops after
+N episodes.</li>
+<li><code>scripts/collect_metrics.py</code> reads six log formats into one record shape. It is a
+<em>reader</em>: it runs nothing and cannot change a number.</li>
+</ul>
+<div class="note">
+<p><strong>The one harness that was merged is the one we abandoned.</strong> The superseded
+<code>rlgen/</code> port had a single shared trainer, evaluator and logger for all twelve. That is
+precisely the design this approach replaced, and it is still on disk, measured, and labelled
+superseded in <code>docs/STATE-2026-08-16.md</code>.</p>
+</div>
+</div>
+
+<h2><span class="q">Question 2</span>Was anything removed, or only partially ported?</h2>
+<div class="col">
+<p><strong>Nothing was removed and nothing is partial.</strong> Each clone is the complete
+original repository with a <code>PRISTINE:</code> first commit, so <code>git diff</code> against
+it is the exhaustive statement. Two mechanical checks:</p>
+<ul>
+<li><strong>Zero deleted files</strong> across all six clones (<code>grep "deleted file"</code>
+over every exported patch returns nothing).</li>
+<li><strong>117 removed lines total</strong>, and every one is a replacement-in-place, not a
+deletion. Read verbatim, they fall into five kinds:</li>
+</ul>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Kind</th><th>Example (the <span class="del">&minus;</span> line)</th><th>Replaced by</th></tr></thead>
+<tbody>
+<tr><td>Signature widened</td><td><code>obs, reward, done, _ = env.step(action)</code></td><td>same call, capturing <code>info</code></td></tr>
+<tr><td>Version drift</td><td><code>jax.ops.index_add(...)</code>, <code>jax.tree_multimap</code>, <code>.copy(add_or_replace=)</code></td><td>documented successors, same semantics</td></tr>
+<tr><td>Env construction wrapped</td><td><code>env = ProcgenVecEnvCustom(..., num_levels=200, ...)</code></td><td>a branch whose Procgen arm passes <em>identical</em> arguments</td></tr>
+<tr><td>Discrete &rarr; continuous</td><td><code>pi = tfd.Categorical(logits=logits)</code></td><td><code>self.make_pi(logits)</code>, Categorical on the discrete path</td></tr>
+<tr><td>Placeholder filled</td><td><code>"/your/data/path/here/"</code></td><td>a relative path the repo can resolve</td></tr>
+</tbody></table></div>
+<div class="col">
+<p>The removals that look largest &mdash; <code>ctrl</code>&rsquo;s 58 lines &mdash; are almost
+entirely the three <code>ProcgenVecEnvCustom</code> blocks being folded into one factory. Its
+Procgen arm reconstructs them argument-for-argument
+(<code>mode='easy'</code>, <code>paint_vel_info=False</code>, <code>normalize_rewards=True</code>),
+so the original path is preserved exactly.</p>
+<p>The <em>superseded</em> <code>rlgen/</code> port is a different story and its removals are
+recorded in <code>docs/STATE-2026-08-16.md</code> &mdash; launcher, logger and env layers cut from
+every vendored base, plus two undeclared ones found on 2026-08-16
+(<code>NNBase</code> inlined; <code>LinearOrderClassifier</code> hand-rewritten from a docstring
+while the reference sat ten lines away). That is exactly the failure mode the clone approach
+removes: with a full clone there is nothing to forget to port.</p>
+</div>
+<h2><span class="q">Question 3</span>Were the algorithms deviated &mdash; including parameters?</h2>
+<div class="col">
+<h3>Scalar hyperparameters: none changed, and this part is verifiable</h3>
+<p>Every argument the launchers pass is env selection, parallelism, logging, or protocol.
+Grepping all seven launchers for <code>lr</code>, <code>entropy_coef</code>,
+<code>clip_param</code>, <code>batch_size</code>, <code>gamma</code>, <code>gae</code>,
+<code>epochs</code> returns <strong>nothing</strong>. Each repo runs on its own defaults.</p>
+<p>ALDA is the case worth checking hardest, because it is configured by a file we added. Diffing
+our <code>train_alda_robosuite_door.yaml</code> against the repo&rsquo;s own
+<code>train_alda_ball_in_cup_catch.yaml</code>, with task names normalised, the <em>entire</em>
+difference is:</p>
+<pre><code>  action_repeat: 4   ->  1        (protocol; RL-ViGen's own Table 2 says 1 for robosuite)
+  episode_length: 1000 -> 500     (robosuite's own horizon)
++ scene_id: 0                     (an RL-ViGen concept DMC has no equivalent for)</code></pre>
+<p><code>seed</code>, <code>batch_size: 128</code>, <code>num_latents: 12</code>,
+<code>values_per_latent: 12</code>, <code>beta: 100</code>, <code>n_train_steps: 500_000</code>
+are all theirs, untouched.</p>
+
+<h3>Algorithms: four heads, one repair, one latent-bug fix</h3>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Change</th><th>Baseline</th><th>What it is</th><th>Provenance</th></tr></thead>
+<tbody>
+<tr><td>Continuous policy head</td><td>idaac</td><td><code>FixedNormal</code> + <code>AddBias</code> + <code>DiagGaussian</code></td><td><span class="tag">copied verbatim</span> from <code>ikostrikov/pytorch-a2c-ppo-acktr-gail@41332b7</code> &mdash; the file&rsquo;s own upstream, whose <code>init</code>/<code>FixedCategorical</code>/<code>Categorical</code> are byte-identical to idaac&rsquo;s</td></tr>
+<tr><td>Continuous policy head</td><td>ppg</td><td><code>_make_normal</code> completed</td><td><span class="tag">authored</span> &mdash; upstream&rsquo;s body was unreachable and hardcoded <code>scale=1.0</code> under its own <code>warnings.warn("Using stdev=1")</code>. Ours clamps <code>log_std</code> to <code>[-5, 2]</code>, i.e. &sigma; &isin; [0.0067, 7.39]</td></tr>
+<tr><td>Continuous policy head</td><td>ibac_sni</td><td><code>make_dist</code> &rarr; <code>Independent(Normal,&nbsp;1)</code></td><td><span class="tag">authored</span> &mdash; <code>torch_rl</code> raises on anything but <code>Discrete</code></td></tr>
+<tr><td>Continuous policy head</td><td>ctrl</td><td><code>make_pi</code> &rarr; <code>MultivariateNormalDiag</code></td><td><span class="tag">authored</span></td></tr>
+<tr><td>Action conditioning</td><td>idaac, ctrl</td><td>one-hot &rarr; the real action vector, for the advantage/cluster heads</td><td><span class="tag">adaptation</span> &mdash; a Box action already <em>is</em> the vector the one-hot was producing</td></tr>
+<tr><td>MYOW loss restored</td><td>ctrl</td><td>two commented lines uncommented</td><td><span class="tag">repair</span> &mdash; see below</td></tr>
+<tr><td><code>num_actions</code> forwarded</td><td>idaac</td><td>advantage head sized from the action space</td><td><span class="tag">latent bug</span> &mdash; inert on Procgen, required here</td></tr>
+</tbody></table></div>
+<div class="col">
+<p><strong>All four heads initialise <code>log_std = 0</code> (&sigma; = 1).</strong> That is not
+four independent guesses: it is the value the one verbatim-copied reference uses
+(<code>AddBias(torch.zeros(num_outputs))</code>), applied uniformly to the three that had no
+continuous head to inherit from. Verified numerically rather than by inspection &mdash; logged
+entropy 9.9333 (ppg) and 9.935 (ibac_sni) against
+7&nbsp;&times;&nbsp;&frac12;log(2&pi;e)&nbsp;=&nbsp;9.9326, and jax&rsquo;s MVNDiag reports
+9.93257 for the same distribution.</p>
+
+<div class="note">
+<p><strong>The one change that alters a running algorithm: <code>ctrl</code>.</strong>
+<code>algo.py:203</code> comments out <code>scores_w_target = w_clust_target @ protos</code> while
+line 211 still reads <code>scores_w_target</code>. As released, <code>ctrl_public@7a118c8</code>
+raises <code>NameError</code> the first time <code>update_cluster</code> runs &mdash; it cannot
+execute its own <code>ppo_ctrl</code> at all. Restoring the authors&rsquo; own two lines makes the
+MYOW branch live, which is a genuine change in what the loss computes versus the released file.
+Checked for completeness: the <em>online</em> <code>w_clust</code> is unpacked and never used
+again, so leaving its partner line commented changes nothing, and the restoration is minimal for
+the path that actually runs.</p>
+</div>
+
+<h3>Recorded, deliberately not fixed</h3>
+<ul>
+<li><strong><code>ppg</code>&rsquo;s auxiliary KL is not summed over the action dimension.</strong>
+<code>aux_train</code> does <code>td.kl_divergence(oldpd, pd).mean()</code> with no
+<code>sum_nonbatch</code>. For a Categorical that is a mean over (B,T); for a 7-dim Normal it
+averages over the action axis while the PPO losses sum over it, making the effective
+<code>beta_clone</code> 7&times; smaller than the loss it is weighed against. It is the
+authors&rsquo; line applied to a distribution they never used, and leaving it is the null.</li>
+<li><strong><code>ctrl</code>&rsquo;s MYOW loop ignores its own index.</strong>
+<code>for k_idx in range(myow_k)</code> indexes <code>indx[:, 0 + 1]</code>; <code>k_idx</code> is
+never used, so every iteration draws the same nearest cluster.</li>
+<li><strong><code>evaluate.py</code>&rsquo;s <code>--argmax</code> is Categorical-only</strong>
+(<code>dist.probs</code>). Nothing uses it, and deterministic evaluation of a Gaussian means its
+mean, not an argmax &mdash; a decision, not a reflex.</li>
+</ul>
+</div>
+
+<h2><span class="q">Question 4</span>The class I under-reported: format, shape, and what they propagate into</h2>
+<div class="col">
+<p>You remembered this correctly. Augmentation-based methods have an input shape their
+augmentation is <em>defined against</em>, and the shape is not a free variable.</p>
+
+<h3>Where the sizes come from &mdash; five of seven are the reference&rsquo;s own</h3>
+<p><code>dmc_gb</code> settles its own case in <code>src/arguments.py</code>:</p>
+<pre><code>if args.algorithm in {'rad', 'curl', 'pad', 'soda'}:
+    args.image_size = 100
+    args.image_crop_size = 84
+else:
+    args.image_size = 84</code></pre>
+<p>So the 100&times;100 render for <code>rad</code>/<code>soda</code> is <strong>the repo&rsquo;s
+own rule</strong>. RL-ViGen renders 84 and offers no way to change it; patch <strong>P6</strong>
+exists so the environment can supply what the algorithm already demands. Without it, the exact
+failures you remember:</p>
+<ul>
+<li><strong>RAD silently becomes SAC.</strong> <code>random_crop</code> computes
+<code>crop_max = img_size - size = 84 - 84 = 0</code> and returns the input unchanged by its own
+<code>if crop_max &lt;= 0</code> guard. No error, no warning, no augmentation.</li>
+<li><strong>SODA refuses to run.</strong> <code>soda.py:51</code> is
+<code>assert x.size(-1) == 100</code>.</li>
+</ul>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Baseline</th><th>Render</th><th>Whose choice</th><th>Why that size</th></tr></thead>
+<tbody>
+<tr><td>rad, soda</td><td class="n">100 &rarr; crop 84</td><td>the repo&rsquo;s</td><td><code>arguments.py</code> sets it for exactly these algorithms</td></tr>
+<tr><td>ppg</td><td class="n">64</td><td>the reference&rsquo;s</td><td>Procgen native; <code>ImpalaCNN</code>&rsquo;s dense layer derives from it, giving the same 2048 as upstream</td></tr>
+<tr><td>idaac</td><td class="n">64</td><td>the reference&rsquo;s</td><td><code>nn.Linear(2048, hidden)</code> is hardcoded; 2048 = 32&times;8&times;8 holds only at 64</td></tr>
+<tr><td>ctrl</td><td class="n">64</td><td>the reference&rsquo;s</td><td><code>model.init</code> example is literally <code>jnp.zeros((1, L, 64, 64, 3))</code></td></tr>
+<tr><td>alda</td><td class="n">64</td><td>the reference&rsquo;s</td><td>encoder built for 64; an 84 render dies on a 3&times;6400 vs 4096&times;256 mismatch</td></tr>
+<tr><td>drqv2, svea, sgqn, curl, drq</td><td class="n">84</td><td>the benchmark&rsquo;s</td><td>RL-ViGen&rsquo;s own default; P6 inert</td></tr>
+<tr><td><strong>ibac_sni</strong></td><td class="n">64</td><td class="warnc"><strong>ours</strong></td><td>its <code>torch_rl</code> branch is MiniGrid and has no image-size precedent; 64 borrowed from the paper&rsquo;s own CoinRun branch</td></tr>
+</tbody></table></div>
+<div class="col">
+<div class="note corr">
+<p><strong>And here is the network size I said we never set.</strong> <code>ibac_sni</code>
+defines its width <em>as a function of the input</em>:</p>
+<pre><code>self.image_embedding_size = ((n-1)//2-2) * ((m-1)//2-2) * 64
+
+  7x7   ->        64      (MiniGrid, what the code was written for)
+  64x64 ->    53,824      (what our choice produces)
+  84x84 ->    97,344</code></pre>
+<p><strong>Measured since, not estimated</strong> &mdash;
+<code>scripts/probe_geometry.py</code> (PROBE&nbsp;3) constructs the real <code>ACModel</code> at
+each resolution. The conv trunk is <em>identical</em> at all three (10,544 parameters); every
+added parameter sits in a fully-connected head:</p>
+<div class="tw"><table>
+<thead><tr><th>Input</th><th class="n">Embedding</th><th class="n">Conv params</th><th class="n">Total params</th></tr></thead>
+<tbody>
+<tr><td>7&times;7 &mdash; MiniGrid native, what the architecture was written for</td><td class="n">64</td><td class="n">10,544</td><td class="n"><strong>15,231</strong></td></tr>
+<tr><td><strong>64&times;64 &mdash; ours</strong></td><td class="n">53,824</td><td class="n">10,544</td><td class="n"><strong>3,455,871</strong></td></tr>
+<tr><td>84&times;84 &mdash; the RL-ViGen five&rsquo;s, for comparison</td><td class="n">97,344</td><td class="n">10,544</td><td class="n">6,241,151</td></tr>
+</tbody></table></div>
+<p>Choosing 64&times;64 over MiniGrid&rsquo;s 7&times;7 multiplies the model by <strong>227&times;</strong>,
+into a head fed by a flattened conv output the architecture expected to be 64-dimensional.
+The resolution <em>was</em> the layer size.</p>
+<p>That feeds <code>Bottleneck(self.embedding_size, 64)</code> &mdash; so the choice of 64&times;64
+sets that layer where the reference had a 64-wide one. Nobody typed a network
+size; an input format determined one. This is the single largest architectural consequence in the
+project and it belongs in any comparison that treats these twelve as peers.</p>
+</div>
+
+<h3>Input scale, which is not shared either</h3>
+<p>Every baseline normalises pixels itself, and one does not:</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Baseline</th><th>Scaling</th><th>Range</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>rad, soda</td><td><code>x/255.</code></td><td>[0, 1]</td><td><code>modules.py:88</code></td></tr>
+<tr><td>alda</td><td><code>obs.float()/255.</code></td><td>[0, 1]</td><td><code>alda_trainer.py:505</code></td></tr>
+<tr><td>ppg</td><td><code>x/scale_ob</code>, <code>scale_ob=255</code></td><td>[0, 1]</td><td><code>impala_cnn.py</code></td></tr>
+<tr><td>idaac</td><td><code>/255.</code></td><td>[0, 1]</td><td><code>envs.py:27,41</code></td></tr>
+<tr><td>ctrl</td><td><code>/255.</code></td><td>[0, 1]</td><td><code>algo.py:176</code></td></tr>
+<tr><td><strong>ibac_sni</strong></td><td class="warnc"><strong>none upstream</strong> &mdash; we divide in the seam</td><td>[0, 1]</td><td><code>utils/general.py:66</code></td></tr>
+<tr><td><strong>RL-ViGen five</strong></td><td><code>obs/255.0 - 0.5</code></td><td class="warnc"><strong>[&minus;0.5, +0.5]</strong></td><td><code>drqv2.py:64</code></td></tr>
+</tbody></table></div>
+<div class="col">
+<p>Two things there. <code>ibac_sni</code>&rsquo;s <code>preprocess_images</code> does
+<code>torch.tensor(images, dtype=torch.float)</code> with <em>no</em> division &mdash; correct for
+MiniGrid, whose &ldquo;image&rdquo; is small category indices, and two orders of magnitude wrong
+for RGB. The division is ours, placed in the seam rather than in their preprocessor, and it is a
+real decision about input scale. And RL-ViGen&rsquo;s own five centre their input at zero while
+the other seven do not &mdash; inherited, not ours, and still a difference between the twelve.</p>
+
+<h3>Output shape</h3>
+<p>Discrete 15 &rarr; <code>Box(-1,1,(7,))</code> forced the heads above, and one derived width:
+IDAAC&rsquo;s advantage head is <code>nn.Linear(hidden_size + num_actions, 1)</code>, so 256+15
+becomes 256+7. That head previously received a hardcoded default of 15 because
+<code>num_actions</code> was never forwarded into the base &mdash; right for Procgen, silently
+wrong for anything else.</p>
+</div>
+<h2><span class="q">Question 5</span>Is this good for both CUDA and MPS?</h2>
+<div class="col">
+<p><strong>CUDA is the primary path and no source line was changed for MPS.</strong> Device
+adaptation lives entirely in <code>runnable/_shim/sitecustomize.py</code>, loaded via
+<code>PYTHONPATH</code>, changing zero repo lines. The alternative was patching
+<code>.cuda()</code> at 22 call sites across 7 files in <code>dmc_gb</code> alone &mdash; 22
+authored deviations bought purely for local convenience.</p>
+<p>Evidence for CUDA is direct, not inferred: RAD trained on a real Tesla&nbsp;T4 across six
+kernel runs with <code>runnable/_shim</code> <em>absent</em> from <code>PYTHONPATH</code>, on
+clones rebuilt from public GitHub at the pinned SHAs by our own exported patches, with
+<code>apply_patches.py --check</code> exiting 0 on a machine that had never seen this workspace.
+The log also shows <code>Observations: (9,100,100)</code> &rarr;
+<code>Cropped: (9,84,84)</code>, which proves P6 is live there and that RAD is genuinely RAD.</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Where they differ</th><th>MPS</th><th>CUDA</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td>float64</td><td>does not exist; shim downcasts to float32, announced once</td><td>kept</td><td>a real numerical difference; local runs are not bit-comparable to remote</td></tr>
+<tr><td><code>curl</code></td><td class="warnc">fails: <code>scatter: index -1</code> in its contrastive loss</td><td>expected fine</td><td>run it with <code>device=cpu</code> locally; isolated by re-running, not assumed</td></tr>
+<tr><td>DataLoader workers</td><td>MuJoCo GL dies across <code>fork</code>; workers set to 0</td><td>fine</td><td>data-loading concurrency only; changes no number</td></tr>
+<tr><td>Determinism</td><td>&mdash;</td><td>GPU nondeterminism observed run-to-run</td><td>same seed, same first eval; losses diverge slightly by the second update</td></tr>
+</tbody></table></div>
+<div class="col">
+<div class="note">
+<p><strong>The platform constraint that decides where real runs go.</strong> RL-ViGen&rsquo;s
+texture modder reads <code>MjModel.tex_rgb</code>, removed in mujoco 3.0, so every
+<code>eval-*</code> regime needs mujoco 2.x. The last 2.x release with wheels is 2.3.7, and it
+stops at <strong>cp311</strong>. Kaggle runs <strong>python 3.12</strong>. So Kaggle can run the
+<em>train</em> regime only &mdash; enough for a CUDA smoke, useless for a generalisation
+benchmark. DataSphere pins 3.11; <code>compute/datasphere/</code> is prepared and asserts both
+<code>MjData.qM</code> and <code>MjModel.tex_rgb</code> in its first lines. It needs a project id
+from the console, which there is no headless way to obtain.</p>
+</div>
+</div>
+
+<h2><span class="q">Question 6</span>Deviations that are not changes</h2>
+<div class="col">
+<p>These are the differences between the twelve that we did not introduce and mostly cannot
+remove without breaking fidelity. They are the real limit on comparability, and none of them
+shows up in the change ledger.</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Axis</th><th>The split</th><th>Origin</th><th>Can it be equalised?</th></tr></thead>
+<tbody>
+<tr><td><strong>Time-limit handling</strong><br><span class="tag">new</span></td><td><strong>bootstraps (correct): rad, soda, alda</strong> &mdash; treats truncation as termination: the RL-ViGen five, ctrl, idaac, ppg. <strong>3&nbsp;/&nbsp;9</strong></td><td>lineage. The three descend from Yarats&rsquo; dmcontrol code, which carried the fix (<code>done_bool = 0 if episode_step + 1 == _max_episode_steps</code>). The four Procgen-native ones are wrong <em>here only because the environment changed underneath them</em> &mdash; in Procgen every episode genuinely <em>is</em> a termination, so their authors were right for Procgen</td><td class="warnc">Not without editing nine clones. Door and Lift never end early, so this fires on <em>every</em> episode: nine baselines&rsquo; value targets are biased downward by the horizon, three are not. The single largest comparability defect found, and no diff can show it</td></tr>
+<tr><td><strong>Frame stack</strong></td><td>3 frames: rad soda alda + RL-ViGen five &mdash; <strong>1 frame</strong>: ppg idaac ibac_sni ctrl</td><td>the right column is exactly the Procgen lineage; Procgen serves one RGB frame</td><td class="warnc">No. A single frame on manipulation is velocity-blind; this is two different POMDPs, not two algorithms</td></tr>
+<tr><td><strong>Discount</strong></td><td>0.99 &times;9 &mdash; <strong>0.999</strong> &times;3 (ppg, idaac, ctrl)</td><td>each repo&rsquo;s own default</td><td>Yes, but it is a hyperparameter change. On a 500-step horizon this is an effective horizon of ~100 vs ~1000 steps</td></tr>
+<tr><td><strong>Learning rate</strong></td><td>1e-4 (RL-ViGen five, matching their paper&rsquo;s Table&nbsp;6 for Door) &mdash; 5e-4 (ppg, idaac, ctrl) &mdash; 7e-4 (ibac_sni) &mdash; 1e-3 (dmc_gb actor/critic)</td><td>each repo&rsquo;s own</td><td>Yes, but a 10&times; spread tuned on other environments</td></tr>
+<tr><td><strong>Action distribution</strong></td><td>SAC squashed Gaussian (rad soda alda) &mdash; DrQv2 tanh-mean + TruncatedNormal (RL-ViGen five) &mdash; unsquashed Gaussian + env clip (ppg idaac ibac_sni ctrl)</td><td>algorithm lineage</td><td class="warnc">No. Only the third family&rsquo;s likelihood disagrees with what the env executes</td></tr>
+<tr><td><strong>Reward normalisation</strong></td><td><code>VecNormalize</code> on rewards: idaac, ctrl &mdash; internal: ppg &mdash; none: the other nine</td><td>each repo&rsquo;s own</td><td>Reported returns are raw everywhere (VecMonitor sits <em>inside</em> VecNormalize); only the training signal differs</td></tr>
+<tr><td><strong>Input range</strong></td><td>[0,1] &times;7 &mdash; <strong>[&minus;0.5,+0.5]</strong> &times;5 (RL-ViGen)</td><td>DrQv2 lineage</td><td>Yes, trivially &mdash; but it is their code</td></tr>
+<tr><td><strong>Render resolution</strong></td><td>100&rarr;84, 84, 64</td><td>each paper&rsquo;s own (except ibac_sni)</td><td class="warnc">Not without breaking an augmentation or an encoder. Different fields of view</td></tr>
+<tr><td><strong>Instance diversity</strong></td><td>Procgen draws a new level per episode; a robosuite env&rsquo;s scene is fixed for the run</td><td>benchmark structure</td><td class="warnc">Bears on IDAAC specifically &mdash; <code>level_seed</code> is what its order classifier means by &ldquo;same instance&rdquo;</td></tr>
+<tr><td><strong>Eval protocol</strong></td><td>single seed, no confidence intervals</td><td>ours, so far</td><td>Yes &mdash; and RL-ViGen&rsquo;s own paper &sect;4 specifies <em>5 seeds and 95% CIs</em>, which we do not yet meet</td></tr>
+</tbody></table></div>
+<h2><span class="q">Question 7</span>Metrics &mdash; what the sibling projects already built</h2>
+<div class="col">
+<p>Three parallel surveys over the sibling projects, each with a bounded read scope and its own
+output file. Together they name <strong>577 distinct metrics</strong>. This project currently
+reports two.</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Project</th><th>Names</th><th>What it is strongest at</th></tr></thead>
+<tbody>
+<tr><td><code>gen-rebuttal</code></td><td class="n">253</td><td><strong>Most relevant &mdash; it ported these same baselines.</strong> Rollout health, gradient/param norms per module, latent and discriminator probes, ALDA reconstruction metrics, cross-field invariant checks</td></tr>
+<tr><td><code>flow</code></td><td class="n">191</td><td>A tiered diagnostic taxonomy (tier0 action stats &rarr; tier1 policy entropy &rarr; tier2 advantage/value), representation probes, explicit train&minus;eval difference metrics</td></tr>
+<tr><td><code>unified-bench</code></td><td class="n">133</td><td><strong>The evaluation-protocol layer</strong>: rliable IQM with stratified bootstrap CI, Wilson intervals on success rates, SEM, percentiles &mdash; and documented conditions under which each is invalid</td></tr>
+</tbody></table></div>
+<div class="col">
+<h3>Four that answer questions this audit left open</h3>
+<p>Not a wish list &mdash; each of these <em>measures</em> something I could otherwise only argue
+about:</p>
+<ul>
+<li><code>obs/interframe_absdiff</code> <span class="tag">gen-rebuttal</span> &mdash; how much
+consecutive stacked frames differ. This turns the frame-stack finding from an argument into a
+number: it directly measures whether a stacked observation carries motion, which is exactly what
+separates the 8 stacked baselines from the 4 single-frame ones.</li>
+<li><code>act/saturation_frac</code>, <code>actor/mu_saturated_frac</code>
+<span class="tag">gen-rebuttal</span> &mdash; the fraction of actions on the box boundary. This is
+the measurement of the clipped-Gaussian family&rsquo;s defect: how much probability mass the env
+is folding onto the boundary while the policy&rsquo;s likelihood still treats it as interior.
+My own superseded <code>rlgen/tags.py</code> already declared
+<code>diag/action_saturated_frac</code>, and it was lost when the approach changed.</li>
+<li><code>init/pi_entropy</code>, <code>init/pi_log_std_mean</code>
+<span class="tag">gen-rebuttal</span> &mdash; exactly the hand-check I ran on the four authored
+heads (entropy 9.9333 vs 7&times;&frac12;log&nbsp;2&pi;e). It should be an assertion at startup,
+not something a person notices in a log.</li>
+<li><code>wilson_lo</code> / <code>wilson_hi</code> <span class="tag">unified-bench</span> &mdash;
+the correct interval for a binary success rate, which is the metric this project just added and
+currently reports as a bare point estimate.</li>
+</ul>
+
+<h3>On family-specific metrics &mdash; my view</h3>
+<p>The twelve split into three families, and the split is the same one that keeps appearing in
+this audit:</p>
+</div>
+<div class="tw"><table>
+<thead><tr><th>Family</th><th>Baselines</th><th>Metrics that mean something</th><th>Metrics that do not</th></tr></thead>
+<tbody>
+<tr><td><strong>Off-policy actor-critic</strong></td><td>rad, soda, alda, drqv2, svea, sgqn, curl, drq</td><td><code>critic/q_mean</code>, <code>alpha</code>, target-entropy tracking, buffer health (<code>buf/frac_full</code>, <code>buf/evicted</code>), update-to-data ratio</td><td><code>approx_kl</code>, <code>clipfrac</code>, <code>explained_variance</code> &mdash; no PPO ratio exists</td></tr>
+<tr><td><strong>On-policy PPO family</strong></td><td>ppg, idaac, ibac_sni, ctrl</td><td><code>approx_kl</code>, <code>clipfrac</code>, <code>explained_variance</code>, advantage mean/std pre-norm, GAE diagnostics</td><td>buffer health &mdash; there is no replay buffer</td></tr>
+<tr><td><strong>Method-specific</strong></td><td>&mdash;</td><td>idaac: <code>adv_head/corr</code>, order-classifier accuracy &middot; ppg: aux-phase <code>pol_distance</code> &middot; ctrl: cluster/proto entropy, dead-code fraction &middot; alda: <code>recon_mse</code>, codebook usage &middot; ibac_sni: bottleneck KL</td><td>meaningless across families &mdash; never aggregate them</td></tr>
+</tbody></table></div>
+<div class="col">
+<p>So the shape I would argue for is <strong>three tiers, not one table</strong>:</p>
+<ol>
+<li><strong>Comparable across all twelve</strong> &mdash; success rate with a Wilson interval,
+episode return, episode length, frames. This is the only tier that may go into one plot, and even
+here return is scale-arbitrary while success rate is not.</li>
+<li><strong>Comparable within a family</strong> &mdash; the PPO diagnostics for the four,
+the actor-critic diagnostics for the eight. Reported side by side, never pooled.</li>
+<li><strong>Per-method, and reported only against itself</strong> &mdash; a method&rsquo;s own
+mechanism working or not. These are the ones that catch a port being subtly wrong, which is
+exactly what this project needs and what neither of the first two tiers can see.</li>
+</ol>
+<div class="note">
+<p><strong>The caveats are the most valuable thing the surveys returned.</strong>
+<code>unified-bench</code> documents ten conditions under which its own metrics are invalid
+&mdash; IQM truncation artifacts on near-binary rewards, single-run SEM being pure Bernoulli
+noise, single-seed point estimates being statistically unreliable, level contamination between
+train and eval. Adopting the metric without the caveat would be adopting the failure. That is the
+part to port first.</p>
+</div>
+</div>
+
+<div class="col">
+<h3>What is implemented, as of now &mdash; not proposed</h3>
+<p><code>scripts/metrics.py</code>, 38 property-based tests in <code>tests/test_metrics.py</code>,
+plus a module <code>--self-test</code>. Each carries its conditions of validity in its docstring,
+because the caveat is the part that gets dropped.</p>
+<div class="tw"><table>
+<thead><tr><th>Metric</th><th>Why this one, over the obvious alternative</th></tr></thead>
+<tbody>
+<tr><td><code>wilson_interval</code></td><td>Every success rate we report is <strong>0.000</strong>. The normal approximation has width <em>zero</em> at p=0, which reads as having proven the policies never succeed, from ten episodes. Wilson gives <code>[0.000, 0.278]</code>.</td></tr>
+<tr><td><code>iqm</code> + <code>bootstrap_ci</code></td><td>Robust to outlier episodes &mdash; carrying <code>unified-bench</code>&rsquo;s own caveat that on a near-binary reward IQM truncates the signal away.</td></tr>
+<tr><td><code>interframe_absdiff</code></td><td>Turns the frame-stack argument into a number. Returns 0.0 for a single frame meaning <em>NOT MEASURABLE</em>, never &ldquo;no motion&rdquo;.</td></tr>
+<tr><td><code>action_saturation_frac</code></td><td>Finding&nbsp;6, quantified. <strong>Measured 31.8%</strong> for the four unsquashed heads at initialisation, 0.0% for SAC, 5.5% for DrQv2 &mdash; and checked against the closed form 2(1&minus;&Phi;(1))&nbsp;=&nbsp;0.3173.</td></tr>
+<tr><td><code>explained_variance</code></td><td>Returns <strong>nan</strong> on constant returns, not 0.0 &mdash; 0.0 reads as &ldquo;explains nothing&rdquo;, a different claim, and an all-zero-return batch is routine on a sparse reward.</td></tr>
+<tr><td><code>approx_kl</code></td><td>Defaults to <strong>k3</strong>. TorchRL computes k1 only, and k1 <em>can go negative</em> &mdash; unusable as a trigger, and it invites someone to &ldquo;fix&rdquo; the sign. Pinned by a test where k1 is negative and k3 is not.</td></tr>
+<tr><td><code>clip_fraction</code>, <code>effective_sample_size</code></td><td>Take the <em>log</em> ratio, because that is what a policy produces and exponentiating early loses precision exactly where the ratio is extreme &mdash; the region these exist to count.</td></tr>
+<tr><td><code>target_network_divergence</code></td><td>Measured <strong>nowhere in TorchRL</strong>. It is what would have caught the DDPG defect they shipped, where <code>delay_value</code> defaulted <code>False</code> so <code>SoftUpdate</code> copied the source onto itself.</td></tr>
+<tr><td><code>diag_gaussian_entropy</code></td><td>Lets a head&rsquo;s initialisation be <em>asserted</em> rather than noticed in a log.</td></tr>
+</tbody></table></div>
+<p>And two probes that run the measurement rather than defining it:
+<code>scripts/probe_geometry.py</code> (the two numbers above, self-checked against closed form)
+and <code>scripts/probe_heads.py</code>, which <strong>constructs all four authored heads</strong>
+&mdash; each in its own interpreter with its own <code>sys.path</code>, because importing them
+into one process is exactly the join this project avoids &mdash; and confirms every one reports
+<strong>9.93257</strong> against a target of 7&nbsp;&times;&nbsp;&frac12;log(2&pi;e). A SKIP is
+reported as a SKIP and never as a pass.</p>
+</div>
+
+<h2><span class="q">Question 8</span>What I would do next, in order</h2>
+<div class="col">
+<ol>
+<li><strong>Decide the truncation split &mdash; new, and it outranks everything below.</strong>
+Three baselines bootstrap through the 500-step horizon and nine treat it as a termination, on a
+task that <em>only ever</em> ends by time limit. So nine baselines&rsquo; value targets are
+biased downward on every episode and three are not. <code>Protocol.time_limit_handling</code> is
+now annotated with the per-clone survey but still <em>declares</em>
+<code>truncate_with_bootstrap</code>, and that value is inside the hash. The consistent fix is to
+split it per-baseline the way <code>OBSERVATION_GEOMETRY</code> splits frame stacking; the
+alternative is to re-value and re-stamp every recorded hash. Not mine to decide silently.</li>
+<li><strong>Decide the frame-stack question.</strong> It gates what any comparison means, and
+<code>interframe_absdiff</code> now lets the decision be made against a measurement
+(<strong>0.0096&ndash;0.0103</strong> mean absolute pixel change per step across the three render
+sizes, on Door). <code>Protocol.OBSERVATION_GEOMETRY</code> records the split honestly; it does
+not resolve it.</li>
+<li><strong>Wilson intervals on success rate, and 5 seeds.</strong> Cheap, and it is
+RL-ViGen&rsquo;s own stated protocol (paper &sect;4). A single-seed point estimate is the weakest
+part of the current setup by a wide margin &mdash; weaker than any code question in this audit.</li>
+<li><s>Startup assertions from <code>init/*</code>.</s> <strong>Done</strong> &mdash;
+<code>scripts/probe_heads.py</code> builds all four heads and checks the entropy, so the claim
+holds without a training run having to happen first.</li>
+<li><s>Family-tier diagnostics.</s> <strong>Done</strong> &mdash; see Question&nbsp;7. What
+remains is <em>wiring</em> them into each baseline&rsquo;s logging, which is nine different
+logging paths and therefore nine small decisions, not one.</li>
+<li><strong>The CUDA eval-regime run on DataSphere.</strong> Everything is prepared; it needs a
+project id.</li>
+<li><strong>Re-examine <code>ibac_sni</code>&rsquo;s 64&times;64.</strong> It is the one
+resolution that is ours rather than a reference&rsquo;s, and it sets a 3.4&nbsp;M-parameter layer.
+Worth either justifying against the paper&rsquo;s CoinRun branch explicitly or reconsidering.</li>
+</ol>
+<h3>Two small things this audit turned up that I should fix</h3>
+<ul>
+<li><code>dmc_gb/src/train.py</code> accumulates a <code>successes</code> list that is never read
+&mdash; the per-episode value is logged directly. Dead accumulation, mine. <strong>Removed</strong>;
+the ledger moved 834&nbsp;&rarr;&nbsp;832 and the staleness test caught all four documents that
+quoted the old figure.</li>
+<li>The <code>ppg</code> aux-KL scaling and the <code>ctrl</code> MYOW <code>k_idx</code> bug are
+both recorded but neither is <em>tested</em>; a test that pins the current behaviour would stop
+either from being silently "fixed" later without a decision.</li>
+</ul>
+</div>
+
+<h2><span class="q">Question 9</span>What survived being checked by people who had not read this</h2>
+<div class="col">
+<p>Everything above was written by the same author who made the changes. So it was checked two
+ways, both deliberately blind: a subagent that recovered this project&rsquo;s <em>own</em>
+recorded failure categories and looked for live instances of each, and fifteen library sweeps
+asking what the established RL libraries actually do. <strong>None of them read this
+report.</strong> A reviewer who has read the report tends to confirm it; the cost of blindness is
+that they occasionally re-derive something already known, which is cheap, and the benefit is that
+agreement means something.</p>
+
+<h3>The blind audit found two defects this report had missed, and both were re-offences</h3>
+<div class="tw"><table>
+<thead><tr><th>Where</th><th>What</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td><code>tests/test_success_metric.py</code></td><td><code>if line is None: pytest.skip(&hellip;)</code> in both tests &mdash; any fault inside the probe, <em>including one caused by the patches under test</em>, was reported as a skip and read as a pass</td><td>fixed; mutating the RESULT token now fails both</td></tr>
+<tr><td><code>_shim/sitecustomize.py</code></td><td><code>except Exception: pass</code> around a non-atomic block that rewrites ~20 torch builtins in a loop &mdash; a fault partway leaves a <em>half</em>-applied shim, where some constructors downcast float64 and others do not</td><td>fixed; announces + traceback, still does not re-raise</td></tr>
+<tr><td>four documents</td><td>the patch registry said <strong>P11</strong> in two files and <strong>P12</strong> in four; it is <strong>P13</strong></td><td>fixed, plus the missing test</td></tr>
+</tbody>
+</table></div>
+<div class="note"><p>The first two are the same defects <code>docs/REGISTER.md</code>:104 and :106
+already recorded and removed <em>by name</em>, elsewhere in this tree. They came back. That is
+worth more than either fix: <strong>the register records the lesson but does not prevent its
+recurrence, because nothing executes it.</strong> The patch-range drift has the same shape one
+level out &mdash; the registry&rsquo;s <em>content</em> was hashed and pinned by a contract test,
+so what rotted was the one restatement nothing checked: the number a person reads.</p></div>
+
+<h3>And one thing the blind audit got wrong, which is why blind is not the same as right</h3>
+<div class="note corr"><p>It reported that &ldquo;every current clone zeroes the bootstrap at the
+500-step horizon.&rdquo; Not true. <code>runnable/dmc_gb/src/train.py:149</code> reads
+<code>done_bool = 0 if episode_step + 1 == env._max_episode_steps else float(done)</code> &mdash;
+<strong><code>rad</code> and <code>soda</code> handle the time limit correctly</strong> and
+bootstrap through it. The other eight do not (RL-ViGen&rsquo;s <code>discount = 0.0</code>,
+<code>ctrl</code>&rsquo;s <code>(1 - done[t])</code>, <code>idaac</code>&rsquo;s masks,
+<code>ppg</code>&rsquo;s <code>notlast</code>). The finding survives &mdash; a hashed protocol
+field claims <code>truncate_with_bootstrap</code> that most runs do not have &mdash; but it is
+<strong>not uniform</strong>, and the non-uniformity is the more interesting fact: two
+baselines&rsquo; value targets mean something different from the other ten&rsquo;s, and that is
+declared nowhere. Earlier in the same session a blind run also invented a method name that does
+not exist. Verify, then repeat.</p></div>
+
+<h3>What fifteen libraries say about the two decisions that had no reference</h3>
+<p><strong>The authored continuous head is not an improvisation &mdash; it is the field&rsquo;s
+standard for the on-policy family.</strong> A trainable state-independent <code>log_std</code>
+initialised to&nbsp;0 (&sigma;&nbsp;=&nbsp;1) is what SB3, Tianshou, CleanRL, PureJaxRL, garage,
+AgileRL and SKRL all do, and PyTorch&rsquo;s own library ships it as a named class &mdash;
+<code>AddStateIndependentNormalScale</code>, <code>init_value=0.0</code>,
+<code>scale_mapping="exp"</code>, used by <em>every</em> on-policy MuJoCo actor in TorchRL.</p>
+<p><strong>Env-side clipping is the correct framing, and the bug is scoring the clipped
+action.</strong> TorchRL&rsquo;s <code>knowledge_base/DEBUGGING_RL.md</code> states it directly:
+the clip &ldquo;should be thought of as part of the environment,&rdquo; and the error is training
+on the clipped action rather than the raw one. Our four heads score the raw action, so the
+log-prob is self-consistent. <strong>SKRL gets this wrong</strong> &mdash; it stores the clipped
+action and takes its density under the unclipped Normal, in its own shipped manipulation
+examples, undocumented. Finding&nbsp;6 is not hypothetical; it is live in a maintained library.</p>
+
+<h3>The strongest external evidence for &ldquo;any join carries a burden of proof&rdquo;</h3>
+<p>TorchRL is the most direct counter-example to this project&rsquo;s stance &mdash; a modular
+library where algorithms share objectives, collectors, replay buffers and modules. Asked whether
+sharing has ever <em>silently</em> changed an algorithm&rsquo;s behaviour there, its own issue
+tracker answers yes about twenty times:</p>
+<ul>
+<li><strong>Issue #1662</strong> &mdash; the shared value estimators read <code>terminated</code>
+from the <code>done</code> key, so <strong>every algorithm using GAE or TD(&lambda;) bootstrapped
+as if truncations were terminations.</strong> Nothing crashed. That is this report&rsquo;s own
+truncation finding, in the field&rsquo;s flagship library, as a two-line diff.</li>
+<li><strong>PR #3679</strong> &mdash; the shared <code>PPOTrainer</code> shipped
+<code>gamma=0.9</code> and an <em>inverted</em> <code>lmbda</code>, while the <em>duplicated</em>
+script had the right values all along. The join was wrong; the duplicate was right.</li>
+<li><strong>Issue #4063</strong> &mdash; moving a hand-written PPO loop onto the shared trainer
+recomputes GAE against a moved critic, a choice &ldquo;selected implicitly by the hook
+placement&rdquo;; migrating &ldquo;can otherwise silently change the training semantics.&rdquo;</li>
+</ul>
+<p>And why none of it was caught: their objectives benchmarks are 1389 lines with <strong>zero
+assertions</strong>, and their 25,275-line test suite compares TorchRL against TorchRL &mdash;
+which is exactly why #1662 stayed green, because <em>both</em> code paths shared the
+misinterpretation. Meanwhile TorchRL&rsquo;s own recipes duplicate rather than join
+(&ldquo;each example is independent of each other for the sake of simplicity&rdquo;), with nine
+identically-named helpers reimplemented across eight <code>utils.py</code> files.</p>
+<div class="note"><p><strong>Two premises worth correcting.</strong> SKRL <em>removed</em>
+robosuite support in v2.0.0, and even its old wrapper flattened observations to 1-D &mdash; pixel
+robosuite was never possible there, so the one library that looked like a shortcut is not one.
+And SB3&rsquo;s fidelity claim is narrower than its reputation: it validates against SB2 and one
+paper&rsquo;s PyBullet table, and its Zoo says of its own benchmark, &ldquo;this is not a
+quantitative benchmark as it corresponds to only one run.&rdquo; Across all fifteen libraries,
+<strong>nine of the twelve baselines have no implementation anywhere</strong>.</p></div>
+<p class="note">Raw reports are preserved verbatim and unmerged in
+<code>docs/library-survey/raw/</code>; the blind audit, with per-finding verification kept
+<em>above</em> its unaltered text, is <code>docs/independent-audit-2026-08-17.md</code>. An audit
+whose corrections are folded silently into its own text stops being evidence of anything.</p>
+</div>
+
+<footer>
+<p>Sources: hunk-by-hunk read of <code>runnable/_patches/*.patch</code> (31 files, +854 / &minus;125
+(569 non-comment)) and <code>setup/apply_patches.py</code> (P1&ndash;P13, 21 hunks);
+<code>scripts/deviations.py</code>; each reference&rsquo;s own argument parser and config;
+three agy surveys over <code>flow</code>, <code>unified-bench</code> and <code>gen-rebuttal</code>;
+and, for Question&nbsp;9, one blind recovery of this project&rsquo;s own recorded failure
+categories plus fifteen library sweeps, all preserved verbatim in
+<code>docs/library-survey/raw/</code> and <code>docs/independent-audit-2026-08-17.md</code>.
+Claims about running behaviour come from logs of runs made this session, on this machine and on a
+Kaggle T4; claims about the references come from reading their code at the pinned commit.</p>
+<p>Suite at time of writing: 402 collected, 401 passed, 1 skipped (places365 is genuinely
+installed here, so that preflight cannot fire), exit&nbsp;0. <code>apply_patches --check</code> clean.
+12/12 baselines TRAINED in one <code>smoke_all.sh</code> pass.</p>
+</footer>
+</div>

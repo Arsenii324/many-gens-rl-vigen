@@ -1,0 +1,19 @@
+# [Codex 2026-09-01 20:34 MSK: immutable strict-P16 SVEA Door calibration with only the declared private val asset]
+name: vigen-native-svea-asset-calibration-v20
+desc: Native SVEA Door 10k explicit-Places365-val calibration; serial readiness evidence only.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=svea FRAMES=10000 TASK=Door SEED=1
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v20.tgz: CODE
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

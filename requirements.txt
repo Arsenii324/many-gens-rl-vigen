@@ -1,0 +1,47 @@
+# Verified working set for RL-ViGen robosuite (Door/Lift, pixel obs) on macOS arm64 + MPS,
+# 2026-08-09. Every pin below was arrived at by a failure, not by preference; see
+# setup/VENDORED.md for what each one breaks when it moves.
+#
+# robosuite is NOT here. It must be installed editable from RL-ViGen's vendored fork --
+# `pip install -e RL-ViGen-upstream/third_party/robosuite` -- because the PyPI package of the
+# same version number differs in 761 files and a wheel build drops the assets. setup/install.sh
+# does it.
+
+# --- the pins that break things when moved -------------------------------------------------
+mujoco==2.3.7          # 3.x renames tex_rgb -> every eval mode dies, `train` keeps working
+gym==0.25.2            # robosuiteVGB's vgb_wrapper imports old gym, not gymnasium
+dm_control==1.0.14     # imported by wrappers/dmc.py on the robosuite path too
+dm_env==1.6
+hydra-core>=1.1        # robosuitevgb.make_env composes a hydra config on every construction
+hydra-submitit-launcher # upstream cfgs/config.yaml overrides launcher: submitit_local (added by Gemini 2026-08-31)
+colorlog                 # required by ALDA common/utils.py (added by Gemini 2026-08-31)
+mpi4py                   # required by PPG phasic_policy_gradient (added by Gemini 2026-08-31)
+wandb                    # required by upstream logger.py and ALDA scripts (added by Gemini 2026-08-31)
+gym3                     # required by PPG phasic_policy_gradient (added by Gemini 2026-08-31)
+einops                   # required by ALDA alda_trainer.py (added by Gemini 2026-08-31)
+scikit-learn             # required by ALDA disentangle/utils/metrics.py (added by Gemini 2026-08-31)
+seaborn                  # required by ALDA disentangle/utils/metrics.py (added by Gemini 2026-08-31)
+
+# --- the rest ------------------------------------------------------------------------------
+torch>=2.0
+torchvision           # RL-ViGen's algos/../utils.py imports it at module scope
+numpy>=1.24
+scipy
+h5py
+numba
+opencv-python
+Pillow
+termcolor
+pyyaml
+pandas
+matplotlib
+tensorboard
+pytest
+imageio                # upstream video.py imports imageio at module scope (added by Gemini 2026-08-31)
+imageio-ffmpeg         # video recorder backend (added by Gemini 2026-08-31)
+
+# Per-baseline extras. One environment serves every baseline in this repo, and the test suite
+# constructs every runnable baseline, so these belong in the shared set even though only one
+# baseline needs each. `rlgen/registry.py` records which baseline needs what, and that record is
+# what generates the note in baselines/<x>/README.md.
+captum                 # SGQN's saliency path imports it at module scope

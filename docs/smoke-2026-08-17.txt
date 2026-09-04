@@ -1,0 +1,17 @@
+baseline   exit   evidence  log
+------------------------------------------------------------------
+rad        0      TRAINED   /tmp/smoke_all_0418/rad.log 
+soda       0      TRAINED   /tmp/smoke_all_0418/soda.log 
+alda       0      TRAINED   /tmp/smoke_all_0418/alda.log 
+ppg        124    TRAINED   /tmp/smoke_all_0418/ppg.log (expected)
+idaac      0      TRAINED   /tmp/smoke_all_0418/idaac.log 
+ibac_sni   0      TRAINED   /tmp/smoke_all_0418/ibac_sni.log 
+ctrl       1      TRAINED   /tmp/smoke_all_0418/ctrl.log (expected)
+drqv2      0      TRAINED   /tmp/smoke_all_0418/drqv2.log 
+svea       0      TRAINED   /tmp/smoke_all_0418/svea.log 
+sgqn       0      TRAINED   /tmp/smoke_all_0418/sgqn.log 
+drq        0      TRAINED   /tmp/smoke_all_0418/drq.log 
+curl       0      TRAINED   /tmp/smoke_all_0418/curl.log 
+------------------------------------------------------------------
+logs in /tmp/smoke_all_0418
+HARNESS EXIT=0

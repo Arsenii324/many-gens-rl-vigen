@@ -1,0 +1,10 @@
+{
+  "_comment": "Every upstream this project runs, at the exact commit its local clone was taken from. scripts/deviations.py verifies the local side of this; the Kaggle kernel clones these SHAs and applies patches/<name>.patch, so a green remote run also proves the patches reproduce the clones from public sources.",
+  "rl_vigen": {"url": "https://github.com/gemcollector/RL-ViGen.git", "sha": "90d8b8c"},
+  "dmc_gb":   {"url": "https://github.com/nicklashansen/dmcontrol-generalization-benchmark.git", "sha": "ff9c0aa"},
+  "ppg":      {"url": "https://github.com/openai/phasic-policy-gradient.git", "sha": "7295473"},
+  "idaac":    {"url": "https://github.com/rraileanu/idaac.git", "sha": "2fe3020"},
+  "ibac_sni": {"url": "https://github.com/google-research/IBAC-SNI.git", "sha": "6b3a58b"},
+  "ctrl":     {"url": "https://github.com/ssingh24/ctrl_public.git", "sha": "7a118c8"},
+  "alda":     {"url": "https://github.com/HanpingZhang/ALDA_Official.git", "sha": "8dcc968"}
+}

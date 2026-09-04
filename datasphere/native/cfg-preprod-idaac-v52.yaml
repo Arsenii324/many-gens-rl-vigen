@@ -1,0 +1,39 @@
+# [Claude 2026-09-03: PRE-PRODUCTION VALIDATION PASS, 3 of 7.
+#
+# This is a validation of the clone-to-curve chain, NOT a science result, and the distinction is
+# the whole design. R7 currently reads "the chain breaks at: training log, eval result set.
+# Present: 0 training log(s), 0 eval grid" and R4 asks for equal training length or a stated
+# reason. Twelve baselines at ONE common budget, one seed, on CUDA, each running its own
+# repository's train.py, answers both -- and 10,000 frames is deliberately far below what learns
+# Door (drqv2 needed 100k to reach 456), so the numbers this produces are a PIPELINE result and
+# must never be quoted as a generalisation result.
+#
+# Why 10k and not 50k: the 50k version prices at 3,286 RUB for the ten measured baselines alone,
+# and alda + ctrl (both gt4i.1, both unmeasured) push the total past the 4,000 ceiling. 10k costs
+# roughly 950 RUB for all twelve. Evaluation is cheap; it was training that made the sweep
+# expensive -- the ten-scene grid cost 59 RUB for 21 minutes.
+#
+# Cells run SEQUENTIALLY (NATIVE_CONCURRENT unset), so a multi-cell job packs bootstrap cost
+# without stacking replay memory. Every floor is cleared: the highest is rlvigen's 4001.
+#
+# Gate decisions C1-C4 were taken BEFORE this run, per the register's own rule that deciding them
+# after seeing which choice flatters a baseline is a garden of forking paths.]
+name: vigen-preprod-idaac-v52
+desc: Pre-production validation pass (3/7) -- idaac:1 at a common 10k budget.
+cmd: >-
+  timeout --foreground 7200s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=idaac:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=10 CELL_TIMEOUT_SECONDS=5400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v51.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

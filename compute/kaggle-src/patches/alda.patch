@@ -1,0 +1,123 @@
+diff --git a/specs/train_alda_robosuite_door.yaml b/specs/train_alda_robosuite_door.yaml
+new file mode 100644
+index 0000000..83a2140
+--- /dev/null
++++ b/specs/train_alda_robosuite_door.yaml
+@@ -0,0 +1,21 @@
++# RL-ViGen robosuite Door. A new spec is this repo's OWN configuration mechanism -- it ships one
++# spec per task -- so this adds a file rather than modifying one. `domain_name: robosuite` selects
++# the branch added to alda_trainer.initialize_env_dmc.
++name: alda_robosuite_door
++trainer:
++  class: ALDA
++  module: trainers.alda_trainer
++  config:
++    seed: 0
++    batch_size: 128
++    num_latents: 12
++    values_per_latent: 12
++    beta: 100
++    n_train_steps: 500_000
++    env:
++      domain_name: robosuite
++      task_name: Door
++      frame_stack: 3
++      action_repeat: 1
++      episode_length: 500
++      scene_id: 0
+diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
+index 20801e2..ed8d6b1 100644
+--- a/trainers/alda_trainer.py
++++ b/trainers/alda_trainer.py
+@@ -3,6 +3,7 @@ import os
+ import torch
+ import torch.nn.functional as F
+ import numpy as np
++import gym
+ import wandb
+ import einops
+ 
+@@ -123,6 +124,35 @@ class ALDA(TrainerBase):
+ 
+     def initialize_env_dmc(self, spec: Dict[str, Any]):
+         env_config = spec['trainer']['config']['env']
++        if env_config.get('domain_name') == 'robosuite':
++            # RL-ViGen robosuite. Its env is natively gym-style with a Box(7,) action space and a
++            # {'rgb': (3,H,W) uint8} observation, so the chain is dict -> array -> FrameStack ->
++            # DMCObsWrapper (which puts it back into the {'rgb','state'} dict this trainer wants).
++            # The three regimes map onto RL-ViGen's own: train / eval-easy (colour+lighting) /
++            # eval-hard (moving light + video background), which is what distract_env means here.
++            import sys as _sys
++            _rlv = os.environ['RLVIGEN_ROOT']
++            for _p in (_rlv, os.path.join(_rlv, 'envs', 'robosuiteVGB')):
++                if _p not in _sys.path:
++                    _sys.path.insert(0, _p)
++            from robosuitevgb.utils import make_env as _robo
++
++            def _build(_mode):
++                _e = _RoboRGB(_robo(task_name=env_config['task_name'], seed=self.seed,
++                                    scene_id=env_config.get('scene_id', 0), mode=_mode),
++                              env_config['episode_length'])
++                return DMCObsWrapper(FrameStack(_e, env_config['frame_stack']))
++
++            self.env = _build('train')
++            self.color_env = _build('eval-easy')
++            self.distract_env = _build('eval-hard')
++            # VideoRecorder(None) disables itself (`enabled = dir_name is not None and enabled`).
++            # Eval videos are off for robosuite: VideoRecorder.record calls
++            # env.render(mode=..., height=..., width=..., camera_id=...), and RL-ViGen's
++            # VGBWrapper.render takes none of those. Declared scope choice -- videos are logging,
++            # not algorithm, and rendering them is not worth patching their wrapper.
++            self.video_recorder = VideoRecorder(None)
++            return
+         self.env = dmc2gym.make(
+             domain_name=env_config['domain_name'],
+             task_name=env_config['task_name'],
+@@ -500,10 +530,17 @@ class ALDA(TrainerBase):
+             done = False
+             episode_reward = 0
+             env_step = 0
++            # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). robosuite's own _check_success,
++            # supplied by RL-ViGen patch P10, is the only unit-free quantity on this benchmark --
++            # Door's return is dense and scale-arbitrary. Convention, matching every other
++            # baseline here: the episode counts as a success if the flag held at ANY step.
++            # DMCObsWrapper returns (obs, reward, done, truncated, info), so info is the 5th.
++            succeeded = False
+             while not done:
+                 with eval_mode(self):
+                     action = self.select_action(self.preprocess_obs(obs['rgb'][None]))
+-                obs, reward, done, _, _ = env.step(action)
++                obs, reward, done, _, _info = env.step(action)
++                succeeded = succeeded or bool((_info or {}).get('success', False))
+ 
+                 # pre_z = self.critic_encoder.shared_trunk(self.preprocess_obs(obs['rgb'][-3:][None]))
+                 # embed = self.latent_model(pre_z)['z_hat']
+@@ -522,6 +559,8 @@ class ALDA(TrainerBase):
+ 
+             self.video_recorder.save(f'{step}{_test_env}.mp4')
+             logger.info(f'eval/episode_reward{_test_env}: {episode_reward}')
++            logger.info(f'eval/success_rate{_test_env}: {float(succeeded)}')
++            self.logging_info.setdefault(f'eval/success_rate{_test_env}', []).append(float(succeeded))
+             if distracting_env:
+                 self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
+             elif color_env:
+@@ -675,3 +714,19 @@ class ALDA(TrainerBase):
+ 
+         # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
+         # self.buffer.load(buffer_fp)
++
++
++class _RoboRGB(gym.ObservationWrapper):
++    """RL-ViGen robosuite returns {'rgb': (3,H,W) uint8}; FrameStack wants an array.
++
++    `_max_episode_steps` is read by FrameStack and robosuite does not expose it (gym blocks
++    private passthrough), so it is taken from the spec's own `episode_length` rather than invented.
++    """
++    def __init__(self, env, max_episode_steps):
++        super().__init__(env)
++        self.observation_space = gym.spaces.Box(
++            low=0, high=255, shape=env.observation_space['rgb'].shape, dtype=np.uint8)
++        self._max_episode_steps = max_episode_steps
++
++    def observation(self, obs):
++        return obs['rgb']

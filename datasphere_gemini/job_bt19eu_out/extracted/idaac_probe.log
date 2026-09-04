@@ -1,0 +1,20 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+usage: train.py [-h] [--lr LR] [--eps EPS] [--alpha ALPHA] [--gamma GAMMA]
+                [--gae_lambda GAE_LAMBDA] [--entropy_coef ENTROPY_COEF]
+                [--value_loss_coef VALUE_LOSS_COEF]
+                [--max_grad_norm MAX_GRAD_NORM] [--seed SEED]
+                [--num_processes NUM_PROCESSES] [--num_steps NUM_STEPS]
+                [--ppo_epoch PPO_EPOCH] [--num_mini_batch NUM_MINI_BATCH]
+                [--clip_param CLIP_PARAM] [--log_interval LOG_INTERVAL]
+                [--num_env_steps NUM_ENV_STEPS] [--env_name ENV_NAME]
+                [--algo {idaac,daac,ppo}] [--log_dir LOG_DIR]
+                [--save_dir SAVE_DIR] [--no_cuda] [--hidden_size HIDDEN_SIZE]
+                [--use_best_hps] [--value_epoch VALUE_EPOCH]
+                [--value_freq VALUE_FREQ] [--adv_loss_coef ADV_LOSS_COEF]
+                [--use_nonlinear_clf] [--order_loss_coef ORDER_LOSS_COEF]
+                [--clf_hidden_size CLF_HIDDEN_SIZE]
+                [--distribution_mode DISTRIBUTION_MODE]
+                [--num_levels NUM_LEVELS] [--start_level START_LEVEL]
+train.py: error: unrecognized arguments: --save_interval 5000

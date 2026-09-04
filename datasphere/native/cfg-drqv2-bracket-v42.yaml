@@ -1,0 +1,30 @@
+# [Claude 2026-09-03: brackets the checkpoint-reproduction defect.
+#
+# Two endurance cells report ~480 during the run and evaluate at 6.8 and 18.4 from their own
+# snapshots. The S0 cell at 6,000 frames reproduces exactly (1.215 logged, 2.237 offline), so the
+# load path, env construction and action selection are sound and something breaks between 6k and
+# 100k. RLVIGEN_PRESERVE_SNAPSHOTS=25000 keeps a stamped checkpoint at 25k and 50k plus the
+# endpoint, and eval_every_frames=25000 logs an eval row at each of those same frames -- so every
+# stamp has a logged number to be checked against, and whichever stamp stops reproducing brackets
+# the cause. The first save boundary (global_step % 5e4) falls inside the window on purpose.
+#
+# 60k rather than 100k: it crosses the 50k boundary, gives three stamps, and costs about an hour.]
+name: vigen-native-drqv2-bracket-v42
+desc: Bracket at 100k where a drqv2 checkpoint stops reproducing -- reaches the frame range where the endurance run learned (12.03 at 50k, 445.52 at 75k).
+cmd: >-
+  timeout --foreground 14000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  EVAL_EVERY_FRAMES=25000 EVAL_EPISODES=20 CELL_TIMEOUT_SECONDS=12000
+  RLVIGEN_PRESERVE_SNAPSHOTS=25000
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v39.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

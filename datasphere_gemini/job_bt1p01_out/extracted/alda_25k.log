@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/tmp/w/runnable/alda/scripts/train.py", line 3, in <module>
+    import wandb
+ModuleNotFoundError: No module named 'wandb'

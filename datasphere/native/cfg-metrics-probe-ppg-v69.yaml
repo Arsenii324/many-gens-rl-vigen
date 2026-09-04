@@ -1,0 +1,69 @@
+# [v68/v69 supersede v67, which ERRORED in ~2 minutes on the runner's own guard:
+# `family.py check-co-schedulable` refuses a job whose families cannot share one python
+# environment, and ctrl is jax while ppg is torch. The guard exists precisely to reject this
+# before the bootstrap is billed, and it did. Split into one job per family; the cells, budget
+# and payload are otherwise identical to v67.]
+#
+# [v67 supersedes v66, which was SUBMITTED AND CANCELLED ~90s in. v66 pointed at payload-v61,
+# which was built BEFORE the ctrl algo.py C28 edit -- so it would have validated C61 and the
+# RECORDS_OUT fix while silently NOT testing the riskiest change in the set, the aux-tuple edit
+# inside a jitted scan. A green result would have been read as covering it. Cancelled rather than
+# left to finish, and payload-v62 rebuilt with every change; each of the five is verified present
+# in the archive by name before this submit rather than assumed from the build succeeding.]
+#
+# [Claude 2026-09-04: hardware validation for the metric work of 2026-09-04, before any of it can
+# reach a production cell. Deliberately the smallest budget that still emits a metric line.
+#
+# WHY IT CANNOT BE SKIPPED. The `ctrl` change edits the aux tuple of `loss_actor_and_critic`, which
+# is consumed inside `jax.lax.scan` under `jax.value_and_grad(..., has_aux=True)` and reached only
+# through a jitted path. Nothing local can execute it: this laptop has no jax-CUDA and no robosuite.
+# A shape or unpacking error there is invisible until it runs, and the place it would otherwise
+# surface is a production cell.
+#
+# WHAT EACH CELL IS FOR
+#   ctrl -- must reach `NATIVE_CELL_COMPLETED`, and its wandb sink must carry `clip_fraction`,
+#           `approx_kl_k3` (C28) and the four `train/*` policy-health keys (C61). The sink is the
+#           only path: ctrl prints none of these.
+#   ppg  -- its progress.csv must carry `train/entropy`, `train/sigma_mean`,
+#           `train/boundary_fraction`, `train/mean_log_std`, plus `train/log_std_raw_mean` and
+#           `train/log_std_clamped_fraction`. At 2,560 frames the clamp should NOT be binding, so
+#           `log_std_clamped_fraction` is expected to be 0.0 and `log_std_raw_mean` should equal
+#           `mean_log_std`. Those two agreeing is the check that the clamped/raw split is wired the
+#           right way round rather than reporting one number twice.
+#
+# ALSO UNDER TEST, for free: RECORDS_OUT. The previous eval-only job returned an EMPTY records.jsonl
+# because that block copied only the training normalizer's output; it now concatenates the
+# offline_eval_*.jsonl files too. This job exercises the TRAINING half of that same block, so a
+# non-empty records.jsonl here plus the guard job's four rows would cover both branches.
+#
+# WHAT WOULD FALSIFY THE WORK
+#   ctrl fails to complete            -> the aux-tuple edit is wrong; revert algo.py, keep C61 only
+#   ctrl completes, keys absent       -> the sink is not reaching the record set as read_wandb_sink
+#                                        assumes, and PART2's "what now reaches the record set" is
+#                                        overstated
+#   ppg's clamped_fraction != 0.0     -> either the clamp is binding at 2.5k frames (a real and
+#                                        surprising C61 finding) or the raw/clamped split is wrong
+#   records.jsonl empty               -> the RECORDS_OUT fix is incomplete
+#
+# 2,560 frames matches the earlier on-policy probe (v30) and the ctrl checkpoint already used in the
+# estimand comparison, so cost is minutes and the shape is known to run.]
+name: vigen-metrics-probe-ppg-v69
+desc: Validate the 2026-09-04 metric additions to ppg on hardware, smallest budget.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CELLS=ppg FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v62.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

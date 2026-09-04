@@ -1,0 +1,40 @@
+# [Claude 2026-09-04: give the cross-family guard a checkpoint it can actually test.
+#
+# `bt1dbmtc04sg5nhc18r6` compared our harness against idaac's own evaluator on idaac's 9,216-frame
+# checkpoint: 1.663 against 3.01. Both straddle the 1.82 random floor (C55) and idaac SAMPLES, so at
+# ten episodes the comparison has no power -- it neither shows the C95 failure mode nor rules it
+# out. Every non-native checkpoint pre-production holds is at or near the floor, so the guard cannot
+# be completed with any of them.
+#
+# idaac is the cheapest way to get a competent one: 4.79 h/seed at 600k, so ~0.8h at 100k, ~135 RUB
+# on gt4.1. It also scored 3.015 at 10k, the second-highest non-native, so it is the most likely of
+# them to clear the floor decisively.
+#
+# Informative either way, which is why it is worth the spend:
+#   clears the floor  -> the guard can be completed and the EVAL-PROTOCOL proposal properly tested
+#   still at floor    -> a finding about idaac on Door, and it bears on C50's vacuity argument --
+#                        the paper's own condition for expecting gains is episode-length variation,
+#                        which a fixed 500-step horizon does not provide
+#
+# RLVIGEN_PRESERVE_SNAPSHOTS is irrelevant here (idaac is not the RL-ViGen family and has its own
+# saving), so the retained artefact is its terminal checkpoint, which is what the guard needs.]
+name: vigen-idaac-100k-v63
+desc: idaac at 100k -- a competent checkpoint for the cross-family evaluator guard.
+cmd: >-
+  timeout --foreground 10800s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CELLS=idaac:1 FRAMES=100000 TASK=Door SEED=1
+  EVAL_EPISODES=10 CELL_TIMEOUT_SECONDS=9000
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v60.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

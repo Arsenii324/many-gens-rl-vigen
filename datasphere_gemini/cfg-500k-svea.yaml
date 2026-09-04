@@ -1,0 +1,15 @@
+name: vigen-svea-500k-gemini
+desc: SVEA 500k standard benchmark on Door with gt4i.1 (Tesla T4i / NVIDIA L4)
+cmd: >-
+  AGENT=svea TASK=Door SEED=1 FRAMES=505000 EVAL_EVERY=50000
+  bash ${JOB} ${CODE} ${RESULT} ${WKEY}
+inputs:
+  - train_500k_job.sh: JOB
+  - code.tgz: CODE
+  - wandb_key.txt: WKEY
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

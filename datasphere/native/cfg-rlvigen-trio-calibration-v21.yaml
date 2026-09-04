@@ -1,0 +1,23 @@
+# [Claude 2026-09-02 02:45 MSK: immutable serial calibration of the three RL-ViGen agents that have
+# never run on real CUDA. One job, one bootstrap: bootstrap measured at ~8.8 min of every job, so
+# three separate jobs would have paid it three times. Places365 is an input because sgqn calls
+# utils.random_overlay on every update, not only svea.]
+name: vigen-native-rlvigen-trio-calibration-v21
+desc: Native drq, sgqn and curl Door 10k serial calibrations in one job; readiness and resource evidence only.
+cmd: >-
+  timeout --foreground 8400s env
+  CELLS=drq,sgqn,curl FRAMES=10000 TASK=Door SEED=1
+  CELL_TIMEOUT_SECONDS=2100
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v21.tgz: CODE
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

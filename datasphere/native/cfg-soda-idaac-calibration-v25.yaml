@@ -1,0 +1,27 @@
+# [Claude 2026-09-02 08:20 MSK: soda retry with a cap that fits it, plus the first idaac calibration.
+# soda was cut off by CELL_TIMEOUT_SECONDS=3000 in job bt1psnr0q4ss6h6fs8il with 8,500 of 10,000
+# frames done at 154 s per 500-frame episode -- so 10k needs about 3,400 s and the cap, not the
+# code, was the failure. 5,400 s per cell now.
+# idaac is a different family and a different budget rule: it floors 10,000 to 9,216 = 36 updates of
+# num_processes 4 x num_steps 256, and the marker carries the executed count. Its import gate and
+# its whole cell path were rehearsed locally first.
+# A gate failure in one family no longer takes the other family's cells with it.]
+name: vigen-native-soda-idaac-calibration-v25
+desc: soda retry with a sufficient cap plus the first idaac Door calibration; readiness and resource evidence only.
+cmd: >-
+  timeout --foreground 13000s env
+  CELLS=soda,idaac FRAMES=10000 TASK=Door SEED=1
+  CELL_TIMEOUT_SECONDS=5400
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - payload-dmcgb-idaac-v25.tgz: CODE
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

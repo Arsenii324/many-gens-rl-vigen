@@ -1,0 +1,19 @@
+name: vigen-probe
+desc: Can a T4 box run this benchmark correctly, and how fast? Gates, hash check, throughput. No training.
+cmd: >-
+  EXPECT_HASH=b5ba34d393766d6e
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - probe_job.sh: JOB
+  - code.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    # Ubuntu 22.04 base for Python 3.10 -- the 20.04 `nvidia/cudagl` images give 3.8, which is
+    # below what this repo's source assumes. Rendering here depends on the platform injecting the
+    # graphics driver stack into every container: verified true on 2026-08-01, and explicitly NOT
+    # true on 2026-07-29 (docs/compute-yandex-datasphere.md). If it has reverted, the GL gate
+    # aborts loudly at ~10 minutes rather than silently rendering in software for hours.
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

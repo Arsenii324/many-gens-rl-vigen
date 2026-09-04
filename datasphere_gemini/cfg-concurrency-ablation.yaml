@@ -1,0 +1,18 @@
+name: vigen-box1-concurrency-ablation
+desc: "Box 1 Concurrency, Stutter & Thread Interference Ablation on DataSphere gt4i.1"
+cmd: >-
+  bash ${JOB} ${CODE} ${RESULT} ${WKEY}
+
+inputs:
+  - probe_box1_concurrency_ablation.sh: JOB
+  - code.tgz: CODE
+  - wandb_key.txt: WKEY
+
+outputs:
+  - result.tgz: RESULT
+
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+
+cloud-instance-type: gt4i.1

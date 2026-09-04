@@ -1,0 +1,36 @@
+# [Claude 2026-09-03: the decisive test for the checkpoint-reproduction defect.
+#
+# A stamped 60k checkpoint from bt15c9cn0v99rphglvgc evaluates offline at 20.95 where its own run
+# logged 135.71, and that run's own training episodes at 57-59.5k read 99, 91, 115, 126, 68, 73.
+# Twenty offline episodes at 100k give mean 4.34 with a maximum of 13.3, so it is not episode
+# noise. Eight offline explanations are excluded. `dmc_gb` and `idaac` both reproduce their own
+# logged numbers, so it is not the harness.
+#
+# This hands that exact file back to the TRAINING LOOP. train.py:380 auto-resumes from a
+# snapshot.pt in the run directory; RESUME_SNAPSHOT puts it there. 61,500 frames means it resumes
+# at 60,000 and runs three more episodes, which is all that is needed:
+#
+#   returns ~95   -> the policy is intact; the offline evaluation path differs from training's
+#   returns ~8    -> the file does not carry the policy the run had
+#
+# Cannot be run locally: the snapshot's storages are CUDA.]
+name: vigen-native-drqv2-resume-v43
+desc: Hand a stamped 60k checkpoint back to RL-ViGen's own training loop and read its episode returns.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RESUME_SNAPSHOT=${RESUME}
+  CELLS=drqv2:1 FRAMES=61500 TASK=Door SEED=1
+  EVAL_EVERY_FRAMES=61500 EVAL_EPISODES=20 CELL_TIMEOUT_SECONDS=4200
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v46.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/resume-snapshot-60000.pt: RESUME
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

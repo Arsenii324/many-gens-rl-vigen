@@ -1,0 +1,11 @@
+2026-08-31 12:06:43,609 [ERROR] utils: Spec override key not found: seed
+Traceback (most recent call last):
+  File "/tmp/w/runnable/alda/scripts/train.py", line 132, in <module>
+    main()
+  File "/tmp/w/runnable/alda/scripts/train.py", line 98, in main
+    spec = parse_spec_file(args)
+  File "/tmp/w/runnable/alda/scripts/train.py", line 45, in parse_spec_file
+    spec = parse_spec_overrides(spec, args.spec_overrides)
+  File "/tmp/w/runnable/alda/common/utils.py", line 219, in parse_spec_overrides
+    cur_val = section[section_keys[-1]]
+KeyError: 'seed'

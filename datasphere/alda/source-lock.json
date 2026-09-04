@@ -1,0 +1,13 @@
+{
+  "accepted_adaptations": [
+    "ALDA terminal evaluator/checkpoint adapter after the unchanged finite loop",
+    "ALDA launcher exposes the separately vendored models package"
+  ],
+  "required_source_hashes": {
+    "runnable/_launch/alda.sh": "925862ebdc9614437244869a939f1fc92a70ebe93386eb112d847d4a222a91fd",
+    "runnable/alda/scripts/train.py": "a5a6212cea3bd18cf2d9691036542443433651e1b34461667892815db41f2a1d",
+    "runnable/alda/specs/train_alda_robosuite_door.yaml": "68e2913a7e21d18357c879a0c591f9d3e0402bc778632116844b188bf4f4cc74",
+    "runnable/alda/trainers/alda_trainer.py": "0bc8440abc732dc50e3522ae06f9b55a62c677a289ce3c97c834dabb965df524",
+    "RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb/utils.py": "2dc13c19663320e5944b86204b508a58f90b1e763ae66de49733677e01516224"
+  }
+}

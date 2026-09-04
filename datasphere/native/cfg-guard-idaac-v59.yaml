@@ -1,0 +1,44 @@
+# [Claude 2026-09-03: the guard that docs/EVAL-PROTOCOL.md §1 states and had not run.
+#
+# The protocol proposes that ALL evaluation move offline into our harness, reading checkpoints and
+# driving each baseline's OWN `act`. That dissolves P-C76's "a deviation in each of seven clones"
+# cost -- the scene set becomes a parameter of our evaluator, not of anyone's train.py.
+#
+# It rests on an assumption that has been demonstrated for exactly one family: that driving a
+# baseline's act from outside its own trainer reproduces what its own evaluator reports. For the
+# five natives it holds (131.57 against a logged 135.71, C95). For the seven others it is asserted.
+#
+# This tests it on `idaac`, the cheapest non-native with a working eval_grid family. Its own cell
+# (bt13r7d6sbdko7913uge, 9216 frames) reported episode_reward 3.01 on eval-easy via test.py's own
+# evaluate(). Our harness, same checkpoint, same regime, scene 0, 10 episodes:
+#
+#   ~3.0  -> the assumption holds for a non-native, and the protocol's central move is sound
+#   far off -> our harness changes what it measures when it drives someone else's policy, which is
+#             the C95 failure mode one level in, and the protocol needs rethinking before use
+#
+# idaac SAMPLES (act(deterministic=False)), so exact equality is not expected -- 10 episodes of a
+# stochastic policy. The comparison is of scale, not of digits.]
+name: vigen-guard-idaac-v59
+desc: Does our offline harness reproduce idaac's own evaluator on its own checkpoint?
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=idaac OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1 OFFLINE_EVAL_FRAME=9216
+  OFFLINE_EVAL_REGIMES=eval-easy,train
+  OFFLINE_EVAL_SCENES=0 OFFLINE_EVAL_EPISODES=10
+  CELLS=idaac:1 FRAMES=9216 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v57.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/idaac-s1-9216.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

@@ -1,0 +1,146 @@
+diff --git a/setup/config.cfg b/setup/config.cfg
+index 0caecf1..88003ce 100644
+--- a/setup/config.cfg
++++ b/setup/config.cfg
+@@ -1,5 +1,5 @@
+ {
+     "datasets": [
+-        "/your/data/path/here/"
++        "data"
+     ]
+-}
+\ No newline at end of file
++}
+diff --git a/src/arguments.py b/src/arguments.py
+index e9a5be8..f663fb6 100644
+--- a/src/arguments.py
++++ b/src/arguments.py
+@@ -74,7 +74,7 @@ def parse_args():
+ 
+ 	assert args.algorithm in {'sac', 'rad', 'curl', 'pad', 'soda', 'drq', 'svea'}, f'specified algorithm "{args.algorithm}" is not supported'
+ 
+-	assert args.eval_mode in {'train', 'color_easy', 'color_hard', 'video_easy', 'video_hard', 'distracting_cs', 'none'}, f'specified mode "{args.eval_mode}" is not supported'
++	assert args.eval_mode in {'train', 'color_easy', 'color_hard', 'video_easy', 'video_hard', 'distracting_cs', 'none', 'eval-easy', 'eval-medium', 'eval-hard'}, f'specified mode "{args.eval_mode}" is not supported'
+ 	assert args.seed is not None, 'must provide seed for experiment'
+ 	assert args.log_dir is not None, 'must provide a log directory for experiment'
+ 
+diff --git a/src/env/wrappers.py b/src/env/wrappers.py
+index 96a9d25..7df4aef 100644
+--- a/src/env/wrappers.py
++++ b/src/env/wrappers.py
+@@ -19,9 +19,21 @@ def make_env(
+ 		action_repeat=4,
+ 		image_size=100,
+ 		mode='train',
+-		intensity=0.
++		intensity=0.,
++		scene_id=0
+ 	):
+ 	"""Make environment for experiments"""
++	if domain_name == 'robosuite':
++		import sys, os
++		_rlv = os.environ['RLVIGEN_ROOT']
++		for _p in (_rlv, os.path.join(_rlv, 'envs', 'robosuiteVGB')):
++			if _p not in sys.path:
++				sys.path.insert(0, _p)
++		from robosuitevgb.utils import make_env as _robo_make_env
++		env = _robo_make_env(task_name=task_name, seed=seed, scene_id=scene_id,
++		                     mode=(mode or 'train'))
++		env = _RGBOnly(env, episode_length)
++		return FrameStack(env, frame_stack)
+ 	assert mode in {'train', 'color_easy', 'color_hard', 'video_easy', 'video_hard', 'distracting_cs'}, \
+ 		f'specified mode "{mode}" is not supported'
+ 
+@@ -314,3 +326,18 @@ class VideoWrapper(gym.Wrapper):
+ 		if channels_last:
+ 			obs = torch.from_numpy(obs).permute(1,2,0).numpy()
+ 		return obs
++
++
++class _RGBOnly(gym.ObservationWrapper):
++	"""RL-ViGen's robosuite env returns {'rgb': (3,84,84) uint8}; this repo's stack expects an
++	array. Gym2DMC does the same unwrap for RL-ViGen's own dm_control-style consumers."""
++	def __init__(self, env, max_episode_steps):
++		super().__init__(env)
++		shp = env.observation_space['rgb'].shape
++		self.observation_space = gym.spaces.Box(low=0, high=255, shape=shp, dtype=np.uint8)
++		# FrameStack reads this; robosuite does not expose it and gym blocks private passthrough.
++		# Taken from train.py's own --episode_length rather than invented.
++		self._max_episode_steps = max_episode_steps
++
++	def observation(self, obs):
++		return obs['rgb']
+diff --git a/src/logger.py b/src/logger.py
+index e390dce..d707942 100644
+--- a/src/logger.py
++++ b/src/logger.py
+@@ -12,7 +12,11 @@ FORMAT_CONFIG = {
+             ('actor_loss', 'ALOSS', 'float'), ('critic_loss', 'CLOSS', 'float'),
+             ('aux_loss', 'AUXLOSS', 'float')
+         ],
+-        'eval': [('step', 'S', 'int'), ('episode_reward', 'ER', 'float'), ('episode_reward_test_env', 'ERTEST', 'float')]
++        # SR/SRTEST added with the success-rate metric: _dump_to_console prints only keys
++        # listed here, so a metric absent from this list lands in the log file and nowhere
++        # a human looks. See docs/PART2-METRIC-INVENTORY.md.
++        'eval': [('step', 'S', 'int'), ('episode_reward', 'ER', 'float'), ('episode_reward_test_env', 'ERTEST', 'float'),
++                 ('success_rate', 'SR', 'float'), ('success_rate_test_env', 'SRTEST', 'float')]
+     }
+ }
+ 
+diff --git a/src/train.py b/src/train.py
+index 793eb15..84afe75 100644
+--- a/src/train.py
++++ b/src/train.py
+@@ -13,23 +13,36 @@ from video import VideoRecorder
+ 
+ def evaluate(env, agent, video, num_episodes, L, step, test_env=False):
+ 	episode_rewards = []
++	# SUCCESS RATE (added for RL-ViGen; see docs/PART2-METRIC-INVENTORY.md). Door's return is
++	# dense and scale-arbitrary, so it compares to nothing outside itself; robosuite's own
++	# _check_success is sparse, task-defined and unit-free. RL-ViGen patch P10 puts it in `info`.
++	# CONVENTION, chosen here and stated because it is a real choice: an episode counts as a
++	# success if _check_success held at ANY step. The alternative -- the flag at the LAST step,
++	# which is what RL-ViGen's own habitat path uses -- differs whenever a policy achieves the
++	# goal and then loses it, which on Door means opening the door and letting it swing back.
++	# Empty dict fallback keeps DMC domains, which have no such key, working unchanged.
++	successes = []
+ 	for i in range(num_episodes):
+ 		obs = env.reset()
+ 		video.init(enabled=(i==0))
+ 		done = False
+ 		episode_reward = 0
++		succeeded = False
+ 		while not done:
+ 			with utils.eval_mode(agent):
+ 				action = agent.select_action(obs)
+-			obs, reward, done, _ = env.step(action)
++			obs, reward, done, info = env.step(action)
+ 			video.record(env)
+ 			episode_reward += reward
++			succeeded = succeeded or bool((info or {}).get('success', False))
+ 
+ 		if L is not None:
+ 			_test_env = '_test_env' if test_env else ''
+ 			video.save(f'{step}{_test_env}.mp4')
+ 			L.log(f'eval/episode_reward{_test_env}', episode_reward, step)
++			L.log(f'eval/success_rate{_test_env}', float(succeeded), step)
+ 		episode_rewards.append(episode_reward)
++		successes.append(succeeded)
+ 	
+ 	return np.mean(episode_rewards)
+ 
+diff --git a/src/utils.py b/src/utils.py
+index 7f90b52..6595632 100644
+--- a/src/utils.py
++++ b/src/utils.py
+@@ -129,8 +129,8 @@ class ReplayBuffer(object):
+         obses, next_obses = [], []
+         for i in idxs:
+             obs, next_obs = self._obses[i]
+-            obses.append(np.array(obs, copy=False))
+-            next_obses.append(np.array(next_obs, copy=False))
++            obses.append(np.asarray(obs))
++            next_obses.append(np.asarray(next_obs))
+         return np.array(obses), np.array(next_obses)
+ 
+     def sample_soda(self, n=None):

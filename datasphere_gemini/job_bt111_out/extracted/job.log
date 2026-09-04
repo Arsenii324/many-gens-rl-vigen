@@ -1,0 +1,559 @@
+
+=== 1. System & Dependencies (t+0s) ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+  OK P1  make_env accepts mode        applied
+  OK P2  guard the video load         applied
+  OK P3a robo_make threads mode       applied
+  OK P3b robo_make exports regime     applied
+  OK P4a places batch device          applied
+  OK P4b places device holder         applied
+  OK P4c random_overlay records device applied
+  OK P5  drq log_alpha float32        applied
+  OK P6  render size settable         applied
+  OK P7a train.py GL not forced       applied
+  OK P7b eval.py GL not forced        applied
+  OK P8  action spec stays float32    applied
+  OK P9  robosuite keeps MUJOCO_GL    applied
+  OK P10 success flag in info         applied
+  OK P12 eval env gets a regime       applied
+  OK P14a eval env recipe kept        applied
+  OK P14b eval sweeps scenes + train regime applied
+  OK P11a Gym2DMC keeps last_info     applied
+  OK P11b eval tracks success         applied
+  OK P11c eval reads last_info        applied
+  OK P11d eval logs success_rate      applied
+  OK P13a logger drops tb import      applied
+  OK P13b logger imports tb lazily    applied
+
+23 applied, 0 already present, 0 unresolved
+
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+
+0 applied, 23 already present, 0 unresolved
+
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+
+=== 2. Benchmark Micro-Profiler Harness (t+389s) ===
+
+=== 3. Ablation 1: Solo Baseline Run (DrQ-v2 Alone) (t+389s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x48672 and 25920x512)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f36ccbbb0a0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f36ccbbaef0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+
+=== 4. Ablation 2: Quad Workers - Unpinned OS Default (OMP=2) (t+399s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f4bb8db7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f4bb8db7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x48672 and 25920x512)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f7a16a03520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f7a16a03370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f59f30eb520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f59f30eb370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f39aace3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f39aace3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 2 (Quad Unpinned) completed.
+
+=== 5. Ablation 3: Quad Workers - Pinned Core Affinity (OMP=1) (t+407s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x48672 and 25920x512)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f974ddb3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f974ddb3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f87cf5ab520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f87cf5ab370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fafb56d3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fafb56d3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fd5e2ba7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fd5e2ba7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 3 (Quad Pinned OMP=1) completed.
+
+=== 6. Ablation 4: Quad Workers - Pinned Core Affinity (OMP=2) (t+414s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x48672 and 25920x512)
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 46, in <module>
+    action = conv(x).detach().cpu().numpy()[0]
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (1x26912 and 13832x512)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fd2787b3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fd2787b3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5b46603520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5b46603370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f40a3fb7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f40a3fb7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f7671dab520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f7671dab370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 4 (Quad Pinned OMP=2) completed.
+
+=== 7. Synthesize Concurrency & Stutter Ablation Summary (t+421s) ===
+Concurrency & Stutter Ablation report synthesized successfully.

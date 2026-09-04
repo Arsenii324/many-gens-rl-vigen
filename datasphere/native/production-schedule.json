@@ -1,0 +1,508 @@
+{
+  "_comment": [
+    "[Claude 2026-09-02 11:05 MSK] A NON-EXECUTABLE production schedule. Nothing reads this to",
+    "submit anything; it exists so the choice of production shape is arithmetic rather than",
+    "intuition, and so the constraints that bind are attached to the rows they bind.",
+    "",
+    "Throughput is measured for seven baselines and marked estimated for five. Every estimate is",
+    "labelled; none is silently pooled with a measurement.",
+    "",
+    "The packing retention 0.658 is measured at 10k on gt4i.1 (bt1ukn3050g3tvgqqfbf). Job",
+    "bt1a5lp648o6bfehnfsg re-measures it at 100k, where the evaluation cadence and the replay disk",
+    "are both in play; until it returns, treat the packed numbers here as provisional."
+  ],
+  "measured_completed_frames_per_second_gt4_1": {
+    "drqv2": 17.53,
+    "curl": 13.11,
+    "drq": 12.48,
+    "svea": 9.99,
+    "sgqn": 6.5,
+    "rad": 6.14,
+    "soda": 3.25
+  },
+  "estimated_baselines": [
+    "alda",
+    "idaac",
+    "ppg",
+    "ibac_sni",
+    "ctrl"
+  ],
+  "per_cell_envelope_gt4_1": {
+    "drqv2": {
+      "rss_gib": 3.29,
+      "vram_mib": 1650,
+      "cores": 1.27
+    },
+    "curl": {
+      "rss_gib": 3.24,
+      "vram_mib": 2194,
+      "cores": 1.2
+    },
+    "drq": {
+      "rss_gib": 3.35,
+      "vram_mib": 2950,
+      "cores": 1.17
+    },
+    "svea": {
+      "rss_gib": 3.74,
+      "vram_mib": 2358,
+      "cores": 2.52
+    },
+    "sgqn": {
+      "rss_gib": 3.98,
+      "vram_mib": 7142,
+      "cores": 1.9
+    },
+    "rad": {
+      "rss_gib": 2.58,
+      "vram_mib": 1476,
+      "cores": 1.04
+    },
+    "soda": {
+      "rss_gib": 3.66,
+      "vram_mib": 2582,
+      "cores": 1.66
+    }
+  },
+  "tiers": {
+    "gt4.1": {
+      "rub_per_hour": 168.48,
+      "cores": 4,
+      "ram_gib": 16,
+      "vram_mib": 15360
+    },
+    "gt4i.1": {
+      "rub_per_hour": 234.0,
+      "cores": 8,
+      "ram_gib": 32,
+      "vram_mib": 23034
+    }
+  },
+  "packing": {
+    "measured_retention": 0.658,
+    "measured_at_frames": 10000,
+    "measured_cells": 4,
+    "source_job": "bt1ukn3050g3tvgqqfbf",
+    "container_disk_free_gib_at_bootstrap": 20.2,
+    "binding_constraint_at_500k": "disk: a 500k off-policy cell keeps about 4 GiB of replay episodes, so 20.2 GiB free caps a pack at about 5 cells",
+    "binding_constraint_for_sgqn": "gpu memory: 7142 MiB per cell caps sgqn at 2 cells on gt4i.1 and 2 on gt4.1",
+    "binding_constraint_for_rad_soda": "host memory: their replay buffer is preallocated in RAM at 30000 B per requested frame"
+  },
+  "rows": [
+    {
+      "baseline": "drqv2",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 1.58,
+      "packed_hours_gt4i_1": 2.11,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "drqv2",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 7.92,
+      "packed_hours_gt4i_1": 10.53,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "curl",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 2.12,
+      "packed_hours_gt4i_1": 2.81,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "curl",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 10.59,
+      "packed_hours_gt4i_1": 14.07,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "drq",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 2.23,
+      "packed_hours_gt4i_1": 2.96,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "drq",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 11.13,
+      "packed_hours_gt4i_1": 14.78,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "svea",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 2.78,
+      "packed_hours_gt4i_1": 3.69,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "svea",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 13.9,
+      "packed_hours_gt4i_1": 18.47,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "sgqn",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 4.27,
+      "packed_hours_gt4i_1": 5.68,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 2,
+      "note": "7142 MiB of GPU memory per cell"
+    },
+    {
+      "baseline": "sgqn",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 21.37,
+      "packed_hours_gt4i_1": 28.39,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 2,
+      "note": "7142 MiB of GPU memory per cell"
+    },
+    {
+      "baseline": "rad",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 4.52,
+      "packed_hours_gt4i_1": 6.01,
+      "replay_buffer_ram_gib": 2.8,
+      "tier": "gt4.1 or gt4i.1",
+      "max_cells_per_job": 2,
+      "note": "replay buffer is preallocated in RAM; 1M is out of reach on either allowed tier"
+    },
+    {
+      "baseline": "rad",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 22.62,
+      "packed_hours_gt4i_1": 30.05,
+      "replay_buffer_ram_gib": 14.0,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 1,
+      "note": "replay buffer is preallocated in RAM; 1M is out of reach on either allowed tier"
+    },
+    {
+      "baseline": "soda",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 8.55,
+      "packed_hours_gt4i_1": 11.35,
+      "replay_buffer_ram_gib": 2.8,
+      "tier": "gt4.1 or gt4i.1",
+      "max_cells_per_job": 2,
+      "note": "replay buffer is preallocated in RAM; 1M is out of reach on either allowed tier"
+    },
+    {
+      "baseline": "soda",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "measured",
+      "solo_hours_gt4_1": 42.74,
+      "packed_hours_gt4i_1": 56.77,
+      "replay_buffer_ram_gib": 14.0,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 1,
+      "note": "replay buffer is preallocated in RAM; 1M is out of reach on either allowed tier"
+    },
+    {
+      "baseline": "alda",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "alda",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "idaac",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "idaac",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "ppg",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "ppg",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "ibac_sni",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 4
+    },
+    {
+      "baseline": "ibac_sni",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4i.1",
+      "max_cells_per_job": 5
+    },
+    {
+      "baseline": "ctrl",
+      "frames": 100000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4.1",
+      "max_cells_per_job": 1,
+      "note": "cannot share a job with any torch family; its own job, base requirements filtered"
+    },
+    {
+      "baseline": "ctrl",
+      "frames": 500000,
+      "seeds": [
+        1,
+        2,
+        3
+      ],
+      "throughput_source": "not yet measured",
+      "solo_hours_gt4_1": null,
+      "packed_hours_gt4i_1": null,
+      "tier": "gt4.1",
+      "max_cells_per_job": 1,
+      "note": "cannot share a job with any torch family; its own job, base requirements filtered"
+    }
+  ],
+  "evaluation_grid": {
+    "regimes": [
+      "train",
+      "eval-easy",
+      "eval-medium",
+      "eval-hard"
+    ],
+    "scenes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_scene_options": {
+      "5": "about 7 points of standard error on a success rate near 0.5",
+      "20": "about 3.5 points, at four times the cost"
+    },
+    "where": "offline, from the retained terminal checkpoint, per baseline, using that baseline's own action path",
+    "why_not_during_training": "4 regimes x 10 scenes x 20 episodes x 500 steps = 400,000 inference steps per cell, comparable to a whole 500k training run",
+    "cost_estimate_rub_36_cells_5_episodes": 2000,
+    "cost_estimate_rub_36_cells_20_episodes": 7900,
+    "blocked": {
+      "ctrl": "its evaluate_ppo.py is procgen-only and discrete-action; a robosuite evaluator for it is outstanding work"
+    },
+    "episodes_per_scene_decision": {
+      "recommended": 20,
+      "measured_on": "drqv2-s2 of bt1ukn3050g3tvgqqfbf, 608 s of laptop CPU",
+      "raw": "dispersion-drqv2-s2-20ep.json",
+      "cost_rub_36_cells": 7900
+    }
+  },
+  "recommended_settings": {
+    "_comment": [
+      "[Claude 2026-09-02 12:00 MSK] The settings a production job should carry, and why. Every one",
+      "of these is a measurement in this notebook rather than a default someone liked."
+    ],
+    "EVAL_EVERY_FRAMES": {
+      "value": 25000,
+      "why": "one evaluation costs about 123 s on a T4 and about 164 s under four-way packing. At 25,000 a 500k run spends about 10% of itself evaluating and returns a 21-point curve; at 10,000 it spends 20%."
+    },
+    "EVAL_EPISODES": {
+      "value": 2,
+      "why": "patch P14 turns num_eval_episodes into episodes-per-scene over ten certified scenes, so 2 means one episode per scene. This is the CURVE, deliberately cheap and deliberately noisy; the scientific grid is computed offline from the checkpoint."
+    },
+    "SAVE_EVERY_FRAMES": {
+      "value": 50000,
+      "why": "the cadence at which upstream's loop already saves. Combined with RLVIGEN_PRESERVE_SNAPSHOTS it turns a 500k run into ten evaluable policies instead of one, at no training cost."
+    },
+    "RLVIGEN_PRESERVE_SNAPSHOTS": {
+      "value": "1 for the RL-ViGen five, considered per baseline elsewhere",
+      "why": "ten DrQ-v2 snapshots are 1.0 GiB and ten DrQ ones 5.4 GiB against 20.2 GiB free in the container, multiplied by the number of packed cells. Set it where the budget curve is wanted and the disk allows."
+    },
+    "CELL_TIMEOUT_SECONDS": {
+      "value": "1.5x the predicted cell wall time",
+      "why": "soda was cut off at exactly its 3,000 s cap with 8,500 of 10,000 frames done. The cap protected the other two cells in that job; it also cost that cell, and the fix is a cap sized from the measured rate."
+    },
+    "offline_grid_episodes_per_scene": {
+      "value": 20,
+      "why": "measured: at one episode per scene the held-out gap is 1.24x the same-scene gap, which is noise; at twenty it is 3.58x with non-overlapping intervals. Coefficient of variation is 0.96 to 2.35, so the pooled ten-scene regime mean has 12.5% standard error at 20 and 25% at 5."
+    }
+  }
+}

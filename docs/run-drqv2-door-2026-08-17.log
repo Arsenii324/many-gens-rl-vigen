@@ -1,0 +1,265 @@
+/Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/train.py:297: Hydra14MigrationWarning: 
+The version_base parameter is not specified.
+Hydra will assume defaults for version 1.1.
+Hydra 1.4 will remove this compatibility behavior.
+Before upgrading to Hydra 1.4, set version_base="1.3" and test your application.
+See https://hydra.cc/docs/upgrades/1.3_to_1.4/prepare_for_1_4/ for preparation instructions.
+  @hydra.main(config_path='cfgs', config_name='svea_config')
+/Users/a2mogus/build-projs/barannikov-work/.venv/lib/python3.11/site-packages/hydra/_internal/hydra.py:119: UserWarning: Future Hydra versions will no longer change working directory at job runtime by default.
+See https://hydra.cc/docs/1.2/upgrades/1.1_to_1.2/changes_to_job_working_dir/ for more information.
+  ret = run_job(
+/Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/train.py:297: Hydra14MigrationWarning: 
+The version_base parameter is not specified.
+Hydra will assume defaults for version 1.1.
+Hydra 1.4 will remove this compatibility behavior.
+Before upgrading to Hydra 1.4, set version_base="1.3" and test your application.
+See https://hydra.cc/docs/upgrades/1.3_to_1.4/prepare_for_1_4/ for preparation instructions.
+  @hydra.main(config_path='cfgs', config_name='svea_config')
+[1m[33m[robosuite WARNING] [0mNo private macro file found! (__init__.py:7)
+workspace: /Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/exp_local/2026.08.17/183214_action_repeat=1,env=robosuite,eval_every_frames=10000,num_eval_episodes=10,num_train_frames=200000,replay_buffer_num_workers=0,save_video=False,seed=1,task@_global_=Door,use_tb=False,use_wandb=False
+[2026-08-17 18:32:14,480][robosuite_logs][WARNING] - No private macro file found!
+[1m[33m[robosuite WARNING] [0mIt is recommended to use a private macro file (__init__.py:8)
+[2026-08-17 18:32:14,480][robosuite_logs][WARNING] - It is recommended to use a private macro file
+[1m[33m[robosuite WARNING] [0mTo setup, run: python /Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[2026-08-17 18:32:14,480][robosuite_logs][WARNING] - To setup, run: python /Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb/utils.py:30: Hydra14MigrationWarning: 
+The version_base parameter is not specified.
+Hydra will assume defaults for version 1.1.
+Hydra 1.4 will remove this compatibility behavior.
+Before upgrading to Hydra 1.4, set version_base="1.3" and test your application.
+See https://hydra.cc/docs/upgrades/1.3_to_1.4/prepare_for_1_4/ for preparation instructions.
+  with initialize(config_path="../cfg"):
+/Users/a2mogus/build-projs/barannikov-work/.venv/lib/python3.11/site-packages/hydra/_internal/defaults_list.py:251: UserWarning: In 'robo_config': Defaults list is missing `_self_`. See https://hydra.cc/docs/1.2/upgrades/1.0_to_1.1/default_composition_order for more information
+  warnings.warn(msg, UserWarning)
+/Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/mjmod.py:1364: DeprecationWarning: `row_stack` alias is deprecated. Use `np.vstack` directly.
+  cbd1 = np.expand_dims(np.row_stack(((h + 1) // 2) * [re, ro]), -1)[:h, :w]
+/Users/a2mogus/build-projs/barannikov-work/.venv/lib/python3.11/site-packages/torch/utils/data/dataloader.py:759: UserWarning: 'pin_memory' argument is set as true but not supported on MPS now, device pinned memory won't be used.
+  super().__init__(loader)
+Now the mode is train
+Now the mode is eval-easy
+| [32meval[0m  | F: 0 | S: 0 | E: 0 | L: 500 | R: 0.8462 | T: 0:00:00 | SR: 0.0000
+| [33mtrain[0m | F: 4500 | S: 4500 | E: 9 | L: 500 | R: 0.7724 | BS: 4500 | FPS: 3.6374 | T: 0:02:17
+| [33mtrain[0m | F: 5000 | S: 5000 | E: 10 | L: 500 | R: 0.8415 | BS: 5000 | FPS: 12.8475 | T: 0:02:56
+| [33mtrain[0m | F: 5500 | S: 5500 | E: 11 | L: 500 | R: 2.0065 | BS: 5500 | FPS: 12.0305 | T: 0:03:37
+| [33mtrain[0m | F: 6000 | S: 6000 | E: 12 | L: 500 | R: 5.2291 | BS: 6000 | FPS: 12.0791 | T: 0:04:19
+| [33mtrain[0m | F: 6500 | S: 6500 | E: 13 | L: 500 | R: 0.9264 | BS: 6500 | FPS: 18.6270 | T: 0:04:46
+| [33mtrain[0m | F: 7000 | S: 7000 | E: 14 | L: 500 | R: 0.7670 | BS: 7000 | FPS: 18.8667 | T: 0:05:12
+| [33mtrain[0m | F: 7500 | S: 7500 | E: 15 | L: 500 | R: 1.1279 | BS: 7500 | FPS: 13.2563 | T: 0:05:50
+| [33mtrain[0m | F: 8000 | S: 8000 | E: 16 | L: 500 | R: 0.8827 | BS: 8000 | FPS: 12.1681 | T: 0:06:31
+| [33mtrain[0m | F: 8500 | S: 8500 | E: 17 | L: 500 | R: 5.7155 | BS: 8500 | FPS: 11.9174 | T: 0:07:13
+| [33mtrain[0m | F: 9000 | S: 9000 | E: 18 | L: 500 | R: 12.9819 | BS: 9000 | FPS: 18.5374 | T: 0:07:40
+| [33mtrain[0m | F: 9500 | S: 9500 | E: 19 | L: 500 | R: 7.1755 | BS: 9500 | FPS: 18.8057 | T: 0:08:07
+| [33mtrain[0m | F: 10000 | S: 10000 | E: 20 | L: 500 | R: 2.7285 | BS: 10000 | FPS: 13.0878 | T: 0:08:45
+| [32meval[0m  | F: 10000 | S: 10000 | E: 20 | L: 500 | R: 6.9041 | T: 0:08:45 | SR: 0.0000
+| [33mtrain[0m | F: 10500 | S: 10500 | E: 21 | L: 500 | R: 30.1062 | BS: 10500 | FPS: 5.0559 | T: 0:10:24
+| [33mtrain[0m | F: 11000 | S: 11000 | E: 22 | L: 500 | R: 9.2768 | BS: 11000 | FPS: 15.5261 | T: 0:10:56
+| [33mtrain[0m | F: 11500 | S: 11500 | E: 23 | L: 500 | R: 5.9238 | BS: 11500 | FPS: 12.0872 | T: 0:11:37
+| [33mtrain[0m | F: 12000 | S: 12000 | E: 24 | L: 500 | R: 8.7410 | BS: 12000 | FPS: 12.0925 | T: 0:12:19
+| [33mtrain[0m | F: 12500 | S: 12500 | E: 25 | L: 500 | R: 11.1314 | BS: 12500 | FPS: 15.8454 | T: 0:12:50
+| [33mtrain[0m | F: 13000 | S: 13000 | E: 26 | L: 500 | R: 4.8271 | BS: 13000 | FPS: 18.6725 | T: 0:13:17
+| [33mtrain[0m | F: 13500 | S: 13500 | E: 27 | L: 500 | R: 3.0039 | BS: 13500 | FPS: 15.5950 | T: 0:13:49
+| [33mtrain[0m | F: 14000 | S: 14000 | E: 28 | L: 500 | R: 3.7351 | BS: 14000 | FPS: 12.0222 | T: 0:14:31
+| [33mtrain[0m | F: 14500 | S: 14500 | E: 29 | L: 500 | R: 3.8430 | BS: 14500 | FPS: 12.0959 | T: 0:15:12
+| [33mtrain[0m | F: 15000 | S: 15000 | E: 30 | L: 500 | R: 5.7802 | BS: 15000 | FPS: 15.8378 | T: 0:15:43
+| [33mtrain[0m | F: 15500 | S: 15500 | E: 31 | L: 500 | R: 4.7631 | BS: 15500 | FPS: 18.7576 | T: 0:16:10
+| [33mtrain[0m | F: 16000 | S: 16000 | E: 32 | L: 500 | R: 6.3577 | BS: 16000 | FPS: 15.5923 | T: 0:16:42
+| [33mtrain[0m | F: 16500 | S: 16500 | E: 33 | L: 500 | R: 3.1343 | BS: 16500 | FPS: 12.2729 | T: 0:17:23
+| [33mtrain[0m | F: 17000 | S: 17000 | E: 34 | L: 500 | R: 19.5032 | BS: 17000 | FPS: 12.1347 | T: 0:18:04
+| [33mtrain[0m | F: 17500 | S: 17500 | E: 35 | L: 500 | R: 8.2054 | BS: 17500 | FPS: 15.8013 | T: 0:18:36
+| [33mtrain[0m | F: 18000 | S: 18000 | E: 36 | L: 500 | R: 11.7674 | BS: 18000 | FPS: 18.6500 | T: 0:19:03
+| [33mtrain[0m | F: 18500 | S: 18500 | E: 37 | L: 500 | R: 4.5101 | BS: 18500 | FPS: 14.6459 | T: 0:19:37
+| [33mtrain[0m | F: 19000 | S: 19000 | E: 38 | L: 500 | R: 9.1374 | BS: 19000 | FPS: 12.0666 | T: 0:20:18
+| [33mtrain[0m | F: 19500 | S: 19500 | E: 39 | L: 500 | R: 1.6473 | BS: 19500 | FPS: 12.1514 | T: 0:20:59
+| [33mtrain[0m | F: 20000 | S: 20000 | E: 40 | L: 500 | R: 6.1117 | BS: 20000 | FPS: 16.1414 | T: 0:21:30
+| [32meval[0m  | F: 20000 | S: 20000 | E: 40 | L: 500 | R: 5.8091 | T: 0:21:30 | SR: 0.0000
+| [33mtrain[0m | F: 20500 | S: 20500 | E: 41 | L: 500 | R: 10.0110 | BS: 20500 | FPS: 4.6956 | T: 0:23:17
+| [33mtrain[0m | F: 21000 | S: 21000 | E: 42 | L: 500 | R: 40.0734 | BS: 21000 | FPS: 12.3676 | T: 0:23:57
+| [33mtrain[0m | F: 21500 | S: 21500 | E: 43 | L: 500 | R: 12.0783 | BS: 21500 | FPS: 18.4176 | T: 0:24:24
+| [33mtrain[0m | F: 22000 | S: 22000 | E: 44 | L: 500 | R: 9.8518 | BS: 22000 | FPS: 18.4368 | T: 0:24:51
+| [33mtrain[0m | F: 22500 | S: 22500 | E: 45 | L: 500 | R: 4.3834 | BS: 22500 | FPS: 12.6911 | T: 0:25:31
+| [33mtrain[0m | F: 23000 | S: 23000 | E: 46 | L: 500 | R: 10.6280 | BS: 23000 | FPS: 12.0604 | T: 0:26:12
+| [33mtrain[0m | F: 23500 | S: 23500 | E: 47 | L: 500 | R: 4.4972 | BS: 23500 | FPS: 12.5579 | T: 0:26:52
+| [33mtrain[0m | F: 24000 | S: 24000 | E: 48 | L: 500 | R: 16.9820 | BS: 24000 | FPS: 18.4415 | T: 0:27:19
+| [33mtrain[0m | F: 24500 | S: 24500 | E: 49 | L: 500 | R: 13.4164 | BS: 24500 | FPS: 18.3009 | T: 0:27:47
+| [33mtrain[0m | F: 25000 | S: 25000 | E: 50 | L: 500 | R: 3.5569 | BS: 25000 | FPS: 12.6880 | T: 0:28:26
+| [33mtrain[0m | F: 25500 | S: 25500 | E: 51 | L: 500 | R: 5.2959 | BS: 25500 | FPS: 12.0343 | T: 0:29:07
+| [33mtrain[0m | F: 26000 | S: 26000 | E: 52 | L: 500 | R: 16.4722 | BS: 26000 | FPS: 12.5526 | T: 0:29:47
+| [33mtrain[0m | F: 26500 | S: 26500 | E: 53 | L: 500 | R: 16.5243 | BS: 26500 | FPS: 18.1213 | T: 0:30:15
+| [33mtrain[0m | F: 27000 | S: 27000 | E: 54 | L: 500 | R: 27.5101 | BS: 27000 | FPS: 19.0186 | T: 0:30:41
+| [33mtrain[0m | F: 27500 | S: 27500 | E: 55 | L: 500 | R: 1.5968 | BS: 27500 | FPS: 12.6039 | T: 0:31:21
+| [33mtrain[0m | F: 28000 | S: 28000 | E: 56 | L: 500 | R: 39.2976 | BS: 28000 | FPS: 12.1011 | T: 0:32:02
+| [33mtrain[0m | F: 28500 | S: 28500 | E: 57 | L: 500 | R: 11.4785 | BS: 28500 | FPS: 12.5292 | T: 0:32:42
+| [33mtrain[0m | F: 29000 | S: 29000 | E: 58 | L: 500 | R: 5.6292 | BS: 29000 | FPS: 18.4996 | T: 0:33:09
+| [33mtrain[0m | F: 29500 | S: 29500 | E: 59 | L: 500 | R: 5.7461 | BS: 29500 | FPS: 19.0774 | T: 0:33:35
+| [33mtrain[0m | F: 30000 | S: 30000 | E: 60 | L: 500 | R: 161.0795 | BS: 30000 | FPS: 12.8857 | T: 0:34:14
+| [32meval[0m  | F: 30000 | S: 30000 | E: 60 | L: 500 | R: 57.4434 | T: 0:34:14 | SR: 0.0000
+| [33mtrain[0m | F: 30500 | S: 30500 | E: 61 | L: 500 | R: 27.2968 | BS: 30500 | FPS: 4.9627 | T: 0:35:55
+| [33mtrain[0m | F: 31000 | S: 31000 | E: 62 | L: 500 | R: 6.7106 | BS: 31000 | FPS: 15.0593 | T: 0:36:28
+| [33mtrain[0m | F: 31500 | S: 31500 | E: 63 | L: 500 | R: 21.7472 | BS: 31500 | FPS: 12.0064 | T: 0:37:10
+| [33mtrain[0m | F: 32000 | S: 32000 | E: 64 | L: 500 | R: 3.7374 | BS: 32000 | FPS: 12.1181 | T: 0:37:51
+| [33mtrain[0m | F: 32500 | S: 32500 | E: 65 | L: 500 | R: 32.3811 | BS: 32500 | FPS: 16.2027 | T: 0:38:22
+| [33mtrain[0m | F: 33000 | S: 33000 | E: 66 | L: 500 | R: 8.5734 | BS: 33000 | FPS: 18.2663 | T: 0:38:49
+| [33mtrain[0m | F: 33500 | S: 33500 | E: 67 | L: 500 | R: 40.2772 | BS: 33500 | FPS: 15.1085 | T: 0:39:22
+| [33mtrain[0m | F: 34000 | S: 34000 | E: 68 | L: 500 | R: 29.1231 | BS: 34000 | FPS: 11.3743 | T: 0:40:06
+| [33mtrain[0m | F: 34500 | S: 34500 | E: 69 | L: 500 | R: 32.5890 | BS: 34500 | FPS: 10.9830 | T: 0:40:52
+| [33mtrain[0m | F: 35000 | S: 35000 | E: 70 | L: 500 | R: 94.0782 | BS: 35000 | FPS: 14.9295 | T: 0:41:25
+| [33mtrain[0m | F: 35500 | S: 35500 | E: 71 | L: 500 | R: 43.5368 | BS: 35500 | FPS: 16.7593 | T: 0:41:55
+| [33mtrain[0m | F: 36000 | S: 36000 | E: 72 | L: 500 | R: 81.3843 | BS: 36000 | FPS: 14.2130 | T: 0:42:30
+| [33mtrain[0m | F: 36500 | S: 36500 | E: 73 | L: 500 | R: 52.5950 | BS: 36500 | FPS: 12.1332 | T: 0:43:11
+| [33mtrain[0m | F: 37000 | S: 37000 | E: 74 | L: 500 | R: 67.5217 | BS: 37000 | FPS: 11.7615 | T: 0:43:54
+| [33mtrain[0m | F: 37500 | S: 37500 | E: 75 | L: 500 | R: 65.1851 | BS: 37500 | FPS: 15.9173 | T: 0:44:25
+| [33mtrain[0m | F: 38000 | S: 38000 | E: 76 | L: 500 | R: 76.0276 | BS: 38000 | FPS: 17.1420 | T: 0:44:55
+| [33mtrain[0m | F: 38500 | S: 38500 | E: 77 | L: 500 | R: 67.0748 | BS: 38500 | FPS: 13.5118 | T: 0:45:32
+| [33mtrain[0m | F: 39000 | S: 39000 | E: 78 | L: 500 | R: 67.2851 | BS: 39000 | FPS: 11.5908 | T: 0:46:15
+| [33mtrain[0m | F: 39500 | S: 39500 | E: 79 | L: 500 | R: 45.5520 | BS: 39500 | FPS: 11.6232 | T: 0:46:58
+| [33mtrain[0m | F: 40000 | S: 40000 | E: 80 | L: 500 | R: 52.3521 | BS: 40000 | FPS: 16.6215 | T: 0:47:28
+| [32meval[0m  | F: 40000 | S: 40000 | E: 80 | L: 500 | R: 70.4576 | T: 0:47:28 | SR: 0.0000
+| [33mtrain[0m | F: 40500 | S: 40500 | E: 81 | L: 500 | R: 111.0971 | BS: 40500 | FPS: 4.5246 | T: 0:49:18
+| [33mtrain[0m | F: 41000 | S: 41000 | E: 82 | L: 500 | R: 70.8968 | BS: 41000 | FPS: 13.2376 | T: 0:49:56
+| [33mtrain[0m | F: 41500 | S: 41500 | E: 83 | L: 500 | R: 47.0388 | BS: 41500 | FPS: 17.3733 | T: 0:50:25
+| [33mtrain[0m | F: 42000 | S: 42000 | E: 84 | L: 500 | R: 101.1440 | BS: 42000 | FPS: 16.7584 | T: 0:50:55
+| [33mtrain[0m | F: 42500 | S: 42500 | E: 85 | L: 500 | R: 42.1257 | BS: 42500 | FPS: 11.6468 | T: 0:51:38
+| [33mtrain[0m | F: 43000 | S: 43000 | E: 86 | L: 500 | R: 9.0482 | BS: 43000 | FPS: 11.6247 | T: 0:52:21
+| [33mtrain[0m | F: 43500 | S: 43500 | E: 87 | L: 500 | R: 54.3443 | BS: 43500 | FPS: 13.5387 | T: 0:52:58
+| [33mtrain[0m | F: 44000 | S: 44000 | E: 88 | L: 500 | R: 46.5223 | BS: 44000 | FPS: 17.9440 | T: 0:53:25
+| [33mtrain[0m | F: 44500 | S: 44500 | E: 89 | L: 500 | R: 81.2871 | BS: 44500 | FPS: 15.2418 | T: 0:53:58
+| [33mtrain[0m | F: 45000 | S: 45000 | E: 90 | L: 500 | R: 88.7882 | BS: 45000 | FPS: 11.4961 | T: 0:54:42
+| [33mtrain[0m | F: 45500 | S: 45500 | E: 91 | L: 500 | R: 33.5471 | BS: 45500 | FPS: 11.5899 | T: 0:55:25
+| [33mtrain[0m | F: 46000 | S: 46000 | E: 92 | L: 500 | R: 61.8471 | BS: 46000 | FPS: 14.2689 | T: 0:56:00
+| [33mtrain[0m | F: 46500 | S: 46500 | E: 93 | L: 500 | R: 80.3862 | BS: 46500 | FPS: 18.0148 | T: 0:56:28
+| [33mtrain[0m | F: 47000 | S: 47000 | E: 94 | L: 500 | R: 60.6385 | BS: 47000 | FPS: 14.3131 | T: 0:57:03
+| [33mtrain[0m | F: 47500 | S: 47500 | E: 95 | L: 500 | R: 27.7530 | BS: 47500 | FPS: 11.5890 | T: 0:57:46
+| [33mtrain[0m | F: 48000 | S: 48000 | E: 96 | L: 500 | R: 126.0428 | BS: 48000 | FPS: 11.6025 | T: 0:58:29
+| [33mtrain[0m | F: 48500 | S: 48500 | E: 97 | L: 500 | R: 77.4699 | BS: 48500 | FPS: 15.1129 | T: 0:59:02
+| [33mtrain[0m | F: 49000 | S: 49000 | E: 98 | L: 500 | R: 144.2429 | BS: 49000 | FPS: 17.8683 | T: 0:59:30
+| [33mtrain[0m | F: 49500 | S: 49500 | E: 99 | L: 500 | R: 79.5807 | BS: 49500 | FPS: 14.3568 | T: 1:00:05
+| [33mtrain[0m | F: 50000 | S: 50000 | E: 100 | L: 500 | R: 68.2964 | BS: 50000 | FPS: 11.5080 | T: 1:00:48
+| [32meval[0m  | F: 50000 | S: 50000 | E: 100 | L: 500 | R: 89.5000 | T: 1:00:48 | SR: 0.1000
+| [33mtrain[0m | F: 50500 | S: 50500 | E: 101 | L: 500 | R: 124.3266 | BS: 50500 | FPS: 5.2114 | T: 1:02:24
+| [33mtrain[0m | F: 51000 | S: 51000 | E: 102 | L: 500 | R: 122.3605 | BS: 51000 | FPS: 14.7586 | T: 1:02:58
+| [33mtrain[0m | F: 51500 | S: 51500 | E: 103 | L: 500 | R: 42.3517 | BS: 51500 | FPS: 17.2637 | T: 1:03:27
+| [33mtrain[0m | F: 52000 | S: 52000 | E: 104 | L: 500 | R: 45.8785 | BS: 52000 | FPS: 17.0059 | T: 1:03:56
+| [33mtrain[0m | F: 52500 | S: 52500 | E: 105 | L: 500 | R: 70.9539 | BS: 52500 | FPS: 11.5206 | T: 1:04:40
+| [33mtrain[0m | F: 53000 | S: 53000 | E: 106 | L: 500 | R: 75.7859 | BS: 53000 | FPS: 11.6209 | T: 1:05:23
+| [33mtrain[0m | F: 53500 | S: 53500 | E: 107 | L: 500 | R: 90.2747 | BS: 53500 | FPS: 15.4265 | T: 1:05:55
+| [33mtrain[0m | F: 54000 | S: 54000 | E: 108 | L: 500 | R: 143.5607 | BS: 54000 | FPS: 17.4149 | T: 1:06:24
+| [33mtrain[0m | F: 54500 | S: 54500 | E: 109 | L: 500 | R: 150.5983 | BS: 54500 | FPS: 13.8785 | T: 1:07:00
+| [33mtrain[0m | F: 55000 | S: 55000 | E: 110 | L: 500 | R: 147.6111 | BS: 55000 | FPS: 11.5907 | T: 1:07:43
+| [33mtrain[0m | F: 55500 | S: 55500 | E: 111 | L: 500 | R: 105.8807 | BS: 55500 | FPS: 11.5043 | T: 1:08:27
+| [33mtrain[0m | F: 56000 | S: 56000 | E: 112 | L: 500 | R: 299.6718 | BS: 56000 | FPS: 15.7553 | T: 1:08:58
+| [33mtrain[0m | F: 56500 | S: 56500 | E: 113 | L: 500 | R: 64.5890 | BS: 56500 | FPS: 16.9924 | T: 1:09:28
+| [33mtrain[0m | F: 57000 | S: 57000 | E: 114 | L: 500 | R: 36.1843 | BS: 57000 | FPS: 13.2222 | T: 1:10:06
+| [33mtrain[0m | F: 57500 | S: 57500 | E: 115 | L: 500 | R: 391.0564 | BS: 57500 | FPS: 11.5232 | T: 1:10:49
+| [33mtrain[0m | F: 58000 | S: 58000 | E: 116 | L: 500 | R: 91.0682 | BS: 58000 | FPS: 11.4952 | T: 1:11:32
+| [33mtrain[0m | F: 58500 | S: 58500 | E: 117 | L: 500 | R: 62.3283 | BS: 58500 | FPS: 16.7975 | T: 1:12:02
+| [33mtrain[0m | F: 59000 | S: 59000 | E: 118 | L: 500 | R: 378.1840 | BS: 59000 | FPS: 17.2387 | T: 1:12:31
+| [33mtrain[0m | F: 59500 | S: 59500 | E: 119 | L: 500 | R: 317.6493 | BS: 59500 | FPS: 12.2623 | T: 1:13:12
+| [33mtrain[0m | F: 60000 | S: 60000 | E: 120 | L: 500 | R: 13.6514 | BS: 60000 | FPS: 11.5714 | T: 1:13:55
+| [32meval[0m  | F: 60000 | S: 60000 | E: 120 | L: 500 | R: 121.0673 | T: 1:13:55 | SR: 0.2000
+| [33mtrain[0m | F: 60500 | S: 60500 | E: 121 | L: 500 | R: 404.1820 | BS: 60500 | FPS: 5.0873 | T: 1:15:33
+| [33mtrain[0m | F: 61000 | S: 61000 | E: 122 | L: 500 | R: 78.0143 | BS: 61000 | FPS: 11.4056 | T: 1:16:17
+| [33mtrain[0m | F: 61500 | S: 61500 | E: 123 | L: 500 | R: 8.2748 | BS: 61500 | FPS: 11.3790 | T: 1:17:01
+| [33mtrain[0m | F: 62000 | S: 62000 | E: 124 | L: 500 | R: 93.8998 | BS: 62000 | FPS: 13.7738 | T: 1:17:38
+| [33mtrain[0m | F: 62500 | S: 62500 | E: 125 | L: 500 | R: 88.3420 | BS: 62500 | FPS: 16.5137 | T: 1:18:08
+| [33mtrain[0m | F: 63000 | S: 63000 | E: 126 | L: 500 | R: 90.1779 | BS: 63000 | FPS: 13.5616 | T: 1:18:45
+| [33mtrain[0m | F: 63500 | S: 63500 | E: 127 | L: 500 | R: 16.7077 | BS: 63500 | FPS: 11.8990 | T: 1:19:27
+| [33mtrain[0m | F: 64000 | S: 64000 | E: 128 | L: 500 | R: 311.4432 | BS: 64000 | FPS: 11.9105 | T: 1:20:09
+| [33mtrain[0m | F: 64500 | S: 64500 | E: 129 | L: 500 | R: 279.6925 | BS: 64500 | FPS: 15.5671 | T: 1:20:41
+| [33mtrain[0m | F: 65000 | S: 65000 | E: 130 | L: 500 | R: 321.0223 | BS: 65000 | FPS: 17.4823 | T: 1:21:09
+| [33mtrain[0m | F: 65500 | S: 65500 | E: 131 | L: 500 | R: 56.3345 | BS: 65500 | FPS: 14.6227 | T: 1:21:44
+| [33mtrain[0m | F: 66000 | S: 66000 | E: 132 | L: 500 | R: 465.3644 | BS: 66000 | FPS: 11.8312 | T: 1:22:26
+| [33mtrain[0m | F: 66500 | S: 66500 | E: 133 | L: 500 | R: 343.9667 | BS: 66500 | FPS: 11.8508 | T: 1:23:08
+| [33mtrain[0m | F: 67000 | S: 67000 | E: 134 | L: 500 | R: 102.9290 | BS: 67000 | FPS: 15.8988 | T: 1:23:40
+| [33mtrain[0m | F: 67500 | S: 67500 | E: 135 | L: 500 | R: 376.8301 | BS: 67500 | FPS: 17.4117 | T: 1:24:08
+| [33mtrain[0m | F: 68000 | S: 68000 | E: 136 | L: 500 | R: 307.5880 | BS: 68000 | FPS: 14.6658 | T: 1:24:42
+| [33mtrain[0m | F: 68500 | S: 68500 | E: 137 | L: 500 | R: 411.4863 | BS: 68500 | FPS: 11.8800 | T: 1:25:24
+| [33mtrain[0m | F: 69000 | S: 69000 | E: 138 | L: 500 | R: 452.5676 | BS: 69000 | FPS: 11.7801 | T: 1:26:07
+| [33mtrain[0m | F: 69500 | S: 69500 | E: 139 | L: 500 | R: 36.6766 | BS: 69500 | FPS: 15.9445 | T: 1:26:38
+| [33mtrain[0m | F: 70000 | S: 70000 | E: 140 | L: 500 | R: 456.8012 | BS: 70000 | FPS: 17.5255 | T: 1:27:07
+| [32meval[0m  | F: 70000 | S: 70000 | E: 140 | L: 500 | R: 242.7015 | T: 1:27:07 | SR: 0.6000
+| [33mtrain[0m | F: 70500 | S: 70500 | E: 141 | L: 500 | R: 469.2877 | BS: 70500 | FPS: 4.4984 | T: 1:28:58
+| [33mtrain[0m | F: 71000 | S: 71000 | E: 142 | L: 500 | R: 14.3096 | BS: 71000 | FPS: 18.2254 | T: 1:29:25
+| [33mtrain[0m | F: 71500 | S: 71500 | E: 143 | L: 500 | R: 460.3021 | BS: 71500 | FPS: 15.1752 | T: 1:29:58
+| [33mtrain[0m | F: 72000 | S: 72000 | E: 144 | L: 500 | R: 447.1419 | BS: 72000 | FPS: 11.8614 | T: 1:30:40
+| [33mtrain[0m | F: 72500 | S: 72500 | E: 145 | L: 500 | R: 30.5393 | BS: 72500 | FPS: 11.9972 | T: 1:31:22
+| [33mtrain[0m | F: 73000 | S: 73000 | E: 146 | L: 500 | R: 458.9795 | BS: 73000 | FPS: 14.0072 | T: 1:31:58
+| [33mtrain[0m | F: 73500 | S: 73500 | E: 147 | L: 500 | R: 462.4094 | BS: 73500 | FPS: 17.8929 | T: 1:32:26
+| [33mtrain[0m | F: 74000 | S: 74000 | E: 148 | L: 500 | R: 335.8851 | BS: 74000 | FPS: 14.0633 | T: 1:33:01
+| [33mtrain[0m | F: 74500 | S: 74500 | E: 149 | L: 500 | R: 407.3207 | BS: 74500 | FPS: 11.6116 | T: 1:33:44
+| [33mtrain[0m | F: 75000 | S: 75000 | E: 150 | L: 500 | R: 458.3061 | BS: 75000 | FPS: 11.7142 | T: 1:34:27
+| [33mtrain[0m | F: 75500 | S: 75500 | E: 151 | L: 500 | R: 430.8638 | BS: 75500 | FPS: 15.1989 | T: 1:35:00
+| [33mtrain[0m | F: 76000 | S: 76000 | E: 152 | L: 500 | R: 267.3278 | BS: 76000 | FPS: 17.2024 | T: 1:35:29
+| [33mtrain[0m | F: 76500 | S: 76500 | E: 153 | L: 500 | R: 379.7433 | BS: 76500 | FPS: 14.5079 | T: 1:36:03
+| [33mtrain[0m | F: 77000 | S: 77000 | E: 154 | L: 500 | R: 9.3508 | BS: 77000 | FPS: 11.2968 | T: 1:36:48
+| [33mtrain[0m | F: 77500 | S: 77500 | E: 155 | L: 500 | R: 468.8937 | BS: 77500 | FPS: 10.8859 | T: 1:37:34
+| [33mtrain[0m | F: 78000 | S: 78000 | E: 156 | L: 500 | R: 51.4917 | BS: 78000 | FPS: 13.4809 | T: 1:38:11
+| [33mtrain[0m | F: 78500 | S: 78500 | E: 157 | L: 500 | R: 406.7912 | BS: 78500 | FPS: 15.7301 | T: 1:38:43
+| [33mtrain[0m | F: 79000 | S: 79000 | E: 158 | L: 500 | R: 467.3469 | BS: 79000 | FPS: 13.1878 | T: 1:39:20
+| [33mtrain[0m | F: 79500 | S: 79500 | E: 159 | L: 500 | R: 439.3162 | BS: 79500 | FPS: 11.4561 | T: 1:40:04
+| [33mtrain[0m | F: 80000 | S: 80000 | E: 160 | L: 500 | R: 465.0057 | BS: 80000 | FPS: 10.8840 | T: 1:40:50
+| [32meval[0m  | F: 80000 | S: 80000 | E: 160 | L: 500 | R: 292.5496 | T: 1:40:50 | SR: 1.0000
+| [33mtrain[0m | F: 80500 | S: 80500 | E: 161 | L: 500 | R: 449.9480 | BS: 80500 | FPS: 4.4120 | T: 1:42:43
+| [33mtrain[0m | F: 81000 | S: 81000 | E: 162 | L: 500 | R: 436.0535 | BS: 81000 | FPS: 10.5955 | T: 1:43:31
+| [33mtrain[0m | F: 81500 | S: 81500 | E: 163 | L: 500 | R: 471.8515 | BS: 81500 | FPS: 11.4256 | T: 1:44:14
+| [33mtrain[0m | F: 82000 | S: 82000 | E: 164 | L: 500 | R: 392.9405 | BS: 82000 | FPS: 16.2020 | T: 1:44:45
+| [33mtrain[0m | F: 82500 | S: 82500 | E: 165 | L: 500 | R: 444.3228 | BS: 82500 | FPS: 17.2477 | T: 1:45:14
+| [33mtrain[0m | F: 83000 | S: 83000 | E: 166 | L: 500 | R: 27.4126 | BS: 83000 | FPS: 11.0438 | T: 1:45:59
+| [33mtrain[0m | F: 83500 | S: 83500 | E: 167 | L: 500 | R: 445.6557 | BS: 83500 | FPS: 11.2624 | T: 1:46:44
+| [33mtrain[0m | F: 84000 | S: 84000 | E: 168 | L: 500 | R: 18.1153 | BS: 84000 | FPS: 12.7002 | T: 1:47:23
+| [33mtrain[0m | F: 84500 | S: 84500 | E: 169 | L: 500 | R: 250.8415 | BS: 84500 | FPS: 17.2636 | T: 1:47:52
+| [33mtrain[0m | F: 85000 | S: 85000 | E: 170 | L: 500 | R: 332.3128 | BS: 85000 | FPS: 17.3790 | T: 1:48:21
+| [33mtrain[0m | F: 85500 | S: 85500 | E: 171 | L: 500 | R: 392.9618 | BS: 85500 | FPS: 11.6181 | T: 1:49:04
+| [33mtrain[0m | F: 86000 | S: 86000 | E: 172 | L: 500 | R: 463.6848 | BS: 86000 | FPS: 11.0941 | T: 1:49:49
+| [33mtrain[0m | F: 86500 | S: 86500 | E: 173 | L: 500 | R: 477.5696 | BS: 86500 | FPS: 12.0007 | T: 1:50:31
+| [33mtrain[0m | F: 87000 | S: 87000 | E: 174 | L: 500 | R: 52.5982 | BS: 87000 | FPS: 17.8283 | T: 1:50:59
+| [33mtrain[0m | F: 87500 | S: 87500 | E: 175 | L: 500 | R: 55.1754 | BS: 87500 | FPS: 17.0218 | T: 1:51:28
+| [33mtrain[0m | F: 88000 | S: 88000 | E: 176 | L: 500 | R: 251.6167 | BS: 88000 | FPS: 11.4263 | T: 1:52:12
+| [33mtrain[0m | F: 88500 | S: 88500 | E: 177 | L: 500 | R: 16.6657 | BS: 88500 | FPS: 10.5755 | T: 1:52:59
+| [33mtrain[0m | F: 89000 | S: 89000 | E: 178 | L: 500 | R: 435.1561 | BS: 89000 | FPS: 13.6818 | T: 1:53:36
+| [33mtrain[0m | F: 89500 | S: 89500 | E: 179 | L: 500 | R: 461.3498 | BS: 89500 | FPS: 18.4776 | T: 1:54:03
+| [33mtrain[0m | F: 90000 | S: 90000 | E: 180 | L: 500 | R: 463.9937 | BS: 90000 | FPS: 17.1253 | T: 1:54:32
+| [32meval[0m  | F: 90000 | S: 90000 | E: 180 | L: 500 | R: 365.3291 | T: 1:54:32 | SR: 0.8000
+| [33mtrain[0m | F: 90500 | S: 90500 | E: 181 | L: 500 | R: 475.2025 | BS: 90500 | FPS: 4.8171 | T: 1:56:16
+| [33mtrain[0m | F: 91000 | S: 91000 | E: 182 | L: 500 | R: 476.5077 | BS: 91000 | FPS: 18.7980 | T: 1:56:42
+| [33mtrain[0m | F: 91500 | S: 91500 | E: 183 | L: 500 | R: 466.4760 | BS: 91500 | FPS: 12.4361 | T: 1:57:23
+| [33mtrain[0m | F: 92000 | S: 92000 | E: 184 | L: 500 | R: 453.5263 | BS: 92000 | FPS: 12.1051 | T: 1:58:04
+| [33mtrain[0m | F: 92500 | S: 92500 | E: 185 | L: 500 | R: 395.6166 | BS: 92500 | FPS: 12.7369 | T: 1:58:43
+| [33mtrain[0m | F: 93000 | S: 93000 | E: 186 | L: 500 | R: 459.8460 | BS: 93000 | FPS: 18.4252 | T: 1:59:10
+| [33mtrain[0m | F: 93500 | S: 93500 | E: 187 | L: 500 | R: 267.9815 | BS: 93500 | FPS: 19.1780 | T: 1:59:36
+| [33mtrain[0m | F: 94000 | S: 94000 | E: 188 | L: 500 | R: 47.4289 | BS: 94000 | FPS: 11.9386 | T: 2:00:18
+| [33mtrain[0m | F: 94500 | S: 94500 | E: 189 | L: 500 | R: 120.6070 | BS: 94500 | FPS: 12.0665 | T: 2:01:00
+| [33mtrain[0m | F: 95000 | S: 95000 | E: 190 | L: 500 | R: 478.0508 | BS: 95000 | FPS: 12.8978 | T: 2:01:38
+| [33mtrain[0m | F: 95500 | S: 95500 | E: 191 | L: 500 | R: 447.4850 | BS: 95500 | FPS: 18.3350 | T: 2:02:06
+| [33mtrain[0m | F: 96000 | S: 96000 | E: 192 | L: 500 | R: 459.8581 | BS: 96000 | FPS: 19.3536 | T: 2:02:32
+| [33mtrain[0m | F: 96500 | S: 96500 | E: 193 | L: 500 | R: 475.1245 | BS: 96500 | FPS: 11.9858 | T: 2:03:13
+| [33mtrain[0m | F: 97000 | S: 97000 | E: 194 | L: 500 | R: 475.9115 | BS: 97000 | FPS: 11.6812 | T: 2:03:56
+| [33mtrain[0m | F: 97500 | S: 97500 | E: 195 | L: 500 | R: 476.7940 | BS: 97500 | FPS: 11.9757 | T: 2:04:38
+| [33mtrain[0m | F: 98000 | S: 98000 | E: 196 | L: 500 | R: 475.7796 | BS: 98000 | FPS: 18.1527 | T: 2:05:05
+| [33mtrain[0m | F: 98500 | S: 98500 | E: 197 | L: 500 | R: 424.4559 | BS: 98500 | FPS: 19.0099 | T: 2:05:32
+| [33mtrain[0m | F: 99000 | S: 99000 | E: 198 | L: 500 | R: 28.1062 | BS: 99000 | FPS: 10.7499 | T: 2:06:18
+| [33mtrain[0m | F: 99500 | S: 99500 | E: 199 | L: 500 | R: 442.4063 | BS: 99500 | FPS: 10.3441 | T: 2:07:06
+| [33mtrain[0m | F: 100000 | S: 100000 | E: 200 | L: 500 | R: 470.7799 | BS: 100000 | FPS: 12.9989 | T: 2:07:45
+| [32meval[0m  | F: 100000 | S: 100000 | E: 200 | L: 500 | R: 469.4089 | T: 2:07:45 | SR: 1.0000
+| [33mtrain[0m | F: 100500 | S: 100500 | E: 201 | L: 500 | R: 415.7897 | BS: 100500 | FPS: 4.3378 | T: 2:09:40
+| [33mtrain[0m | F: 101000 | S: 101000 | E: 202 | L: 500 | R: 360.0559 | BS: 101000 | FPS: 10.7426 | T: 2:10:27
+| [33mtrain[0m | F: 101500 | S: 101500 | E: 203 | L: 500 | R: 474.9648 | BS: 101500 | FPS: 15.7774 | T: 2:10:58
+| [33mtrain[0m | F: 102000 | S: 102000 | E: 204 | L: 500 | R: 475.8276 | BS: 102000 | FPS: 18.5046 | T: 2:11:25
+| [33mtrain[0m | F: 102500 | S: 102500 | E: 205 | L: 500 | R: 383.7114 | BS: 102500 | FPS: 12.4137 | T: 2:12:06
+| [33mtrain[0m | F: 103000 | S: 103000 | E: 206 | L: 500 | R: 450.2094 | BS: 103000 | FPS: 11.8195 | T: 2:12:48
+| [33mtrain[0m | F: 103500 | S: 103500 | E: 207 | L: 500 | R: 473.5461 | BS: 103500 | FPS: 12.4796 | T: 2:13:28
+| [33mtrain[0m | F: 104000 | S: 104000 | E: 208 | L: 500 | R: 477.5035 | BS: 104000 | FPS: 18.1018 | T: 2:13:56
+| [33mtrain[0m | F: 104500 | S: 104500 | E: 209 | L: 500 | R: 470.2930 | BS: 104500 | FPS: 15.6863 | T: 2:14:28
+| [33mtrain[0m | F: 105000 | S: 105000 | E: 210 | L: 500 | R: 473.4054 | BS: 105000 | FPS: 10.0365 | T: 2:15:17
+| [33mtrain[0m | F: 105500 | S: 105500 | E: 211 | L: 500 | R: 475.0985 | BS: 105500 | FPS: 8.6541 | T: 2:16:15
+| [33mtrain[0m | F: 106000 | S: 106000 | E: 212 | L: 500 | R: 36.1367 | BS: 106000 | FPS: 10.4753 | T: 2:17:03
+| [33mtrain[0m | F: 106500 | S: 106500 | E: 213 | L: 500 | R: 476.1200 | BS: 106500 | FPS: 18.2097 | T: 2:17:30
+| [33mtrain[0m | F: 107000 | S: 107000 | E: 214 | L: 500 | R: 476.5628 | BS: 107000 | FPS: 13.5986 | T: 2:18:07
+| [33mtrain[0m | F: 107500 | S: 107500 | E: 215 | L: 500 | R: 475.0886 | BS: 107500 | FPS: 11.8289 | T: 2:18:49
+| [33mtrain[0m | F: 108000 | S: 108000 | E: 216 | L: 500 | R: 476.4566 | BS: 108000 | FPS: 11.9091 | T: 2:19:31
+| [33mtrain[0m | F: 108500 | S: 108500 | E: 217 | L: 500 | R: 333.7533 | BS: 108500 | FPS: 16.2548 | T: 2:20:02
+| [33mtrain[0m | F: 109000 | S: 109000 | E: 218 | L: 500 | R: 476.5364 | BS: 109000 | FPS: 15.1034 | T: 2:20:35
+| [33mtrain[0m | F: 109500 | S: 109500 | E: 219 | L: 500 | R: 473.0336 | BS: 109500 | FPS: 9.7237 | T: 2:21:27
+| [33mtrain[0m | F: 110000 | S: 110000 | E: 220 | L: 500 | R: 378.6359 | BS: 110000 | FPS: 11.0847 | T: 2:22:12

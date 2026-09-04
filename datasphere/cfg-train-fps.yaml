@@ -1,0 +1,18 @@
+name: vigen-train-fps
+desc: What training FPS does SVEA reach on a T4? The one number the whole sweep budget rests on.
+cmd: >-
+  FRAMES=8000
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - train_fps_job.sh: JOB
+  - code-clone.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    # Same image the verified probe used. Rendering depends on the platform injecting the graphics
+    # driver stack into the container -- true on 2026-08-10; the GL gate reports if that reverted.
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+# INTERRUPTIBLE T4. A measurement is exactly the job that can afford to be preempted and rerun,
+# and this is the cheaper of the two permitted instance types.
+cloud-instance-type: gt4i.1

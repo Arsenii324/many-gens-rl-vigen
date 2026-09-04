@@ -1,0 +1,15 @@
+No protocol specified
+No protocol specified
+No protocol specified
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 187, in _run_module_as_main
+    mod_name, mod_spec, code = _get_module_details(mod_name, _Error)
+  File "/usr/lib/python3.10/runpy.py", line 110, in _get_module_details
+    __import__(pkg_name)
+  File "/tmp/w/runnable/ppg/phasic_policy_gradient/__init__.py", line 1, in <module>
+    from .train import train_fn
+  File "/tmp/w/runnable/ppg/phasic_policy_gradient/train.py", line 7, in <module>
+    from .envs import get_venv
+  File "/tmp/w/runnable/ppg/phasic_policy_gradient/envs.py", line 3, in <module>
+    from procgen import ProcgenGym3Env
+ModuleNotFoundError: No module named 'procgen'

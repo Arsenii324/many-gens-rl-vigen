@@ -1,0 +1,496 @@
+=== 1. System & Dependencies (t+0s) ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+=== 2. Clone RL-ViGen Upstream with Exponential Backoff Retry (t+53s) ===
+Cloning RL-ViGen upstream (attempt 1/5)...
+Cloning into 'RL-ViGen-upstream'...
+Updating files:  57% (2507/4343)
+Updating files:  58% (2519/4343)
+Updating files:  59% (2563/4343)
+Updating files:  60% (2606/4343)
+Updating files:  61% (2650/4343)
+Updating files:  62% (2693/4343)
+Updating files:  63% (2737/4343)
+Updating files:  63% (2744/4343)
+Updating files:  64% (2780/4343)
+Updating files:  65% (2823/4343)
+Updating files:  66% (2867/4343)
+Updating files:  67% (2910/4343)
+Updating files:  68% (2954/4343)
+Updating files:  69% (2997/4343)
+Updating files:  70% (3041/4343)
+Updating files:  71% (3084/4343)
+Updating files:  72% (3127/4343)
+Updating files:  73% (3171/4343)
+Updating files:  74% (3214/4343)
+Updating files:  75% (3258/4343)
+Updating files:  76% (3301/4343)
+Updating files:  77% (3345/4343)
+Updating files:  78% (3388/4343)
+Updating files:  79% (3431/4343)
+Updating files:  80% (3475/4343)
+Updating files:  81% (3518/4343)
+Updating files:  82% (3562/4343)
+Updating files:  83% (3605/4343)
+Updating files:  84% (3649/4343)
+Updating files:  84% (3670/4343)
+Updating files:  85% (3692/4343)
+Updating files:  86% (3735/4343)
+Updating files:  87% (3779/4343)
+Updating files:  88% (3822/4343)
+Updating files:  89% (3866/4343)
+Updating files:  90% (3909/4343)
+Updating files:  90% (3942/4343)
+Updating files:  91% (3953/4343)
+Updating files:  92% (3996/4343)
+Updating files:  93% (4039/4343)
+Updating files:  94% (4083/4343)
+Updating files:  95% (4126/4343)
+Updating files:  96% (4170/4343)
+Updating files:  96% (4212/4343)
+Updating files:  97% (4213/4343)
+Updating files:  98% (4257/4343)
+Updating files:  99% (4300/4343)
+Updating files: 100% (4343/4343)
+Updating files: 100% (4343/4343), done.
+  OK P1  make_env accepts mode        applied
+  OK P2  guard the video load         applied
+  OK P3a robo_make threads mode       applied
+  OK P3b robo_make exports regime     applied
+  OK P4a places batch device          applied
+  OK P4b places device holder         applied
+  OK P4c random_overlay records device applied
+  OK P5  drq log_alpha float32        applied
+  OK P6  render size settable         applied
+  OK P7a train.py GL not forced       applied
+  OK P7b eval.py GL not forced        applied
+  OK P8  action spec stays float32    applied
+  OK P9  robosuite keeps MUJOCO_GL    applied
+  OK P10 success flag in info         applied
+  OK P12 eval env gets a regime       applied
+  OK P14a eval env recipe kept        applied
+  OK P14b eval sweeps scenes + train regime applied
+  OK P11a Gym2DMC keeps last_info     applied
+  OK P11b eval tracks success         applied
+  OK P11c eval reads last_info        applied
+  OK P11d eval logs success_rate      applied
+  OK P13a logger drops tb import      applied
+  OK P13b logger imports tb lazily    applied
+23 applied, 0 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+0 applied, 23 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+=== 3. Benchmark Micro-Profiler Harness (t+365s) ===
+=== 4. Ablation 1: Solo Baseline Run (DrQ-v2 Alone) (t+365s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f9465af30a0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f9465af2ef0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+=== 5. Ablation 2: Quad Workers - Unpinned OS Default (OMP=2) (t+374s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    obs, _, done, _ = env.step(action)
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fbecea07520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fe5747b3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fbecea07370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fe5747b3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f1c02daf520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f1c02daf370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f73998e3520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f73998e3370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 2 (Quad Unpinned) completed.
+=== 6. Ablation 3: Quad Workers - Pinned Core Affinity (OMP=1) (t+382s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5bad1a7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5bad1a7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f799f0d7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f799f0d7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f685adaf520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f685adaf370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f09f32db520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f09f32db370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 3 (Quad Pinned OMP=1) completed.
+=== 7. Ablation 4: Quad Workers - Pinned Core Affinity (OMP=2) (t+389s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Traceback (most recent call last):
+  File "/tmp/w/profile_worker.py", line 49, in <module>
+    obs, _, done, _ = env.step(action)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 394, in step
+    self._pre_action(action, policy_step)
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/robot_env.py", line 575, in _pre_action
+    assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+AssertionError: environment got invalid action dimension -- expected 8, got 7
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fd1d43af520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fd1d43af370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f9108bbb520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f9108bbb370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5b880e7520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5b880e7370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f126300f520>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f126300f370>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Ablation 4 (Quad Pinned OMP=2) completed.
+=== 8. Synthesize Concurrency & Stutter Ablation Summary (t+396s) ===
+Concurrency & Stutter Ablation report synthesized successfully.
+Packaging complete: 2869 bytes written to /job/result_klj
+=== TOTAL DURATION: 396s (t+396s) ===

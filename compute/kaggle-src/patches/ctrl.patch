@@ -1,0 +1,583 @@
+diff --git a/algo.py b/algo.py
+index 6034ea5..07b8ca0 100644
+--- a/algo.py
++++ b/algo.py
+@@ -100,27 +100,28 @@ def state_update(online_state,
+                  tau: float = 1.):
+     """ Update key weights as tau * online + (1-tau) * target
+     """
+-    fc_pi = online_state.params['params']['fc_pi'].copy(add_or_replace={})
+-    fc_v = online_state.params['params']['fc_v'].copy(add_or_replace={})
+-    protos = online_state.params['params']['protos'].copy(add_or_replace={})
++    # FLAX API DRIFT, not an algorithm change. Under flax 0.3.x `params` was a FrozenDict, whose
++    # `.copy(add_or_replace=...)` returned a modified copy. Since flax 0.10 `params` is a plain
++    # dict and `dict.copy()` takes no keyword arguments. `dict(x)` and `{**a, **b}` are the same
++    # operations: shallow copy, and copy-with-overrides. Semantics unchanged -- fc_pi, fc_v and
++    # protos are still taken from the ONLINE net verbatim while everything else is EMA'd.
++    fc_pi = dict(online_state.params['params']['fc_pi'])
++    fc_v = dict(online_state.params['params']['fc_v'])
++    protos = dict(online_state.params['params']['protos'])
+     weights = target_update(online_state.params['params'], target_state.params['params'], tau)
+-    
+-    weights = weights.copy(add_or_replace={"fc_pi":fc_pi,
+-                                            "fc_v":fc_v,
+-                                            "protos":protos})
+-    
+-    new_params = target_state.params.copy(
+-        add_or_replace={
+-            'params':
+-            weights
+-        })
++
++    weights = {**weights, "fc_pi": fc_pi, "fc_v": fc_v, "protos": protos}
++
++    new_params = {**target_state.params, 'params': weights}
+ 
+     target_state = target_state.replace(params=new_params)
+     return target_state
+ 
+ 
+ def target_update(online, target, tau: float):
+-    new_target_params = jax.tree_multimap(
++    # JAX API DRIFT: jax.tree_multimap was renamed jax.tree_util.tree_map (and the alias was
++    # deleted in 0.3.16). Same function, same argument order.
++    new_target_params = jax.tree_util.tree_map(
+         lambda p, tp: p * tau + tp * (1 - tau), online, target)
+ 
+     return new_target_params
+@@ -134,9 +135,11 @@ def group_by(data, var):
+     x, g = var
+     x_grouped, group_cnts = data
+     # append entries into specified group
+-    x_grouped = jax.ops.index_add(x_grouped, (g, group_cnts[g]), x)
++    # JAX API DRIFT, not an algorithm change: jax.ops.index_add was removed after 0.2.x (this
++    # repo pins jax==0.2.17). `.at[idx].add(y)` is its documented, exactly-equivalent successor.
++    x_grouped = x_grouped.at[(g, group_cnts[g])].add(x)
+     # track how many entries appended into each group
+-    group_cnts = jax.ops.index_add(group_cnts, g, 1)
++    group_cnts = group_cnts.at[g].add(1)
+     return (x_grouped, group_cnts), 0  # '0' is just a dummy value
+ 
+ 
+@@ -189,7 +192,14 @@ def loss_cluster(params_embedding, apply_fn_embedding, params_target, apply_fn_t
+                                 method=protos_fn)
+ 
+     v_clust_target = l2_normalize(v_clust_target, axis=-1)
+-    # w_clust_target = l2_normalize(w_clust_target, axis=-1)
++    # UNCOMMENTED (not authored). As released, this line and its partner ~10 lines below are
++    # commented out while `cluster_idx = jnp.argmax(scores_w_target, 1)` still uses the result,
++    # so `loss_cluster` raises NameError: scores_w_target the first time update_cluster runs.
++    # ctrl_public @ 7a118c8 therefore cannot execute its own ppo_ctrl algorithm at all -- this is
++    # not a porting problem and not specific to RL-ViGen. `w_clust_target` is bound by the tuple
++    # unpacking above, so restoring the authors' own two lines is the minimal repair and the
++    # only one whose intent is unambiguous (the variable name matches exactly).
++    w_clust_target = l2_normalize(w_clust_target, axis=-1)
+ 
+     v_clust = l2_normalize(v_clust, axis=-1)
+     # w_clust = l2_normalize(w_clust, axis=-1)
+@@ -200,7 +210,7 @@ def loss_cluster(params_embedding, apply_fn_embedding, params_target, apply_fn_t
+ 
+ 
+     scores_v_target = v_clust_target @ protos
+-    # scores_w_target = w_clust_target @ protos
++    scores_w_target = w_clust_target @ protos   # UNCOMMENTED -- see the note above
+     q_target = sinkhorn(scores_v_target, temp=temp, k=k)
+     # q_target = jax.lax.stop_gradient(q_target)
+     proto_loss = -jnp.mean(jnp.sum(q_target * log_p, axis=1))
+@@ -209,7 +219,12 @@ def loss_cluster(params_embedding, apply_fn_embedding, params_target, apply_fn_t
+     dist = compute_distance(jnp.transpose(protos))
+     vals, indx = jax.lax.top_k(-dist, myow_k + 1)
+     cluster_idx = jnp.argmax(scores_w_target, 1)
+-    X_grouped = jnp.zeros((num_clusters, myow_k + 1))
++    # JAX API DRIFT, not an algorithm change. This buffer holds INDICES (group_by adds values
++    # from `jnp.arange(len(cluster_idx))` into it) and is then fed to jnp.take_along_axis, which
++    # since jax 0.4 rejects float indices outright: "take_along_axis indices must be of integer
++    # type, got float32". Declaring it int32 -- the dtype of what it actually stores -- is the
++    # narrowest fix and removes the float round-trip rather than casting at the use site.
++    X_grouped = jnp.zeros((num_clusters, myow_k + 1), np.int32)
+     group_cnts = jnp.zeros((num_clusters, ), np.int32)
+ 
+     (cluster_membership_list, group_cnts), _ = jax.lax.scan(
+@@ -349,7 +364,12 @@ def update_ppo(train_state: TrainState, policy_fn, batch: Tuple, num_envs: int,
+     avg_metrics_dict = defaultdict(int)
+ 
+     state = flatten_dims(state)
+-    action = flatten_dims(action).reshape(-1, 1)
++    # CONTINUOUS: insert the singleton axis WITHOUT flattening the action dimension.
++    # `_fa` is (N,) for Discrete -> (N, 1), identical to upstream `reshape(-1, 1)`;
++    # it is (N, A) for Box -> (N, 1, A), so the `action[:, 0]` below still yields the
++    # per-sample action either way and both loss functions stay untouched.
++    _fa = flatten_dims(action)
++    action = _fa.reshape(_fa.shape[0], 1, *_fa.shape[1:])
+     log_pi_old = flatten_dims(log_pi_old)
+     value = flatten_dims(value)
+     target = flatten_dims(target)
+@@ -416,7 +436,12 @@ def update_daac(train_state: TrainState, policy_fn, batch: Tuple, step: int,
+     avg_metrics_dict = defaultdict(int)
+ 
+     state = flatten_dims(state)
+-    action = flatten_dims(action).reshape(-1, 1)
++    # CONTINUOUS: insert the singleton axis WITHOUT flattening the action dimension.
++    # `_fa` is (N,) for Discrete -> (N, 1), identical to upstream `reshape(-1, 1)`;
++    # it is (N, A) for Box -> (N, 1, A), so the `action[:, 0]` below still yields the
++    # per-sample action either way and both loss functions stay untouched.
++    _fa = flatten_dims(action)
++    action = _fa.reshape(_fa.shape[0], 1, *_fa.shape[1:])
+     log_pi_old = flatten_dims(log_pi_old)
+     value = flatten_dims(value)
+     target = flatten_dims(target)
+@@ -499,7 +524,10 @@ def update_cluster(train_state: TrainState, target_state: TrainState, cluster_fn
+     avg_metrics_dict = defaultdict(int)
+ 
+     state = extract_windows_vectorized(state, cluster_len).transpose(0, 2, 1, 3, 4, 5).reshape(-1, cluster_len, *img_shape)
+-    action = extract_windows_vectorized(action, cluster_len).transpose(0, 2, 1).reshape(-1, cluster_len)
++    # CONTINUOUS: same transpose, generalised over a trailing action dimension. For
++    # Discrete `_aw` is 3-D and this is exactly `.transpose(0, 2, 1).reshape(-1, cluster_len)`.
++    _aw = extract_windows_vectorized(action, cluster_len)
++    action = _aw.transpose(0, 2, 1, *range(3, _aw.ndim)).reshape(-1, cluster_len, *_aw.shape[3:])
+ 
+     reward = extract_windows_vectorized(reward, cluster_len).transpose(0, 2, 1).reshape(-1, cluster_len)
+     
+diff --git a/buffer.py b/buffer.py
+index f63229f..4d60ed2 100644
+--- a/buffer.py
++++ b/buffer.py
+@@ -35,6 +35,8 @@ class Batch:
+         n_steps: int,
+         num_envs: int,
+         state_space,
++        # CONTINUOUS: defaults to None, which means Discrete and reproduces upstream exactly.
++        action_space=None,
+     ):
+         self._n = 0
+         self._p = 0
+@@ -48,13 +50,20 @@ class Batch:
+         self.state_shape = [
+             state_space.shape[1], state_space.shape[2], state_space.shape[0]
+         ]
++        _disc = action_space is None or action_space.__class__.__name__ == "Discrete"
++        self.action_shape = () if _disc else tuple(action_space.shape)
++        self.action_dtype = np.int32 if _disc else np.float32
+ 
+         self.reset()
+ 
+     def reset(self):
+         self.states = np.empty(
+             (self.n_steps, self.num_envs, *self.state_shape), dtype=np.uint8)
+-        self.actions = np.empty((self.n_steps, self.num_envs), dtype=np.int32)
++        # CONTINUOUS: a Box action is a real vector, so the buffer gains a trailing action
++        # dimension and a float dtype. `self.action_shape` is () for Discrete, which reproduces
++        # the upstream line exactly.
++        self.actions = np.empty((self.n_steps, self.num_envs, *self.action_shape),
++                                dtype=self.action_dtype)
+         self.rewards = np.empty((self.n_steps, self.num_envs),
+                                 dtype=np.float32)
+         self.dones = np.empty((self.n_steps, self.num_envs), dtype=np.uint8)
+diff --git a/models.py b/models.py
+index 67bd632..0459807 100644
+--- a/models.py
++++ b/models.py
+@@ -107,6 +107,10 @@ class CTRLModel(nn.Module):
+     n_cluster: int
+     embedding_type: str
+     n_att_heads: int
++    # CONTINUOUS HEAD (authored). RL-ViGen's action space is Box(-1,1,(7,)); this repo is
++    # Procgen-only and has no continuous path anywhere. With continuous=False every line below
++    # behaves exactly as upstream. `n_actions` then means the action DIMENSION, not a count.
++    continuous: bool = False
+     
+ 
+     def setup(self):
+@@ -119,6 +123,10 @@ class CTRLModel(nn.Module):
+         self.fc_pi = nn.Dense(self.n_actions,
+                           kernel_init=default_logits_init(),
+                           name='fc_pi')
++        # State-independent log-stdev, as PPO uses for continuous control. Declared
++        # unconditionally so the parameter tree has the same keys in both modes -- state_update()
++        # copies params by name and a conditional key would break it. Unused when discrete.
++        self.log_std = self.param('log_std', nn.initializers.zeros, (self.n_actions,))
+ 
+         self.action_mlp = MLP(dims=list(self.dims[:-1])+[self.dims[-1]*2], prefix='action_embedding')
+         self.reward_mlp = MLP(dims=list(self.dims[:-1])+[self.dims[-1]*2], prefix='reward_embedding')
+@@ -156,10 +164,31 @@ class CTRLModel(nn.Module):
+         v = self.fc_v(z)
+         # Linear policy logits
+         logits = self.fc_pi(z)
+-        pi = tfd.Categorical(logits=logits)
++        pi = self.make_pi(logits)
+         return v, pi
+     
+ 
++    def make_pi(self, logits):
++        """Categorical is upstream's exact expression; MultivariateNormalDiag is the added path.
++
++        MVNDiag rather than Normal so log_prob() and entropy() come back shaped (B,) -- the same
++        shapes Categorical returns -- which is what leaves algo.py's PPO losses untouched.
++        """
++        if not self.continuous:
++            return tfd.Categorical(logits=logits)
++        return tfd.MultivariateNormalDiag(loc=logits, scale_diag=jnp.exp(self.log_std))
++
++    def embed_action(self, action):
++        """CTRL conditions its cluster embedding on the action.
++
++        Discrete actions are one-hot encoded upstream; a Box action IS already a real vector of
++        width n_actions, so it is reshaped rather than encoded. Same width either way, so
++        action_mlp is unchanged.
++        """
++        if not self.continuous:
++            return jax.nn.one_hot(action.reshape(-1), self.n_actions)
++        return action.reshape(-1, self.n_actions)
++
+     def cluster(self, state, action, reward):
+         """
+         state: n_batch x n_timesteps x H x W x C
+@@ -173,9 +202,11 @@ class CTRLModel(nn.Module):
+         z_state = self.encoder(state.reshape(-1,*img_shape)).reshape(*batch_shape, -1)
+ 
+         # z_action: n_batch x n_timesteps x n_hidden
+-        z_action = jax.nn.one_hot(action.reshape(-1), self.n_actions)
++        z_action = self.embed_action(action)
+         z_action = self.action_mlp(z_action)
+-        gamma_a, beta_a = z_action.reshape(*batch_shape, -1).split(2, axis=-1)
++        # JAX API DRIFT, not an algorithm change: jax arrays no longer carry a `.split` method
++        # (removed after the 0.2.x this repo pins). jnp.split is the same operation.
++        gamma_a, beta_a = jnp.split(z_action.reshape(*batch_shape, -1), 2, axis=-1)
+ 
+         if self.embedding_type == "concat":
+             z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
+@@ -204,6 +235,7 @@ class CTRLDAACModel(nn.Module):
+     n_cluster: int
+     embedding_type: str
+     n_att_heads: int
++    continuous: bool = False   # see CTRLModel
+ 
+     def setup(self):
+         self.encoder_policy = Impala(prefix='')
+@@ -216,6 +248,10 @@ class CTRLDAACModel(nn.Module):
+         self.fc_pi = nn.Dense(self.n_actions,
+                           kernel_init=default_logits_init(),
+                           name='fc_pi')
++        # State-independent log-stdev, as PPO uses for continuous control. Declared
++        # unconditionally so the parameter tree has the same keys in both modes -- state_update()
++        # copies params by name and a conditional key would break it. Unused when discrete.
++        self.log_std = self.param('log_std', nn.initializers.zeros, (self.n_actions,))
+ 
+         self.fc_adv = nn.Dense(1,
+                           kernel_init=default_linear_init(),
+@@ -253,13 +289,17 @@ class CTRLDAACModel(nn.Module):
+ 
+     def ac(self, state, action=None):
+         if action is not None:
+-            action = jax.nn.one_hot(action, num_classes=15)
++            # CONTINUOUS: was `jax.nn.one_hot(action, num_classes=15)` -- Procgen's action count
++            # written as a literal. embed_action is that same one-hot when discrete (n_actions is
++            # 15 on Procgen, so this is unchanged there) and a no-op reshape when the action is
++            # already a real vector. On the daac_ctrl path only; ppo_ctrl uses CTRLModel.
++            action = self.embed_action(action)
+             # Features
+             z_pi = self.encoder_policy(state)
+             # z_pi = jax.lax.stop_gradient(z_pi)
+             # Linear policy logits
+             logits = self.fc_pi(z_pi)
+-            pi = tfd.Categorical(logits=logits)
++            pi = self.make_pi(logits)
+             z_pi = jnp.concatenate([z_pi, action], axis=1)
+             adv = self.fc_adv(z_pi)
+             
+@@ -271,6 +311,27 @@ class CTRLDAACModel(nn.Module):
+             return v
+ 
+ 
++    def make_pi(self, logits):
++        """Categorical is upstream's exact expression; MultivariateNormalDiag is the added path.
++
++        MVNDiag rather than Normal so log_prob() and entropy() come back shaped (B,) -- the same
++        shapes Categorical returns -- which is what leaves algo.py's PPO losses untouched.
++        """
++        if not self.continuous:
++            return tfd.Categorical(logits=logits)
++        return tfd.MultivariateNormalDiag(loc=logits, scale_diag=jnp.exp(self.log_std))
++
++    def embed_action(self, action):
++        """CTRL conditions its cluster embedding on the action.
++
++        Discrete actions are one-hot encoded upstream; a Box action IS already a real vector of
++        width n_actions, so it is reshaped rather than encoded. Same width either way, so
++        action_mlp is unchanged.
++        """
++        if not self.continuous:
++            return jax.nn.one_hot(action.reshape(-1), self.n_actions)
++        return action.reshape(-1, self.n_actions)
++
+     def cluster(self, state, action, reward):
+         """
+         state: n_batch x n_timesteps x H x W x C
+@@ -284,9 +345,11 @@ class CTRLDAACModel(nn.Module):
+         z_state = self.encoder_policy(state.reshape(-1,*img_shape)).reshape(*batch_shape, -1)
+ 
+         # z_action: n_batch x n_timesteps x n_hidden
+-        z_action = jax.nn.one_hot(action.reshape(-1), self.n_actions)
++        z_action = self.embed_action(action)
+         z_action = self.action_mlp(z_action)
+-        gamma_a, beta_a = z_action.reshape(*batch_shape, -1).split(2, axis=-1)
++        # JAX API DRIFT, not an algorithm change: jax arrays no longer carry a `.split` method
++        # (removed after the 0.2.x this repo pins). jnp.split is the same operation.
++        gamma_a, beta_a = jnp.split(z_action.reshape(*batch_shape, -1), 2, axis=-1)
+ 
+         if self.embedding_type == "concat":
+             z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
+diff --git a/train_ppo.py b/train_ppo.py
+index e18477e..2ffd0f7 100644
+--- a/train_ppo.py
++++ b/train_ppo.py
+@@ -15,7 +15,7 @@ from jax.random import PRNGKey
+ from algo import get_transition, select_action, update_ppo, update_daac, update_cluster, state_update
+ from buffer import Batch
+ from models import CTRLModel, CTRLDAACModel
+-from vec_env import ProcgenVecEnvCustom
++from vec_env import ProcgenVecEnvCustom, RLViGenVecEnvCustom
+ 
+ 
+ def safe_mean(x):
+@@ -82,28 +82,26 @@ def main(argv):
+     key = PRNGKey(seed)
+ 
+     # Clip rewards for training
+-    env = ProcgenVecEnvCustom(FLAGS.env_name,
+-                              num_levels=200,
+-                              mode='easy',
+-                              start_level=0,
+-                              paint_vel_info=False,
+-                              num_envs=FLAGS.num_envs,
+-                              normalize_rewards=True)
++    # RL-ViGen has no level split; its held-out axis is the VISUAL REGIME. So `train` stands in
++    # for the 200-level training distribution on both the train and in-distribution-test envs,
++    # and eval-easy is the out-of-distribution one -- the same mapping idaac and dmc_gb use here.
++    _rlvigen = FLAGS.env_name.startswith("robosuite:")
++    _mk = ((lambda mode, **kw: RLViGenVecEnvCustom(FLAGS.env_name, mode=mode,
++                                                   num_envs=FLAGS.num_envs, seed=FLAGS.seed,
++                                                   normalize_rewards=True))
++           if _rlvigen else
++           (lambda mode, **kw: ProcgenVecEnvCustom(FLAGS.env_name, mode='easy',
++                                                   paint_vel_info=False,
++                                                   num_envs=FLAGS.num_envs,
++                                                   normalize_rewards=True, **kw)))
++    env = _mk("train", num_levels=200, start_level=0)
+     # Report unclipped rewards for test
+-    env_test_ID = ProcgenVecEnvCustom(FLAGS.env_name,
+-                                      num_levels=200,
+-                                      mode='easy',
+-                                      start_level=0,
+-                                      paint_vel_info=False,
+-                                      num_envs=FLAGS.num_envs,
+-                                      normalize_rewards=True)
+-    env_test_OOD = ProcgenVecEnvCustom(FLAGS.env_name,
+-                                       num_levels=0,
+-                                       mode='easy',
+-                                       start_level=0,
+-                                       paint_vel_info=False,
+-                                       num_envs=FLAGS.num_envs,
+-                                       normalize_rewards=True)
++    env_test_ID = _mk("train", num_levels=200, start_level=0)
++    env_test_OOD = _mk("eval-easy", num_levels=0, start_level=0)
++    # `n_actions` means the action DIMENSION when continuous. Both are the width of fc_pi.
++    _cont = not hasattr(env.action_space, "n")
++    _ACT = dict(n_actions=env.action_space.shape[0] if _cont else env.action_space.n,
++                continuous=_cont)
+ 
+     os.environ["WANDB_API_KEY"] = FLAGS.wandb_key
+     group_name = "%s_%s_%s" % (FLAGS.algo, FLAGS.env_name, FLAGS.run_id)
+@@ -121,28 +119,29 @@ def main(argv):
+     if "ppo" in FLAGS.algo:
+         model = CTRLModel(dims=(256, 256),
+                           n_cluster=FLAGS.num_clusters,
+-                          n_actions=env.action_space.n,
++                          **_ACT,
+                           n_att_heads=FLAGS.n_att_heads,
+                           embedding_type=FLAGS.embedding_type)
+         model_target = CTRLModel(dims=(256, 256),
+                           n_cluster=FLAGS.num_clusters,
+-                          n_actions=env.action_space.n,
++                          **_ACT,
+                           n_att_heads=FLAGS.n_att_heads,
+                           embedding_type=FLAGS.embedding_type)
+     elif "daac" in FLAGS.algo:
+         model = CTRLDAACModel(dims=(256, 256),
+                               n_cluster=FLAGS.num_clusters,
+-                              n_actions=env.action_space.n,
++                              **_ACT,
+                               n_att_heads=FLAGS.n_att_heads,
+                               embedding_type=FLAGS.embedding_type)
+         model_target = CTRLDAACModel(dims=(256, 256),
+                               n_cluster=FLAGS.num_clusters,
+-                              n_actions=env.action_space.n,
++                              **_ACT,
+                               n_att_heads=FLAGS.n_att_heads,
+                               embedding_type=FLAGS.embedding_type)
+ 
+     fake_args_cluster = (jnp.zeros(
+-        (1, FLAGS.cluster_len, 64, 64, 3)), jnp.zeros((1, FLAGS.cluster_len)))
++        (1, FLAGS.cluster_len, 64, 64, 3)),
++        jnp.zeros((1, FLAGS.cluster_len) + ((_ACT["n_actions"],) if _cont else ())))
+     params_model = model.init(key,
+                               state=fake_args_cluster[0],
+                               action=fake_args_cluster[1],
+@@ -175,7 +174,8 @@ def main(argv):
+                   gae_lambda=FLAGS.gae_lambda,
+                   n_steps=FLAGS.n_steps + 1,
+                   num_envs=FLAGS.num_envs,
+-                  state_space=env.observation_space)
++                  state_space=env.observation_space,
++                  action_space=env.action_space)
+ 
+     state = env.reset()
+     state_id = env_test_ID.reset()
+@@ -183,6 +183,16 @@ def main(argv):
+ 
+     epinfo_buf_id = deque(maxlen=100)
+     epinfo_buf_ood = deque(maxlen=100)
++    # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). RL-ViGen patch P10 puts robosuite's own
++    # _check_success in `info`, and the vendored VecMonitor copies the env's info dict rather
++    # than replacing it, so the key survives. Door's return is dense and scale-arbitrary; this is
++    # the only unit-free quantity available. Convention, shared with every other baseline here:
++    # success if the flag held at ANY step. Per-env and cleared at episode end, because the
++    # VecEnv auto-resets and the next episode must not inherit the previous one's flag.
++    succ_buf_id = deque(maxlen=100)
++    succ_buf_ood = deque(maxlen=100)
++    succ_id = [False] * FLAGS.num_envs
++    succ_ood = [False] * FLAGS.num_envs
+ 
+     returns_ood_acc = []
+ 
+@@ -208,15 +218,21 @@ def main(argv):
+                                               sample=True)
+         state_ood, _, _, infos_ood = env_test_OOD.step(action_ood)
+ 
+-        for info in infos_id:
++        for i, info in enumerate(infos_id):
++            succ_id[i] = succ_id[i] or bool(info.get('success', False))
+             maybe_epinfo = info.get('episode')
+             if maybe_epinfo:
+                 epinfo_buf_id.append(maybe_epinfo)
++                succ_buf_id.append(float(succ_id[i]))
++                succ_id[i] = False
+ 
+-        for info in infos_ood:
++        for i, info in enumerate(infos_ood):
++            succ_ood[i] = succ_ood[i] or bool(info.get('success', False))
+             maybe_epinfo = info.get('episode')
+             if maybe_epinfo:
+                 epinfo_buf_ood.append(maybe_epinfo)
++                succ_buf_ood.append(float(succ_ood[i]))
++                succ_ood[i] = False
+ 
+         if step % (FLAGS.n_steps + 1) == 0:
+             data = batch.get()
+@@ -277,10 +293,11 @@ def main(argv):
+                 returns_ood_acc.append(
+                     safe_mean([info['r'] for info in epinfo_buf_ood]))
+ 
+-            print('[%d]\tEprew200: %.3f\tEprew0: %.3f' %
++            print('[%d]\tEprew200: %.3f\tEprew0: %.3f\tSR_ID: %.3f\tSR_OOD: %.3f' %
+                   (FLAGS.num_envs * step,
+                    safe_mean([info['r'] for info in epinfo_buf_id]),
+-                   safe_mean([info['r'] for info in epinfo_buf_ood])))
++                   safe_mean([info['r'] for info in epinfo_buf_ood]),
++                   safe_mean(list(succ_buf_id)), safe_mean(list(succ_buf_ood))))
+     return (returns_ood_acc, safe_mean([info['r'] for info in epinfo_buf_ood]) )
+ 
+ 
+diff --git a/vec_env.py b/vec_env.py
+index 7401df7..b15b580 100644
+--- a/vec_env.py
++++ b/vec_env.py
+@@ -569,3 +569,88 @@ def clear_mpi_env_vars():
+         yield
+     finally:
+         os.environ.update(removed_environment)
++
++
++class RLViGenVecEnvCustom():
++    """RL-ViGen robosuite behind the SAME VecEnv stack ProcgenVecEnvCustom uses.
++
++    Interface parity with ProcgenVecEnvCustom is the whole design: `observation_space`,
++    `action_space`, `reset()`, `step()`, `_max_episode_steps`. VecMonitor and VecNormalize are
++    the copies vendored in THIS file, so episode bookkeeping and reward normalisation are the
++    same code on both paths -- only the env underneath differs.
++
++    `observation_space` is declared (C, H, W) while the data is (H, W, C), which looks wrong and
++    is not: ProcgenVecEnvCustom does exactly the same, and buffer.py compensates with
++    `state_shape = [shape[1], shape[2], shape[0]]`. Matching the existing convention is what
++    keeps buffer.py untouched.
++
++    `mode` is RL-ViGen's visual regime (train / eval-easy / eval-medium / eval-hard), standing in
++    for Procgen's num_levels / start_level split.
++    """
++
++    def __init__(self, env_name, mode="train", num_envs=8, seed=0, scene_id=0,
++                 normalize_rewards=True, **_ignored):
++        import sys
++        _rlv = os.environ["RLVIGEN_ROOT"]
++        for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
++            if _p not in sys.path:
++                sys.path.insert(0, _p)
++        from robosuitevgb.utils import make_env as _robo_make_env
++
++        task = env_name.split(":", 1)[1] if ":" in env_name else env_name
++        envs = [_robo_make_env(task_name=task, seed=seed + i, scene_id=scene_id, mode=mode)
++                for i in range(num_envs)]
++        c, h, w = envs[0].observation_space["rgb"].shape
++
++        self.observation_space = Box(shape=(c, h, w), low=0, high=255)
++        self.action_space = envs[0].action_space
++
++        env = _SyncVecEnv(envs, self.observation_space, self.action_space)
++        env = VecMonitor(venv=env, filename=None, keep_buf=100)
++        if normalize_rewards:
++            env = VecNormalize(venv=env, ob=False)
++        self.env = env
++        self._max_episode_steps = 10_000
++
++    def reset(self):
++        return self.env.reset()
++
++    def step(self, action):
++        o, r, d, info = self.env.step(np.asarray(action))
++        return o, r, d, info
++
++
++class _SyncVecEnv(VecEnv):
++    """The minimum VecEnv over a list of gym envs: step them in order, auto-reset on done.
++
++    ProcgenEnv is already vectorised, so this file never needed a vectoriser and does not ship
++    one; baselines' DummyVecEnv is not importable from here. Written rather than borrowed, and
++    kept to the three abstract methods VecEnv declares. Auto-reset-on-done matches what
++    ProcgenEnv does internally, which is what VecMonitor's episode accounting assumes.
++    """
++
++    def __init__(self, envs, observation_space, action_space):
++        self.envs = envs
++        VecEnv.__init__(self, len(envs), observation_space, action_space)
++        self._actions = None
++
++    @staticmethod
++    def _obs(o):
++        # (C,H,W) uint8 -> (H,W,C), the layout ProcgenEnv yields after VecExtractDictObs.
++        return np.asarray(o["rgb"], dtype=np.uint8).transpose(1, 2, 0)
++
++    def reset(self):
++        return np.stack([self._obs(e.reset()) for e in self.envs])
++
++    def step_async(self, actions):
++        self._actions = actions
++
++    def step_wait(self):
++        obs, rews, dones, infos = [], [], [], []
++        for e, a in zip(self.envs, self._actions):
++            o, r, d, i = e.step(a)
++            if d:
++                o = e.reset()
++            obs.append(self._obs(o)); rews.append(r); dones.append(d); infos.append(i)
++        return (np.stack(obs), np.array(rews, dtype=np.float32),
++                np.array(dones, dtype=bool), infos)

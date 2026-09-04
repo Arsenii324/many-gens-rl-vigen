@@ -1,0 +1,25 @@
+# [Claude 2026-09-02 10:10 MSK: first CUDA contact for the remaining four families in one job.
+# Deliberately short -- 2,560 requested frames -- because the question this job answers is whether
+# each family's dependency stack, import graph, endpoint rule, checkpoint and marker work at all on
+# the remote image, not how fast it is. A dependency install that fails, or an import gate that
+# fails, now blocks only its own family: CTRL brings a whole JAX-on-CUDA stack and must not be able
+# to take ALDA, PPG and IBAC-SNI down with it.
+# Each family lands on a different executed endpoint and each marker carries its own: ppg rounds
+# 2,560 up to 4,096 (num_envs 8 x nstep 256), ibac_sni to 2,560, ctrl floors to 2,560, alda is
+# exact. None of the four needs the Places365 input.]
+name: vigen-native-onpolicy-probe-v26
+desc: First CUDA contact for alda, ppg, ibac_sni and ctrl; contract and dependency evidence only, not a calibration.
+cmd: >-
+  timeout --foreground 13000s env
+  CELLS=alda,ppg,ibac_sni,ctrl FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=2400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - payload-onpolicy-v26.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

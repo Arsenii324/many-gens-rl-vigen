@@ -1,0 +1,18 @@
+name: vigen-alda-standalone-probe
+desc: "Standalone ALDA 5k step probe on DataSphere gt4i.1 (testing sklearn integration)"
+cmd: >-
+  bash ${JOB} ${CODE} ${RESULT} ${WKEY}
+
+inputs:
+  - probe_alda_standalone.sh: JOB
+  - code.tgz: CODE
+  - wandb_key.txt: WKEY
+
+outputs:
+  - result.tgz: RESULT
+
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+
+cloud-instance-type: gt4i.1

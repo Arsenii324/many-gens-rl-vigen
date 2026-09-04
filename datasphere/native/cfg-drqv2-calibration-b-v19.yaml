@@ -1,0 +1,16 @@
+# [Gemini 2026-09-01 18:12 MSK: immutable DrQ-v2 Calibration B on gt4i.1 for cost-efficiency comparison]
+name: vigen-native-drqv2-calibration-b-v19
+desc: Native DrQ-v2 Door 10k calibration on gt4i.1 (L4); tier-B efficiency comparison.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=drqv2 FRAMES=10000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v19.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

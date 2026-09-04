@@ -1,0 +1,28 @@
+# [Claude 2026-09-02 19:40 MSK: alda's first CUDA contact, third attempt. The two before it never
+# reached alda's own code -- both died at run_probe.sh's runtime `git clone` of RL-ViGen, which is
+# the first network act of every billed job. That clone now retries three times with backoff.
+#
+# Payload v33 also carries this session's fixes: the finiteness gate no longer needs a family's
+# own modules to unpickle its checkpoint, P18 preserves snapshots on a cadence rather than a flag,
+# and family.py refuses a budget below the family's floor before the bootstrap is paid for
+# (alda's floor is 1001; this runs 2560).
+#
+# NOT a calibration. What this buys is a yes/no on alda's dependency closure under CUDA, and the
+# first throughput number for the one baseline whose training loop evaluates three regimes at ten
+# episodes each -- which is why its cost cannot be assumed from the others.]
+name: vigen-native-alda-probe-v34
+desc: alda first CUDA contact, with the clone retried; dependency and contract evidence only.
+cmd: >-
+  timeout --foreground 6000s env
+  CELLS=alda FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=2400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v33.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

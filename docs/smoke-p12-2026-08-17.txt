@@ -1,0 +1,10 @@
+baseline   exit   evidence  log
+------------------------------------------------------------------
+drqv2      0      TRAINED   /tmp/smoke_p12/drqv2.log 
+svea       0      TRAINED   /tmp/smoke_p12/svea.log 
+sgqn       0      TRAINED   /tmp/smoke_p12/sgqn.log 
+drq        0      TRAINED   /tmp/smoke_p12/drq.log 
+curl       0      TRAINED   /tmp/smoke_p12/curl.log 
+------------------------------------------------------------------
+logs in /tmp/smoke_p12
+HARNESS EXIT=0

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "audited_source_files": {
+    "envs/robosuiteVGB/robosuitevgb/secant/utils/misc.py": "f8c9caba32493217d37eedb3e0cbda7d17b6c3994d7d4c589f5a682258f4791c",
+    "third_party/robosuite/robosuite/wrappers/__init__.py": "1ae2b49294b413f43c84a4eaed989931577a141e5b7777011614242efd5ad428",
+    "third_party/robosuite/robosuite/wrappers/demo_sampler_wrapper.py": "70c15df6e7875f4717b18e7c09f03062927650df095654d59a38b149c3ff3fad",
+    "third_party/robosuite/robosuite/wrappers/gym_wrapper.py": "90d2683d8d51dcb3cc31ee3d37b2e252d2bbdca390f33ae5ace37a1adf362787"
+  },
+  "exceptional_imports": [
+    {
+      "source": "envs/robosuiteVGB/robosuitevgb/secant/utils/misc.py",
+      "module": "matplotlib",
+      "requirement": "matplotlib==3.7.5"
+    },
+    {
+      "source": "third_party/robosuite/robosuite/wrappers/demo_sampler_wrapper.py",
+      "module": "h5py",
+      "requirement": "h5py==3.11.0"
+    },
+    {
+      "source": "third_party/robosuite/robosuite/wrappers/gym_wrapper.py",
+      "module": "gym",
+      "requirement": "gym==0.25.2"
+    }
+  ],
+  "excluded_optional_requirements": {
+    "pybullet-svl>=3.1.6.4": "IK controller path is not imported by the audited Door wrapper path.",
+    "hidapi": "macOS-only extra; the remote target is Ubuntu.",
+    "open3d": "NVISII renderer extra is not imported by the audited Door wrapper path."
+  }
+}

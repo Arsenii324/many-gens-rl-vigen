@@ -1,0 +1,11 @@
+{
+  "algo": "alda",
+  "steps": 1000,
+  "fps": 38.54,
+  "mean_ms": 25.95,
+  "p50_ms": 20.28,
+  "p90_ms": 36.67,
+  "p99_ms": 45.33,
+  "stutter_ratio": 1.75,
+  "peak_ram_mb": 5639.0
+}

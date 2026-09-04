@@ -1,0 +1,43 @@
+# [Claude 2026-09-03: the COMPLETE C43/R7 measurement for this project's strongest checkpoint.
+#
+# The v49 grid covered train + eval-easy at five episodes per scene and cost 21 minutes of gt4.1,
+# about 59 RUB. That number is the point: EVALUATION is cheap and it was TRAINING that made the
+# twelve-baseline sweep unaffordable (3,286 RUB at its smallest useful size). So the regime axis
+# can be completed for the price of a rounding error.
+#
+# Four regimes x ten certified scenes x ten episodes = 400 episodes, against the two per cell the
+# training loop could afford and the five v49 used. `eval-medium` and `eval-hard` have never been
+# measured on a trained checkpoint by this project at all -- C43 has only ever seen train and
+# eval-easy, which is half of what the retention claim is about.
+#
+# What v49 already established, and what this extends:
+#   train      mean 89.47 success 0.24  -- per-scene 386.1 / 210.3 / 280.4 on scenes 0, 2, 4 and
+#                                          0.7-9.9 on the other seven: the policy solves 3 of 10
+#   eval-easy  mean  3.07 success 0.00
+#
+# On the container because it must be: [C95](../../docs/CONSTRUCTION.md#c95). The same file reads
+# 131.5 here on either device and 13.85 on the laptop, and the renderer is why.]
+name: vigen-native-offline-eval-s2-full-v50
+desc: Complete four-regime ten-scene C43/R7 grid for drqv2-s2 at 100k.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy,eval-medium,eval-hard
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=10
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v50.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

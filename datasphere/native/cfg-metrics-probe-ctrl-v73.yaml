@@ -1,0 +1,120 @@
+# [v73 supersedes v71. v71 SUCCEEDED and proved the important thing -- ctrl trains to completion
+# with the C28 aux-tuple edit inside `jax.lax.scan` in place, so that edit does not break the
+# jitted update -- but it validated no METRIC, because 2,560 frames never reaches ctrl's logging
+# branch. Its train_console.log holds zero `Eprew200` lines and its wandb sink holds only the
+# `init` event: a job that passed its budget gate, trained, retained a valid 7.4 MB checkpoint and
+# carried no measurement at all.
+#
+# ctrl's declared floor was 1024 ("below one rollout nothing is written"), which guarantees a
+# ROLLOUT while the gate's stated purpose is to refuse a budget too small for a CURVE. Those differ
+# for ctrl and now the floor says so: raised to 4112, the observed logging interval (rows at 4112
+# and 8224 in the 10k cell bt1fer7809i7bpob7g2f). 10,000 frames is the budget that cell used.
+#
+# So this run is the one that can show `clip_fraction`, `approx_kl_k3` and the four C61
+# `train/*` policy-health keys arriving through the sink. Absence of any of them now falsifies the
+# ctrl half of the metric work; absence at 2,560 falsified nothing.]
+#
+# [v71 supersedes v70. THE CAUSE IS `CUDA_ROOT`, and it is not the tier -- v70's header blamed
+# the tier and that guess is now falsified by its own result: v70 ran on gt4i.1, the same L4 the
+# successful cell used, and failed identically.
+#
+# The last successful ctrl cell (cfg-preprod-ctrl-v52.yaml) sets `CUDA_ROOT=/usr/local/cuda` in its
+# cmd env. Neither v68 nor v70 did, because both were derived from a torch job's config that has no
+# reason to. jax's `_cuda_path()` consults CUDA_ROOT/CUDA_HOME FIRST and returns early when it is
+# set; only when it is unset does it fall through to `_try_cuda_nvcc_import()`, the line that raises
+# `TypeError: ... not NoneType` on `nvidia.cuda_nvcc.__file__`. So the env var does not merely help,
+# it SKIPS the broken branch.
+#
+# Everything else was ruled out by comparison against bt1fer7809i7bpob7g2f rather than by argument:
+# 109 resolved packages identical, all five pip install steps byte-identical, same install order,
+# same tier. The `cuda: false` in environment.json is a CONSEQUENCE -- that probe computes the flag
+# by importing jax, so it fails for the same reason rather than indicating anything separate.]
+#
+# [v70 supersedes v68, which ERRORED on ctrl's import gate: flax -> jax -> jax/_src/lib
+# `_cuda_path()` raised `TypeError: expected str, bytes or os.PathLike object, not NoneType`
+# because `nvidia.cuda_nvcc.__file__` was None.
+#
+# The first hypothesis -- dependency drift, since jax is pinned (`jax[cuda12]==0.4.35`) but its
+# nvidia-*-cu12 wheels are NOT -- was CHECKED AND IS WRONG. The last successful ctrl cell
+# (bt1fer7809i7bpob7g2f, 2026-09-03) resolved a byte-identical package set, `nvidia-cuda-nvcc-cu12
+# ==12.9.86` included.
+#
+# What actually differs is the TIER. That job ran on gt4i.1 (NVIDIA L4, 23034 MiB) and reported
+# `cuda: true`; v68 ran on gt4.1 (Tesla T4, 15360 MiB) and reported `cuda: false`. **ctrl has only
+# ever succeeded on gt4i.1**, and v68 used gt4.1 only because this config was derived from the
+# idaac guard, which is a torch job with no such history. The mechanism inside jax's `_cuda_path`
+# is NOT established here -- the same wheel behaved differently on the two tiers, and that is
+# reported as an observation, not explained.
+#
+# Both tiers are permitted. gt4i.1 is 234.00 RUB/h against gt4.1's 168.48.]
+#
+# [v68/v69 supersede v67, which ERRORED in ~2 minutes on the runner's own guard:
+# `family.py check-co-schedulable` refuses a job whose families cannot share one python
+# environment, and ctrl is jax while ppg is torch. The guard exists precisely to reject this
+# before the bootstrap is billed, and it did. Split into one job per family; the cells, budget
+# and payload are otherwise identical to v67.]
+#
+# [v67 supersedes v66, which was SUBMITTED AND CANCELLED ~90s in. v66 pointed at payload-v61,
+# which was built BEFORE the ctrl algo.py C28 edit -- so it would have validated C61 and the
+# RECORDS_OUT fix while silently NOT testing the riskiest change in the set, the aux-tuple edit
+# inside a jitted scan. A green result would have been read as covering it. Cancelled rather than
+# left to finish, and payload-v62 rebuilt with every change; each of the five is verified present
+# in the archive by name before this submit rather than assumed from the build succeeding.]
+#
+# [Claude 2026-09-04: hardware validation for the metric work of 2026-09-04, before any of it can
+# reach a production cell. Deliberately the smallest budget that still emits a metric line.
+#
+# WHY IT CANNOT BE SKIPPED. The `ctrl` change edits the aux tuple of `loss_actor_and_critic`, which
+# is consumed inside `jax.lax.scan` under `jax.value_and_grad(..., has_aux=True)` and reached only
+# through a jitted path. Nothing local can execute it: this laptop has no jax-CUDA and no robosuite.
+# A shape or unpacking error there is invisible until it runs, and the place it would otherwise
+# surface is a production cell.
+#
+# WHAT EACH CELL IS FOR
+#   ctrl -- must reach `NATIVE_CELL_COMPLETED`, and its wandb sink must carry `clip_fraction`,
+#           `approx_kl_k3` (C28) and the four `train/*` policy-health keys (C61). The sink is the
+#           only path: ctrl prints none of these.
+#   ppg  -- its progress.csv must carry `train/entropy`, `train/sigma_mean`,
+#           `train/boundary_fraction`, `train/mean_log_std`, plus `train/log_std_raw_mean` and
+#           `train/log_std_clamped_fraction`. At 2,560 frames the clamp should NOT be binding, so
+#           `log_std_clamped_fraction` is expected to be 0.0 and `log_std_raw_mean` should equal
+#           `mean_log_std`. Those two agreeing is the check that the clamped/raw split is wired the
+#           right way round rather than reporting one number twice.
+#
+# ALSO UNDER TEST, for free: RECORDS_OUT. The previous eval-only job returned an EMPTY records.jsonl
+# because that block copied only the training normalizer's output; it now concatenates the
+# offline_eval_*.jsonl files too. This job exercises the TRAINING half of that same block, so a
+# non-empty records.jsonl here plus the guard job's four rows would cover both branches.
+#
+# WHAT WOULD FALSIFY THE WORK
+#   ctrl fails to complete            -> the aux-tuple edit is wrong; revert algo.py, keep C61 only
+#   ctrl completes, keys absent       -> the sink is not reaching the record set as read_wandb_sink
+#                                        assumes, and PART2's "what now reaches the record set" is
+#                                        overstated
+#   ppg's clamped_fraction != 0.0     -> either the clamp is binding at 2.5k frames (a real and
+#                                        surprising C61 finding) or the raw/clamped split is wrong
+#   records.jsonl empty               -> the RECORDS_OUT fix is incomplete
+#
+# 2,560 frames matches the earlier on-policy probe (v30) and the ctrl checkpoint already used in the
+# estimand comparison, so cost is minutes and the shape is known to run.]
+name: vigen-metrics-probe-ctrl-v73
+desc: Validate the 2026-09-04 metric additions to ctrl on hardware, smallest budget.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CUDA_ROOT=/usr/local/cuda
+  RECORDS_OUT=${RECORDS}
+  CELLS=ctrl FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=10 CELL_TIMEOUT_SECONDS=5400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v63.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

@@ -1,0 +1,65 @@
+# [Claude 2026-09-04, v65: SAME experiment, rebuilt payload. v64 was never submitted; it pointed
+# at payload-v60, which predates today's metric work. v61 carries three additions that this job
+# now also exercises for free, on a path that was going to run anyway:
+#   * scripts/eval_grid.py retains PER-EPISODE success flags beside returns (EVALUATOR-DELTA E6),
+#     so `native.episode_success` should appear in every offline-eval record this job emits, with
+#     length equal to `episodes` and summing to the reported success count.
+#   * runnable/{ppg,ctrl} now call the shared C61 policy-health definition. NEITHER runs here --
+#     this is an idaac offline eval -- so their first exercise is a later cell, not this one.
+#   * datasphere/native/source-lock.json's W&B claim was corrected; it had declared the shim
+#     fail-closed since 2026-09-03, when it became a recording sink.
+# The guard result is NOT contingent on any of that: the ratio compares our harness's return to
+# idaac's own, and the flags are additive. If this job fails, the arity change in eval_grid is the
+# first suspect and `run_scene_idaac` returning three values is the thing to check.
+#
+# The checkpoint is real now: bt1lnh6b11u231cvh4ho reached 99,328 frames and its own evaluator
+# reports test/mean_episode_reward = 5.347 -- about 3x the 1.82 random floor, which is what makes
+# this comparison powered where the 9,216-frame attempt was not. Success rate is still 0.000, so
+# this discharges the RETURN axis only; the competence gate of EVAL-PROTOCOL.md §3 is untouched.]
+# [Claude 2026-09-04: the cross-family evaluator guard, retried on a checkpoint that can carry it.
+#
+# The first attempt (bt1dbmtc04sg5nhc18r6) compared our harness against idaac's own evaluator on a
+# 9,216-frame checkpoint and got 1.663 against 3.01. Both straddle the 1.82 random floor and idaac
+# SAMPLES, so at ten episodes the test had no power -- it neither showed the C95 failure mode nor
+# ruled it out. That is the competence gate of EVAL-PROTOCOL.md §3 arriving from the other side: a
+# floor that makes a retention ratio undefined also makes a fidelity check uninformative.
+#
+# bt1lnh6b11u231cvh4ho trains idaac to 100k for exactly this. Its own cell reports its own
+# evaluator's number; this job runs OUR harness on the checkpoint that cell retained, same regime,
+# same scene, more episodes than before because the comparison is the point.
+#
+#   agrees within sampling noise -> the EVAL-PROTOCOL §1 proposal is validated for a non-native,
+#                                   and P-C76 option (1) can be taken on evidence rather than on a
+#                                   mechanism argument alone
+#   disagrees in the C95 shape    -> the proposal is withdrawn, not patched
+#   still at the floor            -> the guard remains uncompletable at pre-production budgets, and
+#                                   that limitation is the finding
+#
+# 20 episodes rather than 10: the first attempt's ambiguity was partly sample size, and doubling it
+# costs minutes.]
+name: vigen-guard-idaac-100k-v65
+desc: Cross-family evaluator guard on a 100k idaac checkpoint.
+cmd: >-
+  timeout --foreground 7200s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  RECORDS_OUT=${RECORDS}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=idaac OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=eval-easy,train
+  OFFLINE_EVAL_SCENES=0 OFFLINE_EVAL_EPISODES=20
+  CELLS=idaac:1 FRAMES=100000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v61.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/idaac-s1-100k.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

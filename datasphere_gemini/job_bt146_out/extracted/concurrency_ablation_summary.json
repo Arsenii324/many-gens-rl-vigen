@@ -1,0 +1,151 @@
+{
+  "solo": {
+    "algo": "drqv2",
+    "steps": 1000,
+    "fps": 44.3,
+    "mean_ms": 22.57,
+    "p50_ms": 22.65,
+    "p90_ms": 26.94,
+    "p99_ms": 27.84,
+    "stutter_ratio": 1.23,
+    "peak_ram_mb": 2447.0
+  },
+  "quad_unpinned_omp2": {
+    "alda": {
+      "algo": "alda",
+      "steps": 1000,
+      "fps": 38.4,
+      "mean_ms": 26.04,
+      "p50_ms": 20.94,
+      "p90_ms": 37.22,
+      "p99_ms": 44.72,
+      "stutter_ratio": 1.72,
+      "peak_ram_mb": 5628.0
+    },
+    "drqv2": {
+      "algo": "drqv2",
+      "steps": 1000,
+      "fps": 34.38,
+      "mean_ms": 29.08,
+      "p50_ms": 22.78,
+      "p90_ms": 45.52,
+      "p99_ms": 51.67,
+      "stutter_ratio": 1.78,
+      "peak_ram_mb": 2452.0
+    },
+    "idaac": {
+      "algo": "idaac",
+      "steps": 1000,
+      "fps": 38.83,
+      "mean_ms": 25.75,
+      "p50_ms": 20.55,
+      "p90_ms": 36.64,
+      "p99_ms": 44.36,
+      "stutter_ratio": 1.72,
+      "peak_ram_mb": 5718.0
+    },
+    "ppg": {
+      "algo": "ppg",
+      "steps": 1000,
+      "fps": 38.48,
+      "mean_ms": 25.98,
+      "p50_ms": 20.64,
+      "p90_ms": 37.29,
+      "p99_ms": 45.3,
+      "stutter_ratio": 1.74,
+      "peak_ram_mb": 5718.0
+    }
+  },
+  "quad_pinned_omp1": {
+    "alda": {
+      "algo": "alda",
+      "steps": 1000,
+      "fps": 38.54,
+      "mean_ms": 25.95,
+      "p50_ms": 20.28,
+      "p90_ms": 36.67,
+      "p99_ms": 45.33,
+      "stutter_ratio": 1.75,
+      "peak_ram_mb": 5639.0
+    },
+    "drqv2": {
+      "algo": "drqv2",
+      "steps": 1000,
+      "fps": 34.76,
+      "mean_ms": 28.77,
+      "p50_ms": 22.67,
+      "p90_ms": 44.41,
+      "p99_ms": 51.26,
+      "stutter_ratio": 1.78,
+      "peak_ram_mb": 2466.0
+    },
+    "idaac": {
+      "algo": "idaac",
+      "steps": 1000,
+      "fps": 38.58,
+      "mean_ms": 25.92,
+      "p50_ms": 20.32,
+      "p90_ms": 36.95,
+      "p99_ms": 46.04,
+      "stutter_ratio": 1.78,
+      "peak_ram_mb": 5639.0
+    },
+    "ppg": {
+      "algo": "ppg",
+      "steps": 1000,
+      "fps": 39.37,
+      "mean_ms": 25.4,
+      "p50_ms": 20.24,
+      "p90_ms": 35.6,
+      "p99_ms": 44.28,
+      "stutter_ratio": 1.74,
+      "peak_ram_mb": 5733.0
+    }
+  },
+  "quad_pinned_omp2": {
+    "alda": {
+      "algo": "alda",
+      "steps": 1000,
+      "fps": 38.5,
+      "mean_ms": 25.97,
+      "p50_ms": 20.25,
+      "p90_ms": 37.72,
+      "p99_ms": 45.63,
+      "stutter_ratio": 1.76,
+      "peak_ram_mb": 4626.0
+    },
+    "drqv2": {
+      "algo": "drqv2",
+      "steps": 1000,
+      "fps": 34.97,
+      "mean_ms": 28.59,
+      "p50_ms": 22.99,
+      "p90_ms": 44.38,
+      "p99_ms": 51.66,
+      "stutter_ratio": 1.81,
+      "peak_ram_mb": 2447.0
+    },
+    "idaac": {
+      "algo": "idaac",
+      "steps": 1000,
+      "fps": 39.83,
+      "mean_ms": 25.11,
+      "p50_ms": 19.98,
+      "p90_ms": 35.21,
+      "p99_ms": 42.95,
+      "stutter_ratio": 1.71,
+      "peak_ram_mb": 5719.0
+    },
+    "ppg": {
+      "algo": "ppg",
+      "steps": 1000,
+      "fps": 38.37,
+      "mean_ms": 26.06,
+      "p50_ms": 20.34,
+      "p90_ms": 37.11,
+      "p99_ms": 46.31,
+      "stutter_ratio": 1.78,
+      "peak_ram_mb": 4626.0
+    }
+  }
+}

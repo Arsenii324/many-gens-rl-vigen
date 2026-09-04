@@ -1,0 +1,81 @@
+# [Claude 2026-09-03: the decisive test for the checkpoint-reproduction defect, second attempt.
+#
+# v43 (bt1ta23i2tim2imp55vp) FAILED, and the failure was a real design error, not an accident.
+# Restoring `_global_step = 60000` puts the loop past `num_seed_frames`, so `agent.update()` is
+# called on the FIRST iteration -- against a replay directory that is empty, because a snapshot
+# carries the agent and not the buffer. `IndexError: list index out of range` in
+# `replay_buffer._sample_episode`, four minutes in.
+#
+# What this asks, restated precisely after reading the bracket's own eval.csv:
+#
+#   eval.csv @60000 : episode_reward 33.75 (eval regime, 10 scenes x 2)
+#                     train_regime_reward 135.71 (TRAIN regime, scene 0, 2 episodes)
+#   offline grid    : train regime, scene 0 -> 20.95 on CPU, 8.58 on MPS, and 4.34 over 20
+#                     episodes at 100k
+#
+# So the quantity to compare is `train_regime_reward`, not `episode_reward`; the earlier
+# comparison was apples-to-apples in regime and scene, which is now checked rather than assumed.
+# train.py evaluates and only THEN saves, with no gradient step in between, so the stamped file
+# must carry exactly the policy that scored 135.71. Same weights and same observations give the
+# same action, and every env this project builds offline gives 5-20. That points at the
+# observation stream as the training process builds it -- which is the one thing only the
+# training process can be asked for.
+#
+# How it survives this time:
+#   FRAMES 61500 + EVAL_EVERY_FRAMES 60000 -> Every(60000) fires on the FIRST loop iteration, at
+#     global_step 60000, BEFORE the update call. The answer is recorded even if nothing else runs.
+#   num_seed_frames=60500 -> `not seed_until_step(step)` stays False until 61499, by which point
+#     the episodes closing at 60500 and 61000 are on disk, so the one update that does run has a
+#     buffer to sample. The budget gate computes its floor as override+1 = 61500, and 61500 is not
+#     below it, so the gate passes rather than refusing its own escape hatch.
+#   Three closed episodes also mean train.csv is non-empty, which `required_curves` demands.
+#
+# RLVIGEN_EVAL_SCENES=0 makes `per` 20 instead of 20//10=2: both regimes get twenty episodes at
+# scene 0, so the returned train_regime_reward is a twenty-episode mean directly comparable to the
+# offline twenty-episode 4.34, rather than the noisy two-episode 135.71.
+#
+#   train_regime_reward ~95-135 -> the policy is intact; the offline evaluation path differs
+#   train_regime_reward ~5-20   -> the file does not carry the policy, on the hardware that wrote it
+#
+# v44 (bt1bhbb2pllbs2f6u10q) EVALUATED SUCCESSFULLY and was then thrown away by retention.
+# `NATIVE_FINAL_EVALUATION_COMPLETED frame=61500`, exit status 0 -- and then
+# "required curve is absent or empty: train.csv", so result.tgz kept only the log and eval.csv was
+# never returned. The console carries the `rep` half (F: 60000, R: 41.6577, SR: 0.0000 on
+# eval-easy scene 0 over twenty episodes) but the console formatter prints a fixed set of keys and
+# `train_regime_reward` is not among them. That number exists only in eval.csv.
+#
+# Why train.csv was empty, exactly: RL-ViGen logs a train row only inside `if metrics is not None`,
+# and `metrics` is set only by `agent.update()`. num_seed_frames=61499 permitted exactly ONE update,
+# at step 61499, after which `_global_step` reaches 61500 and the loop exits -- before the episode
+# boundary that would have written the row. Correct but useless.
+#
+# 60500 instead: the first episode after the resume closes at 60500 and is on disk, so the buffer is
+# non-empty when updates begin there; episodes then close at 61000 and 61500 with `metrics` set, so
+# train.csv gets rows and retention passes. **The eval at 60000 still happens before the first
+# update**, which is the only property that matters -- the measurement is of the loaded policy,
+# untouched.
+#
+# The terminal block evaluates a second time at 61500; that is a free repeat, not the measurement.
+# Cannot be run locally: the snapshot's storages are CUDA.]
+name: vigen-native-drqv2-resume-v45
+desc: Hand a stamped 60k checkpoint back to RL-ViGen's own loop and read train_regime_reward.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RESUME_SNAPSHOT=${RESUME}
+  CELLS=drqv2:1 FRAMES=61500 TASK=Door SEED=1
+  EVAL_EVERY_FRAMES=60000 EVAL_EPISODES=20 CELL_TIMEOUT_SECONDS=4800
+  RLVIGEN_EVAL_SCENES=0
+  NATIVE_EXTRA_OVERRIDES=num_seed_frames=60500
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v48.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/resume-snapshot-60000.pt: RESUME
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

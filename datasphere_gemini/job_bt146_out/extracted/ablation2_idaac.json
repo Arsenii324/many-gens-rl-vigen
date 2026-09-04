@@ -1,0 +1,11 @@
+{
+  "algo": "idaac",
+  "steps": 1000,
+  "fps": 38.83,
+  "mean_ms": 25.75,
+  "p50_ms": 20.55,
+  "p90_ms": 36.64,
+  "p99_ms": 44.36,
+  "stutter_ratio": 1.72,
+  "peak_ram_mb": 5718.0
+}

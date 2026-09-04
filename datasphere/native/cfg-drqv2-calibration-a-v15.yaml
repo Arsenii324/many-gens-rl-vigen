@@ -1,0 +1,17 @@
+# [Codex 2026-09-01 15:01 MSK: immutable but unsubmitted serial retry after raw v14 audit exposed robosuiteVGB's undeclared matplotlib import]
+name: vigen-native-drqv2-calibration-a-v15
+desc: Native DrQ-v2 Door 10k matplotlib-closure calibration; unsubmitted pending review.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=drqv2 FRAMES=10000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  # [Codex 2026-09-01 15:01 MSK: DataSphere validates input paths from the candidate-root submission directory]
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v15.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

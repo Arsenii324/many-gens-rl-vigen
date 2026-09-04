@@ -1,0 +1,16 @@
+mujoco==2.3.7
+dm_control==1.0.14
+gym==0.25.2
+termcolor
+imageio
+imageio-ffmpeg
+opencv-python-headless
+xmltodict
+tqdm
+einops
+kornia
+hydra-core
+omegaconf
+hydra-submitit-launcher
+scipy
+tensorboard

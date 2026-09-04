@@ -1,0 +1,33 @@
+# [Claude 2026-09-02 10:55 MSK: the run immediately before production, and the last thing owed
+# before a long launch can be called safe.
+#
+# Nothing so far has trained for longer than about 45 minutes. A 500k run is six to seven hours and
+# exercises three things a 10k calibration cannot reach at all:
+#   * repeated evaluation-environment construction -- a 500k run at eval_every 25,000 builds about
+#     230 fresh robosuite environments for evaluation alone, and every one of them creates and
+#     destroys an EGL context. The MuJoCo destructor warnings already seen after a single teardown
+#     are the reason this needs proving rather than assuming;
+#   * the 50k snapshot boundary in upstream's own loop, which no 10k run reaches;
+#   * replay growth on a container that has 20.2 GiB free at bootstrap.
+# Three cells at once, so it measures packing at production length as well -- the 2.63x figure was
+# measured at 10k, where neither disk nor the evaluation cadence was anywhere near its limit.
+#
+# 100k rather than 500k because it reaches all three thresholds at a fifth of the cost, and because
+# 100k is itself one of the production shapes the owner is being asked to choose between.]
+name: vigen-native-endurance-pack-v27
+desc: Three concurrent DrQ-v2 Door 100k cells; endurance, evaluation cadence, snapshot boundary and packing at production length.
+cmd: >-
+  timeout --foreground 21600s env
+  CELLS=drqv2:11,drqv2:12,drqv2:13 NATIVE_CONCURRENT=1
+  FRAMES=100000 TASK=Door EVAL_EVERY_FRAMES=25000 EVAL_EPISODES=2
+  CELL_TIMEOUT_SECONDS=18000
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v28.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

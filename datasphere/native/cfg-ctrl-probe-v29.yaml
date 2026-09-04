@@ -1,0 +1,23 @@
+# [Claude 2026-09-02 11:00 MSK: CTRL on its own, which is the only way it can run.
+# jax[cuda12] requires nvidia-cudnn-cu12>=9 and torch 2.3.1+cu121 pins 8.9.2.26; there is no
+# version of both, and the robosuite environment CTRL steps needs numpy<2 while an unconstrained
+# jax install resolves numpy 2.2.6. So this job installs the base requirements with torch filtered
+# out and pins numpy in the same command as jax. CTRL is a JAX baseline and never imports torch.
+# It is also the first CTRL run that can leave a checkpoint behind at all: upstream's own
+# checkpoint import is commented out and its checkpoint_interval flag is never read.]
+name: vigen-native-ctrl-probe-v29
+desc: First CUDA contact for ctrl, alone because its JAX stack cannot share an environment with torch.
+cmd: >-
+  timeout --foreground 9000s env
+  CELLS=ctrl FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - payload-ctrl-v29.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

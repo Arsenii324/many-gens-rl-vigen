@@ -1,0 +1,361 @@
+diff --git a/torch_rl/model.py b/torch_rl/model.py
+index 1523a27..aacba55 100644
+--- a/torch_rl/model.py
++++ b/torch_rl/model.py
+@@ -2,6 +2,8 @@ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+ from torch.distributions.categorical import Categorical
++from torch.distributions.normal import Normal
++from torch.distributions.independent import Independent
+ import torch_rl
+ import gym
+ from bottleneck import Bottleneck
+@@ -126,7 +128,20 @@ class ACModel(nn.Module):
+         self.embedding_size = self.semi_memory_size
+ 
+         # Define actor's model
+-        if not isinstance(action_space, gym.spaces.Discrete):
++        # CONTINUOUS HEAD. Upstream refuses anything but Discrete -- the torch_rl branch of this
++        # repo only ever ran on MiniGrid. RL-ViGen's Box(-1,1,(7,)) needs a Gaussian head, so the
++        # actor emits a mean of width action_space.shape[0] and carries a state-independent
++        # log-stdev, which is what PPO does for continuous control. Authored here; the reference
++        # has no continuous head anywhere to descend from, in this branch or in the TF one.
++        # Independent(Normal, 1) is used so log_prob() and entropy() return shape (B,), exactly
++        # as Categorical does -- that is what keeps algos/base.py and algos/ppo.py untouched.
++        if isinstance(action_space, gym.spaces.Discrete):
++            self.num_actions = action_space.n
++            self.log_std = None
++        elif isinstance(action_space, gym.spaces.Box):
++            self.num_actions = action_space.shape[0]
++            self.log_std = nn.Parameter(torch.zeros(self.num_actions))
++        else:
+             raise ValueError("Unknown action space: " + str(action_space))
+ 
+         if use_bottleneck:
+@@ -140,7 +155,7 @@ class ACModel(nn.Module):
+         self.actor = nn.Sequential(
+             # nn.Linear(self.embedding_size, 64),
+             nn.Tanh(),
+-            nn.Linear(64, action_space.n)
++            nn.Linear(64, self.num_actions)
+         )
+ 
+         # Define critic's model
+@@ -201,17 +216,23 @@ class ACModel(nn.Module):
+ 
+         return bot_mean, bot, kl
+ 
++    def make_dist(self, x):
++        """Discrete path is upstream's exact expression; Box path is the added Gaussian."""
++        if self.log_std is None:
++            return Categorical(logits=F.log_softmax(x, dim=1))
++        return Independent(Normal(x, self.log_std.exp()), 1)
++
+     def compute_run(self, obs):
+         bot_mean, bot, kl = self.encode(obs)
+ 
+         if self.sni_type is not None:
+             # For any SNI type, the rollouts values are deterministic
+             x_dist = self.actor(bot_mean)
+-            dist = Categorical(logits=F.log_softmax(x_dist, dim=1))
++            dist = self.make_dist(x_dist)
+             value = self.critic(bot_mean).squeeze(1)
+         else:
+             x_dist = self.actor(bot)
+-            dist = Categorical(logits=F.log_softmax(x_dist, dim=1))
++            dist = self.make_dist(x_dist)
+             value = self.critic(bot).squeeze(1)
+         return dist, value, kl
+ 
+@@ -221,15 +242,15 @@ class ACModel(nn.Module):
+         if self.sni_type == 'vib':
+             # Need both policies for training, but still only one value function:
+             x_dist_run = self.actor(bot_mean)
+-            dist_run = Categorical(logits=F.log_softmax(x_dist_run, dim=1))
++            dist_run = self.make_dist(x_dist_run)
+             value = self.critic(bot_mean).squeeze(1)
+ 
+             x_dist_train = self.actor(bot)
+-            dist_train = Categorical(logits=F.log_softmax(x_dist_train, dim=1))
++            dist_train = self.make_dist(x_dist_train)
+             return dist_run, dist_train, value, kl
+         elif self.sni_type == 'dropout' or self.sni_type is None:
+             # Random policy AND value function
+             x_dist_train = self.actor(bot)
+-            dist_train = Categorical(logits=F.log_softmax(x_dist_train, dim=1))
++            dist_train = self.make_dist(x_dist_train)
+             value = self.critic(bot).squeeze(1)
+             return dist_train, value, kl
+diff --git a/torch_rl/scripts/evaluate.py b/torch_rl/scripts/evaluate.py
+index dd1359e..bbb46b5 100644
+--- a/torch_rl/scripts/evaluate.py
++++ b/torch_rl/scripts/evaluate.py
+@@ -48,7 +48,12 @@ utils.seed(args.seed)
+ 
+ envs = []
+ for i in range(args.procs):
+-    env = gym.make(args.env)
++    # Same one-line seam as scripts/train.py. This repo trains and evaluates in SEPARATE runs,
++    # so this file is how a trained ibac_sni policy gets measured in a held-out visual regime
++    # (RLVIGEN_MODE=eval-easy) -- the generalisation gap its training loop cannot report on its
++    # own, obtained with the AUTHORS' OWN evaluation script rather than one we wrote.
++    env = (utils.make_rlvigen_env(args.env, args.seed + 10000*i)
++           if args.env.startswith("robosuite:") else gym.make(args.env))
+     env.seed(args.seed + 10000*i)
+     if args.fullObs:
+         env = gym_minigrid.wrappers.FullyObsWrapper(env)
+diff --git a/torch_rl/scripts/train.py b/torch_rl/scripts/train.py
+index 1fd760a..6b94db0 100644
+--- a/torch_rl/scripts/train.py
++++ b/torch_rl/scripts/train.py
+@@ -121,7 +121,8 @@ utils.seed(args.seed)
+ 
+ envs = []
+ for i in range(args.procs):
+-    env = gym.make(args.env)
++    env = (utils.make_rlvigen_env(args.env, args.seed + 10000*i)
++           if args.env.startswith("robosuite:") else gym.make(args.env))
+     env.seed(args.seed + 10000*i)
+     if args.fullObs:
+         env = gym_minigrid.wrappers.FullyObsWrapper(env)
+@@ -197,6 +198,10 @@ while num_frames < args.frames:
+         duration = int(time.time() - total_start_time)
+         return_per_episode = utils.synthesize(logs["return_per_episode"])
+         rreturn_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
++        # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). Only the mean is carried: min/max of
++        # a 0/1 indicator are not informative, and the std is a function of the mean.
++        success_rate = float(sum(logs["success_per_episode"])) / max(
++            1, len(logs["success_per_episode"]))
+         num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
+ 
+         header = ["update", "frames", "FPS", "duration"]
+@@ -207,9 +212,18 @@ while num_frames < args.frames:
+         data += num_frames_per_episode.values()
+         header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm", "kl"]
+         data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["kl"]]
++        # SUCCESS RATE appended AFTER the losses, never inserted: `data` is consumed positionally
++        # by the format string below, so a field inserted mid-sequence silently shifts every one
++        # after it -- the first attempt printed the episode length in the entropy slot.
++        header += ["success_rate"]
++        data += [success_rate]
+ 
+         logger.info(
+-            "U {} | F {:06} | FPS {:04.0f} | D {} | rR:μσmM {:.2f} {:.2f} {:.2f} {:.2f} | F:μσmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | ∇ {:.3f}"
++            # `kl` is printed too, not out of curiosity: upstream's format string had 17
++            # placeholders against 18 data items, so `.format(*data)` silently dropped the LAST
++            # one -- kl. Appending success_rate therefore made "SR" display kl. Adding a slot for
++            # both makes the counts equal and the discard impossible to reintroduce unnoticed.
++            "U {} | F {:06} | FPS {:04.0f} | D {} | rR:μσmM {:.2f} {:.2f} {:.2f} {:.2f} | F:μσmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | ∇ {:.3f} | kl {:.3f} | SR {:.3f}"
+             .format(*data))
+ 
+         header += ["return_" + key for key in return_per_episode.keys()]
+@@ -229,7 +243,15 @@ while num_frames < args.frames:
+     # Save vocabulary and model
+ 
+     if args.save_interval > 0 and update % args.save_interval == 0:
+-        preprocess_obss.vocab.save()
++        # `vocab` is attached to the preprocessor ONLY on the MiniGrid branch of
++        # utils.get_obss_preprocessor -- it tokenises the mission string. The generic
++        # Box([H,W,3]) branch, which every image env including RL-ViGen takes, attaches nothing,
++        # so this line made --save-interval crash with
++        #   AttributeError: 'function' object has no attribute 'vocab'
++        # on any non-MiniGrid env. Checkpointing is what lets a trained policy be measured in a
++        # held-out regime by this repo's own scripts/evaluate.py, so it is not optional here.
++        if hasattr(preprocess_obss, "vocab"):
++            preprocess_obss.vocab.save()
+ 
+         if torch.cuda.is_available():
+             acmodel.cpu()
+diff --git a/torch_rl/torch_rl/torch_rl/algos/base.py b/torch_rl/torch_rl/torch_rl/algos/base.py
+index bf32dba..cb19538 100644
+--- a/torch_rl/torch_rl/torch_rl/algos/base.py
++++ b/torch_rl/torch_rl/torch_rl/algos/base.py
+@@ -1,5 +1,6 @@
+ from abc import ABC, abstractmethod
+ import torch
++import gym
+ import numpy
+ 
+ from torch_rl.format import default_preprocess_obss
+@@ -78,7 +79,13 @@ class BaseAlgo(ABC):
+         self.obss = [None]*(shape[0])
+         self.mask = torch.ones(shape[1], device=self.device)
+         self.masks = torch.zeros(*shape, device=self.device)
+-        self.actions = torch.zeros(*shape, device=self.device, dtype=torch.int)
++        # CONTINUOUS: upstream stores one int per step. A Box action is a real vector, so the
++        # buffer gains a trailing action dimension and a float dtype. Discrete is byte-identical
++        # to before ((), torch.int).
++        _aspace = envs[0].action_space
++        _ashape = () if isinstance(_aspace, gym.spaces.Discrete) else _aspace.shape
++        _adtype = torch.int if isinstance(_aspace, gym.spaces.Discrete) else torch.float
++        self.actions = torch.zeros(*shape, *_ashape, device=self.device, dtype=_adtype)
+         self.values = torch.zeros(*shape, device=self.device)
+         self.rewards = torch.zeros(*shape, device=self.device)
+         self.advantages = torch.zeros(*shape, device=self.device)
+@@ -86,6 +93,11 @@ class BaseAlgo(ABC):
+ 
+         # Initialize log values
+ 
++        # Per-env success, cleared at episode end: the env auto-resets, so the next episode must
++        # not inherit the previous one's flag. Convention shared with every baseline here:
++        # success if the flag held at ANY step.
++        self.log_episode_success = [False] * self.num_procs
++        self.log_success = [0.0] * self.num_procs
+         self.log_episode_return = torch.zeros(self.num_procs, device=self.device)
+         self.log_episode_reshaped_return = torch.zeros(self.num_procs, device=self.device)
+         self.log_episode_num_frames = torch.zeros(self.num_procs, device=self.device)
+@@ -124,7 +136,10 @@ class BaseAlgo(ABC):
+                 dist, value, kl = self.acmodel.compute_run(preprocessed_obs)
+             action = dist.sample()
+ 
+-            obs, reward, done, _ = self.env.step(action.cpu().numpy())
++            # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md): `info` was discarded here.
++            # RL-ViGen patch P10 puts robosuite's own _check_success in it; Door's return is
++            # dense and scale-arbitrary, and this is the only unit-free quantity available.
++            obs, reward, done, infos = self.env.step(action.cpu().numpy())
+ 
+             # Update experiences values
+ 
+@@ -149,12 +164,18 @@ class BaseAlgo(ABC):
+             self.log_episode_reshaped_return += self.rewards[i]
+             self.log_episode_num_frames += torch.ones(self.num_procs, device=self.device)
+ 
++            for i, info_ in enumerate(infos):
++                self.log_episode_success[i] = (
++                    self.log_episode_success[i] or bool((info_ or {}).get('success', False)))
++
+             for i, done_ in enumerate(done):
+                 if done_:
+                     self.log_done_counter += 1
+                     self.log_return.append(self.log_episode_return[i].item())
+                     self.log_reshaped_return.append(self.log_episode_reshaped_return[i].item())
+                     self.log_num_frames.append(self.log_episode_num_frames[i].item())
++                    self.log_success.append(float(self.log_episode_success[i]))
++                    self.log_episode_success[i] = False
+ 
+             self.log_episode_return *= self.mask
+             self.log_episode_reshaped_return *= self.mask
+@@ -187,7 +208,8 @@ class BaseAlgo(ABC):
+                     for j in range(self.num_procs)
+                     for i in range(self.num_frames_per_proc)]
+         # for all tensors below, T x P -> P x T -> P * T
+-        exps.action = self.actions.transpose(0, 1).reshape(-1)
++        # `*self.actions.shape[2:]` is empty for Discrete, so this is the upstream line there.
++        exps.action = self.actions.transpose(0, 1).reshape(-1, *self.actions.shape[2:])
+         exps.value = self.values.transpose(0, 1).reshape(-1)
+         exps.reward = self.rewards.transpose(0, 1).reshape(-1)
+         exps.advantage = self.advantages.transpose(0, 1).reshape(-1)
+@@ -206,11 +228,13 @@ class BaseAlgo(ABC):
+             "return_per_episode": self.log_return[-keep:],
+             "reshaped_return_per_episode": self.log_reshaped_return[-keep:],
+             "num_frames_per_episode": self.log_num_frames[-keep:],
++            "success_per_episode": self.log_success[-keep:],
+             "num_frames": self.num_frames
+         }
+ 
+         self.log_done_counter = 0
+         self.log_return = self.log_return[-self.num_procs:]
++        self.log_success = self.log_success[-self.num_procs:]
+         self.log_reshaped_return = self.log_reshaped_return[-self.num_procs:]
+         self.log_num_frames = self.log_num_frames[-self.num_procs:]
+ 
+diff --git a/torch_rl/utils/agent.py b/torch_rl/utils/agent.py
+index f3c0605..11de955 100644
+--- a/torch_rl/utils/agent.py
++++ b/torch_rl/utils/agent.py
+@@ -31,11 +31,21 @@ class Agent:
+         else:
+             actions = dist.sample()
+ 
+-        if torch.cuda.is_available():
+-            actions = actions.cpu().numpy()
++        # UNCONDITIONAL, was `if torch.cuda.is_available():`. On a CPU-only machine this
++        # returned torch Tensors, which the env then did arithmetic on -- surfacing from inside
++        # robosuite's OSC controller as the thoroughly unhelpful
++        #   TypeError: Concatenation operation is not implemented for NumPy arrays
++        # at `goal_position = current_position + delta`. It happened to work on MiniGrid, whose
++        # step() accepts an int-like, and on CUDA, where the branch fires. Neither holds here.
++        # `.cpu()` on a CPU tensor is a no-op, so the CUDA path is unchanged.
++        actions = actions.cpu().numpy()
+ 
+         return actions
+ 
++        # NOTE, not fixed because nothing here uses it: the `--argmax` branch above reads
++        # `dist.probs`, which only a Categorical has. Under the continuous head it would raise.
++        # Deterministic evaluation of a Gaussian policy means its mean, not an argmax.
++
+     def get_action(self, obs):
+         return self.get_actions([obs]).item()
+ 
+diff --git a/torch_rl/utils/general.py b/torch_rl/utils/general.py
+index bf3ecc6..596cd60 100644
+--- a/torch_rl/utils/general.py
++++ b/torch_rl/utils/general.py
+@@ -30,4 +30,46 @@ def synthesize(array):
+     d["std"] = numpy.std(array)
+     d["min"] = numpy.amin(array)
+     d["max"] = numpy.amax(array)
+-    return d
+\ No newline at end of file
++    return d
++
++def make_rlvigen_env(env_id, seed):
++    """RL-ViGen robosuite as a plain gym env, in the shape this repo's own preprocessor expects.
++
++    `utils.get_obss_preprocessor` already has a generic branch for `Box([H, W, 3])` -- written
++    for RGB envs, unused by MiniGrid -- so nothing about preprocessing needs changing; the
++    wrapper just has to present that shape. RL-ViGen yields {'rgb': (3,H,W) uint8}.
++
++    THE ONE DELIBERATE SCALING CHOICE: `utils.format.preprocess_images` does
++    `torch.tensor(images, dtype=torch.float)` with NO division. That is correct for MiniGrid,
++    whose "image" is small category indices, and wrong for 0-255 RGB -- inputs two orders of
++    magnitude off what `initialize_parameters` assumes. Division by 255 therefore happens HERE,
++    in the seam, rather than by editing the repo's preprocessor. Declared, not silent: every
++    other baseline in this project feeds pixels in [0,1] too.
++
++    `mode` comes from RLVIGEN_MODE so train / eval-easy / eval-medium / eval-hard select the
++    visual regime without a new CLI flag.
++    """
++    import os, sys, gym, numpy as np
++    _rlv = os.environ["RLVIGEN_ROOT"]
++    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
++        if _p not in sys.path:
++            sys.path.insert(0, _p)
++    from robosuitevgb.utils import make_env as _robo_make_env
++
++    class _HWCFloat(gym.ObservationWrapper):
++        def __init__(self, env):
++            super().__init__(env)
++            c, h, w = env.observation_space["rgb"].shape
++            self.observation_space = gym.spaces.Box(0.0, 1.0, (h, w, c), dtype=np.float32)
++
++        def observation(self, obs):
++            return (np.asarray(obs["rgb"], dtype=np.float32).transpose(1, 2, 0) / 255.0)
++
++        def seed(self, seed=None):
++            "The env is seeded at construction; RL-ViGen's own `seed` is an int attribute."
++            return []
++
++    task = env_id.split(":", 1)[1]
++    return _HWCFloat(_robo_make_env(
++        task_name=task, seed=seed, scene_id=0,
++        mode=os.environ.get("RLVIGEN_MODE", "train")))
+diff --git a/torch_rl/utils/save.py b/torch_rl/utils/save.py
+index 27b3f60..99e8fd2 100644
+--- a/torch_rl/utils/save.py
++++ b/torch_rl/utils/save.py
+@@ -12,7 +12,12 @@ def get_model_path(model_dir):
+ 
+ def load_model(model_dir):
+     path = get_model_path(model_dir)
+-    model = torch.load(path)
++    # TORCH API DRIFT, not an algorithm change: torch.load defaults to weights_only=True from
++    # torch 2.6, and save_model below pickles the whole ACModel object rather than a state_dict,
++    # so the default refuses it ("Unsupported global: GLOBAL model.ACModel"). False restores the
++    # behaviour this code was written against. It is unsafe for a checkpoint from an untrusted
++    # source; every checkpoint on this path is one save_model wrote a few lines below.
++    model = torch.load(path, weights_only=False)
+     model.eval()
+     return model
+ 

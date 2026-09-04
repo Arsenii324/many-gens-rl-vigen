@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "[Claude 2026-09-02] The pinned RL-ViGen tree, shipped as a job input instead of cloned at",
+    "run time. run_probe.sh cloned it from GitHub inside every billed job until 2026-09-02, when",
+    "two probes (bt1nlcstc5kg3qtqro52, bt1uk6ehfsfo6m49dsdn) died there with `could not read",
+    "Username for 'https://github.com'` after three retries -- while the same repository answered",
+    "git ls-remote from the laptop at that moment and returned exactly this commit. The container's",
+    "egress changed; upstream did not.",
+    "",
+    "PRISTINE, deliberately: the runner applies P1-P18 to whatever it gets, and the vendored",
+    "working copy already has them applied (15 files modified under git status). Shipping the",
+    "working copy would patch a patched tree.",
+    "",
+    "run_probe.sh verifies this sha256 before extracting. A silently swapped or truncated input",
+    "would otherwise surface minutes later as a patch anchor that does not match, with no hint why."
+  ],
+  "commit": "90d8b8c40acb63af6f938c1f4cc79a0cfee7d7ec",
+  "sha256": "3f7c4dd4143df9f9fd9dc7711dd8c2aaa4cf5c9218c47ae7251aad06c36d0b24",
+  "bytes": 237567137,
+  "entries": 1785,
+  "archive_root": "RL-ViGen-upstream",
+  "built_by": "git clone https://github.com/gemcollector/RL-ViGen.git && git checkout <commit>, then tar czf excluding .git, __pycache__, .DS_Store, envs/DMCVGB, img, and the six robosuite robots Door does not use",
+  "known_divergence_from_the_commit": [
+    "envs/DMCVGB is EXCLUDED -- 480 MB of mp4 distractor videos and colour tensors for the DeepMind Control variant of the benchmark. Nothing on the robosuite path reads them: wrappers/__init__.py is empty, train.py imports only wrappers.dmc and (lazily) wrappers.robo_wrapper, and the sole `from dmcvgb...` import is wrappers/loco_wrapper.py, which is not on this path -- and dmcvgb is not on the container's PYTHONPATH at all, so importing it would already fail. Excluded because a 667 MB upload was reset by peer mid-transfer; at 310 MB it is within the precedent set by the 455 MB places365 asset. THIS MAKES THE ARCHIVE UNUSABLE FOR THE DMC OR LOCOMOTION DOMAINS.",
+    "third_party/robosuite/robosuite/models/assets/robots/{sawyer,baxter,ur5e,iiwa,kinova3,jaco} are EXCLUDED -- 324 MB of meshes for robots this project never instantiates. Protocol.robot is 'Panda' and Panda's 84 MB of assets are kept in full. Safe by construction rather than by hope: robosuite reads a robot's XML in ManipulatorModel.__init__ via xml_path_completion('robots/<name>/robot.xml'), and register_robot only stores the class object, so importing robosuite never touches these files and only instantiating one of those six would. THIS MAKES THE ARCHIVE UNUSABLE FOR ANY TASK ON A NON-PANDA ROBOT.",
+    "img/ is excluded: README figures, 2 MB, read by nothing.",
+    "cfgs/task/TwoArmHandOver.yaml shows as modified in a fresh clone on macOS, because the repo ships both TwoArmHandover.yaml and TwoArmHandOver.yaml and a case-insensitive filesystem can hold only one. setup/apply_patches.py:177 already documents the collision. Neither file is on the Door path, so it changes nothing measured -- recorded because an archive that claims to be a commit should say where it is not."
+  ]
+}

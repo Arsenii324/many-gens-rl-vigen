@@ -1,0 +1,40 @@
+# [Claude 2026-09-03: I4 -- the production command shape has never run at production LENGTH.
+#
+# The pre-production pass ran the shape at 10k. Three things only bite at length and none was
+# exercised: the checkpoint cadence (C60: stamps only at multiples of 50k plus the endpoint), the
+# archive size that cadence produces (I3), and the separate records output that exists so the cheap
+# artefact can be fetched without the expensive one.
+#
+# This runs ONE baseline at 100k with the stamp grid on, which is the smallest run that produces
+# more than one stamp. It is a shape validation, not a result: drqv2 at 100k is already measured
+# (bt12o3nc3fg8g0ffhaso), and its curve -- train-regime 0.84/30.67/283.66/453.91/456.06 at
+# 0/25k/50k/75k/100k -- is the reference this should reproduce.
+#
+# What it exercises for the first time:
+#   RLVIGEN_PRESERVE_SNAPSHOTS  -> stamps at 50k and the 100k endpoint, so a budget curve exists
+#   RECORDS_OUT                 -> records.jsonl as its own output, ~100 KB instead of a ~300 MB tar
+#   OFFLINE_EVAL_EPISODE_SEED   -> present in the runner now; not used here, but the runner is the
+#                                  one changed today and this is the first job to carry it
+#
+# Cost ~1.6h on gt4i.1, ~375 RUB of the 2,000 available.]
+name: vigen-shape-drqv2-v62
+desc: I4 -- production command shape at 100k with the stamp grid and the records output.
+cmd: >-
+  timeout --foreground 14400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  RLVIGEN_PRESERVE_SNAPSHOTS=50000
+  CELLS=drqv2:1 FRAMES=100000 TASK=Door SEED=1
+  EVAL_EVERY_FRAMES=25000 EVAL_EPISODES=20 CELL_TIMEOUT_SECONDS=12600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v60.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

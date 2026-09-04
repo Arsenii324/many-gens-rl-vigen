@@ -1,0 +1,56 @@
+# [Claude 2026-09-03: separate RENDERER from DEVICE, the two variables still conflated in the
+#
+# v46/v47 both died at import: `ModuleNotFoundError: No module named 'scripts.metrics'`.
+# `eval_grid.py` was added to the payload without its transitive dependency -- eval_across_scenes
+# imports `scripts.metrics` for bootstrap_ci/wilson_interval. Now shipped, and the whole import
+# chain was verified by extracting the payload to an empty directory and running
+# `scripts/eval_grid.py --help` with nothing else on the path, which is the check that would have
+# caught it before the job rather than after.
+# biggest finding of the day.
+#
+# Established: the same 60k drqv2 snapshot, evaluated on eval-easy / scene 0 / twenty episodes,
+# returns 41.66 and 50.73 inside the container (RL-ViGen's own eval(), two independent jobs) and
+# 3.41 on this laptop from RL-ViGen's own `_eval_regime`, 2.94 from `eval_grid.py`. The loop is
+# therefore exonerated -- upstream's code fails here exactly as mine does -- and the difference
+# follows the machine. Two candidates remain:
+#
+#   DEVICE   -- container CUDA against local CPU/MPS
+#   RENDERER -- MUJOCO_GL=egl in the container against glfw on macOS
+#
+# This job runs the SAME grid twice in one container, once per device, both under EGL:
+#
+#   cuda ~= cpu ~= 41  -> the renderer is the cause; every locally-computed offline number in this
+#                         project is invalid, and EGL/GLFW is the mechanism
+#   cuda ~= 41, cpu ~= 3 -> the device is the cause, and the renderer is exonerated
+#
+# The renderer is the stronger prior: these are vision policies, a different rasteriser puts every
+# observation slightly out of distribution, and that predicts the one pattern the whole
+# investigation kept reproducing -- the damage scales with how much policy there is to damage
+# (6k reproduces, idaac at 1.5 reproduces, and the gap grows 6.5x -> 60x -> 670x from 60k to 100k).
+#
+# It also produces the first trustworthy R7/C43 numbers for this checkpoint, since `train` is
+# measured alongside `eval-easy` and the run's own logged train-regime value at 60k is 135.71.]
+name: vigen-native-offline-eval-v48
+desc: Run the offline grid on the container, on CUDA and CPU, to separate renderer from device.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda,cpu
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=1 OFFLINE_EVAL_FRAME=60000
+  OFFLINE_EVAL_REGIMES=eval-easy,train
+  OFFLINE_EVAL_SCENES=0 OFFLINE_EVAL_EPISODES=20
+  CELLS=drqv2:1 FRAMES=60000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v50.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/resume-snapshot-60000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

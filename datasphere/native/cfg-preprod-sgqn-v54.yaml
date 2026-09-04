@@ -1,0 +1,48 @@
+# [Claude 2026-09-03: the one baseline the pre-production pass could not complete, run as a
+# DIAGNOSTIC rather than a retry.
+#
+# In the five-cell job (bt1hs1lpt7bskh8sdri0) drqv2, svea, drq and curl all completed; sgqn reached
+# F: 5000 of 10,000 and died:
+#
+#   RuntimeError: DataLoader worker (pid 8025) is killed by signal: Aborted.
+#
+# **Maximum resident set size 3,766,064 KB -- 3.77 GB on a 32 GB tier**, so it is not OOM, which is
+# the explanation a retry would have been testing. num_seed_frames is 4000, so the abort lands
+# ~1000 frames into the first updates -- the first point at which sgqn's saliency-attribution path
+# runs under load, and the thing that distinguishes sgqn from the four that passed.
+#
+# `replay_buffer_num_workers=0` is the whole experiment. SIGABRT from a worker is a C-level abort
+# in a child process, and a child's abort arrives at the parent as an opaque signal with no
+# traceback. With zero workers the loader runs in-process, so:
+#
+#   completes            -> the crash was in the worker transport, not in sgqn's algorithm
+#   aborts with a stack  -> a genuine fault, and now it is legible
+#
+# Either outcome is worth the cell; a plain retry would have been worth nothing, because nothing
+# about the first failure looked stochastic (fixed budget, fixed seed, reproducible phase).
+#
+# places365 IS required -- sgqn is one of the three baselines whose overlay augmentation needs it,
+# and omitting it is what silently killed two jobs earlier today.]
+name: vigen-preprod-sgqn-v54
+desc: sgqn alone at 10k with replay_buffer_num_workers=0 -- diagnose the worker abort.
+cmd: >-
+  timeout --foreground 14400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=sgqn:1 FRAMES=10000 TASK=Door SEED=1
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  EVAL_EPISODES=10 CELL_TIMEOUT_SECONDS=10800
+  NATIVE_EXTRA_OVERRIDES=replay_buffer_num_workers=0
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v51.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

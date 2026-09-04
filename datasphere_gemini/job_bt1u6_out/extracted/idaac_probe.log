@@ -1,0 +1,18 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+Traceback (most recent call last):
+  File "/tmp/w/runnable/idaac/train.py", line 8, in <module>
+    from test import evaluate
+  File "/tmp/w/runnable/idaac/test.py", line 9, in <module>
+    from baselines.common.vec_env import (
+  File "/tmp/w/ext/baselines/baselines/common/vec_env/__init__.py", line 3, in <module>
+    from .shmem_vec_env import ShmemVecEnv
+  File "/tmp/w/ext/baselines/baselines/common/vec_env/shmem_vec_env.py", line 17, in <module>
+    np.bool: ctypes.c_bool}
+  File "/usr/local/lib/python3.10/dist-packages/numpy/__init__.py", line 324, in __getattr__
+    raise AttributeError(__former_attrs__[attr])
+AttributeError: module 'numpy' has no attribute 'bool'.
+`np.bool` was a deprecated alias for the builtin `bool`. To avoid this error in existing code, use `bool` by itself. Doing this will not modify any behavior and is safe. If you specifically wanted the numpy scalar type, use `np.bool_` here.
+The aliases was originally deprecated in NumPy 1.20; for more details and guidance see the original release note at:
+    https://numpy.org/devdocs/release/1.20.0-notes.html#deprecations. Did you mean: 'bool_'?

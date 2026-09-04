@@ -1,0 +1,431 @@
+
+=== 1. Hardware & System Inspection (t+0s) ===
+Linux t4i-6783a60c-449d-3a35-ac82-8e2acfa52b53 5.13.0-40-generic #45~20.04.1-Ubuntu SMP Mon Apr 4 09:38:31 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+               total        used        free      shared  buff/cache   available
+Mem:            31Gi       1.2Gi        25Gi       7.0Mi       4.3Gi        29Gi
+Swap:             0B          0B          0B
+NVIDIA L4, 23034 MiB, 535.261.03
+
+=== 2. System Dependencies (t+0s) ===
+Python: 3.10.12 at /usr/bin/python3
+
+=== 3. Unpack Self-Contained Code Payload (t+76s) ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+
+=== 4. Python Dependencies (PyTorch cu121 + Pinned Environment) (t+86s) ===
+Installed Python packages in 301s
+
+=== 5. Apply RL-ViGen Patches P1-P14 (t+387s) ===
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+
+0 applied, 23 already present, 0 unresolved
+
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+
+0 applied, 23 already present, 0 unresolved
+
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+Patches verified cleanly.
+
+=== 6. GL & CUDA Hardware Gates (t+387s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+GL_VENDOR   : NVIDIA Corporation
+GL_RENDERER : NVIDIA L4/PCIe/SSE2
+Frame shape : (84, 84, 3)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fb557976830>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fb557976680>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+
+=== 7. W&B Setup (t+393s) ===
+wandb: ERROR Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>403</title>403 Forbidden
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 100, in login
+    logged_in, _ = _login(
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 186, in _login
+    auth: wbauth.Auth | None = _use_explicit_key(
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 241, in _use_explicit_key
+    auth.verify()
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/lib/wbauth/auth.py", line 88, in verify
+    raise AuthenticationError(problems)
+wandb.errors.errors.AuthenticationError: Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>403</title>403 Forbidden
+
+=== 8. Probe 2A: DrQ-v2 Standalone Probe (5,000 steps) (t+396s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+workspace: /tmp/w/RL-ViGen-upstream/exp_local/2026.08.31/111753_action_repeat=1,env=robosuite,eval_every_frames=2500,num_eval_episodes=2,num_train_frames=5000,save_snapshot=True,save_video=False,save_video=False,seed=1,task@_global_=Door,use_tb=True,use_tb=True,use_wandb=False,use_wandb=False
+[2026-08-31 11:17:55,789][robosuite_logs][WARNING] - No private macro file found!
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[2026-08-31 11:17:55,789][robosuite_logs][WARNING] - It is recommended to use a private macro file
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[2026-08-31 11:17:55,789][robosuite_logs][WARNING] - To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+[2026-08-31 11:17:56,294][matplotlib.font_manager][INFO] - generated new fontManager
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/mjmod.py:1364: DeprecationWarning: `row_stack` alias is deprecated. Use `np.vstack` directly.
+  cbd1 = np.expand_dims(np.row_stack(((h + 1) // 2) * [re, ro]), -1)[:h, :w]
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/mjmod.py:1364: DeprecationWarning: `row_stack` alias is deprecated. Use `np.vstack` directly.
+  cbd1 = np.expand_dims(np.row_stack(((h + 1) // 2) * [re, ro]), -1)[:h, :w]
+Now the mode is train
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 0 | S: 0 | E: 0 | L: 500 | R: 0.8688 | T: 0:00:01 | SR: 0.0000
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 2500 | S: 2500 | E: 5 | L: 500 | R: 0.8945 | T: 0:02:36 | SR: 0.0000
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+| train          | F: 4500 | S: 4500 | E: 9 | L: 500 | R: 1.2796 | BS: 4500 | FPS: 1.6391 | T: 0:05:05
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fe756bb9240>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe7510ef3c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fe756bb9090>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe7510ef3c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fe756bb9240>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe7514e3d40>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fe756bb9090>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe7514e3d40>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fe756bb9240>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fe790c464c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fe790c464c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe790c465c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fe756bb9090>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fe75371a3c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fe790c464c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fe790c464c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fe790c465c0>,
+	),
+	result = 0
+)
+DrQ-v2 probe completed in 337s
+
+=== 9. Probe 2B: IDAAC Standalone Probe (5,000 steps) (t+733s) ===
+Traceback (most recent call last):
+  File "/tmp/w/runnable/idaac/train.py", line 7, in <module>
+    from test import evaluate
+  File "/tmp/w/runnable/idaac/test.py", line 4, in <module>
+    from procgen import ProcgenEnv
+ModuleNotFoundError: No module named 'procgen'
+IDAAC probe completed in 1s
+
+=== 10. Probe 2C: PPG Standalone Probe (5,000 steps) (t+734s) ===
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/runpy.py", line 187, in _run_module_as_main
+    mod_name, mod_spec, code = _get_module_details(mod_name, _Error)
+  File "/usr/lib/python3.10/runpy.py", line 110, in _get_module_details
+    __import__(pkg_name)
+  File "/tmp/w/runnable/ppg/phasic_policy_gradient/__init__.py", line 1, in <module>
+    from .train import train_fn
+  File "/tmp/w/runnable/ppg/phasic_policy_gradient/train.py", line 2, in <module>
+    from mpi4py import MPI
+ModuleNotFoundError: No module named 'mpi4py'
+PPG probe completed in 0s
+
+=== 11. Probe 2D: ALDA Standalone Probe (5,000 steps, Full Buffer) (t+734s) ===
+Traceback (most recent call last):
+  File "/tmp/w/runnable/alda/scripts/train.py", line 15, in <module>
+    from common.utils import setup_logging, create_instance_from_spec, print_spec, parse_spec_overrides
+  File "/tmp/w/runnable/alda/common/utils.py", line 11, in <module>
+    from colorlog import ColoredFormatter
+ModuleNotFoundError: No module named 'colorlog'
+ALDA probe completed in 3s
+
+=== 12. Package Artifacts & Telemetry Logs (t+737s) ===

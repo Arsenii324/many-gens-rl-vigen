@@ -1,0 +1,11 @@
+{
+  "algo": "ppg",
+  "steps": 1000,
+  "fps": 38.48,
+  "mean_ms": 25.98,
+  "p50_ms": 20.64,
+  "p90_ms": 37.29,
+  "p99_ms": 45.3,
+  "stutter_ratio": 1.74,
+  "peak_ram_mb": 5718.0
+}

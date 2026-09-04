@@ -1,0 +1,204 @@
+=== 1. Hardware and CGroup Inspection (t+0s) ===
+Linux t4i-48a534d7-1b20-3ed7-8ce2-2e9475303517 5.13.0-40-generic #45~20.04.1-Ubuntu SMP Mon Apr 4 09:38:31 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+8
+               total        used        free      shared  buff/cache   available
+Mem:            31Gi       1.2Gi        26Gi       7.0Mi       3.6Gi        29Gi
+Swap:             0B          0B          0B
+NVIDIA L4, 23034 MiB, 535.261.03
+=== 2. System Dependencies (t+0s) ===
+Python: 3.10 at /usr/bin/python3
+=== 3. Unpack Code Payload (t+48s) ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'SCHILY.fflags'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.FinderInfo'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+=== 4. Clone RL-ViGen Upstream at Pinned Commit (t+48s) ===
+Cloned at commit: 90d8b8c40acb63af6f938c1f4cc79a0cfee7d7ec in 36s
+=== 5. Python Dependencies (PyTorch cu121 + Pinned Environment) (t+84s) ===
+Installed Python packages in 269s
+=== 6. Apply RL-ViGen Patches P1-P12 (t+353s) ===
+  OK P1  make_env accepts mode        applied
+  OK P2  guard the video load         applied
+  OK P3a robo_make threads mode       applied
+  OK P3b robo_make exports regime     applied
+  OK P4a places batch device          applied
+  OK P4b places device holder         applied
+  OK P4c random_overlay records device applied
+  OK P5  drq log_alpha float32        applied
+  OK P6  render size settable         applied
+  OK P7a train.py GL not forced       applied
+  OK P7b eval.py GL not forced        applied
+  OK P8  action spec stays float32    applied
+  OK P9  robosuite keeps MUJOCO_GL    applied
+  OK P10 success flag in info         applied
+  OK P12 eval env gets a regime       applied
+  OK P14a eval env recipe kept        applied
+  OK P14b eval sweeps scenes + train regime applied
+  OK P11a Gym2DMC keeps last_info     applied
+  OK P11b eval tracks success         applied
+  OK P11c eval reads last_info        applied
+  OK P11d eval logs success_rate      applied
+  OK P13a logger drops tb import      applied
+  OK P13b logger imports tb lazily    applied
+23 applied, 0 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+0 applied, 23 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+Patches verified cleanly.
+=== 7. GL Gate (Hardware EGL Verification) (t+353s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+GL_VENDOR   : NVIDIA Corporation
+GL_RENDERER : NVIDIA L4/PCIe/SSE2
+Frame shape : (84, 84, 3) uint8 Mean px: 112.27
+Software fallback: False
+Hardware GPU rendering verified.
+=== 8. CUDA Gate (t+358s) ===
+PyTorch 2.5.1+cu121 | CUDA available: True
+Device name: NVIDIA L4
+Matmul throughput: 9852.3 GFLOP/s
+=== 9. Weights & Biases Setup (t+360s) ===
+W&B: API Key configured. Project=many-gens-rl-vigen, Group=datasphere-500k-gemini
+=== 10. Background Snapshot Preservation Monitor (t+360s) ===
+=== 11. Launch 500k Training Run (svea on Door, Seed 1) (t+360s) ===
+Snapshot monitor started...
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/train.py", line 29, in <module>
+    from video import TrainVideoRecorder, VideoRecorder
+  File "/tmp/w/RL-ViGen-upstream/video.py", line 6, in <module>
+    import imageio
+ModuleNotFoundError: No module named 'imageio'
+Training completed in 5s
+=== 12. Evaluation Sweep Across 10 Scenes (Train and Eval-Easy) (t+365s) ===
+/job/job_kse: line 188:  2710 Killed                  "$PY" - <<'MON'
+import time, os, shutil, pathlib, glob
+root = pathlib.Path("/tmp/w/RL-ViGen-upstream/exp_local")
+out_dir = pathlib.Path("/tmp/out/checkpoints")
+out_dir.mkdir(parents=True, exist_ok=True)
+seen = set()
+print("Snapshot monitor started...", flush=True)
+for _ in range(1200): # Watch for up to ~10 hours
+    for snap in root.rglob("snapshot.pt"):
+        try:
+            sz = snap.stat().st_size
+            if sz < 1000000: # Wait until written
+                continue
+            mtime = snap.stat().st_mtime
+            key = (str(snap), mtime)
+            if key not in seen:
+                # Attempt to extract step
+                import torch
+                payload = torch.load(snap, map_location="cpu", weights_only=False)
+                step = payload.get("_global_step", payload.get("step", int(time.time())))
+                dest = out_dir / f"snapshot_{step}_frames.pt"
+                shutil.copy2(snap, dest)
+                print(f"[PRESERVE] Copied snapshot at step {step} -> {dest.name} ({sz/1e6:.1f} MB)", flush=True)
+                seen.add(key)
+        except Exception as e:
+            pass
+    time.sleep(15)
+MON
+=== 13. Collect Artifacts and Logs (t+366s) ===
+=== 14. Package Results into Archive (t+366s) ===
+Packaging complete: 2990 bytes written to /job/result_ioc
+=== TOTAL JOB DURATION: 367s ===

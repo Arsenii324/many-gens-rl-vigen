@@ -1,0 +1,160 @@
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+workspace: /tmp/w/RL-ViGen-upstream/exp_local/2026.08.31/122105_action_repeat=1,env=robosuite,eval_every_frames=2500,num_eval_episodes=2,num_train_frames=5000,save_snapshot=True,save_video=False,save_video=False,seed=1,task@_global_=Door,use_tb=True,use_tb=True,use_wandb=False,use_wandb=False
+[2026-08-31 12:21:07,813][robosuite_logs][WARNING] - No private macro file found!
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[2026-08-31 12:21:07,813][robosuite_logs][WARNING] - It is recommended to use a private macro file
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[2026-08-31 12:21:07,813][robosuite_logs][WARNING] - To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+[2026-08-31 12:21:08,320][matplotlib.font_manager][INFO] - generated new fontManager
+Now the mode is train
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 0 | S: 0 | E: 0 | L: 500 | R: 0.8345 | T: 0:00:01 | SR: 0.0000
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 2500 | S: 2500 | E: 5 | L: 500 | R: 0.8630 | T: 0:02:37 | SR: 0.0000
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+| train          | F: 4500 | S: 4500 | E: 9 | L: 500 | R: 0.7290 | BS: 4500 | FPS: 1.6362 | T: 0:05:05
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fbda3455c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbda047d7c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fbda3455ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbda047d7c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fbda3455c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbdaab755c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fbda3455ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbdaab755c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fbda3455c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fbdd170e3c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fbdd170e3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbdd170e4c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fbda3455ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fbda06622c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fbdd170e3c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fbdd170e3c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fbdd170e4c0>,
+	),
+	result = 0
+)

@@ -1,0 +1,15 @@
+name: vigen-native-drqv2-calibration-a
+desc: Native DrQ-v2 Door 10k calibration; serial readiness evidence only.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=drqv2 FRAMES=10000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - run_probe.sh: JOB
+  - native-payload-v9.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

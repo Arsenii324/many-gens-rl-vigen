@@ -1,0 +1,16 @@
+{
+  "id": "arsen4ikvar/rlvigen-part1-cuda-smoke",
+  "title": "rlvigen-part1-cuda-smoke",
+  "code_file": "smoke.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "arsen4ikvar/rlvigen-part1-src"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "machine_shape": "NvidiaTeslaT4"
+}

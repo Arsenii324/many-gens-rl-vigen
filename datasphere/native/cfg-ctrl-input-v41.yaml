@@ -1,0 +1,59 @@
+# [Claude 2026-09-03: ctrl attempt #13.
+#
+# #12 (bt1f1kg6kiemsj7j8f6q) TRAINED AND REACHED ITS ENDPOINT -- exit status 0,
+# `NATIVE_FINAL_EVALUATION_COMPLETED frame=2560`, snapshot, console log, retained.json and the new
+# wandb_offline.jsonl all returned. num_envs 16 fixed the cluster reshape. It was then failed by
+# MY OWN GATE:
+#
+#   could not load /tmp/native-out/cells/ctrl-s1/snapshot.pt: ModuleNotFoundError: No module named 'torch'
+#
+# The finiteness probe chose its loader by FILE EXTENSION (`path.endswith(".msgpack")`), and the
+# runner copies every family's checkpoint to `snapshot.pt` whatever it was called -- so ctrl's flax
+# msgpack arrived as a .pt, took the torch branch, and ctrl deliberately excludes torch because it
+# is JAX. A gate failing a cell whose training had already succeeded. The probe now sniffs the
+# file's magic bytes and tries torch, msgpack and numpy in the order that suggests, reporting which
+# one worked; both directions are covered by a test.
+#
+# Also carried: scripts/eval_grid.py is now a payload member, because local offline evaluation of a
+# container-trained checkpoint was shown today to under-measure by 12-14x.
+#
+# RSS at num_envs 16 measured 13.4 GB, so gt4i.1 stays -- that would have been tight on gt4.1.
+#
+# #11 (bt1qgrrl5dcpn07jcq40) cleared the W&B blocker and TRAINED -- "PPO took 8.844827 seconds" --
+# then died in the first CTRL cluster update:
+#
+#   idxes_cluster = jax.random.permutation(rng, idxes).reshape(-1, size_minibatch)
+#   TypeError: cannot reshape array of shape (494,) into shape (-1, 61)
+#
+# algo.py:517-520 builds size_batch = num_envs * (n_steps - cluster_len + 1) // 2 and reshapes it
+# into n_minibatch_ctrl groups, which requires the one to divide the other. At num_envs 4 that is
+# 494 against 8. PPO's own batch is num_envs * n_steps and divides at every num_envs, so nothing
+# catches this until the first cluster update -- two minutes in, after a successful PPO epoch.
+#
+# num_envs 16 is the smallest value satisfying BOTH constraints at upstream's own n_steps 256,
+# cluster_len 10 and n_minibatch_ctrl 8 (8 and 12 each fail the cluster one). Upstream's default is
+# 64, so this moves toward the released configuration. 2560 frames still floors to the quantum
+# exactly (2560 / 16 = 160).
+#
+# gt4i.1 rather than gt4.1: sixteen robosuite Door envs in one process against #11's measured
+# 4.7 GB at four. The tier is the owner-permitted ceiling, and a second OOM costs more than the
+# difference -- this is the same failure alda took a whole job to find.]
+name: vigen-native-ctrl-input-v41
+desc: ctrl #13 -- num_envs 16 to satisfy CTRL's cluster-batch divisibility.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=ctrl FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=2 CELL_TIMEOUT_SECONDS=4200
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v49.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

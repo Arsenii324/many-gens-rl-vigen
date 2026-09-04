@@ -1,0 +1,209 @@
+# Hyperparameter sets for the RL-ViGen robosuite benchmark.
+#
+# THE MECHANISM, copied deliberately from the group's own reference repo
+# (~/Downloads/IBAC_SNI_torch, hyperparams/procgen/config.yml): a launch script names a
+# CONFIG, not an algorithm, and the config carries `baseline` plus that method's own
+# hyperparameters. Adding a baseline means adding an entry that is `base` plus only its
+# method-specific keys.
+#
+# WHY THIS SHAPE SATISFIES R4. In the reference, `easy-200-ibac` is `easy-200` plus exactly
+# three keys and all eighteen shared keys are byte-identical. Equal training conditions become
+# the default a baseline must explicitly opt out of, key by key, in a diffable file -- rather
+# than a convention someone has to remember. Every deviation below is one line, and
+# `tests/test_configs.py` prints the diff of each entry against `base` so a review sees the
+# whole deviation set at once.
+
+base: &base
+  # -- protocol (these become fields of rlgen.Protocol; nothing here is read anywhere else) --
+  task: Door
+  total_frames: 500000
+  eval_every_frames: 50000
+  eval_mode: eval-easy
+  episodes_per_scene: 10
+  policy_mode: deterministic
+  aggregation: mean
+  seed: 0
+
+  # -- trainer --
+  batch_size: 256
+  replay_capacity: 100000
+  num_seed_frames: 4000
+  update_every_frames: 2
+  nstep: 3
+  discount: 0.99
+  save_every_frames: 50000
+
+  # -- agent --
+  lr: 1.0e-4
+  feature_dim: 50
+  hidden_dim: 1024
+  critic_target_tau: 0.01
+  num_expl_steps: 2000
+  update_every_steps: 2
+  # [RLV] cfgs/task/easy.yaml, which cfgs/task/Door.yaml selects. This was linear(...,500000) --
+  # upstream's `medium` preset, which cfgs/task/Lift.yaml selects -- on a Door base with a 500k
+  # budget, so exploration noise finished annealing exactly at the last frame and every DrQ-v2
+  # arm trained at near-maximal action noise throughout. That is a systematic bias, not noise: it
+  # favours whichever methods tolerate high action noise.
+  #
+  # The schedule's argument is AGENT STEPS, not frames (train.py:118 `global_frame = global_step
+  # * action_repeat`, and `agent.act(obs, self.global_step, ...)`). Upstream robosuite runs
+  # action_repeat=2, we run 1, so in agent steps canonical Door is 1.1e6/2 = 550k against our
+  # 500k -- close enough that 100000 is a match, not a rescale. Rescaling proportionally would
+  # give 0.182 * 500k = 91k, within 10% of it, so the canonical literal needs no adjustment.
+  #
+  # NOTE: this is Door's value. RL-ViGen assigns Lift the `medium` preset
+  # (linear(1.0,0.1,500000)); a Lift config must override this. See docs/FAITHFULNESS.md.
+  stddev_schedule: linear(1.0,0.1,100000)
+  stddev_clip: 0.3
+
+# --------------------------------------------------------------------------------------------
+# One entry per runnable baseline. `<<: *base` then ONLY the deviations.
+# --------------------------------------------------------------------------------------------
+random:
+  <<: *base
+  baseline: random
+  total_frames: 0          # the negative control never trains; it is evaluated directly
+
+drqv2:
+  <<: *base
+  baseline: drqv2
+
+svea:
+  <<: *base
+  baseline: svea
+
+sgqn:
+  <<: *base
+  baseline: sgqn
+  # DEAD KNOB (C71 #3): this whole file configures the RETIRED `rlgen/` port. The null became
+  # "the original repository, cloned, running its own train.py" on 2026-08-17, and no clone run
+  # reads this file. The 2026-08-10 fix below is real and correct and reaches nothing; the clone
+  # goes through hydra to `cfgs/sgqn_config.yaml:54` and runs `aux_lr: 1e-4`. Kept rather than
+  # deleted because it records a decision, and the decision is still the open question in C64.
+  # RL-ViGen Table 6 (Door/Lift). The constructor default is aux_lr=0.3, which upstream never
+  # runs because its hydra config supplies 1e-4 -- we bypass hydra, so the dead default was live
+  # for us. 8e-5 is RL-ViGen's value across ALL its benchmarks; canonical SGQN's code uses 3e-4.
+  aux_lr: 8.0e-5
+  # 0.90 is both canonical SGQN's argparse default AND RL-ViGen Table 6. The 0.95 constructor
+  # default and the 0.93 in their sgqn_config.yaml agree with neither.
+  sgqn_quantile: 0.9
+  # FOUND 2026-08-14: unlike aux_lr/sgqn_quantile above, this knob was never listed here at all --
+  # sgqn's registry.build (unlike curl's) passes no `defaults` dict, so it silently ran on
+  # SGQNAgent's own constructor default (0.9) with no config path able to reach or override it.
+  # Pinned explicitly now rather than left as an unrecorded coincidence: 0.9 is what was already
+  # running, and it happens to match both canonical SGQN's argparse default AND the paper's stated
+  # Adam beta1, so this line changes nothing about behaviour -- it only makes the value reachable
+  # and visible instead of accidental, the same treatment aux_lr got when its own dead default
+  # (0.3, catastrophically wrong) was found.
+  aux_beta: 0.9
+
+curl:
+  <<: *base
+  baseline: curl
+  aux_lr: 1.0e-4
+  aux_beta: 0.99
+
+ctrl:
+  <<: *base
+  baseline: ctrl
+  num_steps: 2048
+  gamma: 0.99
+  gae_lambda: 0.95
+  # ctrl_coef REMOVED: bmazoure/ctrl_public has separate update_ppo / update_daac /
+  # update_cluster functions and no SSL-vs-PPO scalar. It was a mechanism the method lacks.
+  ctrl_window: 8           # steps pooled into one sub-trajectory embedding
+  ctrl_clusters: 32        # Sinkhorn equipartition collapses when clusters are large relative
+                           # to batch; 200 (paper) presupposes thousands of views, 8 was ours.
+
+drq:
+  <<: *base
+  baseline: drq
+  init_temperature: 0.1
+  log_std_bounds: [-5, 2]
+  hidden_depth: 2
+  nstep: 1                 # [RLV] Table 2 "N-step return -- DrQ: 1" and cfgs/drq_config.yaml
+
+# --------------------------------------------------------------------------------------------
+# Smoke: the SAME code path with a tiny budget. A separate smoke code path would prove nothing
+# about the real one, so this changes only budgets -- never which functions run.
+# -- SAC-backbone baselines. Their SAC hyperparameters are required constructor arguments and
+# -- live in rlgen/agents.py:SAC_DEFAULTS (DMC-GB/SODA published values); anything listed here
+# -- overrides them, and baselines/<x>/README.md prints the resulting diff.
+rad:
+  <<: *base
+  baseline: rad
+  actor_lr: 1.0e-3         # stated explicitly: `lr` is not a SAC_DEFAULTS key and was dropped
+  critic_lr: 1.0e-3        # silently. SECANT ran robosuite SAC at 1e-3.
+  rad_augmentation: random_shift   # declared 100->84 deviation, see rlgen/algos/rad.py
+
+soda:
+  <<: *base
+  baseline: soda
+  actor_lr: 1.0e-3         # explicit, as for rad
+  critic_lr: 1.0e-3
+  aux_update_freq: 2
+  soda_batch_size: 256
+  soda_tau: 0.005
+
+alda:
+  <<: *base
+  baseline: alda
+  # ALDA's own hyperparameters live in rlgen/algos/alda/config.py (AldaConfig), which carries a
+  # source tag on every number. Anything named here overrides that dataclass field-by-field.
+
+# -- on-policy (PPO family). Driven by rlgen/trainer_onpolicy.py; only experience COLLECTION
+# -- differs from the off-policy loop -- evaluator, logger, protocol and cadence are shared.
+idaac:
+  <<: *base
+  baseline: idaac
+  num_steps: 2048
+  gamma: 0.99
+  gae_lambda: 0.95
+
+ppg:
+  <<: *base
+  baseline: ppg
+  num_steps: 2048
+  gamma: 0.99
+  gae_lambda: 0.95
+  # All three confirmed in the authors' released code 2026-08-10, not only the paper -- tags
+  # upgraded [P] -> [P][C]. Refs are to ext/phasic-policy-gradient/phasic_policy_gradient/.
+  n_policy_phases: 32      # [P][C] Cobbe et al. 2020 N_pi = 32; train.py:27 `n_pi=32`
+  aux_epochs: 6            # [P][C] E_aux = 6;                   ppg.py:224 `n_aux_epochs=6`
+  aux_beta_clone: 1.0      # [P][C] beta_clone = 1;              train.py:28 `beta_clone=1.0`
+
+ibac_sni:
+  <<: *base
+  baseline: ibac_sni
+  num_steps: 2048
+  gamma: 0.99
+  gae_lambda: 0.95
+  # [P] IBAC-SNI appendix D (Coinrun): "The best performance was achieved with pd = 0.2 for
+  # Dropout and 1e-4 for IBAC and weight decay." Corroborated by DZ's Procgen port. Upgraded from
+  # a port-only tag 2026-08-10 -- and worth noting that reading the CODE would have misled us:
+  # no canonical default equals 1e-4 (coinrun/config.py defaults `beta` to the sentinel -1,
+  # torch_rl/scripts/train.py to 1.0, toy-classification to 0.001).
+  vib_beta: 1.0e-4
+  sni: true
+  # [P] The paper's own figures label the method "IBAC-SNI (lambda=0.5)" (coinrun/plots.py:82,122).
+  # Appendix D's "lambda = 1 learns fastest" is about DROPOUT-SNI, not IBAC-SNI -- do not carry it
+  # over as a preference for 1.0 here.
+  sni_lambda: 0.5
+
+# --------------------------------------------------------------------------------------------
+smoke: &smoke
+  total_frames: 3000
+  num_steps: 256           # the real config is 2048 [IDAAC App. E]; at a 3000-frame budget that
+                           # is ONE update, which exercises almost nothing. Budgets are exactly
+                           # what `smoke` is allowed to change.
+  eval_every_frames: 1500
+  episodes_per_scene: 1
+  num_seed_frames: 500
+  replay_capacity: 4000
+  batch_size: 32
+  save_every_frames: 1500
+  soda_batch_size: 32      # SODA's auxiliary batch is 256 by paper default; at 84x84 on
+                           # MPS that is the largest allocation in the run and the smoke
+                           # profile was killed by it. Budgets are exactly what `smoke`
+                           # is allowed to change.

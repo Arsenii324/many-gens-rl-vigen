@@ -1,0 +1,9 @@
+name: pullback-probe
+desc: Prove DataSphere returns artifacts before any paid GPU time is spent on this project.
+cmd: bash ${JOB} ${RESULT} ${MANIFEST}
+inputs:
+  - pullback_job.sh: JOB
+outputs:
+  - result.tgz: RESULT
+  - manifest.txt: MANIFEST
+cloud-instance-type: c1.4

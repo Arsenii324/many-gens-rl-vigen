@@ -1,0 +1,12 @@
+workspace: /tmp/w/RL-ViGen-upstream/exp_local/2026.08.31/svea/115534_eval_every_frames=25000,num_train_frames=25000,task@_global_=Door,use_wandb=false
+Error executing job with overrides: ['task@_global_=Door', 'num_train_frames=25000', 'eval_every_frames=25000', 'use_wandb=false']
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/train.py", line 361, in main
+    workspace = W(cfg)
+  File "/tmp/w/RL-ViGen-upstream/train.py", line 49, in __init__
+    self.setup(self.cfg.env)
+  File "/tmp/w/RL-ViGen-upstream/train.py", line 67, in setup
+    assert env in ['dmc', 'robosuite', 'habitat']
+AssertionError
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.

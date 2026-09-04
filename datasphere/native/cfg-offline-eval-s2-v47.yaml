@@ -1,0 +1,41 @@
+# [Claude 2026-09-03: the first TRUSTWORTHY generalisation measurement of this project's best
+# checkpoint, produced where the policy was trained.
+#
+# C95 established that a container-trained checkpoint cannot be evaluated on this laptop: the same
+# file returns 41.66/50.73 in the container and 2.94-3.41 here, with RL-ViGen's own eval loop
+# failing locally exactly as ours does. Every R7/C43 number computed locally is therefore void.
+#
+# This recomputes them for `drqv2-s2` at 100k -- the strongest checkpoint the project has, whose own
+# run logged train_regime_reward 456.06 with train_regime_success 1.0 and an eval-easy sweep of
+# 5.61 at success 0.0. Ten scenes, both regimes, five episodes per cell: 100 episodes, against the
+# two per cell the training loop could afford. That is the C43 comparison at a sample size the
+# training loop never had.
+#
+# Deliberately CUDA-only: cfg-offline-eval-v46 is separating device from renderer on the 60k
+# snapshot in parallel, and duplicating that question here would buy nothing. This job asks the
+# domain question, not the platform one, and is valid whichever way v46 lands -- the container is
+# where the policy was trained either way.]
+name: vigen-native-offline-eval-s2-v47
+desc: Trustworthy R7/C43 grid for drqv2-s2 at 100k, ten scenes, on the container.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=5
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v49.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

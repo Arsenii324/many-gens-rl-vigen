@@ -1,0 +1,148 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+
+Arguments:  Namespace(lr=0.0005, eps=1e-05, alpha=0.99, gamma=0.999, gae_lambda=0.95, entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, seed=0, num_processes=1, num_steps=256, ppo_epoch=1, num_mini_batch=8, clip_param=0.2, log_interval=10, num_env_steps=25000, env_name='robosuite:Door', algo='idaac', log_dir='logs', save_dir='models', no_cuda=False, hidden_size=256, use_best_hps=False, value_epoch=9, value_freq=1, adv_loss_coef=0.25, use_nonlinear_clf=False, order_loss_coef=0.001, clf_hidden_size=4, distribution_mode='easy', num_levels=200, start_level=0, cuda=True)
+Logging to logs
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/__init__.py:30: DeprecationWarning: invalid escape sequence '\ '
+  __logo__ = """
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/__init__.py:7: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead
+  ROBOSUITE_DEFAULT_LOGGER.warn("No private macro file found!")
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+
+Log File:  -robosuite:Door-idaac-s0
+Now the mode is train
+
+ Actor-Critic Network:  IDAACnet(
+  (base): PolicyResNetBase(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=263, out_features=1, bias=True)
+  )
+  (value_net): ValueResNet(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=256, out_features=1, bias=True)
+  )
+  (dist): DiagGaussian(
+    (fc_mean): Linear(in_features=256, out_features=7, bias=True)
+    (logstd): AddBias()
+  )
+)
+
+ Order Classifier:  LinearOrderClassifier(
+  (main): Sequential(
+    (0): Flatten()
+    (1): Linear(in_features=512, out_features=2, bias=True)
+    (2): Softmax(dim=1)
+  )
+)
+
+Update 10, step 2816:
+Last 5 training episodes, mean/median reward 1.62/1.24
+Traceback (most recent call last):
+  File "/tmp/w/runnable/idaac/train.py", line 253, in <module>
+    train(args)
+  File "/tmp/w/runnable/idaac/train.py", line 233, in train
+    eval_episode_rewards, eval_episode_successes = evaluate(args, actor_critic, device)
+NameError: name 'evaluate' is not defined
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f12d46e3640>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f12d46e3490>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>

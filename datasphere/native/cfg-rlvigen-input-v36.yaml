@@ -1,0 +1,32 @@
+# [Claude 2026-09-02 19:55 MSK: S0 of the staged plan -- prove the clone blocker is gone.
+#
+# Every job until now began with `git clone https://github.com/gemcollector/RL-ViGen.git` inside
+# the billed container. On 2026-09-02 that started failing for every baseline with `could not read
+# Username for 'https://github.com'`, after three retries, while the same repository answered
+# git ls-remote from the laptop and returned exactly the pinned commit. RL-ViGen is now a job
+# INPUT: a pristine tree at 90d8b8c4, sha256-checked by the runner before extraction.
+#
+# drqv2 because it is the cheapest measured baseline and it exercises the whole RL-ViGen path --
+# the patch set, the import gate, the robosuite closure and an actual training step. 6000 frames
+# because the family floor is 4001 (num_seed_frames is 4000 and no training curve exists below
+# it), and this run is about the bootstrap, not about learning.
+#
+# The one line that decides the outcome is NATIVE_RLVIGEN_FROM_INPUT in the log.]
+name: vigen-native-rlvigen-input-v36
+desc: S0 -- RL-ViGen shipped as a hash-checked input instead of cloned; drqv2 6000 frames as the carrier.
+cmd: >-
+  timeout --foreground 4800s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CELLS=drqv2:1 FRAMES=6000 TASK=Door SEED=1
+  EVAL_EPISODES=2 CELL_TIMEOUT_SECONDS=2400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v36.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

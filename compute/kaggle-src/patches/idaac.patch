@@ -1,0 +1,372 @@
+diff --git a/ppo_daac_idaac/distributions.py b/ppo_daac_idaac/distributions.py
+index e243ac4..8799f71 100644
+--- a/ppo_daac_idaac/distributions.py
++++ b/ppo_daac_idaac/distributions.py
+@@ -41,3 +41,60 @@ class Categorical(nn.Module):
+     def forward(self, x):
+         x = self.linear(x)
+         return FixedCategorical(logits=x)
++
++
++# ---------------------------------------------------------------------------------------------
++# CONTINUOUS HEAD. This file is a cut-down of ikostrikov/pytorch-a2c-ppo-acktr-gail
++# (a2c_ppo_acktr/distributions.py @ 41332b7) -- `init`, `FixedCategorical` and `Categorical`
++# above are byte-identical to it. IDAAC dropped the Box branch because Procgen is discrete.
++#
++# Everything below is COPIED VERBATIM from that same upstream file, not written here. That is
++# the point: RL-ViGen's Box(-1,1,(7,)) action space needs the branch this file already had a
++# lineage for. `AddBias` sits in the upstream's utils.py rather than here; it is placed next to
++# its only caller so the change stays in one file. Its body is unmodified.
++# ---------------------------------------------------------------------------------------------
++class FixedNormal(torch.distributions.Normal):
++    def log_probs(self, actions):
++        return super().log_prob(actions).sum(-1, keepdim=True)
++
++    def entropy(self):
++        return super().entropy().sum(-1)
++
++    def mode(self):
++        return self.mean
++
++
++class AddBias(nn.Module):
++    def __init__(self, bias):
++        super(AddBias, self).__init__()
++        self._bias = nn.Parameter(bias.unsqueeze(1))
++
++    def forward(self, x):
++        if x.dim() == 2:
++            bias = self._bias.t().view(1, -1)
++        else:
++            bias = self._bias.t().view(1, -1, 1, 1)
++
++        return x + bias
++
++
++class DiagGaussian(nn.Module):
++    def __init__(self, num_inputs, num_outputs):
++        super(DiagGaussian, self).__init__()
++
++        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
++                               constant_(x, 0))
++
++        self.fc_mean = init_(nn.Linear(num_inputs, num_outputs))
++        self.logstd = AddBias(torch.zeros(num_outputs))
++
++    def forward(self, x):
++        action_mean = self.fc_mean(x)
++
++        #  An ugly hack for my KFAC implementation.
++        zeros = torch.zeros(action_mean.size())
++        if x.is_cuda:
++            zeros = zeros.cuda()
++
++        action_logstd = self.logstd(zeros)
++        return FixedNormal(action_mean, action_logstd.exp())
+diff --git a/ppo_daac_idaac/envs.py b/ppo_daac_idaac/envs.py
+index b1e0d77..8b28356 100644
+--- a/ppo_daac_idaac/envs.py
++++ b/ppo_daac_idaac/envs.py
+@@ -41,4 +41,66 @@ class VecPyTorchProcgen(VecEnvWrapper):
+         obs = torch.from_numpy(obs).float().to(self.device) / 255.
+         reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
+         return obs, reward, done, info
+-        
+\ No newline at end of file
++        
++
++def make_rlvigen_venv(args, device, mode, num_envs):
++    """RL-ViGen robosuite behind the SAME VecEnv stack ProcgenEnv gets.
++
++    baselines' own DummyVecEnv replaces ProcgenEnv; VecMonitor / VecNormalize(ob=False) /
++    VecPyTorchProcgen are then applied unchanged, so episode bookkeeping, reward normalisation
++    and the tensor conversion are the authors' code on both paths. VecExtractDictObs is dropped
++    because the wrapper below already yields a bare array, exactly what it would have produced.
++
++    `mode` is RL-ViGen's train / eval-easy / eval-medium / eval-hard.
++    """
++    import os, sys
++    from baselines.common.vec_env import DummyVecEnv, VecMonitor, VecNormalize
++    _rlv = os.environ["RLVIGEN_ROOT"]
++    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
++        if _p not in sys.path:
++            sys.path.insert(0, _p)
++    from robosuitevgb.utils import make_env as _robo_make_env
++
++    class _RGBOnly(gym.ObservationWrapper):
++        """{'rgb': (3,H,W) uint8} under a float64 Box RL-ViGen never fills -> a real uint8 Box.
++        VecPyTorchProcgen reads observation_space.low[0,0,0], so the declared dtype matters."""
++        def __init__(self, env):
++            super().__init__(env)
++            self.observation_space = Box(
++                0, 255, env.observation_space["rgb"].shape, dtype=np.uint8)
++
++        def observation(self, obs):
++            return np.asarray(obs["rgb"], dtype=np.uint8)
++
++    class _LevelSeed(gym.Wrapper):
++        """Supplies info['level_seed'], which Procgen provides and IDAAC's own mechanism needs.
++
++        IDAACRolloutStorage.before_update pairs each observation with another one carrying the
++        SAME level_seed and asks the order classifier which came first -- that is IDAAC's
++        instance-invariance signal, so this key is not bookkeeping, it defines what "the same
++        instance" means here. An RL-ViGen env's visual instance is fixed by its seed at
++        construction, so the seed IS the level id.
++
++        DIFFERENT FROM PROCGEN, and it bears on IDAAC specifically: a Procgen env draws a new
++        level every episode, so one rollout spans many instances; here each env is one instance
++        for the whole run, and instance diversity per batch is capped at num_processes.
++        Recorded, not silently equated -- it is a Part 2 comparability question.
++        """
++        def __init__(self, env, level_seed):
++            super().__init__(env)
++            self._level_seed = level_seed
++
++        def step(self, action):
++            obs, rew, done, info = self.env.step(action)
++            info["level_seed"] = self._level_seed
++            return obs, rew, done, info
++
++    task = args.env_name.split(":", 1)[1]
++    venv = DummyVecEnv([
++        (lambda i=i: _LevelSeed(_RGBOnly(_robo_make_env(
++            task_name=task, seed=args.seed + i, scene_id=0, mode=mode)), args.seed + i))
++        for i in range(num_envs)
++    ])
++    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
++    venv = VecNormalize(venv=venv, ob=False)
++    return VecPyTorchProcgen(venv, device)
+diff --git a/ppo_daac_idaac/model.py b/ppo_daac_idaac/model.py
+index 2edfde6..c48fb99 100644
+--- a/ppo_daac_idaac/model.py
++++ b/ppo_daac_idaac/model.py
+@@ -5,7 +5,7 @@ import torch.nn as nn
+ import torch.nn.functional as F
+ 
+ from ppo_daac_idaac.utils import init
+-from ppo_daac_idaac.distributions import Categorical
++from ppo_daac_idaac.distributions import Categorical, DiagGaussian
+ 
+ 
+ init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
+@@ -174,9 +174,14 @@ class PolicyResNetBase(NNBase):
+     """
+     Residual Network 
+     """
+-    def __init__(self, num_inputs, hidden_size=256, channels=[16,32,32], num_actions=15):
++    def __init__(self, num_inputs, hidden_size=256, channels=[16,32,32], num_actions=15,
++                 continuous=False):
+         super(PolicyResNetBase, self).__init__(hidden_size)
+         self.num_actions = num_actions 
++        # CONTINUOUS: IDAAC conditions its advantage head on the action. Procgen actions are
++        # discrete so upstream one-hots them; a Box action IS already a real vector of width
++        # num_actions and is concatenated as-is. Discrete behaviour below is untouched.
++        self.continuous = continuous
+ 
+         self.layer1 = self._make_layer(num_inputs, channels[0])
+         self.layer2 = self._make_layer(channels[0], channels[1])
+@@ -215,6 +220,8 @@ class PolicyResNetBase(NNBase):
+ 
+         if actions is None:
+            onehot_actions = torch.zeros(x.shape[0], self.num_actions).to(x.device)
++        elif self.continuous:
++            onehot_actions = actions.float()   # already (N, num_actions); no one-hot to take
+         else:
+             onehot_actions = F.one_hot(actions.squeeze(1), self.num_actions).float()
+         gae_inputs = torch.cat((x, onehot_actions), dim=1)
+@@ -301,7 +308,7 @@ class PPOnet(nn.Module):
+     """
+     PPO netowrk 
+     """
+-    def __init__(self, obs_shape, num_actions, base_kwargs=None):
++    def __init__(self, obs_shape, action_space, base_kwargs=None):
+         super(PPOnet, self).__init__()
+         
+         if base_kwargs is None:
+@@ -309,8 +316,15 @@ class PPOnet(nn.Module):
+         
+         base = ResNetBase
+         
++        # Restores the upstream dispatch (ikostrikov/pytorch-a2c-ppo-acktr-gail Policy.__init__),
++        # which IDAAC replaced with a bare int because Procgen is discrete.
++        if action_space.__class__.__name__ == "Discrete":
++            num_outputs = action_space.n
++        else:
++            num_outputs = action_space.shape[0]
+         self.base = base(obs_shape[0], **base_kwargs)
+-        self.dist = Categorical(self.base.output_size, num_actions)
++        self.dist = (Categorical if action_space.__class__.__name__ == "Discrete"
++                     else DiagGaussian)(self.base.output_size, num_outputs)
+         
+     def forward(self, inputs):
+         raise NotImplementedError
+@@ -347,7 +361,7 @@ class IDAACnet(nn.Module):
+     """
+     IDAAC network
+     """
+-    def __init__(self, obs_shape, num_actions, base_kwargs=None):
++    def __init__(self, obs_shape, action_space, base_kwargs=None):
+         super(IDAACnet, self).__init__()
+         
+         if base_kwargs is None:
+@@ -355,9 +369,21 @@ class IDAACnet(nn.Module):
+         
+         base = PolicyResNetBase
+         
+-        self.base = base(obs_shape[0], **base_kwargs)
++        # Restores the upstream dispatch (ikostrikov/pytorch-a2c-ppo-acktr-gail Policy.__init__),
++        # which IDAAC replaced with a bare int because Procgen is discrete.
++        if action_space.__class__.__name__ == "Discrete":
++            num_outputs = action_space.n
++        else:
++            num_outputs = action_space.shape[0]
++        continuous = action_space.__class__.__name__ != "Discrete"
++        # num_actions was never forwarded here, so the advantage head sat at its default 15 --
++        # exactly right for Procgen and silently wrong for any other width. Passing it is inert
++        # for Procgen (action_space.n == 15) and required for Box(7,).
++        self.base = base(obs_shape[0], num_actions=num_outputs, continuous=continuous,
++                         **base_kwargs)
+         self.value_net = ValueResNet(obs_shape[0], **base_kwargs)
+-        self.dist = Categorical(self.base.output_size, num_actions)
++        self.dist = (DiagGaussian if continuous else Categorical)(
++            self.base.output_size, num_outputs)
+         
+     def forward(self, inputs):
+         raise NotImplementedError
+diff --git a/test.py b/test.py
+index d8953bb..d05e56a 100644
+--- a/test.py
++++ b/test.py
+@@ -8,21 +8,36 @@ from baselines.common.vec_env import (
+     VecNormalize
+ )
+ 
+-from ppo_daac_idaac.envs import VecPyTorchProcgen
++from ppo_daac_idaac.envs import VecPyTorchProcgen, make_rlvigen_venv
+ 
+ 
+ def evaluate(args, actor_critic, device):
+     actor_critic.eval()
+ 
+     # Sample Levels From the Full Distribution 
+-    venv = ProcgenEnv(num_envs=1, env_name=args.env_name, \
+-        num_levels=0, start_level=0, distribution_mode=args.distribution_mode)
+-    venv = VecExtractDictObs(venv, "rgb")
+-    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+-    venv = VecNormalize(venv=venv, ob=False)
+-    eval_envs = VecPyTorchProcgen(venv, device)
++    if args.env_name.startswith("robosuite:"):
++        # The RL-ViGen analogue of "the full level distribution" is a held-out visual regime.
++        # RLVIGEN_EVAL_MODE picks which one; eval-easy matches the other baselines' default.
++        import os
++        eval_envs = make_rlvigen_venv(
++            args, device, os.environ.get("RLVIGEN_EVAL_MODE", "eval-easy"), 1)
++    else:
++        venv = ProcgenEnv(num_envs=1, env_name=args.env_name, \
++            num_levels=0, start_level=0, distribution_mode=args.distribution_mode)
++        venv = VecExtractDictObs(venv, "rgb")
++        venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
++        venv = VecNormalize(venv=venv, ob=False)
++        eval_envs = VecPyTorchProcgen(venv, device)
+ 
+     eval_episode_rewards = []
++    # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). RL-ViGen patch P10 puts robosuite's own
++    # _check_success in `info`, and it survives DummyVecEnv -> VecMonitor -> VecNormalize
++    # untouched. Door's return is dense and scale-arbitrary; this is the only unit-free quantity.
++    # Convention, the same one every baseline here uses: success if the flag held at ANY step of
++    # the episode. `succeeded` is per-env and cleared when that env's episode ends, because the
++    # VecEnv auto-resets and the next episode must not inherit the previous one's flag.
++    eval_episode_successes = []
++    succeeded = [False] * eval_envs.num_envs
+     obs = eval_envs.reset()
+ 
+     while len(eval_episode_rewards) < 10:
+@@ -34,15 +49,19 @@ def evaluate(args, actor_critic, device):
+ 
+         obs, _, done, infos = eval_envs.step(action)
+ 
+-        for info in infos:
++        for i, info in enumerate(infos):
++            succeeded[i] = succeeded[i] or bool(info.get('success', False))
+             if 'episode' in info.keys():
+                 eval_episode_rewards.append(info['episode']['r'])
++                eval_episode_successes.append(float(succeeded[i]))
++                succeeded[i] = False
+ 
+     eval_envs.close()
+ 
+-    print("Last {} test episodes: mean/median reward {:.1f}/{:.1f}\n"\
++    print("Last {} test episodes: mean/median reward {:.1f}/{:.1f} | success rate {:.3f}\n"\
+         .format(len(eval_episode_rewards), \
+-        np.mean(eval_episode_rewards), np.median(eval_episode_rewards)))
++        np.mean(eval_episode_rewards), np.median(eval_episode_rewards), \
++        np.mean(eval_episode_successes) if eval_episode_successes else float('nan')))
+ 
+-    return eval_episode_rewards
++    return eval_episode_rewards, eval_episode_successes
+ 
+diff --git a/train.py b/train.py
+index d7318e7..9de50ec 100644
+--- a/train.py
++++ b/train.py
+@@ -20,7 +20,7 @@ from ppo_daac_idaac.model import PPOnet, IDAACnet, \
+     LinearOrderClassifier, NonlinearOrderClassifier
+ from ppo_daac_idaac.storage import DAACRolloutStorage, \
+     IDAACRolloutStorage, RolloutStorage
+-from ppo_daac_idaac.envs import VecPyTorchProcgen
++from ppo_daac_idaac.envs import VecPyTorchProcgen, make_rlvigen_venv
+ 
+ 
+ def train(args):
+@@ -50,24 +50,27 @@ def train(args):
+     logger.configure(dir=args.log_dir, format_strs=['csv', 'stdout'], log_suffix=log_file)
+     print("\nLog File: ", log_file)
+ 
+-    venv = ProcgenEnv(num_envs=args.num_processes, env_name=args.env_name, \
+-        num_levels=args.num_levels, start_level=args.start_level, \
+-        distribution_mode=args.distribution_mode)
+-    venv = VecExtractDictObs(venv, "rgb")
+-    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
+-    venv = VecNormalize(venv=venv, ob=False)
+-    envs = VecPyTorchProcgen(venv, device)
++    if args.env_name.startswith("robosuite:"):
++        envs = make_rlvigen_venv(args, device, "train", args.num_processes)
++    else:
++        venv = ProcgenEnv(num_envs=args.num_processes, env_name=args.env_name, \
++            num_levels=args.num_levels, start_level=args.start_level, \
++            distribution_mode=args.distribution_mode)
++        venv = VecExtractDictObs(venv, "rgb")
++        venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
++        venv = VecNormalize(venv=venv, ob=False)
++        envs = VecPyTorchProcgen(venv, device)
+ 
+     obs_shape = envs.observation_space.shape     
+     if args.algo == 'ppo':
+         actor_critic = PPOnet(
+             obs_shape,
+-            envs.action_space.n,
++            envs.action_space,
+             base_kwargs={'hidden_size': args.hidden_size})    
+     else:           
+         actor_critic = IDAACnet(
+             obs_shape,
+-            envs.action_space.n,
++            envs.action_space,
+             base_kwargs={'hidden_size': args.hidden_size})    
+     actor_critic.to(device)
+     print("\n Actor-Critic Network: ", actor_critic)
+@@ -225,9 +228,13 @@ def train(args):
+             logger.logkv("train/median_episode_reward", np.median(episode_rewards))
+ 
+             # Log eval stats (on the full distribution of levels) 
+-            eval_episode_rewards = evaluate(args, actor_critic, device)
++            eval_episode_rewards, eval_episode_successes = evaluate(args, actor_critic, device)
+             logger.logkv("test/mean_episode_reward", np.mean(eval_episode_rewards))
+             logger.logkv("test/median_episode_reward", np.median(eval_episode_rewards))
++            # SUCCESS RATE -- see test.py's note. nan rather than 0 when no episode finished:
++            # a zero here would be indistinguishable from a measured failure.
++            logger.logkv("test/success_rate",
++                         np.mean(eval_episode_successes) if eval_episode_successes else np.nan)
+ 
+             logger.dumpkvs()
+ 

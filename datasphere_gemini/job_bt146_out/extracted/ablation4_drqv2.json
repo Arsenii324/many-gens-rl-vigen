@@ -1,0 +1,11 @@
+{
+  "algo": "drqv2",
+  "steps": 1000,
+  "fps": 34.97,
+  "mean_ms": 28.59,
+  "p50_ms": 22.99,
+  "p90_ms": 44.38,
+  "p99_ms": 51.66,
+  "stutter_ratio": 1.81,
+  "peak_ram_mb": 2447.0
+}

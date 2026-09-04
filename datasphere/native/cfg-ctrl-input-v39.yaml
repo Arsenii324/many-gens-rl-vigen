@@ -1,0 +1,41 @@
+# [Claude 2026-09-03: ctrl attempt #11 -- the twelfth and last baseline to make CUDA contact.
+#
+# Attempt #10 (bt1efc5ma3m0lohlnq2d) reached the training script and died three lines into it:
+#
+#   File "runnable/ctrl/train_ppo.py", line 111, in main
+#     wandb.init(project=FLAGS.wandb_project, ...)
+#   File "runnable/_shim/wandb.py", line 5, in _disabled
+#     RuntimeError: W&B tracking is disabled for this native probe
+#
+# ctrl is the one baseline of the twelve that calls `wandb.init` unconditionally, with no flag to
+# turn it off, so the fail-closed shim [Codex 2026-09-01] made it unrunnable by construction.
+# The shim is now an OFFLINE SINK rather than a refusal: it opens no socket and imports no client,
+# but `init`/`log` record to $RLGEN_WANDB_JSONL, which the runner points at the run directory.
+# `RLGEN_WANDB_STRICT=1` restores the original raising behaviour exactly, so the property Codex
+# was defending is still one variable away. That is a payload change, so the runner contract goes
+# to 10 and this uses payload-v47.
+#
+# ctrl's own metrics ride the wandb calls, so wandb_offline.jsonl is now one of its optional
+# curves -- attempt #10's real loss was not just the crash but that its numbers had nowhere to go.
+#
+# Note the header of v38 described drqv2 and S0; it was copied and not rewritten. This one
+# describes what it actually runs.]
+name: vigen-native-ctrl-input-v39
+desc: ctrl #11 -- first CUDA contact, with W&B recorded offline instead of refused.
+cmd: >-
+  timeout --foreground 4800s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=ctrl FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=2 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v47.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

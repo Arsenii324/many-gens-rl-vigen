@@ -1,0 +1,26 @@
+name: rlvigen-part1-cuda-smoke
+desc: >
+  Do the Part 1 originals run on real CUDA, and do the exported patches rebuild the clones from
+  public sources? Same question as the Kaggle kernel, on an image where the EVAL REGIMES also
+  work -- python 3.11 admits mujoco 2.3.7, which Kaggle's 3.12 does not.
+
+cmd: python main.py
+
+env:
+  python:
+    # `type` became mandatory in a datasphere-CLI release after this config was written; without
+    # it the job fails locally in under a second with "you have to specify `type` of python env"
+    # and never reaches the cloud. Valid values are `auto` and `manual` (config.py:352);
+    # `manual` is the one that honours `version` and `requirements-file`, which is the whole
+    # reason for using DataSphere rather than Kaggle -- see this directory's README.
+    type: manual
+    version: "3.11"          # DataSphere supports 3.8-3.12; 3.11 is what mujoco 2.3.7 needs
+    requirements-file: requirements.txt
+
+# gt4.1 = 1x Tesla T4, $1.38/h. NOT g1.1, which this file said "one T4" while g1.1 is a
+# 1x V100 at $2.76/h -- double, and above the ceiling the owner set for this project. The comment
+# was wrong and I submitted a job on it before checking the price table. Corrected 2026-08-24.
+cloud-instance-type: gt4.1
+
+outputs:
+  - result.txt

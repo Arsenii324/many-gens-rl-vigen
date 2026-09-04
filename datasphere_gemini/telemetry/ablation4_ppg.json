@@ -1,0 +1,33 @@
+{
+  "provenance": {
+    "job_id": "bt146mf3mg0pk82sf4lq",
+    "cloud_provider": "Yandex DataSphere",
+    "instance_type": "gt4i.1",
+    "hardware_cpu": "8 vCPUs (Intel Xeon Ice Lake @ 2.80GHz)",
+    "hardware_gpu": "1x NVIDIA L4 (24GB VRAM)",
+    "task": "robosuite:Door",
+    "robot": "Franka Panda (8-DoF continuous action)",
+    "control_frequency_hz": 20,
+    "horizon": 500,
+    "reward_shaping": true,
+    "condition_id": "condition_4_quad_pinned_omp2",
+    "condition_name": "Quad Workers - Pinned Core Affinity (OMP=2)",
+    "concurrency_mode": "quad_concurrent",
+    "active_workers_count": 4,
+    "core_affinity_mask": "taskset -c 4,5",
+    "omp_num_threads": 2,
+    "algorithm": "ppg",
+    "image_resolution_px": 64,
+    "frame_stack": 1
+  },
+  "metrics": {
+    "benchmark_steps": 1000,
+    "throughput_fps": 38.37,
+    "mean_step_latency_ms": 26.06,
+    "median_p50_latency_ms": 20.34,
+    "tail_p90_latency_ms": 37.11,
+    "tail_p99_latency_ms": 46.31,
+    "stutter_ratio_p99_over_mean": 1.78,
+    "peak_rss_ram_mb": 4626.0
+  }
+}

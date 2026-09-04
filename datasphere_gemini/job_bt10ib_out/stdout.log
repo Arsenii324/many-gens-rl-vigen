@@ -1,0 +1,1543 @@
+=== 1. Hardware & System Inspection (t+0s) ===
+Linux t4i-1205077d-a575-3584-a8b1-73236e3c881b 5.13.0-40-generic #45~20.04.1-Ubuntu SMP Mon Apr 4 09:38:31 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+               total        used        free      shared  buff/cache   available
+Mem:            31Gi       1.4Gi        25Gi       7.0Mi       4.2Gi        29Gi
+Swap:             0B          0B          0B
+NVIDIA L4, 23034 MiB, 535.261.03
+=== 2. System Dependencies (t+0s) ===
+Python: 3.10.12 at /usr/bin/python3
+=== 3. Unpack Self-Contained Code Payload (t+76s) ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+=== 4. Python Dependencies (PyTorch cu121 + Pinned Environment) (t+85s) ===
+Installed Python packages in 287s
+=== 5. Apply RL-ViGen Patches P1-P14 (t+372s) ===
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+0 applied, 23 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+  == P1  make_env accepts mode        already applied
+  == P2  guard the video load         already applied
+  == P3a robo_make threads mode       already applied
+  == P3b robo_make exports regime     already applied
+  == P4a places batch device          already applied
+  == P4b places device holder         already applied
+  == P4c random_overlay records device already applied
+  == P5  drq log_alpha float32        already applied
+  == P6  render size settable         already applied
+  == P7a train.py GL not forced       already applied
+  == P7b eval.py GL not forced        already applied
+  == P8  action spec stays float32    already applied
+  == P9  robosuite keeps MUJOCO_GL    already applied
+  == P10 success flag in info         already applied
+  == P12 eval env gets a regime       already applied
+  == P14a eval env recipe kept        already applied
+  == P14b eval sweeps scenes + train regime already applied
+  == P11a Gym2DMC keeps last_info     already applied
+  == P11b eval tracks success         already applied
+  == P11c eval reads last_info        already applied
+  == P11d eval logs success_rate      already applied
+  == P13a logger drops tb import      already applied
+  == P13b logger imports tb lazily    already applied
+0 applied, 23 already present, 0 unresolved
+by kind of change  (PLATFORM: theirs still · RESTORES: toward their intent · ENABLES: ours)
+  PLATFORM      P4, P5, P7, P8, P9, P13
+  RESTORES      P1, P2, P3, P12
+  ENABLES       P6, P10, P11, P14
+A number produced with P6, P10, P11, P14 active is not a pure-fidelity number:
+  those patches change what is measured, not how it is reached.
+The vendored tree matches its pinned commit plus exactly the declared differences.
+Patches verified cleanly.
+=== 6. GL & CUDA Hardware Gates (t+373s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+GL_VENDOR   : NVIDIA Corporation
+GL_RENDERER : NVIDIA L4/PCIe/SSE2
+Frame shape : (84, 84, 3)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fb650af1510>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fb650af1360>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+OpenGL.raw.EGL._errors.EGLError: <exception str() failed>
+=== 7. W&B Setup (t+378s) ===
+wandb: ERROR Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>403</title>403 Forbidden
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 100, in login
+    logged_in, _ = _login(
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 186, in _login
+    auth: wbauth.Auth | None = _use_explicit_key(
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/wandb_login.py", line 241, in _use_explicit_key
+    auth.verify()
+  File "/usr/local/lib/python3.10/dist-packages/wandb/sdk/lib/wbauth/auth.py", line 88, in verify
+    raise AuthenticationError(problems)
+wandb.errors.errors.AuthenticationError: Failed to authenticate with https://api.wandb.ai: <!doctype html><meta charset="utf-8"><meta name=viewport content="width=device-width, initial-scale=1"><title>403</title>403 Forbidden
+=== 8. Probe 2A: DrQ-v2 Standalone Probe (5,000 steps) (t+381s) ===
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+workspace: /tmp/w/RL-ViGen-upstream/exp_local/2026.08.31/124053_action_repeat=1,env=robosuite,eval_every_frames=2500,num_eval_episodes=2,num_train_frames=5000,save_snapshot=True,save_video=False,save_video=False,seed=1,task@_global_=Door,use_tb=True,use_tb=True,use_wandb=False,use_wandb=False
+[2026-08-31 12:40:54,471][robosuite_logs][WARNING] - No private macro file found!
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[2026-08-31 12:40:54,471][robosuite_logs][WARNING] - It is recommended to use a private macro file
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+[2026-08-31 12:40:54,471][robosuite_logs][WARNING] - To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+[2026-08-31 12:40:54,960][matplotlib.font_manager][INFO] - generated new fontManager
+Now the mode is train
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 0 | S: 0 | E: 0 | L: 500 | R: 0.8345 | T: 0:00:01 | SR: 0.0000
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is eval-easy
+Now the mode is train
+| eval           | F: 2500 | S: 2500 | E: 5 | L: 500 | R: 0.8630 | T: 0:02:27 | SR: 0.0000
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+/tmp/w/RL-ViGen-upstream/replay_buffer.py:170: DeprecationWarning: Seeding based on hashing is deprecated
+since Python 3.9 and will be removed in a subsequent version. The only 
+supported seed types are: None, int, float, str, bytes, and bytearray.
+  random.seed(seed)
+| train          | F: 4500 | S: 4500 | E: 9 | L: 500 | R: 0.7291 | BS: 4500 | FPS: 1.7458 | T: 0:04:46
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fde9e1d9c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fde1d91be40>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fde9e1d9ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fde1d91be40>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fde9e1d9c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fde1d635240>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fde9e1d9ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fde1d635240>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fde9e1d9c60>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fdecc3b63c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fdecc3b63c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fdecc3b64c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fde9e1d9ab0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fde759bad40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fdecc3b63c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fdecc3b63c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fdecc3b64c0>,
+	),
+	result = 0
+)
+DrQ-v2 probe completed in 317s
+=== 9. Probe 2B: IDAAC Standalone Probe (5,000 steps) (t+698s) ===
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+Arguments:  Namespace(lr=0.0005, eps=1e-05, alpha=0.99, gamma=0.999, gae_lambda=0.95, entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, seed=1, num_processes=1, num_steps=256, ppo_epoch=1, num_mini_batch=8, clip_param=0.2, log_interval=10, num_env_steps=5000, env_name='robosuite:Door', algo='idaac', log_dir='logs', save_dir='models', no_cuda=False, hidden_size=256, use_best_hps=False, value_epoch=9, value_freq=1, adv_loss_coef=0.25, use_nonlinear_clf=False, order_loss_coef=0.001, clf_hidden_size=4, distribution_mode='easy', num_levels=200, start_level=0, cuda=True)
+Logging to logs
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/__init__.py:7: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead
+  ROBOSUITE_DEFAULT_LOGGER.warn("No private macro file found!")
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Log File:  -robosuite:Door-idaac-s1
+Now the mode is train
+ Actor-Critic Network:  IDAACnet(
+  (base): PolicyResNetBase(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=263, out_features=1, bias=True)
+  )
+  (value_net): ValueResNet(
+    (layer1): Sequential(
+      (0): Conv2d_tf(3, 16, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(16, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer2): Sequential(
+      (0): Conv2d_tf(16, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (layer3): Sequential(
+      (0): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=SAME)
+      (1): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      (2): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+      (3): BasicBlock(
+        (conv1): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        (relu): ReLU(inplace=True)
+        (conv2): Conv2d_tf(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+      )
+    )
+    (flatten): Flatten()
+    (relu): ReLU()
+    (fc): Linear(in_features=2048, out_features=256, bias=True)
+    (critic_linear): Linear(in_features=256, out_features=1, bias=True)
+  )
+  (dist): DiagGaussian(
+    (fc_mean): Linear(in_features=256, out_features=7, bias=True)
+    (logstd): AddBias()
+  )
+)
+ Order Classifier:  LinearOrderClassifier(
+  (main): Sequential(
+    (0): Flatten()
+    (1): Linear(in_features=512, out_features=2, bias=True)
+    (2): Softmax(dim=1)
+  )
+)
+Update 10, step 2816:
+Last 5 training episodes, mean/median reward 2.89/2.55
+Now the mode is eval-easy
+Last 10 test episodes: mean/median reward 7.4/5.4 | success rate 0.000
+------------------------------------------
+| test/mean_episode_reward    | 7.36     |
+| test/median_episode_reward  | 5.37     |
+| test/success_rate           | 0        |
+| train/approx_kl_k3          | 0.00868  |
+| train/clip_fraction         | 0.125    |
+| train/mean_episode_reward   | 2.89     |
+| train/median_episode_reward | 2.55     |
+| train/total_num_steps       | 2.82e+03 |
+------------------------------------------
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5c43a54af0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5ba91d3e40>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5c43a54940>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 150, in free
+    EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglDestroyContext,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5ba91d3e40>,
+	),
+	result = 0
+)
+Exception ignored in: <function MjRenderContext.__del__ at 0x7f5c43a54af0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5c4885a040>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7f5c43a54940>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5c1f7b8cc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7f5c48859f40>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7f5c4885a040>,
+	),
+	result = 0
+)
+IDAAC probe completed in 195s
+=== 10. Probe 2C: PPG Standalone Probe (5,000 steps) (t+893s) ===
+No protocol specified
+No protocol specified
+No protocol specified
+logger: logging to /tmp/ppg
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/__init__.py:7: DeprecationWarning: The 'warn' method is deprecated, use 'warning' instead
+  ROBOSUITE_DEFAULT_LOGGER.warn("No private macro file found!")
+[robosuite WARNING] No private macro file found! (__init__.py:7)
+[robosuite WARNING] It is recommended to use a private macro file (__init__.py:8)
+[robosuite WARNING] To setup, run: python /tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py (__init__.py:9)
+Now the mode is train
+                                     path          shape   numel   pct     std
+aux_vf_head                                                  257   0.0        
+aux_vf_head.bias                                    (1,)       1   0.0     nan
+aux_vf_head.weight                              (1, 256)     256   0.0 0.00623
+pi_enc                                                    622144  49.9        
+pi_enc.cnn                                                622144  49.9        
+pi_enc.cnn.dense                                          524544  42.1        
+pi_enc.cnn.dense.bias                             (256,)     256   0.0 0.00000
+pi_enc.cnn.dense.weight                      (256, 2048)  524288  42.1 0.03094
+pi_enc.cnn.stacks                                          97600   7.8        
+pi_enc.cnn.stacks.0                                         9728   0.8        
+pi_enc.cnn.stacks.0.blocks                                  9280   0.7        
+pi_enc.cnn.stacks.0.blocks.0                                4640   0.4        
+pi_enc.cnn.stacks.0.blocks.0.conv0                          2320   0.2        
+pi_enc.cnn.stacks.0.blocks.0.conv0.bias            (16,)      16   0.0 0.00000
+pi_enc.cnn.stacks.0.blocks.0.conv0.weight (16, 16, 3, 3)    2304   0.2 0.05325
+pi_enc.cnn.stacks.0.blocks.0.conv1                          2320   0.2        
+pi_enc.cnn.stacks.0.blocks.0.conv1.bias            (16,)      16   0.0 0.00000
+pi_enc.cnn.stacks.0.blocks.0.conv1.weight (16, 16, 3, 3)    2304   0.2 0.05319
+pi_enc.cnn.stacks.0.blocks.1                                4640   0.4        
+pi_enc.cnn.stacks.0.blocks.1.conv0                          2320   0.2        
+pi_enc.cnn.stacks.0.blocks.1.conv0.bias            (16,)      16   0.0 0.00000
+pi_enc.cnn.stacks.0.blocks.1.conv0.weight (16, 16, 3, 3)    2304   0.2 0.05326
+pi_enc.cnn.stacks.0.blocks.1.conv1                          2320   0.2        
+pi_enc.cnn.stacks.0.blocks.1.conv1.bias            (16,)      16   0.0 0.00000
+pi_enc.cnn.stacks.0.blocks.1.conv1.weight (16, 16, 3, 3)    2304   0.2 0.05325
+pi_enc.cnn.stacks.0.firstconv                                448   0.0        
+pi_enc.cnn.stacks.0.firstconv.bias                 (16,)      16   0.0 0.00000
+pi_enc.cnn.stacks.0.firstconv.weight       (16, 3, 3, 3)     432   0.0 0.19254
+pi_enc.cnn.stacks.1                                        41632   3.3        
+pi_enc.cnn.stacks.1.blocks                                 36992   3.0        
+pi_enc.cnn.stacks.1.blocks.0                               18496   1.5        
+pi_enc.cnn.stacks.1.blocks.0.conv0                          9248   0.7        
+pi_enc.cnn.stacks.1.blocks.0.conv0.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.1.blocks.0.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.1.blocks.0.conv1                          9248   0.7        
+pi_enc.cnn.stacks.1.blocks.0.conv1.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.1.blocks.0.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.1.blocks.1                               18496   1.5        
+pi_enc.cnn.stacks.1.blocks.1.conv0                          9248   0.7        
+pi_enc.cnn.stacks.1.blocks.1.conv0.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.1.blocks.1.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.1.blocks.1.conv1                          9248   0.7        
+pi_enc.cnn.stacks.1.blocks.1.conv1.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.1.blocks.1.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.1.firstconv                               4640   0.4        
+pi_enc.cnn.stacks.1.firstconv.bias                 (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.1.firstconv.weight      (32, 16, 3, 3)    4608   0.4 0.08334
+pi_enc.cnn.stacks.2                                        46240   3.7        
+pi_enc.cnn.stacks.2.blocks                                 36992   3.0        
+pi_enc.cnn.stacks.2.blocks.0                               18496   1.5        
+pi_enc.cnn.stacks.2.blocks.0.conv0                          9248   0.7        
+pi_enc.cnn.stacks.2.blocks.0.conv0.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.2.blocks.0.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.2.blocks.0.conv1                          9248   0.7        
+pi_enc.cnn.stacks.2.blocks.0.conv1.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.2.blocks.0.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.2.blocks.1                               18496   1.5        
+pi_enc.cnn.stacks.2.blocks.1.conv0                          9248   0.7        
+pi_enc.cnn.stacks.2.blocks.1.conv0.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.2.blocks.1.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.2.blocks.1.conv1                          9248   0.7        
+pi_enc.cnn.stacks.2.blocks.1.conv1.bias            (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.2.blocks.1.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+pi_enc.cnn.stacks.2.firstconv                               9248   0.7        
+pi_enc.cnn.stacks.2.firstconv.bias                 (32,)      32   0.0 0.00000
+pi_enc.cnn.stacks.2.firstconv.weight      (32, 32, 3, 3)    9216   0.7 0.05893
+pi_head                                                     1799   0.1        
+pi_head.bias                                        (7,)       7   0.0 0.00000
+pi_head.weight                                  (7, 256)    1792   0.1 0.00625
+pi_logstd                                           (7,)       7   0.0 0.00000
+vf_enc                                                    622144  49.9        
+vf_enc.cnn                                                622144  49.9        
+vf_enc.cnn.dense                                          524544  42.1        
+vf_enc.cnn.dense.bias                             (256,)     256   0.0 0.00000
+vf_enc.cnn.dense.weight                      (256, 2048)  524288  42.1 0.03094
+vf_enc.cnn.stacks                                          97600   7.8        
+vf_enc.cnn.stacks.0                                         9728   0.8        
+vf_enc.cnn.stacks.0.blocks                                  9280   0.7        
+vf_enc.cnn.stacks.0.blocks.0                                4640   0.4        
+vf_enc.cnn.stacks.0.blocks.0.conv0                          2320   0.2        
+vf_enc.cnn.stacks.0.blocks.0.conv0.bias            (16,)      16   0.0 0.00000
+vf_enc.cnn.stacks.0.blocks.0.conv0.weight (16, 16, 3, 3)    2304   0.2 0.05325
+vf_enc.cnn.stacks.0.blocks.0.conv1                          2320   0.2        
+vf_enc.cnn.stacks.0.blocks.0.conv1.bias            (16,)      16   0.0 0.00000
+vf_enc.cnn.stacks.0.blocks.0.conv1.weight (16, 16, 3, 3)    2304   0.2 0.05326
+vf_enc.cnn.stacks.0.blocks.1                                4640   0.4        
+vf_enc.cnn.stacks.0.blocks.1.conv0                          2320   0.2        
+vf_enc.cnn.stacks.0.blocks.1.conv0.bias            (16,)      16   0.0 0.00000
+vf_enc.cnn.stacks.0.blocks.1.conv0.weight (16, 16, 3, 3)    2304   0.2 0.05325
+vf_enc.cnn.stacks.0.blocks.1.conv1                          2320   0.2        
+vf_enc.cnn.stacks.0.blocks.1.conv1.bias            (16,)      16   0.0 0.00000
+vf_enc.cnn.stacks.0.blocks.1.conv1.weight (16, 16, 3, 3)    2304   0.2 0.05325
+vf_enc.cnn.stacks.0.firstconv                                448   0.0        
+vf_enc.cnn.stacks.0.firstconv.bias                 (16,)      16   0.0 0.00000
+vf_enc.cnn.stacks.0.firstconv.weight       (16, 3, 3, 3)     432   0.0 0.19226
+vf_enc.cnn.stacks.1                                        41632   3.3        
+vf_enc.cnn.stacks.1.blocks                                 36992   3.0        
+vf_enc.cnn.stacks.1.blocks.0                               18496   1.5        
+vf_enc.cnn.stacks.1.blocks.0.conv0                          9248   0.7        
+vf_enc.cnn.stacks.1.blocks.0.conv0.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.1.blocks.0.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.1.blocks.0.conv1                          9248   0.7        
+vf_enc.cnn.stacks.1.blocks.0.conv1.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.1.blocks.0.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.1.blocks.1                               18496   1.5        
+vf_enc.cnn.stacks.1.blocks.1.conv0                          9248   0.7        
+vf_enc.cnn.stacks.1.blocks.1.conv0.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.1.blocks.1.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.1.blocks.1.conv1                          9248   0.7        
+vf_enc.cnn.stacks.1.blocks.1.conv1.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.1.blocks.1.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.1.firstconv                               4640   0.4        
+vf_enc.cnn.stacks.1.firstconv.bias                 (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.1.firstconv.weight      (32, 16, 3, 3)    4608   0.4 0.08334
+vf_enc.cnn.stacks.2                                        46240   3.7        
+vf_enc.cnn.stacks.2.blocks                                 36992   3.0        
+vf_enc.cnn.stacks.2.blocks.0                               18496   1.5        
+vf_enc.cnn.stacks.2.blocks.0.conv0                          9248   0.7        
+vf_enc.cnn.stacks.2.blocks.0.conv0.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.2.blocks.0.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.2.blocks.0.conv1                          9248   0.7        
+vf_enc.cnn.stacks.2.blocks.0.conv1.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.2.blocks.0.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.2.blocks.1                               18496   1.5        
+vf_enc.cnn.stacks.2.blocks.1.conv0                          9248   0.7        
+vf_enc.cnn.stacks.2.blocks.1.conv0.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.2.blocks.1.conv0.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.2.blocks.1.conv1                          9248   0.7        
+vf_enc.cnn.stacks.2.blocks.1.conv1.bias            (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.2.blocks.1.conv1.weight (32, 32, 3, 3)    9216   0.7 0.03765
+vf_enc.cnn.stacks.2.firstconv                               9248   0.7        
+vf_enc.cnn.stacks.2.firstconv.bias                 (32,)      32   0.0 0.00000
+vf_enc.cnn.stacks.2.firstconv.weight      (32, 32, 3, 3)    9216   0.7 0.05893
+vf_vhead                                                     257   0.0        
+vf_vhead.bias                                       (1,)       1   0.0     nan
+vf_vhead.weight                                 (1, 256)     256   0.0 0.00626
+~total                                                   1246608 100.0        
+Saving to  /tmp/ppg/model.jd IC=0
+Warning: nminibatch > ntrain!! (8 > 1)
+parameter 'aux_vf_head.weight' torch.Size([1, 256]) has no gradient for 'PPO'
+parameter 'aux_vf_head.bias' torch.Size([1]) has no gradient for 'PPO'
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.93257 |     -0.09933 |    -6.44e-06 |      0.00000 |      0.00000 |     4.25e-09 |     1.07e-08 |     -0.09933 |      0.35199
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.16e+09  |
+| del_time           | 4.99      |
+| EpLenMean          | nan       |
+| EpRewMean          | nan       |
+| EpSuccessMean      | nan       |
+| GpuMaxMemory       | 6.66e+08  |
+| IPS_total          | 51.3      |
+| Iter               | 0         |
+| Misc/FrameRewMean  | 0.0384    |
+| Misc/InteractCount | 256       |
+| Misc/TimeElapsed   | 4.99      |
+| Opt/approx_kl_k3   | 1.07e-08  |
+| Opt/approxkl       | 4.25e-09  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.352     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -6.44e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.663     |
+| VFStats/AdvStd     | 0.515     |
+| VFStats/EV         | -0.00501  |
+| VFStats/VpredMean  | -0.0308   |
+| VFStats/VpredStd   | 0.0039    |
+| VFStats/VtargMean  | 0.632     |
+| VFStats/VtargStd   | 0.514     |
+| wait_optimization  | 0.494     |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.93007 |     -0.09930 |     2.46e-06 |      0.00000 |      0.00000 |     2.51e-09 |     1.09e-08 |     -0.09930 |      0.18393
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.16e+09 |
+| del_time           | 4.3      |
+| EpLenMean          | 500      |
+| EpRewMean          | 1.18     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 59.6     |
+| Iter               | 1        |
+| Misc/FrameRewMean  | 0.0342   |
+| Misc/InteractCount | 512      |
+| Misc/TimeElapsed   | 9.29     |
+| Opt/approx_kl_k3   | 1.09e-08 |
+| Opt/approxkl       | 2.51e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.184    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 2.46e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.583    |
+| VFStats/AdvStd     | 0.169    |
+| VFStats/EV         | 0.00787  |
+| VFStats/VpredMean  | 0.226    |
+| VFStats/VpredStd   | 0.00262  |
+| VFStats/VtargMean  | 0.809    |
+| VFStats/VtargStd   | 0.17     |
+| wait_optimization  | 0.0284   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92862 |     -0.09929 |     1.58e-06 |      0.00000 |      0.00000 |     3.08e-09 |     1.09e-08 |     -0.09928 |      0.29916
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.16e+09 |
+| del_time           | 4.06     |
+| EpLenMean          | 500      |
+| EpRewMean          | 1.18     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 63.1     |
+| Iter               | 2        |
+| Misc/FrameRewMean  | 0.0383   |
+| Misc/InteractCount | 768      |
+| Misc/TimeElapsed   | 13.3     |
+| Opt/approx_kl_k3   | 1.09e-08 |
+| Opt/approxkl       | 3.08e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.299    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 1.58e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.669    |
+| VFStats/AdvStd     | 0.389    |
+| VFStats/EV         | -0.022   |
+| VFStats/VpredMean  | 0.511    |
+| VFStats/VpredStd   | 0.0117   |
+| VFStats/VtargMean  | 1.18     |
+| VFStats/VtargStd   | 0.384    |
+| wait_optimization  | 0.0285   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92790 |     -0.09928 |     1.36e-05 |      0.00000 |      0.00000 |     6.27e-09 |     1.70e-08 |     -0.09927 |      0.15397
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.17e+09 |
+| del_time           | 4.02     |
+| EpLenMean          | 500      |
+| EpRewMean          | 3.08     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 63.6     |
+| Iter               | 3        |
+| Misc/FrameRewMean  | 0.026    |
+| Misc/InteractCount | 1.02e+03 |
+| Misc/TimeElapsed   | 17.4     |
+| Opt/approx_kl_k3   | 1.7e-08  |
+| Opt/approxkl       | 6.27e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.154    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 1.36e-05 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.373    |
+| VFStats/AdvStd     | 0.412    |
+| VFStats/EV         | -0.0415  |
+| VFStats/VpredMean  | 0.975    |
+| VFStats/VpredStd   | 0.0212   |
+| VFStats/VtargMean  | 1.35     |
+| VFStats/VtargStd   | 0.403    |
+| wait_optimization  | 0.0284   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92694 |     -0.09927 |     8.29e-06 |      0.00000 |      0.00000 |     5.42e-09 |     1.47e-08 |     -0.09926 |      0.11494
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.17e+09 |
+| del_time           | 4.06     |
+| EpLenMean          | 500      |
+| EpRewMean          | 3.08     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 63       |
+| Iter               | 4        |
+| Misc/FrameRewMean  | 0.018    |
+| Misc/InteractCount | 1.28e+03 |
+| Misc/TimeElapsed   | 21.4     |
+| Opt/approx_kl_k3   | 1.47e-08 |
+| Opt/approxkl       | 5.42e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.115    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 8.29e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.321    |
+| VFStats/AdvStd     | 0.357    |
+| VFStats/EV         | 0.0762   |
+| VFStats/VpredMean  | 1.71     |
+| VFStats/VpredStd   | 0.049    |
+| VFStats/VtargMean  | 2.03     |
+| VFStats/VtargStd   | 0.372    |
+| wait_optimization  | 0.0286   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92580 |     -0.09926 |     6.30e-06 |      0.00000 |      0.00000 |     4.98e-09 |     1.40e-08 |     -0.09925 |      0.20552
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.17e+09 |
+| del_time           | 4.05     |
+| EpLenMean          | 500      |
+| EpRewMean          | 3.47     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 63.3     |
+| Iter               | 5        |
+| Misc/FrameRewMean  | 0.0246   |
+| Misc/InteractCount | 1.54e+03 |
+| Misc/TimeElapsed   | 25.5     |
+| Opt/approx_kl_k3   | 1.4e-08  |
+| Opt/approxkl       | 4.98e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.206    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 6.3e-06  |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.164    |
+| VFStats/AdvStd     | 0.621    |
+| VFStats/EV         | 0.00888  |
+| VFStats/VpredMean  | 2.93     |
+| VFStats/VpredStd   | 0.061    |
+| VFStats/VtargMean  | 3.09     |
+| VFStats/VtargStd   | 0.624    |
+| wait_optimization  | 0.0284   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92531 |     -0.09925 |    -4.99e-06 |      0.00000 |      0.00000 |     5.00e-09 |     1.14e-08 |     -0.09926 |      0.00702
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.18e+09  |
+| del_time           | 4.08      |
+| EpLenMean          | 500       |
+| EpRewMean          | 3.47      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 62.8      |
+| Iter               | 6         |
+| Misc/FrameRewMean  | 0.00643   |
+| Misc/InteractCount | 1.79e+03  |
+| Misc/TimeElapsed   | 29.6      |
+| Opt/approx_kl_k3   | 1.14e-08  |
+| Opt/approxkl       | 5e-09     |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.00702   |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -4.99e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.0401    |
+| VFStats/AdvStd     | 0.112     |
+| VFStats/EV         | 0.454     |
+| VFStats/VpredMean  | 4.8       |
+| VFStats/VpredStd   | 0.188     |
+| VFStats/VtargMean  | 4.84      |
+| VFStats/VtargStd   | 0.151     |
+| wait_optimization  | 0.0283    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92553 |     -0.09926 |    -5.00e-06 |      0.00000 |      0.00000 |     8.47e-09 |     1.70e-08 |     -0.09926 |      1.59490
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.18e+09 |
+| del_time           | 4.06     |
+| EpLenMean          | 500      |
+| EpRewMean          | 2.9      |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 63       |
+| Iter               | 7        |
+| Misc/FrameRewMean  | 0.0145   |
+| Misc/InteractCount | 2.05e+03 |
+| Misc/TimeElapsed   | 33.6     |
+| Opt/approx_kl_k3   | 1.7e-08  |
+| Opt/approxkl       | 8.47e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 1.59     |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | -5e-06   |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | -0.576   |
+| VFStats/AdvStd     | 1.69     |
+| VFStats/EV         | -0.11    |
+| VFStats/VpredMean  | 8.59     |
+| VFStats/VpredStd   | 0.234    |
+| VFStats/VtargMean  | 8.01     |
+| VFStats/VtargStd   | 1.61     |
+| wait_optimization  | 0.0283   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92570 |     -0.09926 |    -1.83e-06 |      0.00000 |      0.00000 |     1.69e-09 |     9.78e-09 |     -0.09926 |      0.06472
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.18e+09  |
+| del_time           | 4.07      |
+| EpLenMean          | 500       |
+| EpRewMean          | 2.9       |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 62.9      |
+| Iter               | 8         |
+| Misc/FrameRewMean  | 0.0237    |
+| Misc/InteractCount | 2.3e+03   |
+| Misc/TimeElapsed   | 37.7      |
+| Opt/approx_kl_k3   | 9.78e-09  |
+| Opt/approxkl       | 1.69e-09  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.0647    |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -1.83e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.291     |
+| VFStats/AdvStd     | 0.212     |
+| VFStats/EV         | -0.00587  |
+| VFStats/VpredMean  | 6.88      |
+| VFStats/VpredStd   | 0.164     |
+| VFStats/VtargMean  | 7.17      |
+| VFStats/VtargStd   | 0.211     |
+| wait_optimization  | 0.0285    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92592 |     -0.09926 |    -2.89e-06 |      0.00000 |      0.00000 |     1.91e-09 |     7.22e-09 |     -0.09926 |      0.82388
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.19e+09  |
+| del_time           | 4.05      |
+| EpLenMean          | 500       |
+| EpRewMean          | 3.48      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 63.3      |
+| Iter               | 9         |
+| Misc/FrameRewMean  | 0.0268    |
+| Misc/InteractCount | 2.56e+03  |
+| Misc/TimeElapsed   | 41.7      |
+| Opt/approx_kl_k3   | 7.22e-09  |
+| Opt/approxkl       | 1.91e-09  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.824     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -2.89e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | -0.143    |
+| VFStats/AdvStd     | 1.28      |
+| VFStats/EV         | 0.0231    |
+| VFStats/VpredMean  | 6.58      |
+| VFStats/VpredStd   | 0.222     |
+| VFStats/VtargMean  | 6.43      |
+| VFStats/VtargStd   | 1.29      |
+| wait_optimization  | 0.0283    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92613 |     -0.09926 |    -2.78e-06 |      0.00000 |      0.00000 |     8.52e-10 |     5.36e-09 |     -0.09926 |      0.30718
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.19e+09  |
+| del_time           | 4.06      |
+| EpLenMean          | 500       |
+| EpRewMean          | 3.48      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 63        |
+| Iter               | 10        |
+| Misc/FrameRewMean  | 0.0394    |
+| Misc/InteractCount | 2.82e+03  |
+| Misc/TimeElapsed   | 45.8      |
+| Opt/approx_kl_k3   | 5.36e-09  |
+| Opt/approxkl       | 8.52e-10  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.307     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -2.78e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.63      |
+| VFStats/AdvStd     | 0.467     |
+| VFStats/EV         | 0.175     |
+| VFStats/VpredMean  | 5.79      |
+| VFStats/VpredStd   | 0.103     |
+| VFStats/VtargMean  | 6.42      |
+| VFStats/VtargStd   | 0.514     |
+| wait_optimization  | 0.0286    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92657 |     -0.09927 |    -4.47e-08 |      0.00000 |      0.00000 |     4.80e-09 |     1.42e-08 |     -0.09927 |      0.74742
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.19e+09  |
+| del_time           | 4.16      |
+| EpLenMean          | 500       |
+| EpRewMean          | 3.95      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 61.6      |
+| Iter               | 11        |
+| Misc/FrameRewMean  | 0.00493   |
+| Misc/InteractCount | 3.07e+03  |
+| Misc/TimeElapsed   | 50        |
+| Opt/approx_kl_k3   | 1.42e-08  |
+| Opt/approxkl       | 4.8e-09   |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.747     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -4.47e-08 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | -0.51     |
+| VFStats/AdvStd     | 1.11      |
+| VFStats/EV         | 0.0596    |
+| VFStats/VpredMean  | 6.14      |
+| VFStats/VpredStd   | 0.0862    |
+| VFStats/VtargMean  | 5.63      |
+| VFStats/VtargStd   | 1.15      |
+| wait_optimization  | 0.0284    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92715 |     -0.09927 |    -5.50e-06 |      0.00000 |      0.00000 |     5.68e-09 |     1.91e-08 |     -0.09928 |      0.29415
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.2e+09  |
+| del_time           | 4.11     |
+| EpLenMean          | 500      |
+| EpRewMean          | 3.95     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 62.3     |
+| Iter               | 12       |
+| Misc/FrameRewMean  | 0.0288   |
+| Misc/InteractCount | 3.33e+03 |
+| Misc/TimeElapsed   | 54.1     |
+| Opt/approx_kl_k3   | 1.91e-08 |
+| Opt/approxkl       | 5.68e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.294    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | -5.5e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.448    |
+| VFStats/AdvStd     | 0.624    |
+| VFStats/EV         | -0.0953  |
+| VFStats/VpredMean  | 6.16     |
+| VFStats/VpredStd   | 0.156    |
+| VFStats/VtargMean  | 6.61     |
+| VFStats/VtargStd   | 0.596    |
+| wait_optimization  | 0.0289   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92762 |     -0.09928 |     3.58e-06 |      0.00000 |      0.00000 |     3.21e-09 |     1.00e-08 |     -0.09927 |      0.78599
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.2e+09  |
+| del_time           | 4.29     |
+| EpLenMean          | 500      |
+| EpRewMean          | 4.36     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 59.7     |
+| Iter               | 13       |
+| Misc/FrameRewMean  | 0.0152   |
+| Misc/InteractCount | 3.58e+03 |
+| Misc/TimeElapsed   | 58.4     |
+| Opt/approx_kl_k3   | 1e-08    |
+| Opt/approxkl       | 3.21e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.786    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 3.58e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | -0.317   |
+| VFStats/AdvStd     | 1.22     |
+| VFStats/EV         | -0.00835 |
+| VFStats/VpredMean  | 6.3      |
+| VFStats/VpredStd   | 0.0997   |
+| VFStats/VtargMean  | 5.98     |
+| VFStats/VtargStd   | 1.21     |
+| wait_optimization  | 0.0287   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92813 |     -0.09928 |    -8.40e-06 |      0.00000 |      0.00000 |     4.54e-09 |     1.12e-08 |     -0.09929 |      0.15383
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.2e+09  |
+| del_time           | 4.26     |
+| EpLenMean          | 500      |
+| EpRewMean          | 4.36     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 60.1     |
+| Iter               | 14       |
+| Misc/FrameRewMean  | 0.0301   |
+| Misc/InteractCount | 3.84e+03 |
+| Misc/TimeElapsed   | 62.6     |
+| Opt/approx_kl_k3   | 1.12e-08 |
+| Opt/approxkl       | 4.54e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.154    |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | -8.4e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | 0.435    |
+| VFStats/AdvStd     | 0.345    |
+| VFStats/EV         | -0.843   |
+| VFStats/VpredMean  | 6.39     |
+| VFStats/VpredStd   | 0.154    |
+| VFStats/VtargMean  | 6.82     |
+| VFStats/VtargStd   | 0.254    |
+| wait_optimization  | 0.029    |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92867 |     -0.09929 |     5.72e-06 |      0.00000 |      0.00000 |     8.82e-09 |     1.42e-08 |     -0.09928 |      0.92997
+RCALL_LOGDIR:  /tmp/ppg
+---------------------------------
+| CpuMaxMemory       | 2.2e+09  |
+| del_time           | 4.31     |
+| EpLenMean          | 500      |
+| EpRewMean          | 4.69     |
+| EpSuccessMean      | 0        |
+| GpuMaxMemory       | 6.81e+08 |
+| IPS_total          | 59.4     |
+| Iter               | 15       |
+| Misc/FrameRewMean  | 0.0141   |
+| Misc/InteractCount | 4.1e+03  |
+| Misc/TimeElapsed   | 66.9     |
+| Opt/approx_kl_k3   | 1.42e-08 |
+| Opt/approxkl       | 8.82e-09 |
+| Opt/clipfrac       | 0        |
+| Opt/entropy        | 9.93     |
+| Opt/loss_pi        | -0.0993  |
+| Opt/loss_vf        | 0.93     |
+| Opt/negent         | -0.0993  |
+| Opt/pg             | 5.72e-06 |
+| Opt/pi_kl          | 0        |
+| VFStats/AdvMean    | -0.362   |
+| VFStats/AdvStd     | 1.32     |
+| VFStats/EV         | -0.125   |
+| VFStats/VpredMean  | 6.71     |
+| VFStats/VpredStd   | 0.277    |
+| VFStats/VtargMean  | 6.34     |
+| VFStats/VtargStd   | 1.24     |
+| wait_optimization  | 0.0286   |
+---------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92895 |     -0.09929 |    -6.56e-06 |      0.00000 |      0.00000 |     3.23e-09 |     9.55e-09 |     -0.09930 |      0.37532
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.21e+09  |
+| del_time           | 4.34      |
+| EpLenMean          | 500       |
+| EpRewMean          | 4.69      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 59        |
+| Iter               | 16        |
+| Misc/FrameRewMean  | 0.0344    |
+| Misc/InteractCount | 4.35e+03  |
+| Misc/TimeElapsed   | 71.3      |
+| Opt/approx_kl_k3   | 9.55e-09  |
+| Opt/approxkl       | 3.23e-09  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.375     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -6.56e-06 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.515     |
+| VFStats/AdvStd     | 0.699     |
+| VFStats/EV         | 0.103     |
+| VFStats/VpredMean  | 6.4       |
+| VFStats/VpredStd   | 0.104     |
+| VFStats/VtargMean  | 6.92      |
+| VFStats/VtargStd   | 0.738     |
+| wait_optimization  | 0.0289    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92941 |     -0.09929 |    -1.25e-05 |      0.00000 |      0.00000 |     2.18e-08 |     2.96e-08 |     -0.09931 |      0.92334
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.21e+09  |
+| del_time           | 4.41      |
+| EpLenMean          | 500       |
+| EpRewMean          | 4.99      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 58.1      |
+| Iter               | 17        |
+| Misc/FrameRewMean  | 0.00355   |
+| Misc/InteractCount | 4.61e+03  |
+| Misc/TimeElapsed   | 75.7      |
+| Opt/approx_kl_k3   | 2.96e-08  |
+| Opt/approxkl       | 2.18e-08  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.923     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -1.25e-05 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | -0.553    |
+| VFStats/AdvStd     | 1.24      |
+| VFStats/EV         | 0.0233    |
+| VFStats/VpredMean  | 6.8       |
+| VFStats/VpredStd   | 0.114     |
+| VFStats/VtargMean  | 6.25      |
+| VFStats/VtargStd   | 1.26      |
+| wait_optimization  | 0.0286    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.92980 |     -0.09930 |    -1.32e-05 |      0.00000 |      0.00000 |     3.46e-08 |     4.28e-08 |     -0.09931 |      0.02446
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.21e+09  |
+| del_time           | 4.35      |
+| EpLenMean          | 500       |
+| EpRewMean          | 4.99      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 58.9      |
+| Iter               | 18        |
+| Misc/FrameRewMean  | 0.0116    |
+| Misc/InteractCount | 4.86e+03  |
+| Misc/TimeElapsed   | 80        |
+| Opt/approx_kl_k3   | 4.28e-08  |
+| Opt/approxkl       | 3.46e-08  |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.0245    |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -1.32e-05 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | 0.0943    |
+| VFStats/AdvStd     | 0.201     |
+| VFStats/EV         | 0.49      |
+| VFStats/VpredMean  | 6.98      |
+| VFStats/VpredStd   | 0.182     |
+| VFStats/VtargMean  | 7.07      |
+| VFStats/VtargStd   | 0.282     |
+| wait_optimization  | 0.0288    |
+----------------------------------
+Warning: nminibatch > ntrain!! (8 > 1)
+     entropy |       negent |           pg |        pi_kl |     clipfrac |     approxkl | approx_kl_k3 |      loss_pi |      loss_vf
+     9.93045 |     -0.09930 |    -8.57e-07 |      0.00000 |      0.00000 |     1.80e-09 |     1.26e-08 |     -0.09931 |      0.81067
+RCALL_LOGDIR:  /tmp/ppg
+----------------------------------
+| CpuMaxMemory       | 2.22e+09  |
+| del_time           | 4.24      |
+| EpLenMean          | 500       |
+| EpRewMean          | 4.84      |
+| EpSuccessMean      | 0         |
+| GpuMaxMemory       | 6.81e+08  |
+| IPS_total          | 60.4      |
+| Iter               | 19        |
+| Misc/FrameRewMean  | 0.00957   |
+| Misc/InteractCount | 5.12e+03  |
+| Misc/TimeElapsed   | 84.3      |
+| Opt/approx_kl_k3   | 1.26e-08  |
+| Opt/approxkl       | 1.8e-09   |
+| Opt/clipfrac       | 0         |
+| Opt/entropy        | 9.93      |
+| Opt/loss_pi        | -0.0993   |
+| Opt/loss_vf        | 0.811     |
+| Opt/negent         | -0.0993   |
+| Opt/pg             | -8.57e-07 |
+| Opt/pi_kl          | 0         |
+| VFStats/AdvMean    | -0.44     |
+| VFStats/AdvStd     | 1.2       |
+| VFStats/EV         | 0.105     |
+| VFStats/VpredMean  | 6.7       |
+| VFStats/VpredStd   | 0.222     |
+| VFStats/VtargMean  | 6.26      |
+| VFStats/VtargStd   | 1.27      |
+| wait_optimization  | 0.0287    |
+----------------------------------
+Exception ignored in: <function MjRenderContext.__del__ at 0x7fc01757add0>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/utils/binding_utils.py", line 203, in __del__
+    self.gl_ctx.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fc04f16cbc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fc017b090c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fc017b090c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fc017b091c0>,
+	),
+	result = 0
+)
+Exception ignored in: <function EGLGLContext.__del__ at 0x7fc01757ac20>
+Traceback (most recent call last):
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 155, in __del__
+    self.free()
+  File "/tmp/w/RL-ViGen-upstream/third_party/robosuite/robosuite/renderers/context/egl_context.py", line 149, in free
+    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+  File "/usr/local/lib/python3.10/dist-packages/OpenGL/error.py", line 230, in glCheckError
+    raise self._errorClass(
+OpenGL.raw.EGL._errors.EGLError: EGLError(
+	err = EGL_NOT_INITIALIZED,
+	baseOperation = eglMakeCurrent,
+	cArguments = (
+		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fc04f16cbc0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fc017b090c0>,
+		<OpenGL._opaque.EGLSurface_pointer object at 0x7fc017b090c0>,
+		<OpenGL._opaque.EGLContext_pointer object at 0x7fc017b091c0>,
+	),
+	result = 0
+)
+PPG probe completed in 92s
+=== 11. Probe 2D: ALDA Standalone Probe (5,000 steps, Full Buffer) (t+985s) ===
+2026-08-31 12:50:54,253 [INFO] __main__: scripts/train.py --experiment_spec_file specs/train_alda_robosuite_door.yaml --results_dir results --use_wandb False --spec_overrides --spec.trainer.config.n_train_steps=5000 --spec.trainer.config.seed=1
+[37m[1m[2026-08-31 12:50:54,253] [INFO] __main__: scripts/train.py --experiment_spec_file specs/train_alda_robosuite_door.yaml --results_dir results --use_wandb False --spec_overrides --spec.trainer.config.n_train_steps=5000 --spec.trainer.config.seed=1[0m
+2026-08-31 12:50:54,254 [INFO] utils: ---- Options ----
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: ---- Options ----[0m
+2026-08-31 12:50:54,254 [INFO] utils: name   : alda_robosuite_door
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: name   : alda_robosuite_door[0m
+2026-08-31 12:50:54,254 [INFO] utils: trainer:
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils: trainer:[0m
+2026-08-31 12:50:54,254 [INFO] utils:     class : ALDA
+[37m[1m[2026-08-31 12:50:54,254] [INFO] utils:     class : ALDA[0m
+2026-08-31 12:50:54,255 [INFO] utils:     module: trainers.alda_trainer
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:     module: trainers.alda_trainer[0m
+2026-08-31 12:50:54,255 [INFO] utils:     config:
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:     config:[0m
+2026-08-31 12:50:54,255 [INFO] utils:         batch_size       : 128
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         batch_size       : 128[0m
+2026-08-31 12:50:54,255 [INFO] utils:         beta             : 100
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         beta             : 100[0m
+2026-08-31 12:50:54,255 [INFO] utils:         debug            : False
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         debug            : False[0m
+2026-08-31 12:50:54,255 [INFO] utils:         device           : cuda:0
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         device           : cuda:0[0m
+2026-08-31 12:50:54,255 [INFO] utils:         exp_dir          : results/alda_robosuite_door/seed_1
+[37m[1m[2026-08-31 12:50:54,255] [INFO] utils:         exp_dir          : results/alda_robosuite_door/seed_1[0m
+2026-08-31 12:50:54,256 [INFO] utils:         n_train_steps    : 5000
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         n_train_steps    : 5000[0m
+2026-08-31 12:50:54,256 [INFO] utils:         num_latents      : 12
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         num_latents      : 12[0m
+2026-08-31 12:50:54,256 [INFO] utils:         seed             : 1
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         seed             : 1[0m
+2026-08-31 12:50:54,256 [INFO] utils:         use_wandb        : False
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         use_wandb        : False[0m
+2026-08-31 12:50:54,256 [INFO] utils:         values_per_latent: 12
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         values_per_latent: 12[0m
+2026-08-31 12:50:54,256 [INFO] utils:         env:
+[37m[1m[2026-08-31 12:50:54,256] [INFO] utils:         env:[0m
+2026-08-31 12:50:54,257 [INFO] utils:             action_repeat : 1
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             action_repeat : 1[0m
+2026-08-31 12:50:54,257 [INFO] utils:             domain_name   : robosuite
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             domain_name   : robosuite[0m
+2026-08-31 12:50:54,257 [INFO] utils:             episode_length: 500
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             episode_length: 500[0m
+2026-08-31 12:50:54,257 [INFO] utils:             frame_stack   : 3
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             frame_stack   : 3[0m
+2026-08-31 12:50:54,257 [INFO] utils:             scene_id      : 0
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             scene_id      : 0[0m
+2026-08-31 12:50:54,257 [INFO] utils:             task_name     : Door
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils:             task_name     : Door[0m
+2026-08-31 12:50:54,257 [INFO] utils: -----------------
+[37m[1m[2026-08-31 12:50:54,257] [INFO] utils: -----------------[0m
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+Traceback (most recent call last):
+  File "/tmp/w/runnable/alda/scripts/train.py", line 132, in <module>
+    main()
+  File "/tmp/w/runnable/alda/scripts/train.py", line 113, in main
+    trainer = create_instance_from_spec(spec['trainer'], name=spec['name'])
+  File "/tmp/w/runnable/alda/common/utils.py", line 100, in create_instance_from_spec
+    module = importlib.import_module(module_name)
+  File "/usr/lib/python3.10/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/tmp/w/runnable/alda/trainers/alda_trainer.py", line 10, in <module>
+    from disentangle.utils.metrics import log_reconstruction_metrics, peak_signal_to_noise_ratio
+  File "/tmp/w/runnable/alda/disentangle/utils/metrics.py", line 6, in <module>
+    import sklearn
+ModuleNotFoundError: No module named 'sklearn'
+ALDA probe completed in 3s
+=== 12. Package Artifacts & Telemetry Logs (t+988s) ===
+Packaging complete: 17486 bytes written to /job/result_uzy
+=== TOTAL STAGE 2 DURATION: 988s (t+988s) ===

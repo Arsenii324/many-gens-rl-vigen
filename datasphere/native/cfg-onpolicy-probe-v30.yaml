@@ -1,0 +1,21 @@
+# [Claude 2026-09-02 11:00 MSK: retry of the first-contact probe for alda, ppg and ibac_sni.
+# CTRL is deliberately not here: job bt1a8q6ee090jh1k9npp showed its jax[cuda12] install replaces
+# numpy and cudnn with versions torch, numba and matplotlib reject, and the runner now refuses a
+# mixed job before the bootstrap rather than discovering it after one. PPG additionally gained
+# python3-dev, without which mpi4py has no wheel and cannot build.]
+name: vigen-native-onpolicy-probe-v30
+desc: First CUDA contact for alda, ppg and ibac_sni; contract and dependency evidence only, not a calibration.
+cmd: >-
+  timeout --foreground 11000s env
+  CELLS=alda,ppg,ibac_sni FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=2400
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - payload-onpolicy-v30.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

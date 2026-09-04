@@ -1,0 +1,26 @@
+# [Claude 2026-09-02 05:55 MSK: first calibration of the second source family. rad and soda run
+# dmcontrol-generalization-benchmark's own train.py against RL-ViGen's robosuite Door, so the job
+# still bootstraps and patches RL-ViGen -- the environment is shared, the training loop is not.
+# soda overlays from Places365 exactly as svea and sgqn do, so the same declared private input is
+# supplied and pinned to the val split for all three; rad uses random_crop only and needs none.
+# Verified locally end to end at 2,000 frames before this was written: marker, terminal
+# checkpoint, train.log, eval.log and info.log all returned.]
+name: vigen-native-dmcgb-calibration-v22
+desc: Native rad and soda Door 10k serial calibrations in one job; readiness and resource evidence only.
+cmd: >-
+  timeout --foreground 8400s env
+  CELLS=rad,soda FRAMES=10000 TASK=Door SEED=1
+  CELL_TIMEOUT_SECONDS=3000
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - dmcgb-payload-v22.tgz: CODE
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

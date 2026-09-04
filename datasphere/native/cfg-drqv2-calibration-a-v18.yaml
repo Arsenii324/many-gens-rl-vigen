@@ -1,0 +1,17 @@
+# [Codex 2026-09-01 16:31 MSK: immutable unsubmitted DrQ-v2 A configuration for the P15 terminal-evaluation protocol]
+name: vigen-native-drqv2-calibration-a-v18
+desc: Native DrQ-v2 Door 10k terminal-evaluation calibration; serial readiness evidence only.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=drqv2 FRAMES=10000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  # [Codex 2026-09-01 16:31 MSK: DataSphere resolves these inputs from the candidate-root submission directory]
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v18.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

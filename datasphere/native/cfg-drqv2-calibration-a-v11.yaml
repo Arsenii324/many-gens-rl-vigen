@@ -1,0 +1,16 @@
+# [Codex 2026-09-01 10:18 MSK: immutable corrected rerun after v9's undeclared-termcolor import failure]
+name: vigen-native-drqv2-calibration-a-v11
+desc: Native DrQ-v2 Door 10k dependency-contract rerun; serial readiness evidence only.
+cmd: >-
+  timeout --foreground 1800s env
+  BASELINE=drqv2 FRAMES=10000 TASK=Door SEED=1
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - run_probe.sh: JOB
+  - native-payload-v11.tgz: CODE
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

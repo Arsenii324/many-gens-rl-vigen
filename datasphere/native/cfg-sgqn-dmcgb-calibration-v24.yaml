@@ -1,0 +1,26 @@
+# [Claude 2026-09-02 08:05 MSK: three baselines, one bootstrap. sgqn is a retry after job
+# bt1qb6jomkvrqki8nsj9 exposed the undeclared captum import; rad and soda are the first calibration
+# of the dmc_gb family. They share this job because bootstrap is about nine minutes of every job and
+# all three need the same RL-ViGen environment and the same Places365 val input -- sgqn through
+# utils.random_overlay, soda through augmentations.random_overlay, rad through neither but it costs
+# nothing to carry. The payload declares both families explicitly; it contains no clone that this
+# job does not run.]
+name: vigen-native-sgqn-dmcgb-calibration-v24
+desc: sgqn retry plus first rad and soda Door 10k calibrations in one job; readiness and resource evidence only.
+cmd: >-
+  timeout --foreground 10800s env
+  CELLS=sgqn,rad,soda FRAMES=10000 TASK=Door SEED=1
+  CELL_TIMEOUT_SECONDS=3000
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - native-payload-v24.tgz: CODE
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1
