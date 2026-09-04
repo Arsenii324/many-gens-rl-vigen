@@ -4625,10 +4625,26 @@ not a choice anyone is free to make differently.
 > **So the default above is superseded for `ibac_sni` specifically.** Its own escalation rule —
 > *"either fires → the coefficient is decided per baseline on that evidence, and the affected cells
 > are re-run rather than reported with a caveat"* — now applies, and holding 0.01 there is no longer
-> the evidenced choice. **What replaces it is the owner's**, because the options are not equivalent:
-> lowering `entropy_coeff` for `ibac_sni` alone is a declared per-baseline deviation from the
-> authors' value, while leaving it makes every `ibac_sni` number a measurement of a policy that is
-> mostly clipping. The three others stay as they were; their measurements did not fire it.
+> the evidenced choice. The three others stay as they were; their measurements did not fire it.
+>
+> **DEFAULT SET, 2026-09-04, awaiting approval — do NOT change the coefficient, and stop treating
+> `ibac_sni` as poolable.** The two halves are separately argued:
+>
+> * **Do not change it.** Changing `entropy_coeff` requires evidence pointing at a *value*, and
+>   none exists. The measurement says 0.01 is wrong for this head; it does not say what is right.
+>   Picking a number by judgement would replace a transcribed author's constant with an invented
+>   one and would be the *less* defensible of the two undeclared quantities.
+> * **Stop pooling it.** Reporting a number from a policy whose action mass is 58% outside the box,
+>   in a table beside eleven that are not, is the kind of silent join this project exists to refuse.
+>   **`ctrl` is the precedent**: it already sits outside the comparable table for a stated reason
+>   ([COMPARABILITY_CONTRACT](COMPARABILITY_CONTRACT.md) §5d, a different estimand). `ibac_sni`
+>   joins it for a different stated reason — its policy is mostly clipping — and both stay visible
+>   with their diagnostic attached rather than being dropped.
+>
+> **The deciding experiment, named and NOT run** (compute is not being spent on it): a three-value
+> `entropy_coeff` sweep at 100k on `ibac_sni` alone, reading `boundary_fraction` at the endpoint,
+> which is roughly three cells of about an hour each. That produces the value the first half above
+> says is missing. Until it is run, "hold 0.01, report outside the pooled table" is the position.
 >
 > **What this does NOT establish**: one seed, one budget, and the return column is noisy across the
 > same stamps (12.79 → 0.97 → 7.63 → 4.50 → 4.38 → 4.74), so the drift is not yet tied to a

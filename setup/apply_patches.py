@@ -202,6 +202,34 @@ def undeclared_modifications() -> list[str]:
     Untracked paths are judged separately, against ALLOWED_UNTRACKED -- see its note.
     """
     import subprocess
+
+    # [Claude 2026-09-04] **This check must confirm which repository it is talking to, and until
+    # today it did not.** `git -C <dir> status` walks UP to the nearest enclosing repository. In
+    # this recovery workspace `RL-ViGen-upstream` is unpacked from the rlvigen tarball input and
+    # has no `.git` of its own, so:
+    #   * before the workspace was put under version control, the command FAILED, this function
+    #     returned [] on the error path, and the check silently passed on every run since
+    #     2026-08-31 -- inert, and indistinguishable from clean;
+    #   * the moment a repository existed at the project root, the command SUCCEEDED against the
+    #     wrong tree and reported the project's own edited docs as "undeclared modifications in
+    #     the vendored tree".
+    # One assumption -- "UPSTREAM is its own repository" -- produced a silent false negative for
+    # weeks and then a loud false positive. It is now checked, and an abstention is ANNOUNCED
+    # rather than returned as an empty list, because a guard that cannot run and a guard that
+    # found nothing must not look the same. That confusion is this project's signature join
+    # defect; see STEP-ZERO section 8.
+    try:
+        top = subprocess.run(["git", "-C", UPSTREAM, "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=30)
+    except Exception:
+        top = None
+    resolved = (top.stdout.strip() if top and top.returncode == 0 else "")
+    if os.path.realpath(resolved or os.devnull) != os.path.realpath(UPSTREAM):
+        print(f"  ?? undeclared-modification check ABSTAINED: {UPSTREAM} is not the root of its "
+              f"own git repository (git resolves it to {resolved or 'no repository'}), so a "
+              "porcelain listing there describes a different tree. This is not a pass.",
+              file=sys.stderr)
+        return []
     try:
         out = subprocess.run(["git", "-C", UPSTREAM, "status", "--porcelain"],
                              capture_output=True, text=True, timeout=30)

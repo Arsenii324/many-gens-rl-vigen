@@ -117,6 +117,7 @@ def run_scene_dmc_gb(agent, task, scene_id, mode, episodes, seed, image_size, ep
     """
     seed_the_placement_rng(seed)
     import torch
+    import utils
     from env.wrappers import make_env
 
     env = make_env(domain_name="robosuite", task_name=task, seed=seed,
@@ -128,7 +129,20 @@ def run_scene_dmc_gb(agent, task, scene_id, mode, episodes, seed, image_size, ep
         total, succeeded = 0.0, False
         done = False
         while not done:
-            with torch.no_grad():
+            # [Claude 2026-09-04] `utils.eval_mode(agent)`, matching `src/train.py::evaluate`
+            # EXACTLY, where this previously used a bare `torch.no_grad()`. The two are not the
+            # same thing: theirs is a context manager that calls `model.train(False)` and restores
+            # afterwards, and it does NOT disable gradients (their `select_action` already does
+            # that internally, so our `no_grad` was redundant rather than equivalent).
+            #
+            # On TODAY's action path the two produce identical actions, and that was verified
+            # rather than assumed: `Actor` is encoder + Linear/ReLU, and the encoder is Conv2d,
+            # ReLU, LayerNorm, Tanh, Linear -- not one train/eval-sensitive layer among them.
+            # **But that is a property of the architecture, not of the code**, and the hazard is
+            # one instantiation away: `modules.SODAMLP` contains an `nn.BatchNorm1d`, which at the
+            # batch size of 1 this loop uses would read a single sample's own statistics in train
+            # mode. Matching their call removes the dependence on that coincidence for free.
+            with torch.no_grad(), utils.eval_mode(agent):
                 action = agent.select_action(obs)
             obs, reward, done, info = env.step(action)
             total += float(reward)

@@ -168,9 +168,71 @@ endpoint**. `RLVIGEN_PRESERVE_SNAPSHOTS` filters that grid; it cannot add to it.
 post-processing choice over a retained curve rather than a decision baked into what was kept —
 consistent with §2's principle.
 
+> ### Measured 2026-09-04 — "every family that can" turns out to be ONE, and the curve is not currently producible
+>
+> The sentence above was written from C60, which is about the RL-ViGen five. Read across all
+> twelve — from `families.json` and confirmed against four returned archives rather than the
+> descriptor alone — the per-family save cadence is:
+>
+> | family | save cadence | mechanism |
+> |---|---|---|
+> | `rlvigen` | 50k stamps + endpoint | `save_every` 50000, `RLVIGEN_PRESERVE_SNAPSHOTS` filters |
+> | `dmc_gb` | 100k | live `--save_freq`, set coarsely |
+> | `alda` | `save_every` 50000 configured, but the checkpoint pattern names only `{endpoint}` |
+> | `ctrl`, `ibac_sni`, `idaac`, `ppg` | **endpoint only** | no `save_every` at all |
+>
+> **So the intersection of checkpoint frames across the twelve is the endpoint alone.** The
+> `drqv2` 100k cell makes it concrete: **5 eval points, 2 checkpoints**, so three of its
+> during-train eval points cannot be reproduced offline, swept over scenes, or placed beside
+> another baseline. A cross-baseline *curve* is not a thing this project can currently produce;
+> a cross-baseline *endpoint table* is.
+>
+> **The cost of changing that is graded, and the grades are what make it decidable:**
+> `ibac_sni` has a **live** `--save-interval` (`torch_rl/scripts/train.py:286`, default 0) and
+> `dmc_gb` a live `--save_freq` — configuration, zero fidelity cost. `ctrl` **declares**
+> `checkpoint_interval` (`train_ppo.py:98`) and never reads it, so wiring it is a small declared
+> deviation nearer RESTORES than ENABLES. `idaac` and `ppg` have no mechanism, so periodic saving
+> there is authored behaviour and a genuine deviation.
+>
+> **DEFAULT SET, awaiting approval: report the cross-baseline table at the ENDPOINT**, the one
+> frame all twelve supply; take the two free configuration wins so `dmc_gb` and `ibac_sni` gain a
+> curve at no fidelity cost; leave `idaac`/`ppg` terminal-only rather than author saving into two
+> clones for a curve nobody has yet asked for. This does **not** settle §3b #3's headline
+> question below — it removes the option of pretending a twelve-baseline curve is available.
+
 **Open, not decided**: whether the headline is the endpoint or the best-on-a-held-out-criterion.
 Selecting the best checkpoint *by the metric being reported* is a garden-of-forking-paths hazard
 and I would refuse it; selecting by a separate criterion is defensible.
+
+---
+
+## 4b. Seeds, and what a given seed count licenses (§3b #4)
+
+**DEFAULT SET 2026-09-04, awaiting approval.** The seed count is the axis that actually costs
+compute, so the rule is about *claims*, not about a number to buy in advance.
+
+**Seeds are spent adaptively, not uniformly.** Spreading three seeds across twelve baselines before
+knowing which reach competence buys precision on rows that are at the floor, where
+[C55](CONSTRUCTION.md#c55) already says the ratio is undefined rather than small. The order is:
+one seed everywhere to find who is competent (§3 gate), then seeds concentrated on the comparisons
+that are actually live.
+
+**What each seed count licenses, stated so a later table cannot quietly exceed it:**
+
+| seeds | admissible claims |
+|---|---|
+| **1** | *existence* — "this baseline reaches success 1.00 in the training regime at 100k"; and *floor* — "this baseline is indistinguishable from random in eval-easy". Both are about one run and neither orders two baselines. |
+| **2** | the above, plus "the effect reproduced", which is a statement about reproducibility, not about size. |
+| **3+** | a ranking claim, and only between baselines that each have 3+, at the resolution [C18](CONSTRUCTION.md#c18) allows — **~31% at five seeds**, worse at three. |
+
+**The two results in hand are both single-seed and both stay inside row 1**: `drqv2`'s 0.30%
+retention is an existence-plus-floor claim, and `ibac_sni`'s entropy collapse is an existence claim
+about one run. Neither orders anything, and the write-ups say so.
+
+**This is a rule about reporting, so it costs nothing and can be adopted before the budget is
+decided.** It is also the rule that makes the cheap production shapes usable: a one-seed sweep is
+not a weak version of the three-seed answer, it is a *different and legitimate* question — who is
+competent — asked first because the answer changes where seeds are worth spending.
 
 ---
 
