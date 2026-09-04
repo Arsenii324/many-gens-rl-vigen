@@ -525,7 +525,25 @@ the owner's recollection that such a block existed; the block is real for `idaac
 > the resolution is therefore not a repair, and the only real one is architectural — add
 > downsampling, which is what `impala_cnn` is.
 >
-> **Default unchanged (keep 64x64, declared), and now for a stated reason rather than inertia**:
+> ### The repair exists now, opt-in and locally verified — 2026-09-04
+>
+> `model_type="impala"` ports IBAC-SNI's **own** pixel network from its TensorFlow branch
+> (`coinrun/coinrun/policies.py::impala_cnn`) into `torch_rl/model.py`: conv3x3(depth) → maxpool(3,
+> stride 2, 'same') → two residual blocks, depths 16/32/32. Both models were constructed locally
+> with the bottleneck and SNI active — the one validation in this whole area that needed no GPU:
+>
+> | `model_type` | embedding | total parameters |
+> |---|---|---|
+> | `default` (MiniGrid trunk) | 53,824 | **6,900,671** |
+> | `impala` (the paper's pixel net) | **2,048** | **360,399** |
+>
+> Nineteen times smaller, at the figure the paper's own CoinRun branch produces, and the same order
+> as `ppg`'s and `idaac`'s. **Opt-in and default-off**: no existing number changes, and choosing it
+> is a deliberate act. It is **not** a bug fix — `impala` and `default` are different models and
+> must never share a column.
+>
+> **Default unchanged (keep 64x64 and the `default` trunk, declared), and now for a stated reason
+> rather than inertia**:
 > (a) is the only one of the three that adds no authored deviation, and the owner's own standard is
 > that the algorithms and models stay fidelity-bound. But this materially strengthens the
 > C61 suspicion — **a 3.46M-parameter FC head trained on a few thousand frames is a strong
