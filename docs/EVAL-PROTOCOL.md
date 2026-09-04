@@ -118,6 +118,25 @@ Per baseline, per seed, per retained checkpoint:
 
 - **regimes**: `train`, `eval-easy`, `eval-medium`, `eval-hard` — all four. `train` is the
   retention denominator and is *not* a randomised distribution ([C51](CONSTRUCTION.md#c51)).
+
+  > **The camera axis is EXCLUDED, and as of 2026-09-04 that is a decision rather than an
+  > oversight.** `robosuitevgb/utils.py` branches on **six** regimes, not four: `cam-easy` and
+  > `cam-hard` set `randomize_camera=True` and override position, rotation and fov. A register row
+  > from 2026-08-18 recorded that this project measures none of it and nothing followed.
+  >
+  > **DEFAULT SET, awaiting approval: leave it out of this deliverable.** Three reasons, in order
+  > of weight. (1) It is a **different kind of generalisation** — viewpoint, not appearance — and
+  > the contract's retention question is posed over the appearance regimes; mixing a viewpoint
+  > result into that column would answer a question nobody asked. (2) It is **not reachable from
+  > our harness as written**: the branch loads its settings via
+  > `open('../../../../envs/robosuiteVGB/cfg/setting/robo_setting.yaml')`, a cwd-relative path four
+  > levels up that resolves only from upstream's own launch directory, so an offline evaluator
+  > running anywhere else raises `FileNotFoundError` before the env is built. (3) It would make the
+  > grid **1.5x larger** (six regimes against four) at a budget already over the grant.
+  >
+  > **What it would cost if wanted**: one patch making that path absolute — PLATFORM-class, since
+  > it changes where a file is found and not what is measured — plus 50% more evaluation. Recorded
+  > so the exclusion can be reversed by decision rather than rediscovered as a gap.
 - **scenes**: all ten certified, per regime. Per-scene rows retained, never only the aggregate —
   today's grid showed 392.9 on scene 0 against 0.7 on scene 3, which an aggregate erases.
 - **episodes**: 10 per (regime, scene) cell. 4 × 10 × 10 = 400 episodes per checkpoint ≈ 1h ≈ 168 RUB.
