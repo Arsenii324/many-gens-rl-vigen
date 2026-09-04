@@ -23,8 +23,14 @@ submitted roughly twenty DataSphere jobs. A handoff that describes a quiet tree
 while the tree is running jobs is the exact failure this project keeps
 recording elsewhere, so it is corrected rather than patched over.
 
-**Where the candidate lives, and the risk that carries.** This tree has **no
-`.git`**. The versioned original is `ccm-intro/projects/many-gens-rl-vigen`,
+**Where the candidate lives, and the risk that carries.** ~~This tree has **no
+`.git`**.~~ **Corrected 2026-09-04 (later the same day): it does now** — one
+local repository, 637 files, 8.2 MB, no remote and nothing pushed, following
+the rule `scripts/deviations.py` already stated (clones carry their own `.git`
+and are reproducible from `ext/` plus `runnable/_patches/*.patch`, so the
+patches are tracked and the 200 MB clones are not). **The reconciliation below
+is untouched by this** and remains the single largest risk. The versioned
+original is `ccm-intro/projects/many-gens-rl-vigen`,
 branch `nd-ln-architecture-transition`, HEAD `f041f5e1`, with 53 uncommitted
 files and content from ~2026-08-18. 30 files differ between the two; 18 exist
 in only one. Everything from 2026-08-31 onward — the whole `datasphere/native`
@@ -66,8 +72,37 @@ approval, which does **not** mark either settled. `python scripts/open_decisions
 is the live list; `python scripts/requirements.py` recomputes R1–R7 rather than
 trusting `docs/TASK.md`'s stale table.
 
+**Later on 2026-09-04 — the contract moved and the tree is versioned.**
+**R7 is no longer NOT MET**: it failed partly because this project read each
+job's records out of a scratch directory and discarded them, so the repo held
+zero training logs and zero eval result sets while six jobs had produced them.
+`results/records/` and `results/logs/` now retain 1,001 records and five
+training curves (1.6 MB) — the storage rule `EVAL-PROTOCOL` §6 already
+prescribed. Two of R7's four links were also graded against the **pre-C95 local
+pipeline** and could not have passed whatever the clone era produced. **R3 is
+now the only hard NOT MET**, and it is P-C76, which is yours.
+
+**This tree is under git** (`.gitignore` restored from the versioned original
+after I overwrote it). Local only, nothing pushed; it is *not* the hunk-by-hunk
+merge, which remains yours and unstarted.
+
+**Defaults set and awaiting approval, none marked settled**: C48 (the anchor,
+contingent on §3b #5), C61 (hold 0.01, decide on the diagnostic — and its
+trip-wire has since **fired** on `ibac_sni`), the endpoint-only cross-baseline
+table, adaptive seeds with an explicit table of what each count licenses, the
+camera axis excluded with its blocker named, and C84 narrowed to an MPS-only
+event that cannot reach a production number. Fidelity items 5 and 6 dissolved as
+port-era artefacts; `scripts/open_decisions.py` is 27, from 29.
+
 **Production remains out of reach at the planned shape**, and this is arithmetic:
 `datasphere/native/plan_production.py` puts 6e5 × 3 seeds × 12 baselines at
-**445 job-hours / ~101k RUB / 15.6× the 5M-unit grant**, and one cell's archive
+**512 job-hours / ~116k RUB / 17.9× the 5M-unit grant**, and one cell's archive
 at 6e5 is ~1.5 GB against ~30 GB free here. Nothing about the production run is
 approved or started.
+
+*(Those figures were **445 h / 101k / 15.6×** until 2026-09-04, when the cost
+model was found to cover only TEN baselines while describing itself as twelve —
+a stale note claimed `alda` and `ctrl` had no successful CUDA run after both had
+completed. Every previously quoted production cost was short by a sixth of the
+fleet. Shorter shapes, for scale: 1e5 × 1 seed is 42 h / 7.3k RUB / **1.1×** the
+grant, and 1e5 × 3 seeds is 95 h / 16.6k / 2.6×.)*
