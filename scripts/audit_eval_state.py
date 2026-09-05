@@ -62,12 +62,19 @@ STATE = {
               "running_stats": "ret_rms exists but is training-only; VecMonitor is inside VecNormalize so returns are raw",
               "reusable": "yes -- test.py::evaluate builds its own robosuite venv",
               "anchor": "runnable/idaac/ppo_daac_idaac/model.py:332", "expect": "def act(self, inputs, deterministic=False):"},
-    "ppg":   {"policy_mode": "not chosen anywhere -- no evaluation code exists to read it from",
+    "ppg":   {"policy_mode": "STOCHASTIC (samples) -- `runnable/_launch/ppg_eval.py` now exists "
+                          "and calls `PpoModel.act`, which samples; there is no deterministic-"
+                          "action path in this repo to call instead "
+                          "[found stale and corrected 2026-09-06: this entry said 'no evaluation "
+                          "code exists' after the eval loop below had already been written -- "
+                          "preprod_table.py's own ESTIMATOR dict already had 'ppg': 'SAMPLE' "
+                          "correctly, so only this audit's description had drifted, not any "
+                          "actual comparability decision]",
               "obs_scaling": "stateless", "running_stats": "RewardNormalizer is training-only and applied after logging",
-              "reusable": "ADAPT -- there is no eval loop, but the action path exists: "
-                          "distr_builder.py builds the distribution and clamps logstd to [-5, 2]. "
-                          "What is missing is a loop, not a policy",
-              "anchor": "runnable/ppg/phasic_policy_gradient/ppo.py:256", "expect": "lsh.gather_roller_stats(roller)"},
+              "reusable": "yes -- runnable/_launch/ppg_eval.py builds its own venv via get_venv "
+                          "and reuses Roller/VecMonitor2, the same rollout/episode accounting "
+                          "training uses",
+              "anchor": "runnable/_launch/ppg_eval.py:71", "expect": "act_fn=model.act"},
     "ibac_sni": {"policy_mode": "STOCHASTIC (samples) -- evaluate.py's `--argmax` is "
                              "store_true defaulting False, so the flag that would take the "
                              "mode is off unless asked for [resolved 2026-09-03]",

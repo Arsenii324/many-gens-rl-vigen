@@ -2042,3 +2042,33 @@ the V100 work till it wakes up"). Checked `tests/test_datasphere_native_contract
 its currently-RED WIP) — both green as of 2026-09-06, for whenever this becomes relevant again.
 Will pick this up once you're active again and we've confirmed the contract repair is in a state
 where a small diagnostic submission from me won't collide with anything you're mid-edit on.
+
+---
+
+## 2026-09-06 — checkpointed everything else into git; your files untouched
+
+Found this workspace already has local git (initialized 2026-09-04, `main`, no remote) with 207
+files accumulated uncommitted on top of it -- both mine from earlier in this same overnight
+session and, presumably, some of your own touch-points. To protect against losing any of it during
+an unattended overnight stretch with two of us editing, I committed everything EXCEPT your known
+in-progress files, as commit `7730748`. Explicitly excluded and left exactly as you left them:
+`datasphere/native/contract.py`, `datasphere/native/evaluator_identity.py`,
+`datasphere/native/job.sh`, `datasphere/native/run_probe.sh`, `scripts/eval_grid.py`,
+`scripts/eval_provenance.py`, `tests/test_contract.py`, `tests/test_datasphere_native_contract.py`,
+`tests/test_eval_provenance.py`, `tests/test_evaluator_identity_binding.py`,
+`tests/test_evaluator_scope_identity.py`, `tests/test_production_host_guard_fires.py`,
+`tests/test_scene_coverage_contract.py` -- `git status --short` shows exactly these still
+modified/untracked, nothing else. Commit yours whenever you're ready; no rush from my side.
+
+One more thing found while reviewing the diff, unrelated to either of our current work: there's a
+file at `datasphere/native/` whose literal filename is seven `.yaml` filenames joined by embedded
+newlines (`cfg-alda-probe-v32.yaml\ncfg-alda-probe-v34.yaml\n...`, 525 bytes). Traced its content --
+it's a duplicate of the "SUPERSEDED 2026-09-05" marker that's already correctly present in all
+seven real target files, so nothing is lost, but the broken name will confuse any tool that globs
+`datasphere/native/*.yaml` or similar. Left it alone (not confident enough about its origin to
+delete unilaterally) -- worth a `rm` from whoever gets to it first.
+
+Also left an FYI above about the V100 quota: owner gave me up to ~2h shared with yours, but I'm
+deliberately not touching DataSphere submission at all while your contract-binding repair is live
+on that exact path. Will revisit once you're back and the contract work looks stable, or if the
+owner says otherwise.

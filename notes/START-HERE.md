@@ -393,3 +393,54 @@ during-training eval for each of the 12, and is it RNG-safe" for all seven evalu
 individually. Three suppressed (sentinel value, rlvigen/dmc_gb/alda), two RNG-isolated and left
 running (idaac fully, ctrl partially — already tracked), two have no online-eval mechanism at all
 (ibac_sni, ppg). One self-caught false alarm along the way, corrected before writing this file.
+
+## Added 2026-09-06 — the metric-inventory subagent's 4 findings closed; C1's "does it cancel" question actually worked through
+
+A dispatched Sonnet subagent's report (`METRIC-INVENTORY-VERDICT-2026-09-05.md`) named 4 secondary
+findings beyond what CORRECTIONS #77 had already fixed. All 4 independently re-verified against
+live code (not trusted from its prose) and closed — `CORRECTIONS.md` #78 (tracking) through #80:
+`drq`'s architecture misclassification in PART2 Finding 6 (it's SAC-family, not DrQv2-family —
+its own `SquashedNormal`/`TanhTransform`, not shared with svea/sgqn/curl); `critic_loss` is four
+different formulas under one name across 8 of 12 baselines (added as PART2 Finding 8, reported not
+resolved — a k2/k3-shaped naming collision, owner's call to pool or not); a stale "`ctrl` is not
+wired" PART2 claim (it's wired now, for the `ppo`/`ppo_ctrl` branch — `daac`/`daac_ctrl` genuinely
+still isn't, documented as an explicit caveat rather than left implicit); and a `clip_fraction`
+"takes the log-ratio for precision" overclaim (checked against all four live on-policy
+implementations, not just the reference helper — none of them do; only `approx_kl_k3` has a real,
+smaller, and *inverted* version of that asymmetry in `idaac`/`ibac_sni`).
+
+**The owner's sharper question — does C1's 9-vs-3 truncation-bootstrap split actually cancel in
+the metrics this project reports, or is "declare and quantify" being left as formalism —**
+answered directly, not deferred again: [`FINDING-c1-does-the-asymmetry-cancel.md`](FINDING-c1-does-the-asymmetry-cancel.md).
+Short version: no metric in the reported matrix (`R_train`, `R_OOD`, `Δ`, success rate, retention,
+floor-adjusted retention) is protected by construction; the difference and the ratio each have a
+cancellation story, but the two are mutually exclusive (additive-invariant vs. multiplicative-
+invariant), so reporting both is not a hedge that protects the pair jointly. Only an empirical
+ablation can resolve it, and none exists yet — named as the concrete next step rather than
+repeating the phrase.
+
+**Checking whether that split is actually kept out of tables (not just declared) found two real,
+independent bugs, both fixed** (`CORRECTIONS.md` #81, #82): `scripts/results_table.py` and
+`scripts/preprod_table.py` — the two table generators — had zero mechanism to detect a table that
+pools rows across C1's split, despite C1 being rated the largest comparability defect found. Not
+yet live (today's populated cells all share one group), but `rad`/`soda`/`alda` are explicitly
+"not yet run" in both files, so the first cell for any of them would have mixed silently. Fixed
+additively in both, with tests. While fixing this, found and fixed a second, dormant drift risk in
+the same file (#83): `preprod_table.py`'s `STACK` dict was a hand-duplicated literal that happened
+to still match `rlgen/protocol.py`'s `OBSERVATION_GEOMETRY` — now reads from it directly, same
+mechanism as the new `TIME_LIMIT` dict.
+
+**A third instance of "a doc's prose went stale after the code it describes changed"** (#84, after
+PART2's ctrl-wiring and clip_fraction claims): `scripts/audit_eval_state.py`'s `ppg` entry still
+said "no evaluation code exists" after `runnable/_launch/ppg_eval.py` had already been written and
+`preprod_table.py`'s own `ESTIMATOR` dict already correctly said `ppg: "SAMPLE"`. Fixed the entry;
+a dependent test (`test_the_two_baselines_needing_evaluator_work_are_named`) also expected `ppg`
+in the still-needs-work set and had to be updated to `{"ctrl"}` only, caught by running it rather
+than trusting the doc edit.
+
+**Housekeeping, unrelated to the audit content itself**: this workspace's local git (initialized
+2026-09-04, no remote) had 207 files accumulated uncommitted since across multiple sessions.
+Checkpointed everything except Codex/Luna's own in-progress evaluator-identity-binding repair
+(explicitly excluded by path, commit `7730748`) — full list and reasoning in
+`notes/claude-answers.md`'s 2026-09-06 entries. A ~2h V100/DataSphere quota was granted but
+deliberately not used yet, since Codex's repair sits directly on the job-submission contract path.

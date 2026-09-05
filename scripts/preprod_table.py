@@ -35,8 +35,21 @@ ESTIMATOR = {
     "rad": "mode", "soda": "mode", "alda": "mode",
     "idaac": "SAMPLE", "ibac_sni": "SAMPLE", "ppg": "SAMPLE", "ctrl": "SAMPLE",
 }
-STACK = {b: 3 for b in ("drqv2", "svea", "drq", "sgqn", "curl", "rad", "soda", "alda")}
-STACK.update({b: 1 for b in ("ppg", "idaac", "ibac_sni", "ctrl")})
+# [Claude 2026-09-06] Read from rlgen/protocol.py's OBSERVATION_GEOMETRY (render size, frame
+# stack) rather than hand-duplicated, the same fix TIME_LIMIT below already needed: a
+# hand-typed per-baseline literal drifts silently from its source, which is exactly how C1's
+# false-certification half happened in the first place. Verified equal to the previous literal
+# at the time of this change; a future OBSERVATION_GEOMETRY edit now propagates instead of drifting.
+def _stack_by_baseline() -> dict:
+    src = (Path(__file__).resolve().parents[1] / "rlgen" / "protocol.py").read_text(encoding="utf-8")
+    m = re.search(r"OBSERVATION_GEOMETRY\s*=\s*\{(.*?)\n\}", src, re.S)
+    if not m:
+        return {}
+    return {b: int(stack) for b, stack in
+            re.findall(r'"(\w+)":\s*\(\s*\d+,\s*(\d+)\s*\)', m.group(1))}
+
+
+STACK = _stack_by_baseline()
 
 # [Claude 2026-09-06] C1, rated the largest comparability defect found (CONSTRUCTION.md#c1): on
 # Door every episode ends by time limit, and nine of twelve zero the value bootstrap there (biasing

@@ -84,3 +84,14 @@ def test_every_row_prints_its_own_time_limit_value(monkeypatch, tmp_path, capsys
     rad_line = next(l for l in out.splitlines() if l.startswith("| `rad`"))
     assert "| terminal |" in drqv2_line
     assert "| bootstrap |" in rad_line
+
+
+def test_stack_dict_matches_rlgen_protocol_exactly():
+    """`STACK` used to be a hand-typed literal duplicating OBSERVATION_GEOMETRY's frame-stack
+    column -- the exact drift shape C1's false-certification half already demonstrated once.
+    Now read from the source directly; this pins the two staying identical going forward."""
+    src = (ROOT / "rlgen" / "protocol.py").read_text(encoding="utf-8")
+    ns: dict = {}
+    exec(compile(src, "protocol.py", "exec"), ns)
+    expected = {b: geom[1] for b, geom in ns["OBSERVATION_GEOMETRY"].items()}
+    assert pt.STACK == expected

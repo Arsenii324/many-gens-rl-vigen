@@ -1507,3 +1507,64 @@ failed with exactly the expected assertion error. Restored from a backup copy; r
 
 Both #81 and #82 are additive-only: no existing row's printed number changed, no sort order
 changed, no existing column removed. `test_docs_integrity.py` and the full suite both still pass.
+
+## #83 — closed a second dormant drift risk found while fixing #82: `preprod_table.py`'s `STACK` was a hand-duplicated literal
+
+While adding `TIME_LIMIT` to `preprod_table.py` (#82), checked whether the file's existing
+`STACK` dict (C2's frame-stack axis, already declared as a column) had the same property that made
+`TIME_LIMIT_HANDLING`'s pre-fix false-certification possible: a hand-typed per-baseline literal
+that can silently drift from its source. It did — `STACK` was a literal, not read from
+`rlgen/protocol.py`'s `OBSERVATION_GEOMETRY` (the actual source for both render size and frame
+stack). Values matched exactly at the time of checking (verified: `{drqv2:3, svea:3, drq:3,
+sgqn:3, curl:3, rad:3, soda:3, alda:3, ppg:1, idaac:1, ibac_sni:1, ctrl:1}` on both sides) — no
+live bug, but a dormant one, in exactly the shape C1's own false-certification half already
+demonstrated is real.
+
+**Fixed**: `STACK` now derives from `OBSERVATION_GEOMETRY` via the same source-text-read
+mechanism as `TIME_LIMIT`, rather than duplicating it. Added
+`test_stack_dict_matches_rlgen_protocol_exactly` to `tests/test_preprod_table.py`, independently
+re-deriving the expected dict via `exec()` on `protocol.py`'s own source (not importing and
+trusting `pt.STACK`, which is the thing under test). Full local suite green except the one known
+MPS `linalg_qr` flake in `test_nd_ln_style_train.py` (unrelated, confirmed flaky earlier this
+session).
+
+## #84 — third instance of the same staleness class, in `scripts/audit_eval_state.py`'s ppg entry
+
+Found while cross-checking `preprod_table.py`'s `ESTIMATOR` dict (which marks `ppg: "SAMPLE"`)
+against its own stated source, `scripts/audit_eval_state.py`. That file's `ppg` entry still read
+`"policy_mode": "not chosen anywhere -- no evaluation code exists to read it from"` and
+`"reusable": "ADAPT -- there is no eval loop..."` — describing a state from before
+`runnable/_launch/ppg_eval.py` was written. Verified against the live file: `ppg_eval.py` exists,
+builds its own venv via `get_venv`, reuses `Roller`/`VecMonitor2` (the authors' own rollout/
+episode accounting), and calls `model.act` (line 71) — which samples, per the file's own docstring
+("It samples; it does not take the mode... there is no deterministic-action path in this repo to
+call instead"). So `ESTIMATOR`'s `"SAMPLE"` was already correct; only this audit's *description*
+had drifted — no comparability decision was ever wrong, but the documented evidence for it was.
+
+**Fixed**: updated the `ppg` entry's `policy_mode` and `reusable` fields to describe the current
+`ppg_eval.py`-based evaluator, with a `[found stale and corrected 2026-09-06]` note matching this
+file's own established convention for prior corrections on the same dict (idaac `[resolved
+2026-09-03]`, ibac_sni `[resolved 2026-09-03]`, ctrl `[corrected 2026-09-04]`) — ppg's was simply
+the one nobody had gone back to update.
+
+**One mechanical bug introduced and self-caught while writing the fix**: `anchor`/`expect` are
+checked LIVE by `tests/test_record_conventions.py::test_eval_state_audit_anchors_still_hold`,
+which does `path, line = entry["anchor"].rsplit(":", 1)` — a bare `"anchor": "runnable/_launch/
+ppg_eval.py"` with no `:line` suffix would raise `ValueError: not enough values to unpack` the
+moment that test ran, not silently pass. Caught by running the test immediately rather than
+trusting the edit; fixed to `"runnable/_launch/ppg_eval.py:71"` / `"expect": "act_fn=model.act"`,
+anchored to the actual call site (`Roller(venv=venv, act_fn=model.act, ...)`), not the docstring
+prose that merely mentions `PpoModel.act` by name. Verified: the anchor test passes, and running
+the script itself now prints ppg's corrected, accurate one-line summary.
+
+This is the third instance this session of "a doc/audit's prose description went stale after the
+code it describes changed, and nothing forced it to be revisited" — after PART2's `ctrl`-not-wired
+claim (#79) and its `clip_fraction` log-ratio claim (#80). All three were found by cross-checking a
+document against the artifact it claims to describe, not by reading the document in isolation.
+
+**A second, dependent staleness surfaced immediately by running the tests rather than trusting
+the diff**: `test_the_two_baselines_needing_evaluator_work_are_named` asserted
+`needs_work == {"ppg", "ctrl"}` — genuinely correct before this fix, genuinely wrong after, since
+`ppg`'s `reusable` field no longer starts with `"ADAPT"`. Renamed to
+`test_the_one_baseline_still_needing_evaluator_work_is_named`, updated to expect `{"ctrl"}` only,
+with the docstring explaining why `ppg` dropped out. Both tests green now.

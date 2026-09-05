@@ -126,13 +126,17 @@ def test_the_policy_mode_agrees_with_the_evaluator_audit():
             assert described.startswith("deterministic"), baseline
 
 
-def test_the_two_baselines_needing_evaluator_work_are_named():
-    """Neither needs a policy written. `ctrl`'s eval loop calls a discrete-only helper while
-    `algo.select_action` already handles both action spaces; `ppg` has the distribution and no
-    loop. Naming them keeps two work items from becoming folklore -- and the first version of this
-    test said "authored", which overstated both."""
+def test_the_one_baseline_still_needing_evaluator_work_is_named():
+    """Neither needed a policy written. `ctrl`'s eval loop calls a discrete-only helper while
+    `algo.select_action` already handles both action spaces -- still ADAPT, unfixed here.
+    `ppg` used to be the other ADAPT case (had the distribution and no loop) until
+    `runnable/_launch/ppg_eval.py` was written; found 2026-09-06 that this test still expected
+    `ppg` in the needs-work set after its own evaluator already existed -- the test itself had
+    gone stale the same way `audit_eval_state.py`'s ppg entry had (CORRECTIONS.md #84). Naming
+    the remaining item keeps it from becoming folklore -- and the first version of this test said
+    "authored", which overstated it."""
     needs_work = {b for b, e in AUDIT_STATE.STATE.items() if e["reusable"].startswith("ADAPT")}
-    assert needs_work == {"ppg", "ctrl"}, needs_work
+    assert needs_work == {"ctrl"}, needs_work
     assert not any(e["reusable"].startswith("NO") for e in AUDIT_STATE.STATE.values()), \
         "nothing should be unreachable now that ctrl is repointable rather than unusable"
 
