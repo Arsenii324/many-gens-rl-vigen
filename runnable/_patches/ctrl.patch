@@ -386,10 +386,10 @@ index 67bd632..0459807 100644
          if self.embedding_type == "concat":
              z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
 diff --git a/train_ppo.py b/train_ppo.py
-index e18477e..691b715 100644
+index e18477e..dc4704c 100644
 --- a/train_ppo.py
 +++ b/train_ppo.py
-@@ -15,7 +15,60 @@ from jax.random import PRNGKey
+@@ -15,7 +15,68 @@ from jax.random import PRNGKey
  from algo import get_transition, select_action, update_ppo, update_daac, update_cluster, state_update
  from buffer import Batch
  from models import CTRLModel, CTRLDAACModel
@@ -427,10 +427,18 @@ index e18477e..691b715 100644
 +    `ibac_sni` endpoint-only despite saving every update.
 +    """
 +    from flax.serialization import to_bytes as _flax_to_bytes
++    try:
++        from safe_checkpoint import safe_write
++    except ImportError:
++        def safe_write(path, write_fn, **_kwargs):
++            write_fn(path)
++            return True
 +    _dir = os.path.abspath(os.path.join(FLAGS.model_dir, FLAGS.env_name))
 +    os.makedirs(_dir, exist_ok=True)
-+    with open(os.path.join(_dir, 'checkpoint_%d.msgpack' % frames), 'wb') as _fh:
-+        _fh.write(_flax_to_bytes(train_state))
++    _state_bytes = _flax_to_bytes(train_state)
++    safe_write(os.path.join(_dir, 'checkpoint_%d.msgpack' % frames),
++              lambda tmp: open(tmp, 'wb').write(_state_bytes), label="ctrl.checkpoint",
++              expected_bytes=len(_state_bytes))
 +
 +
 +def _find_log_std(tree):
@@ -451,7 +459,7 @@ index e18477e..691b715 100644
  
  
  def safe_mean(x):
-@@ -66,7 +119,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
+@@ -66,7 +127,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
                      "Run ID. Change that to change W&B name")
  flags.DEFINE_string("wandb_mode", "disabled",
                      "W&B logging (disabled, online, offline)")
@@ -465,7 +473,7 @@ index e18477e..691b715 100644
                      "W&B key")
  flags.DEFINE_string("wandb_entity", "ssl_rl",
                      "W&B entity (username or team name)")
-@@ -82,28 +140,26 @@ def main(argv):
+@@ -82,28 +148,26 @@ def main(argv):
      key = PRNGKey(seed)
  
      # Clip rewards for training
@@ -513,7 +521,7 @@ index e18477e..691b715 100644
  
      os.environ["WANDB_API_KEY"] = FLAGS.wandb_key
      group_name = "%s_%s_%s" % (FLAGS.algo, FLAGS.env_name, FLAGS.run_id)
-@@ -121,28 +177,29 @@ def main(argv):
+@@ -121,28 +185,29 @@ def main(argv):
      if "ppo" in FLAGS.algo:
          model = CTRLModel(dims=(256, 256),
                            n_cluster=FLAGS.num_clusters,
@@ -548,7 +556,7 @@ index e18477e..691b715 100644
      params_model = model.init(key,
                                state=fake_args_cluster[0],
                                action=fake_args_cluster[1],
-@@ -175,7 +232,8 @@ def main(argv):
+@@ -175,7 +240,8 @@ def main(argv):
                    gae_lambda=FLAGS.gae_lambda,
                    n_steps=FLAGS.n_steps + 1,
                    num_envs=FLAGS.num_envs,
@@ -558,7 +566,7 @@ index e18477e..691b715 100644
  
      state = env.reset()
      state_id = env_test_ID.reset()
-@@ -183,6 +241,16 @@ def main(argv):
+@@ -183,6 +249,16 @@ def main(argv):
  
      epinfo_buf_id = deque(maxlen=100)
      epinfo_buf_ood = deque(maxlen=100)
@@ -575,11 +583,56 @@ index e18477e..691b715 100644
  
      returns_ood_acc = []
  
-@@ -208,15 +276,21 @@ def main(argv):
-                                               sample=True)
-         state_ood, _, _, infos_ood = env_test_OOD.step(action_ood)
+@@ -190,33 +266,48 @@ def main(argv):
+         train_state, state, batch, key = get_transition(
+             train_state, model.ac, env, state, batch, key)
  
+-        action_id, _, _, key = select_action(train_state.params,
+-                                             train_state.apply_fn,
+-                                             model.ac,
+-                                             state_id.astype(jnp.float32) /
+-                                             255.,
+-                                             key,
+-                                             sample=True)
+-        state_id, _, _, infos_id = env_test_ID.step(action_id)
+-
+-        action_ood, _, _, key = select_action(train_state.params,
+-                                              train_state.apply_fn,
+-                                              model.ac,
+-                                              state_ood.astype(jnp.float32) /
+-                                              255.,
+-                                              key,
+-                                              sample=True)
+-        state_ood, _, _, infos_ood = env_test_OOD.step(action_ood)
+-
 -        for info in infos_id:
++        # The test envs are part of CTRL's original progress reporting, but their Door resets use
++        # the process-global NumPy placement stream. In production, preserve the training stream
++        # around these steps so changing the reporting cadence cannot change later train scenes.
++        _eval_numpy_state = np.random.get_state() if os.environ.get(
++            "NATIVE_ISOLATE_ONLINE_EVAL") == "1" else None
++        try:
++            action_id, _, _, key = select_action(train_state.params,
++                                                 train_state.apply_fn,
++                                                 model.ac,
++                                                 state_id.astype(jnp.float32) /
++                                                 255.,
++                                                 key,
++                                                 sample=True)
++            state_id, _, _, infos_id = env_test_ID.step(action_id)
++
++            action_ood, _, _, key = select_action(train_state.params,
++                                                  train_state.apply_fn,
++                                                  model.ac,
++                                                  state_ood.astype(jnp.float32) /
++                                                  255.,
++                                                  key,
++                                                  sample=True)
++            state_ood, _, _, infos_ood = env_test_OOD.step(action_ood)
++        finally:
++            if _eval_numpy_state is not None:
++                np.random.set_state(_eval_numpy_state)
++
 +        for i, info in enumerate(infos_id):
 +            succ_id[i] = succ_id[i] or bool(info.get('success', False))
              maybe_epinfo = info.get('episode')
@@ -599,7 +652,7 @@ index e18477e..691b715 100644
  
          if step % (FLAGS.n_steps + 1) == 0:
              data = batch.get()
-@@ -257,6 +331,17 @@ def main(argv):
+@@ -257,6 +348,17 @@ def main(argv):
              renamed_dict = {}
              for k, v in metric_dict.items():
                  renamed_dict["%s/%s" % (FLAGS.env_name, k)] = v
@@ -617,7 +670,7 @@ index e18477e..691b715 100644
              wandb.log(renamed_dict, step=FLAGS.num_envs * step)
  
              wandb.log({
-@@ -277,10 +362,53 @@ def main(argv):
+@@ -277,10 +379,53 @@ def main(argv):
                  returns_ood_acc.append(
                      safe_mean([info['r'] for info in epinfo_buf_ood]))
  
@@ -674,10 +727,10 @@ index e18477e..691b715 100644
  
  
 diff --git a/vec_env.py b/vec_env.py
-index 7401df7..b15b580 100644
+index 7401df7..c58b692 100644
 --- a/vec_env.py
 +++ b/vec_env.py
-@@ -569,3 +569,88 @@ def clear_mpi_env_vars():
+@@ -569,3 +569,128 @@ def clear_mpi_env_vars():
          yield
      finally:
          os.environ.update(removed_environment)
@@ -701,7 +754,7 @@ index 7401df7..b15b580 100644
 +    """
 +
 +    def __init__(self, env_name, mode="train", num_envs=8, seed=0, scene_id=0,
-+                 normalize_rewards=True, **_ignored):
++                 normalize_rewards=True, condition_seed=None, **_ignored):
 +        import sys
 +        _rlv = os.environ["RLVIGEN_ROOT"]
 +        for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
@@ -717,11 +770,37 @@ index 7401df7..b15b580 100644
 +        self.observation_space = Box(shape=(c, h, w), low=0, high=255)
 +        self.action_space = envs[0].action_space
 +
-+        env = _SyncVecEnv(envs, self.observation_space, self.action_space)
++        # [Added 2026-09-05.] Hoist the regime this stack was CONSTRUCTED with.
++        #
++        # `scripts/eval_grid.verify_regime(..., strict=True)` refuses to emit a production record
++        # for a regime it cannot read back, and it could not read one here: VecMonitor,
++        # VecNormalize and this class forward no arbitrary attributes, so `_mode`/`_scene_id` on
++        # the base envs were unreachable from the handle the evaluator holds. Verified by
++        # constructing this env locally and running the real guard -- it raised
++        # "ctrl: regime 'train'/scene 0 is UNVERIFIED", which would have failed EVERY ctrl cell.
++        #
++        # Same shape as P3's dict and as the hoists in idaac's envs.py and ibac_sni's general.py,
++        # so the evaluator sees one read-back format across every family. No reset and no step:
++        # touching either would consume C69's global placement RNG before the measured episodes.
++        applied_regime = {
++            "mode": getattr(envs[0], "_mode", None),
++            "scene_id": getattr(envs[0], "_scene_id", None),
++            "video_background": getattr(envs[0], "video_background", None),
++        }
++        if applied_regime["mode"] is None:
++            raise RuntimeError(
++                "RL-ViGen did not expose its applied mode at construction: "
++                f"{type(envs[0]).__name__} has no `_mode`")
++        if any(getattr(e, "_mode", None) != applied_regime["mode"] for e in envs[1:]):
++            raise RuntimeError("RL-ViGen vector members disagree about the requested regime")
++
++        env = _SyncVecEnv(envs, self.observation_space, self.action_space,
++                          condition_seed=condition_seed, scene_id=scene_id)
 +        env = VecMonitor(venv=env, filename=None, keep_buf=100)
 +        if normalize_rewards:
 +            env = VecNormalize(venv=env, ob=False)
 +        self.env = env
++        self._vigen_regime = dict(applied_regime)
 +        self._max_episode_steps = 10_000
 +
 +    def reset(self):
@@ -741,8 +820,11 @@ index 7401df7..b15b580 100644
 +    ProcgenEnv does internally, which is what VecMonitor's episode accounting assumes.
 +    """
 +
-+    def __init__(self, envs, observation_space, action_space):
++    def __init__(self, envs, observation_space, action_space, condition_seed=None, scene_id=0):
 +        self.envs = envs
++        self._condition_seed = condition_seed
++        self._scene_id = scene_id
++        self._episode_indices = [0] * len(envs)
 +        VecEnv.__init__(self, len(envs), observation_space, action_space)
 +        self._actions = None
 +
@@ -752,7 +834,16 @@ index 7401df7..b15b580 100644
 +        return np.asarray(o["rgb"], dtype=np.uint8).transpose(1, 2, 0)
 +
 +    def reset(self):
-+        return np.stack([self._obs(e.reset()) for e in self.envs])
++        return np.stack([self._reset_one(i, e) for i, e in enumerate(self.envs)])
++
++    def _reset_one(self, index, env):
++        if self._condition_seed is not None:
++            value = int(np.random.SeedSequence([
++                int(self._condition_seed), int(self._scene_id), self._episode_indices[index]
++            ]).generate_state(1, dtype=np.uint32)[0])
++            np.random.seed(value)
++            self._episode_indices[index] += 1
++        return self._obs(env.reset())
 +
 +    def step_async(self, actions):
 +        self._actions = actions
@@ -762,7 +853,9 @@ index 7401df7..b15b580 100644
 +        for e, a in zip(self.envs, self._actions):
 +            o, r, d, i = e.step(a)
 +            if d:
-+                o = e.reset()
-+            obs.append(self._obs(o)); rews.append(r); dones.append(d); infos.append(i)
++                o = self._reset_one(len(obs), e)
++            else:
++                o = self._obs(o)
++            obs.append(o); rews.append(r); dones.append(d); infos.append(i)
 +        return (np.stack(obs), np.array(rews, dtype=np.float32),
 +                np.array(dones, dtype=bool), infos)

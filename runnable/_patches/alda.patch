@@ -79,10 +79,10 @@ index e1e658d..ee35580 100644
  
 diff --git a/specs/train_alda_robosuite_door.yaml b/specs/train_alda_robosuite_door.yaml
 new file mode 100644
-index 0000000..182ea9c
+index 0000000..4c4e022
 --- /dev/null
 +++ b/specs/train_alda_robosuite_door.yaml
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,41 @@
 +# RL-ViGen robosuite Door. A new spec is this repo's OWN configuration mechanism -- it ships one
 +# spec per task -- so this adds a file rather than modifying one. `domain_name: robosuite` selects
 +# the branch added to alda_trainer.initialize_env_dmc.
@@ -97,6 +97,22 @@ index 0000000..182ea9c
 +    values_per_latent: 12
 +    beta: 100
 +    n_train_steps: 500_000
++    # [Claude 2026-09-05] Declared explicitly at ALDA's OWN default (trainers/alda_trainer.py:73)
++    # so behaviour is unchanged, but the cadence becomes reachable. Two reasons it must be:
++    #   1. `parse_spec_overrides` only accepts keys ALREADY PRESENT in the spec, so a key absent
++    #      here cannot be set from the command line -- job bt1nmsbsf7u1o4618eks failed with
++    #      "Spec override key not found: trainer.config.checkpoint_n_steps" for exactly this.
++    #   2. `families.json` records alda's production `save_every: 50000` as "its own cadence ...
++    #      unchanged". That is true only because this default happens to equal the desired value;
++    #      nothing plumbed it, so a production run at any other cadence would silently not apply.
++    # With the key declared, `--spec.trainer.config.checkpoint_n_steps=N` works and the descriptor
++    # can pass {save_every} like every other family.
++    checkpoint_n_steps: 50_000
++    # Declared for the same reason and at ALDA's own default (alda_trainer.py:72). The descriptor
++    # passes --spec.trainer.config.eval_n_steps={eval_every}; without the key present here that
++    # override is rejected and EVERY alda cell dies at startup, which is how job
++    # bt1763ukgansn5t7t5tv failed with "Spec override key not found: trainer.config.eval_n_steps".
++    eval_n_steps: 10_000
 +    env:
 +      domain_name: robosuite
 +      task_name: Door
@@ -109,10 +125,13 @@ index 0000000..182ea9c
 +      episode_length: 500
 +      scene_id: 0
 diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
-index 20801e2..5a419f0 100644
+index 20801e2..b2dad29 100644
 --- a/trainers/alda_trainer.py
 +++ b/trainers/alda_trainer.py
-@@ -3,6 +3,7 @@ import os
+@@ -1,8 +1,10 @@
++import json
+ import logging
+ import os
  import torch
  import torch.nn.functional as F
  import numpy as np
@@ -120,7 +139,7 @@ index 20801e2..5a419f0 100644
  import wandb
  import einops
  
-@@ -123,6 +124,35 @@ class ALDA(TrainerBase):
+@@ -123,6 +125,35 @@ class ALDA(TrainerBase):
  
      def initialize_env_dmc(self, spec: Dict[str, Any]):
          env_config = spec['trainer']['config']['env']
@@ -156,7 +175,28 @@ index 20801e2..5a419f0 100644
          self.env = dmc2gym.make(
              domain_name=env_config['domain_name'],
              task_name=env_config['task_name'],
-@@ -500,10 +530,17 @@ class ALDA(TrainerBase):
+@@ -184,7 +215,7 @@ class ALDA(TrainerBase):
+         video_dir.mkdir(exist_ok=True)
+         self.video_recorder = VideoRecorder(str(video_dir), height=448, width=448)
+ 
+-    def build(self, spec: Dict[str, Any]):
++    def build(self, spec: Dict[str, Any], replay_capacity=None, prefill=True):
+         self.spec = spec
+ 
+         self.initialize_env_dmc(spec)
+@@ -195,8 +226,9 @@ class ALDA(TrainerBase):
+         self.buffer = utils.ReplayBuffer(
+             obs_shape=self.obs_shape,
+             action_shape=self.env.action_space.shape,
+-            capacity=self.buffer_capacity,
+-            batch_size=self.batch_size
++            capacity=self.buffer_capacity if replay_capacity is None else replay_capacity,
++            batch_size=self.batch_size,
++            prefill=prefill,
+         )
+ 
+         shared_trunk = QuantizedEncoder(
+@@ -500,10 +532,17 @@ class ALDA(TrainerBase):
              done = False
              episode_reward = 0
              env_step = 0
@@ -175,7 +215,7 @@ index 20801e2..5a419f0 100644
  
                  # pre_z = self.critic_encoder.shared_trunk(self.preprocess_obs(obs['rgb'][-3:][None]))
                  # embed = self.latent_model(pre_z)['z_hat']
-@@ -522,6 +559,8 @@ class ALDA(TrainerBase):
+@@ -522,6 +561,8 @@ class ALDA(TrainerBase):
  
              self.video_recorder.save(f'{step}{_test_env}.mp4')
              logger.info(f'eval/episode_reward{_test_env}: {episode_reward}')
@@ -184,10 +224,32 @@ index 20801e2..5a419f0 100644
              if distracting_env:
                  self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
              elif color_env:
-@@ -621,6 +660,30 @@ class ALDA(TrainerBase):
+@@ -595,6 +636,20 @@ class ALDA(TrainerBase):
+ 
+                 if self.use_wandb:
+                     wandb.log(self.logging_info)
++                else:
++                    # [Claude 2026-09-05] `self.logging_info.clear()` below used to run
++                    # unconditionally, so under the actual production flag (`use_wandb=False`,
++                    # `runnable/alda/scripts/train.py:30`'s own default -- families.json never
++                    # overrides it) every accumulated metric here -- critic/actor loss, alpha,
++                    # gradient norms, the VQ/commitment/reconstruction losses, even
++                    # `train/episode_reward` itself -- was computed, averaged, and discarded with
++                    # no persistent record anywhere. Found auditing metric richness across all
++                    # twelve baselines: this had been reported as ALDA's strength, not its gap.
++                    # Additive: writes the SAME dict wandb would have received, one JSON line per
++                    # log interval, append-only so a mid-run crash keeps every line already
++                    # written (the same streaming convention `scripts/eval_grid.py` uses).
++                    with open(Path(self.exp_dir) / "train_metrics.jsonl", "a") as _f:
++                        _f.write(json.dumps(self.logging_info) + "\n")
+ 
+                 self.logging_info.clear()
+ 
+@@ -621,11 +676,55 @@ class ALDA(TrainerBase):
              episode_step += 1
              self.env_steps += 1
  
+-    def save_checkpoint(self):
 +        # [Claude 2026-09-02] TERMINAL SAVE AND EVALUATION, after the unchanged loop.
 +        #
 +        # ALDA checkpoints at `step % checkpoint_n_steps == 0` with checkpoint_n_steps = 50_000 and
@@ -210,12 +272,55 @@ index 20801e2..5a419f0 100644
 +            self.evaluate(self.env_steps, distracting_env=True)
 +            self.evaluate(self.env_steps, color_env=True)
 +        logger.info(f'Terminal checkpoint at step {self.env_steps}')
-+        self.save_checkpoint()
++        # Codex, mailbox Q18(b): alda's checkpoint filename is step-stamped, never overwritten, so
++        # a failed terminal write here does not leave a STALE file under this name the way idaac's/
++        # ibac_sni's/rlvigen's fixed-name checkpoints could -- retrieval would simply find no file
++        # at the exact expected step and fail loudly downstream. Failing here anyway: closer to the
++        # actual cause, at the actual moment, rather than a confusing "file not found" much later.
++        try:
++            from safe_checkpoint import TERMINAL_MAX_WAIT_SECONDS
++        except ImportError:
++            TERMINAL_MAX_WAIT_SECONDS = 1800
++        if not self.save_checkpoint(max_wait_seconds=TERMINAL_MAX_WAIT_SECONDS):
++            raise RuntimeError(
++                f"alda's terminal checkpoint write at step {self.env_steps} failed -- the run "
++                "cannot produce a usable terminal checkpoint. Exiting rather than reporting "
++                "success over one that does not exist.")
 +
-     def save_checkpoint(self):
++    def save_checkpoint(self, max_wait_seconds=None):
          filepath = self.cp_dir.joinpath(f'sac_{self.env_name}_step_{self.env_steps}.pt')
          logger.info(f'Saving checkpoint to {filepath}')
-@@ -675,3 +738,19 @@ class ALDA(TrainerBase):
+ 
+-        torch.save(
++        try:
++            from safe_checkpoint import safe_torch_save
++        except ImportError:
++            def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++                import torch as _torch
++                _torch.save(obj, path, **(torch_kwargs or {}))
++                return True
++        ok = safe_torch_save(
+             {
+                 'env_steps': self.env_steps,
+                 'actor_encoder': self.actor_encoder.state_dict(),
+@@ -643,12 +742,15 @@ class ALDA(TrainerBase):
+                 'log_alpha': self.log_alpha,
+                 'log_alpha_optimizer': self.log_alpha_optimizer.state_dict(),
+             },
+-            filepath
++            filepath,
++            label="alda.checkpoint",
++            **({"max_wait_seconds": max_wait_seconds} if max_wait_seconds is not None else {}),
+         )
+         # save replay buffer to disk
+         if self.save_buffer:
+             buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer')
+             self.buffer.save(buffer_fp)
++        return ok
+ 
+     def load_checkpoint(self, path: str):
+         path = Path(path)
+@@ -675,3 +777,19 @@ class ALDA(TrainerBase):
  
          # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
          # self.buffer.load(buffer_fp)

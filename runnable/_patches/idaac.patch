@@ -120,10 +120,71 @@ index e243ac4..8799f71 100644
 +        action_logstd = self.logstd(zeros)
 +        return FixedNormal(action_mean, action_logstd.exp())
 diff --git a/ppo_daac_idaac/envs.py b/ppo_daac_idaac/envs.py
-index b1e0d77..b88d9ae 100644
+index b1e0d77..89bfc61 100644
 --- a/ppo_daac_idaac/envs.py
 +++ b/ppo_daac_idaac/envs.py
-@@ -41,4 +41,72 @@ class VecPyTorchProcgen(VecEnvWrapper):
+@@ -6,6 +6,60 @@ from gym.spaces.box import Box
+ from baselines.common.vec_env import VecEnvWrapper
+ 
+ 
++def observation_level_seed(info, done):
++    """Return the episode identity for the observation emitted by a VecEnv step.
++
++    OpenAI Baselines' DummyVecEnv auto-resets a completed environment: on ``done`` the returned
++    observation is the next episode's reset observation while ``info`` still came from the
++    terminal transition. EpisodeLevelSeed records both identities so callers cannot silently tag
++    that reset observation with the episode that just ended.
++    """
++    key = "next_level_seed" if done else "level_seed"
++    if key not in info:
++        raise KeyError(f"IDAAC step info is missing {key!r} for done={bool(done)}")
++    return info[key]
++
++
++def observation_level_seeds(infos, dones):
++    """Vector form used by IDAAC's rollout collector."""
++    if len(infos) != len(dones):
++        raise ValueError(f"infos/dones length mismatch: {len(infos)} != {len(dones)}")
++    return [observation_level_seed(info, bool(done)) for info, done in zip(infos, dones)]
++
++
++class EpisodeLevelSeed(gym.Wrapper):
++    """Give each RL-ViGen episode the instance identity required by IDAAC."""
++
++    def __init__(self, env, level_seed, condition_seed=None, scene_id=0, level_stride=1):
++        super().__init__(env)
++        self._level_seed_base = level_seed
++        self._level_stride = level_stride
++        self._level_seed = level_seed
++        self._condition_seed = condition_seed
++        self._scene_id = scene_id
++        self._episode_index = 0
++
++    def reset(self, **kwargs):
++        self._level_seed = self._level_seed_base + self._episode_index * self._level_stride
++        if self._condition_seed is not None:
++            condition = int(np.random.SeedSequence(
++                [int(self._condition_seed), int(self._scene_id), self._episode_index]
++            ).generate_state(1, dtype=np.uint32)[0])
++            np.random.seed(condition)
++        self._episode_index += 1
++        return self.env.reset(**kwargs)
++
++    def step(self, action):
++        obs, rew, done, info = self.env.step(action)
++        info["level_seed"] = self._level_seed
++        if done:
++            # DummyVecEnv calls reset immediately after this method returns. The next reset uses
++            # exactly this index, and its observation replaces the terminal observation.
++            info["next_level_seed"] = (
++                self._level_seed_base + self._episode_index * self._level_stride)
++        return obs, rew, done, info
++
++
+ class VecPyTorchProcgen(VecEnvWrapper):
+     def __init__(self, venv, device):
+         """
+@@ -41,4 +95,85 @@ class VecPyTorchProcgen(VecEnvWrapper):
          obs = torch.from_numpy(obs).float().to(self.device) / 255.
          reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
          return obs, reward, done, info
@@ -166,38 +227,51 @@ index b1e0d77..b88d9ae 100644
 +        def observation(self, obs):
 +            return np.asarray(obs["rgb"], dtype=np.uint8)
 +
-+    class _LevelSeed(gym.Wrapper):
-+        """Supplies info['level_seed'], which Procgen provides and IDAAC's own mechanism needs.
-+
-+        IDAACRolloutStorage.before_update pairs each observation with another one carrying the
-+        SAME level_seed and asks the order classifier which came first -- that is IDAAC's
-+        instance-invariance signal, so this key is not bookkeeping, it defines what "the same
-+        instance" means here. An RL-ViGen env's visual instance is fixed by its seed at
-+        construction, so the seed IS the level id.
-+
-+        DIFFERENT FROM PROCGEN, and it bears on IDAAC specifically: a Procgen env draws a new
-+        level every episode, so one rollout spans many instances; here each env is one instance
-+        for the whole run, and instance diversity per batch is capped at num_processes.
-+        Recorded, not silently equated -- it is a Part 2 comparability question.
-+        """
-+        def __init__(self, env, level_seed):
-+            super().__init__(env)
-+            self._level_seed = level_seed
-+
-+        def step(self, action):
-+            obs, rew, done, info = self.env.step(action)
-+            info["level_seed"] = self._level_seed
-+            return obs, rew, done, info
-+
 +    task = args.env_name.split(":", 1)[1]
-+    venv = DummyVecEnv([
-+        (lambda i=i: _LevelSeed(_RGBOnly(_robo_make_env(
-+            task_name=task, seed=args.seed + i, scene_id=scene_id, mode=mode)), args.seed + i))
-+        for i in range(num_envs)
-+    ])
++    # [Corrected 2026-09-05.] The read-back is built HERE from the base env's own attributes,
++    # rather than read off `venv.envs[0]` expecting `_vigen_regime`.
++    #
++    # P3 sets `_vigen_regime` inside RL-ViGen's `robo_make`. This adapter does not call that -- it
++    # calls `robosuitevgb.utils.make_env` directly (imported above as `_robo_make_env`), which P3
++    # does not patch. So `_vigen_regime` was never set on anything in this stack, `venv.envs[0]`
++    # is a `_LevelSeed` wrapper that forwards nothing anyway, and the guard below raised on EVERY
++    # construction: job bt1p4ei1s64o50oka946 died at exactly this line, which means idaac could not
++    # be evaluated at all.
++    #
++    # `_mode` and `_scene_id` ARE on the VGBWrapper that `_robo_make_env` returns -- verified
++    # directly on a constructed env -- and they are the same attributes P3 itself reads and that
++    # `scripts/eval_grid.verify_regime` walks for. The dict is assembled in P3's shape so the
++    # evaluator sees one read-back format across every family.
++    #
++    # No reset and no step: touching either would consume C69's global placement RNG before the
++    # measured episodes begin.
++    bases = []
++
++    def _one(i):
++        base = _robo_make_env(task_name=task, seed=args.seed + i, scene_id=scene_id, mode=mode)
++        bases.append(base)
++        return EpisodeLevelSeed(_RGBOnly(base), args.seed + i,
++                                getattr(args, "condition_seed", None), scene_id, num_envs)
++
++    venv = DummyVecEnv([(lambda i=i: _one(i)) for i in range(num_envs)])
++    if not bases:
++        raise RuntimeError("RL-ViGen adapter constructed no environments")
++    applied_regime = {
++        "mode": getattr(bases[0], "_mode", None),
++        "scene_id": getattr(bases[0], "_scene_id", None),
++        "video_background": getattr(bases[0], "video_background", None),
++    }
++    if applied_regime["mode"] is None:
++        raise RuntimeError(
++            "RL-ViGen adapter could not read the applied regime off the constructed env: "
++            f"{type(bases[0]).__name__} exposes no `_mode`")
++    if any(getattr(b, "_mode", None) != applied_regime["mode"] for b in bases[1:]):
++        raise RuntimeError("RL-ViGen vector members disagree about the requested regime")
 +    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
 +    venv = VecNormalize(venv=venv, ob=False)
-+    return VecPyTorchProcgen(venv, device)
++    wrapped = VecPyTorchProcgen(venv, device)
++    wrapped._vigen_regime = dict(applied_regime)
++    return wrapped
 diff --git a/ppo_daac_idaac/model.py b/ppo_daac_idaac/model.py
 index 2edfde6..c48fb99 100644
 --- a/ppo_daac_idaac/model.py
@@ -383,7 +457,7 @@ index d8953bb..c856faa 100644
 +    return eval_episode_rewards, eval_episode_successes
  
 diff --git a/train.py b/train.py
-index d7318e7..97916c9 100644
+index d7318e7..7404107 100644
 --- a/train.py
 +++ b/train.py
 @@ -1,11 +1,19 @@
@@ -407,10 +481,35 @@ index d7318e7..97916c9 100644
  
  from baselines import logger
  from baselines.common.vec_env import (
-@@ -14,13 +22,45 @@ from baselines.common.vec_env import (
+@@ -14,13 +22,74 @@ from baselines.common.vec_env import (
      VecNormalize
  )
  
++
++def _evaluate_without_training_rng(args, actor_critic, device):
++    """Run IDAAC's in-loop evaluator without advancing the training RNG streams.
++
++    The Door placement sampler uses process-global NumPy state, and the sampled continuous policy
++    also advances torch state. In production the offline grid is the measurement, so an in-loop
++    progress evaluation must not alter the subsequent training trajectory. The environment flag
++    keeps ordinary upstream-compatible invocations unchanged.
++    """
++    if os.environ.get("NATIVE_ISOLATE_ONLINE_EVAL") != "1":
++        return evaluate(args, actor_critic, device)
++    import random
++    numpy_state = np.random.get_state()
++    python_state = random.getstate()
++    torch_state = torch.get_rng_state()
++    cuda_state = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
++    try:
++        return evaluate(args, actor_critic, device)
++    finally:
++        np.random.set_state(numpy_state)
++        random.setstate(python_state)
++        torch.set_rng_state(torch_state)
++        if cuda_state is not None:
++            torch.cuda.set_rng_state_all(cuda_state)
++
 +# [OURS] C61 policy-health diagnostics; scripts/metrics.py owns the definitions so the four
 +# PPO-family baselines report the same quantity rather than four near-misses of it.
 +import importlib.util as _ilu
@@ -428,7 +527,11 @@ index d7318e7..97916c9 100644
  from ppo_daac_idaac.storage import DAACRolloutStorage, \
      IDAACRolloutStorage, RolloutStorage
 -from ppo_daac_idaac.envs import VecPyTorchProcgen
-+from ppo_daac_idaac.envs import VecPyTorchProcgen, make_rlvigen_venv
++from ppo_daac_idaac.envs import (
++    VecPyTorchProcgen,
++    make_rlvigen_venv,
++    observation_level_seeds,
++)
 +
 +
 +# [Claude 2026-09-02 06:25 MSK: endpoint hook for the native DataSphere contract.
@@ -454,7 +557,17 @@ index d7318e7..97916c9 100644
  
  
  def train(args):
-@@ -50,24 +90,27 @@ def train(args):
+@@ -38,6 +107,9 @@ def train(args):
+     print("\nArguments: ", args)
+ 
+     torch.manual_seed(args.seed)
++    # RL-ViGen's Door placement sampler draws from global NumPy, not torch. Without this seed the
++    # same IDAAC --seed names different physical task instances across runs (C69).
++    np.random.seed(args.seed)
+     torch.cuda.manual_seed_all(args.seed)
+ 
+     log_dir = os.path.expanduser(args.log_dir)
+@@ -50,24 +122,28 @@ def train(args):
      logger.configure(dir=args.log_dir, format_strs=['csv', 'stdout'], log_suffix=log_file)
      print("\nLog File: ", log_file)
  
@@ -465,7 +578,8 @@ index d7318e7..97916c9 100644
 -    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
 -    venv = VecNormalize(venv=venv, ob=False)
 -    envs = VecPyTorchProcgen(venv, device)
-+    if args.env_name.startswith("robosuite:"):
++    is_rlvigen = args.env_name.startswith("robosuite:")
++    if is_rlvigen:
 +        envs = make_rlvigen_venv(args, device, "train", args.num_processes)
 +    else:
 +        venv = ProcgenEnv(num_envs=args.num_processes, env_name=args.env_name, \
@@ -491,7 +605,59 @@ index d7318e7..97916c9 100644
              base_kwargs={'hidden_size': args.hidden_size})    
      actor_critic.to(device)
      print("\n Actor-Critic Network: ", actor_critic)
-@@ -199,16 +242,36 @@ def train(args):
+@@ -139,6 +215,12 @@ def train(args):
+     obs = envs.reset()
+     rollouts.obs[0].copy_(obs)
+     rollouts.to(device)
++    if args.algo == 'idaac' and is_rlvigen:
++        # EpisodeLevelSeed's first reset assigns these identities. Initialize index zero from the
++        # observation it actually contains; waiting for the first step is wrong when that step
++        # terminates and DummyVecEnv has already replaced the observation with the next episode.
++        rollouts.levels[0].copy_(
++            torch.arange(args.seed, args.seed + args.num_processes, dtype=torch.long))
+ 
+     episode_rewards = deque(maxlen=10)
+     num_updates = int(
+@@ -159,8 +241,11 @@ def train(args):
+             obs, reward, done, infos = envs.step(action)
+ 
+             if args.algo == 'idaac':
+-                levels = torch.LongTensor([info['level_seed'] for info in infos])
+-                if j == 0 and step == 0:
++                if is_rlvigen:
++                    levels = torch.LongTensor(observation_level_seeds(infos, done))
++                else:
++                    levels = torch.LongTensor([info['level_seed'] for info in infos])
++                if not is_rlvigen and j == 0 and step == 0:
+                     rollouts.levels[0].copy_(levels)
+ 
+             for info in infos:
+@@ -191,24 +276,77 @@ def train(args):
+         if args.algo == 'idaac':
+             rollouts.before_update()
+             order_acc, order_loss, clf_loss, adv_loss, value_loss, \
+-                action_loss, dist_entropy = agent.update(rollouts)    
++                action_loss, dist_entropy = agent.update(rollouts)
++            _update_metrics = {
++                "train/order_acc": order_acc, "train/order_loss": order_loss,
++                "train/clf_loss": clf_loss, "train/adv_loss": adv_loss,
++                "train/value_loss": value_loss, "train/action_loss": action_loss,
++                "train/dist_entropy": dist_entropy,
++            }
+         elif args.algo == 'daac':
+-            adv_loss, value_loss, action_loss, dist_entropy = agent.update(rollouts)    
++            adv_loss, value_loss, action_loss, dist_entropy = agent.update(rollouts)
++            _update_metrics = {
++                "train/adv_loss": adv_loss, "train/value_loss": value_loss,
++                "train/action_loss": action_loss, "train/dist_entropy": dist_entropy,
++            }
+         else:
+-            value_loss, action_loss, dist_entropy = agent.update(rollouts)    
++            value_loss, action_loss, dist_entropy = agent.update(rollouts)
++            _update_metrics = {
++                "train/value_loss": value_loss, "train/action_loss": action_loss,
++                "train/dist_entropy": dist_entropy,
++            }
          rollouts.after_update()
  
          # Save Model
@@ -523,28 +689,60 @@ index d7318e7..97916c9 100644
 -                actor_critic,
 -                getattr(envs, 'ob_rms', None)
 -            ], os.path.join(args.save_dir, "agent{}.pt".format(log_file))) 
++            try:
++                from safe_checkpoint import safe_torch_save, TERMINAL_MAX_WAIT_SECONDS
++            except ImportError:
++                TERMINAL_MAX_WAIT_SECONDS = 1800
++                def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++                    import torch as _torch
++                    _torch.save(obj, path, **(torch_kwargs or {}))
++                    return True
 +            _payload = [actor_critic, getattr(envs, 'ob_rms', None)]
 +            if _is_last:
-+                torch.save(_payload,
-+                           os.path.join(args.save_dir, "agent{}.pt".format(log_file)))
++                # Codex, mailbox Q18(b): fail CLOSED here specifically. This is the fixed-name
++                # checkpoint the offline evaluator always reads; a silently-skipped write here
++                # (disk pressure outlasting safe_torch_save's wait) would leave either nothing or a
++                # STALE file under the canonical name, and the job would still exit 0.
++                if not safe_torch_save(_payload,
++                                       os.path.join(args.save_dir, "agent{}.pt".format(log_file)),
++                                       label="idaac.final",
++                                       max_wait_seconds=TERMINAL_MAX_WAIT_SECONDS):
++                    raise RuntimeError(
++                        "idaac.final checkpoint write failed -- the run cannot produce a usable "
++                        "terminal checkpoint. Exiting rather than reporting success over a "
++                        "missing or stale one.")
 +            if _cross:
-+                torch.save(_payload, os.path.join(
-+                    args.save_dir, "agent{}_{}.pt".format(log_file, _frames_here)))
++                safe_torch_save(_payload, os.path.join(
++                    args.save_dir, "agent{}_{}.pt".format(log_file, _frames_here)),
++                    label="idaac.stamped")
  
          # Save Logs
          total_num_steps = (j + 1) * args.num_processes * args.num_steps
-@@ -225,12 +288,41 @@ def train(args):
+@@ -225,12 +363,54 @@ def train(args):
              logger.logkv("train/median_episode_reward", np.median(episode_rewards))
  
              # Log eval stats (on the full distribution of levels) 
 -            eval_episode_rewards = evaluate(args, actor_critic, device)
-+            eval_episode_rewards, eval_episode_successes = evaluate(args, actor_critic, device)
++            eval_episode_rewards, eval_episode_successes = _evaluate_without_training_rng(
++                args, actor_critic, device)
              logger.logkv("test/mean_episode_reward", np.mean(eval_episode_rewards))
              logger.logkv("test/median_episode_reward", np.median(eval_episode_rewards))
 +            # SUCCESS RATE -- see test.py's note. nan rather than 0 when no episode finished:
 +            # a zero here would be indistinguishable from a measured failure.
 +            logger.logkv("test/success_rate",
 +                         np.mean(eval_episode_successes) if eval_episode_successes else np.nan)
++
++            # [Claude 2026-09-05] `agent.update()`'s own return tuple -- value_loss, action_loss,
++            # and (for idaac/daac) the order-classifier/advantage-loss diagnostics that ARE
++            # idaac's defining mechanism -- was unpacked into local variables every update and
++            # never logged anywhere. Found auditing metric richness: the two standard PPO losses
++            # and the auxiliary head's own accuracy/loss were invisible for the entire run, so a
++            # collapsed or inert order-classifier (order_acc sitting at chance) would have produced
++            # a plausible-looking curve with no signal that the mechanism specific to this baseline
++            # was doing nothing. Purely additive -- `_update_metrics` is populated above from
++            # values already computed for the gradient step, nothing upstream changes.
++            for _key, _value in _update_metrics.items():
++                logger.logkv(_key, _value)
 +
 +            # [OURS] C28 family-tier diagnostics, read off the agent rather than threaded
 +            # through update()'s return tuple -- see the note in algo/idaac.py. getattr keeps

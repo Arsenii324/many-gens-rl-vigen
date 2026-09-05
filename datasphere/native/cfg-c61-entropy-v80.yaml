@@ -1,0 +1,47 @@
+# [Claude 2026-09-04: isolate the CAUSE of ibac_sni's entropy inflation. One variable, one job.
+#
+# WHAT WAS MEASURED. `bt1i1s0j8qhbal67gjnn` ran ibac_sni for 100,000 frames under the newly-ported
+# impala architecture (360,399 float values, confirming the port executes on CUDA). Across 782
+# updates `mean_log_std` rose MONOTONICALLY 0.0026 -> 1.4472 and the reported entropy 9.95 -> 20.03,
+# with no sign of levelling; return stayed at the C55 floor and success was 0.00 throughout. A
+# 7-D Gaussian at log_std 1.45 has sigma ~= 4.3 against actions in [-1, 1] -- the policy is noise.
+#
+# WHAT THIS DOES NOT YET ESTABLISH. That the ENTROPY BONUS causes it. Two explanations fit the same
+# curve: (a) a coefficient of 0.01 tuned for a 15-way categorical, whose entropy is bounded by
+# log(15) = 2.71, applied to a Gaussian whose entropy is UNBOUNDED, so the bonus pays forever
+# (this is exactly what C61 predicted); or (b) the policy gradient itself widening sigma because
+# the returns carry no signal, which no coefficient change would fix. Reporting (a) without ruling
+# out (b) would be the kind of claim this project's runbook forbids.
+#
+# THE TEST. Identical run, 25,000 frames, ONE flag changed: --entropy-coef 0.0. The control is not
+# a second cell but the run above, whose curve passes through log_std 0.5381 at frame 24,960 --
+# same code, same seed, same architecture, same task, same container.
+#   if log_std stays near 0 at 25k  -> the bonus causes it, C61 is confirmed and configurable
+#   if log_std still reaches ~0.54  -> the bonus is innocent, C61's proposed fix would not work
+# and either outcome is worth the run, which is what makes it worth submitting.
+#
+# The impala architecture is now ibac_sni's default (`runnable/_launch/ibac_sni.sh`), so this needs
+# no model_type override -- it inherits it, and that is deliberate: the question is about the
+# coefficient under the architecture we would actually report.]
+name: vigen-c61-entropy-v80
+desc: Does the entropy bonus cause ibac_sni's log_std inflation? 25k at --entropy-coef 0.0.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  NATIVE_EXTRA_OVERRIDES=--entropy-coef=0.0
+  CELLS=ibac_sni:1 FRAMES=25000 TASK=Door SEED=1
+  EVAL_EPISODES=5 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v67.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

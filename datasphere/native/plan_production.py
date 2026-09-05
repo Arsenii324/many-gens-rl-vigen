@@ -16,7 +16,22 @@ Nothing submits from this. It exists so the production shape is arithmetic.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.util
 import json
+import pathlib
+
+_HERE = pathlib.Path(__file__).resolve().parent
+_DESCRIPTORS = json.loads(_HERE.joinpath("families.json").read_text())
+_family_spec = importlib.util.spec_from_file_location("_native_family_for_plan", _HERE / "family.py")
+_family = importlib.util.module_from_spec(_family_spec)
+_family_spec.loader.exec_module(_family)
+MINIMUM_TIER = {baseline: entry.get("minimum_tier", "gt4.1")
+                for entry in _DESCRIPTORS.values() if isinstance(entry, dict)
+                for baseline in entry.get("baselines", [])}
+DECLARED_PACKING_CAP = {baseline: entry.get("production", {}).get("cells_per_job", 1)
+                        for entry in _DESCRIPTORS.values() if isinstance(entry, dict)
+                        for baseline in entry.get("baselines", [])}
 
 # Completed-cell throughput, one cell alone on gt4.1, from returned artifacts parsed by
 # summarize_result.py. Anything absent here is unmeasured and stays unmeasured in the output --
@@ -77,6 +92,7 @@ ENVELOPE = {
     "idaac": {"rss_gib": 2.90, "vram_mib": 1204, "cores": 1.35},
     "ppg":   {"rss_gib": 4.20, "vram_mib": 1588, "cores": 1.80},
     "ibac_sni": {"rss_gib": 3.10, "vram_mib": 1102, "cores": 1.10},
+    "ctrl": {"rss_gib": 13.40, "vram_mib": None, "cores": 8.0},
 }
 
 # `units_per_hour` is the currency the DataSphere GRANT is denominated in, and it is the one that
@@ -111,9 +127,164 @@ ALDA_FIXED_GIB = 15.3
 
 GIB = 1024 ** 3
 
+V100_HOST = {
+    "cpu_cores": 16,
+    "ram_gib_available": 113,
+    "gpu_count": 2,
+    "gpu_model": "Tesla V100-SXM2-32GB",
+    "gpu_vram_mib": 32 * 1024,
+    "gpus_available_when_measured": 1,
+    "availability_is_runtime_state": True,
+    "source": "notes/remote-infra.txt (measured 2026-09-05)",
+}
 
-def cell_ram_gib(baseline: str, frames: int, capacity: int | None) -> tuple[float, str]:
-    """Resident memory one cell reaches at the end of a run, and what sets it."""
+# [Claude 2026-09-04: checkpoint bytes, MEASURED from `retained.json` on real jobs -- not estimated.
+# This block exists because enabling intermediate checkpoints changed the storage question and
+# nobody had recomputed it: with a 50k grid a 6e5 cell writes TWELVE stamps plus the terminal one,
+# so the archive is thirteen checkpoints where it used to be one.]
+CHECKPOINT_MB = {
+    "rlvigen": 104.1,   # drqv2 snapshot.pt, bt15e9v1k2ngmb71hnjn
+    "dmc_gb": 104.1,    # not separately measured; same SAC-shaped encoder+critic+target as rlvigen
+    "alda": 103.9,      # sac_None_step_10000.pt
+    "ctrl": 39.8,       # checkpoint_10000.msgpack
+    "ibac_sni": 27.6,   # model.pt, default (non-impala) architecture -- impala is 19x SMALLER
+    "idaac": 5.0,
+    "ppg": 5.0,
+}
+FAMILY_OF = {**{b: "rlvigen" for b in RLVIGEN}, **{b: "dmc_gb" for b in DMC_GB},
+             "alda": "alda", "ctrl": "ctrl", "ibac_sni": "ibac_sni", "idaac": "idaac", "ppg": "ppg"}
+
+
+def curve_eval_hours(frames: int, save_every: int, seeds: int, episodes: int = 10,
+                     regimes: int = 2, episode_steps: int = 500) -> dict:
+    """Job-hours added by evaluating the intermediate grid in the container.
+
+    Derived from the same measured throughputs the cost model already uses, so it needs no new
+    measurement: an evaluation episode is `episode_steps` environment steps of forward passes with
+    no gradient, which is at worst as slow as training at that family's measured FPS -- and in
+    practice faster, since there is no update. Treating it as equal is the conservative direction.
+
+    Reported separately from training rather than folded in, because it is the price of a decision
+    (evaluate every stamp, or only the endpoint) and a reader has to be able to see what dropping
+    the curve would save.
+    """
+    stamps = max(frames // save_every, 0) + 1
+    per_baseline = {}
+    for baseline, fps in MEASURED_FPS_GT4_1.items():
+        steps = stamps * regimes * episodes * episode_steps
+        hours = steps / fps / 3600.0
+        per_baseline[baseline] = {"stamps": stamps, "eval_steps": steps,
+                                  "hours_per_seed": hours, "hours_all_seeds": hours * seeds}
+    total = sum(v["hours_all_seeds"] for v in per_baseline.values())
+    return {"stamps": stamps, "rows": per_baseline, "total_hours": total}
+
+
+def checkpoint_storage_gb(frames: int, save_every: int, seeds: int) -> dict:
+    """What retaining the intermediate grid actually costs, per baseline and in total.
+
+    The answer decides a design question, not just a number. If the weights must come home, a
+    3-seed 6e5 run does not fit on this laptop; if they are evaluated where they were produced and
+    only the records travel, the same run costs kilobytes. C95 already forces the second option --
+    a container-trained checkpoint CANNOT be validly evaluated here -- so retaining the weights
+    buys nothing that retaining the records does not, and costs four orders of magnitude more.
+    """
+    stamps = max(frames // save_every, 0) + 1   # the 50k grid plus the terminal checkpoint
+    rows = {}
+    for baseline, family in FAMILY_OF.items():
+        per_cell_gb = CHECKPOINT_MB[family] * stamps / 1000.0
+        rows[baseline] = {"stamps": stamps, "per_cell_gb": per_cell_gb,
+                          "all_seeds_gb": per_cell_gb * seeds}
+    total = sum(r["all_seeds_gb"] for r in rows.values())
+    return {"stamps": stamps, "rows": rows, "total_gb": total}
+
+
+def resolved_fleet(profile: str) -> tuple[dict, str]:
+    """Resolve every family through the launcher's own overlay logic and hash that result."""
+    resolved = {
+        name: _family.resolved_descriptor(name, profile=profile)
+        for name in sorted(_family.load())
+    }
+    canonical = json.dumps(resolved, sort_keys=True, separators=(",", ":")).encode()
+    return resolved, hashlib.sha256(canonical).hexdigest()
+
+
+def v100_schedule(frames: int, seeds: list[int]) -> dict:
+    """Production-host shape without pretending T4 throughput was measured on a V100."""
+    resolved, descriptor_hash = resolved_fleet("v100")
+    rows = []
+    order = RLVIGEN + DMC_GB + ("alda",) + ONPOLICY
+    for baseline in order:
+        family = _family.family_of(baseline)
+        entry = resolved[family]
+        settings = entry.get("production", {})
+        capacity = settings.get("replay_capacity")
+        if baseline in DMC_GB:
+            # This implementation allocates `capacity=args.train_steps`; there is no separate
+            # option, so its effective capacity is the requested budget on every host.
+            capacity = frames
+        if baseline in RLVIGEN:
+            max_retained = frames + -(-frames // 500)  # one reset entry per full Door horizon
+            evicts = capacity is None or int(capacity) < max_retained
+        elif baseline in DMC_GB:
+            max_retained, evicts = frames, False
+        else:
+            max_retained, evicts = None, None
+        ram, ram_reason = cell_ram_gib(baseline, frames, capacity, entry)
+        rows.append({
+            "baseline": baseline,
+            "family": family,
+            "requested_frames": frames,
+            "executed_endpoint": _family.expected_endpoint(
+                family, frames, profile="v100"),
+            "seeds": seeds,
+            "runtime_constants": entry.get("constants", {}),
+            "replay_capacity": capacity,
+            "maximum_retained_transitions": max_retained,
+            "evicts_before_endpoint": evicts,
+            "save_every_frames": settings.get("save_every"),
+            "endpoint_eval_episodes": settings.get("offline_eval_episodes"),
+            "curve_eval_episodes": settings.get(
+                "curve_eval_episodes", settings.get("offline_eval_episodes")),
+            "offline_eval_regimes": settings.get("offline_eval_regimes"),
+            "offline_eval_scenes": settings.get("offline_eval_scenes"),
+            "cell_ram_gib_model": round(ram, 2),
+            "cell_ram_model_basis": ram_reason,
+            "v100_completed_frames_per_second": None,
+            "throughput_source": "UNMEASURED_ON_V100",
+            "t4_completed_frames_per_second_reference": MEASURED_FPS_GT4_1.get(baseline),
+            "t4_reference_basis": FPS_BASIS.get(baseline),
+        })
+    return {
+        "_comment": [
+            "GENERATED by plan_production.py --host-profile v100; nothing submits from this file.",
+            "Runtime settings are resolved by family.py from the explicit v100 profile.",
+            "Every V100 throughput is null until measured on that host; T4 rates are references,",
+            "not estimates silently relabelled as production measurements.",
+        ],
+        "host_profile": "v100",
+        "resolved_descriptor_sha256": descriptor_hash,
+        "host": V100_HOST,
+        "frames": frames,
+        "seeds": seeds,
+        "rows": rows,
+        "calendar_status": "BLOCKED_ON_MEASURED_V100_THROUGHPUT",
+    }
+
+
+
+def cell_ram_gib(baseline: str, frames: int, capacity: int | None,
+                  entry: dict | None = None) -> tuple[float, str]:
+    """Resident memory one cell reaches at the end of a run, and what sets it.
+
+    [Corrected 2026-09-05.] The on-policy fallback branch read a single static `ENVELOPE` figure
+    per baseline regardless of process count -- ibac_sni's 3.10 GiB was measured at `procs=1` and
+    stayed 3.10 GiB in this function even once the resolved profile asked for `procs=16`, while
+    `family.check_memory`'s SEPARATE `parallel_rollout_memory` model (also in families.json)
+    correctly modeled the same 16-worker process tree at 17.91 GiB. Same underlying fact, two
+    consumers, one of them stale -- caught by `tests/test_production_schedule_not_stale.py`.
+    `entry` (the resolved descriptor already available at every call site in `v100_schedule`) lets
+    this function read the SAME `parallel_rollout_memory` model instead of a second hardcoded copy.
+    """
     if baseline in RLVIGEN:
         retained = min(frames, capacity) if capacity else frames
         floor = ENVELOPE[baseline]["rss_gib"]
@@ -124,6 +295,16 @@ def cell_ram_gib(baseline: str, frames: int, capacity: int | None) -> tuple[floa
             "replay preallocated at construction"
     if baseline == "alda":
         return ALDA_FIXED_GIB, "fixed working set, budget-independent"
+    if entry is not None:
+        parallel = entry.get("production", {}).get("parallel_rollout_memory")
+        if parallel:
+            procs = int(entry.get("constants", {}).get("procs", 1))
+            total = (float(parallel["parent_gib"]) + procs * float(parallel["per_worker_gib"])
+                     + float(parallel.get("margin_gib", 0.0)))
+            return total, (f"process tree model: parent {parallel['parent_gib']} + "
+                            f"{procs}x{parallel['per_worker_gib']} workers + "
+                            f"{parallel.get('margin_gib', 0.0)} margin (source: "
+                            f"{parallel.get('source_job', 'unrecorded')})")
     return ENVELOPE.get(baseline, {}).get("rss_gib", 4.2), "on-policy rollout only, budget-independent"
 
 
@@ -146,14 +327,19 @@ def plan_row(baseline: str, frames: int, capacity: int | None, seeds: list[int])
         row["solo_hours_per_seed_gt4_1"] = round(frames / fps / 3600, 2)
 
     # Smallest tier that holds one cell, then how many cells fit beside it.
+    tier_rank = {"gt4.1": 1, "gt4i.1": 2}
+    minimum = MINIMUM_TIER.get(baseline, "gt4.1")
     for name in ("gt4.1", "gt4i.1"):
+        if tier_rank[name] < tier_rank[minimum]:
+            continue
         tier = TIERS[name]
         if ram <= tier["usable_ram_gib"] and (vram is None or vram <= tier["vram_mib"]):
             row["tier"] = name
             by_ram = int(tier["usable_ram_gib"] // ram)
             by_vram = int(tier["vram_mib"] // vram) if vram else by_ram
             by_cores = max(1, int(tier["cores"] // max(1.0, ENVELOPE.get(baseline, {}).get("cores", 1.0))))
-            row["max_cells_per_job"] = max(1, min(by_ram, by_vram, by_cores))
+            row["max_cells_per_job"] = max(1, min(by_ram, by_vram, by_cores,
+                                                   DECLARED_PACKING_CAP[baseline]))
             row["packing_limited_by"] = min(
                 (("host memory", by_ram), ("device memory", by_vram), ("cores", by_cores)),
                 key=lambda item: item[1],
@@ -180,6 +366,9 @@ def plan_row(baseline: str, frames: int, capacity: int | None, seeds: list[int])
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--host-profile", choices=("datasphere", "v100"), default="datasphere",
+                        help="resolve runtime settings for this named host; never read ambient "
+                             "NATIVE_HOST_PROFILE when generating an artifact")
     parser.add_argument("--frames", type=int, default=600_000)
     parser.add_argument("--rlvigen-capacity", type=int, default=300_000)
     # dmc_gb's buffer is `capacity=args.train_steps` with no flag (train.py:111), so a cap is not
@@ -187,7 +376,37 @@ def main() -> int:
     # price what that change would buy.
     parser.add_argument("--dmc-gb-capacity", type=int, default=None)
     parser.add_argument("--seeds", default="101,102,103")
+    parser.add_argument("--sync-schedule", action="store_true",
+                        help="rewrite production-schedule.json's throughput table from this "
+                             "module, which is the source of truth for it")
     args = parser.parse_args()
+
+    if args.host_profile == "v100":
+        seeds = [int(item) for item in args.seeds.split(",")]
+        payload = json.dumps(v100_schedule(args.frames, seeds), indent=2) + "\n"
+        if args.sync_schedule:
+            schedule = pathlib.Path(__file__).with_name("production-schedule-v100.json")
+            schedule.write_text(payload)
+            print(f"synced {schedule.name}: explicit v100 profile, {len(seeds)} seeds")
+            return 0
+        print(payload, end="")
+        return 0
+
+    if args.sync_schedule:
+        # [Claude 2026-09-04: the schedule carried its own copy of the FPS table and drifted --
+        # drqv2 stayed at 17.53 after re-grounding at 26.05, and five baselines stayed 'estimated'
+        # after all five had completed CUDA runs. One number, one home.]
+        import json as _json
+        schedule = pathlib.Path(__file__).with_name("production-schedule.json")
+        data = _json.loads(schedule.read_text())
+        data["measured_completed_frames_per_second_gt4_1"] = dict(sorted(MEASURED_FPS_GT4_1.items()))
+        data["throughput_basis"] = dict(sorted(FPS_BASIS.items()))
+        data["estimated_baselines"] = [b for b, basis in sorted(FPS_BASIS.items())
+                                       if basis != "measured"]
+        schedule.write_text(_json.dumps(data, indent=1, ensure_ascii=False) + "\n")
+        print(f"synced {schedule.name}: {len(MEASURED_FPS_GT4_1)} baselines, "
+              f"{len(data['estimated_baselines'])} not directly measured")
+        return 0
 
     seeds = [int(item) for item in args.seeds.split(",")]
     order = RLVIGEN + DMC_GB + ("alda",) + ONPOLICY
@@ -215,6 +434,13 @@ def main() -> int:
             "which understated every total by a sixth of the fleet after both had in fact",
             "completed (bt13km8g093do0fdtc58, bt1ums2q8170s3cq5p9l).",
         ],
+        # Keep these explicit in the generated artifact: the schedule test reads them directly,
+        # and omitting them made the documented regeneration command create a file that its own
+        # stale-file checks could no longer load.
+        "measured_completed_frames_per_second_gt4_1": dict(sorted(MEASURED_FPS_GT4_1.items())),
+        "throughput_basis": dict(sorted(FPS_BASIS.items())),
+        "estimated_baselines": [b for b, basis in sorted(FPS_BASIS.items())
+                               if basis != "measured"],
         "frames": args.frames,
         "seeds": seeds,
         "tiers": TIERS,

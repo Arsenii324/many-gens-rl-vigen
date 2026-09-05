@@ -29,7 +29,14 @@ For paired runs A, B of the same configuration, `E|A - B| = sigma_diff * sqrt(2/
 normality, and `sigma_diff = sigma * sqrt(2)` for two independent runs of variance `sigma^2`.
 Working in relative terms gives a coefficient of variation for a single run's return. The
 two-sample detectable difference at 5% significance and 80% power is then
-`d = z * CV * sqrt(2/n)` with `z = 2.802`.
+`d = mult * CV * sqrt(2/n)`.
+
+**CORRECTED 2026-09-05.** `mult` was the NORMAL approximation `z = 2.802` (= 1.960 + 0.842). That
+is asymptotic, and this project's production design is n = 3 per arm -- df = 2n-2 = 4, the one
+regime where the normal approximation is least valid. It understated the detectable difference at
+n=3 by a third (39.8% -> 52.8%). `mult` is now `t(.975, df) + t(.80, df)`, which agrees with the
+old value at large n (both 9.8% at n=50) and diverges only at small n. See
+notes/FINDING-resolving-power-at-n3.md.
 
 **Returns, not success rate.** At these budgets C41 found success rate flipping both ways between
 paired runs (1.0 vs 0.4 at 80k), so it carries no signal to plan against. C33 made return the
@@ -41,7 +48,19 @@ import argparse
 import math
 import statistics as st
 
-Z_80_POWER = 2.802
+Z_80_POWER = 2.802  # normal approximation; kept only to report the old value alongside
+
+
+def _multiplier(n: int) -> float:
+    """t-based two-sample multiplier at 5% significance and 80% power, df = 2n-2.
+
+    Falls back to the normal approximation for n < 2, where t is undefined.
+    """
+    if n < 2:
+        return Z_80_POWER
+    from scipy import stats
+    df = 2 * n - 2
+    return float(stats.t.ppf(0.975, df) + stats.t.ppf(0.80, df))
 
 # C41, `docs/REGISTER.md` 2026-08-18: (frame, run A return, run B return). Same config, same seed,
 # same machine, runs a day apart. Frames 0 and 10k agreed exactly and are omitted -- they are
@@ -61,13 +80,27 @@ def cv_from_pairs(pairs) -> float:
     return st.mean(rels) / math.sqrt(2 / math.pi) / math.sqrt(2)
 
 
-def detectable(cv: float, n: int, z: float = Z_80_POWER) -> float:
-    """Smallest relative difference two arms of `n` seeds each can separate."""
-    return z * cv * math.sqrt(2 / n)
+def detectable(cv: float, n: int, z: float | None = None) -> float:
+    """Smallest relative difference two arms of `n` seeds each can separate.
+
+    Uses the t-based multiplier for the actual n unless one is passed explicitly.
+    """
+    mult = _multiplier(n) if z is None else z
+    return mult * cv * math.sqrt(2 / n)
 
 
-def seeds_for(cv: float, d: float, z: float = Z_80_POWER) -> int:
-    return math.ceil(2 * (z * cv / d) ** 2)
+def seeds_for(cv: float, d: float, z: float | None = None) -> int:
+    """Seeds per arm needed to resolve a relative difference `d`.
+
+    Solved by iteration rather than in closed form: the t multiplier depends on n, so the closed
+    form with a fixed z systematically under-counts at the small n this project actually plans.
+    """
+    if z is not None:
+        return math.ceil(2 * (z * cv / d) ** 2)
+    for n in range(2, 10_000):
+        if detectable(cv, n) <= d:
+            return n
+    return 10_000
 
 
 def main() -> int:

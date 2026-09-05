@@ -39,7 +39,7 @@ fi
 PY="${PYTHON_BIN:-${PYTHON:-python3}}"
 export RLVIGEN_ROOT="$REPO/RL-ViGen-upstream"
 export RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-64}"
-export PYTHONPATH="$BASE:$BASE/torch_rl"
+export PYTHONPATH="$BASE:$BASE/torch_rl:$REPO/runnable/_shim"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   export MUJOCO_GL="${MUJOCO_GL:-glfw}"
   export PYGLFW_LIBRARY="${PYGLFW_LIBRARY:-/opt/homebrew/lib/libglfw.dylib}"

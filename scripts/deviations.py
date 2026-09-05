@@ -32,6 +32,7 @@ the launcher, or the run is not reproducible.
 from __future__ import annotations
 
 import pathlib
+import pathlib
 import re
 import subprocess
 import sys
@@ -106,6 +107,7 @@ def main() -> int:
     total_ins = total_del = total_files = total_code = 0
     incomplete: list[tuple[str, int]] = []
     bad_base = []
+    unverifiable = []
     print(f'{"clone":<16}{"files":>6}{"+":>7}{"-":>7}{"code+":>7}   baseline commit')
     print("-" * 78)
     ignored_seen = {}
@@ -148,9 +150,21 @@ def main() -> int:
                             git(["log", "--format=%s", "-1", base], c))
         src = SOURCE_OF.get(c.name)
         if claimed and src and (ROOT / src).exists():
-            actual = git(["log", "-1", "--format=%h"], ROOT / src).strip()
-            if actual and not actual.startswith(claimed.group(0)[:len(actual)]):
-                bad_base.append(f"{c.name}: claims {claimed.group(0)}, {src} is at {actual}")
+            # [Corrected 2026-09-05.] `git -C <dir> log` WALKS UP when <dir> is not itself a
+            # repository, so it cheerfully returned the ENCLOSING repo's HEAD and this check
+            # accused all six baselines of mislabelled provenance against one unrelated commit
+            # (12f6322, ccm-intro's own HEAD). ext/ has no .git and neither do the vendored copies
+            # inside it. Ask whether the directory is its own repository root before believing the
+            # answer -- and when it is not, say the claim is UNCHECKABLE here rather than wrong.
+            toplevel = git(["rev-parse", "--show-toplevel"], ROOT / src).strip()
+            own_repo = toplevel and pathlib.Path(toplevel).resolve() == (ROOT / src).resolve()
+            if not own_repo:
+                unverifiable.append(f"{c.name}: {src} carries no git identity of its own, so its "
+                                    f"claimed base {claimed.group(0)} cannot be checked in this tree")
+            else:
+                actual = git(["log", "-1", "--format=%h"], ROOT / src).strip()
+                if actual and not actual.startswith(claimed.group(0)[:len(actual)]):
+                    bad_base.append(f"{c.name}: claims {claimed.group(0)}, {src} is at {actual}")
         ins = dels = files = 0
         for line in stat.splitlines():
             parts = line.split("\t")
@@ -197,6 +211,13 @@ def main() -> int:
         print(f'{"TOTAL":<16}{total_files:>6}{total_ins:>7}{total_del:>7}{total_code:>7}')
     print("\n`+` counts every inserted line; `code+` counts only those that are neither blank")
     print("nor comment-only. Both are shown because each flatters a different story.")
+    if unverifiable:
+        print("\nBASELINE UNCHECKABLE HERE -- not a mismatch, and NOT a pass either:")
+        for u in unverifiable:
+            print(f"  ?? {u}")
+        print("  Check these in a tree where ext/ holds real clones with their own .git.")
+        print("  NOTE: a zero exit does NOT certify these -- it means no MISMATCH was proven, and")
+        print("  a claim that could not be checked is not a claim that was checked and passed.")
     if bad_base:
         print("\nBASELINE MISLABELLED -- the PRISTINE commit does not name its actual source:")
         for b in bad_base:

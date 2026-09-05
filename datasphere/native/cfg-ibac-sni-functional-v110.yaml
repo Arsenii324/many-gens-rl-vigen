@@ -1,0 +1,33 @@
+# Evaluator-only validation of the current Impala IBAC-SNI loader.  The checkpoint predates the
+# corrected final beta setting, so this proves evaluator plumbing only and is not pilot evidence.
+name: vigen-ibac-sni-functional-v110
+desc: Evaluate a retained Impala IBAC-SNI checkpoint through the current CUDA evaluator.
+cmd: >-
+  timeout --foreground 7200s env
+  CELLS=ibac_sni:1
+  FRAMES=100096
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=ibac_sni
+  OFFLINE_EVAL_BASELINE=ibac_sni
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100096
+  OFFLINE_EVAL_EPISODES=5
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v110.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/impala/cells/ibac_sni-s1/checkpoints/model_100096.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

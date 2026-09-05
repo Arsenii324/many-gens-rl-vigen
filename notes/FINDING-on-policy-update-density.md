@@ -1,0 +1,81 @@
+# The four on-policy families' regular-phase update density versus their Procgen source
+
+Found 2026-09-05 in the full-project audit, extending the same question already asked of the
+off-policy families (`FINDING-update-to-data-ratio.md`, A27, corrected after review 14): not "what
+does one unit of the x-axis mean" but "how much learning happens per unit". PPG's AUXILIARY-phase
+cadence was already found and fixed today (A26) — this is the separate, previously unexamined
+question of the REGULAR PPO-phase update rate, for all four on-policy families.
+
+## The mechanism
+
+An on-policy update takes `epochs x minibatches` gradient steps per collected rollout of
+`num_envs x num_steps` transitions. Holding `epochs` and `minibatches` fixed while `num_envs` shrinks
+(because a single V100 cannot run Procgen's ~64 cheap procedurally-generated envs' worth of parallel
+*robosuite/MuJoCo* environments) multiplies the update density by exactly the ratio of rollout sizes
+— the identical shape as the off-policy `action_repeat` case, mechanism substituted.
+
+## The measurement, verified against the executed entry point in each case
+
+| family | production rollout (`num_envs x num_steps`) | epochs x minibatches | grad steps / env frame | upstream rollout | upstream grad steps / env frame | ratio |
+|---|---:|---:|---:|---:|---:|---:|
+| `idaac` (policy+aux head) | 16 x 256 = 4096 | 1 x 8 = 8 | 0.00195 | 64 x 256 = 16384 | 0.000488 | **4x** |
+| `idaac` (value head, separate optimizer) | 4096 | 9 x 8 = 72 | 0.01758 | 16384 | 0.004395 | **4x** |
+| `ppg` (regular PPO phase) | 8 x 256 = 2048 | 1 x 8 = 8 | 0.00391 | 16384 (1-rank) / 65536 (4-rank MPI) | 0.000488 / 0.000122 | **8x / 32x** |
+| `ibac_sni` (target `procs=16` profile) | 16 x 128 = 2048 | 4 x 8 = 32 | 0.015625 | 16 x 128 = 2048 (both are upstream's own defaults) | 0.015625 | **1x — exact match** |
+| `ctrl` (V100 profile, `num_envs=64`) | 64 x 256 = 16384 | 3 x 8 = 24 | 0.001465 | 64 x 256 = 16384 (upstream default) | 0.001465 | **1x — exact match** |
+
+Every non-1x number above comes from an UNOVERRIDDEN upstream default colliding with a SMALLER
+`num_envs` than Procgen's own default — none of `ppo_epoch`, `num_mini_batch`, `value_epoch`,
+`n_epoch_pi`, `nminibatch` are touched by this project's launchers or descriptors. Evidence, all
+read from the executed entry point, not a callee's own internal default (PPG's `nminibatch` needed
+this distinction: `ppo.py`'s function signature defaults to 4, but `train.py:33` — the actual CLI
+entry point our launcher calls — defaults to 8, and that is the value that executes):
+
+- idaac: `ppo_daac_idaac/arguments.py:62-64,72-79,134-136`; `algo/idaac.py:60,76,94,132`;
+  `families.json` idaac constants/host_profiles.v100 (`num_processes` 4 base / 16 v100, vs upstream
+  default 64).
+- ppg: `phasic_policy_gradient/train.py:27-38`; `ppo.py:168-170`; `families.json` ppg
+  constants (`num_envs: 8`, A26-reverted) vs upstream default 64 (single rank) / 4-rank MPI.
+- ibac_sni: `torch_rl/scripts/train.py:53,67,87-91` (`--procs` default **16**, `--frames-per-proc`
+  default **128** for PPO, `--batch-size` default 256, `--epochs` default 4 — all four are upstream
+  defaults, none overridden); `families.json` ibac_sni constants (`procs: 1` base is a DataSphere
+  memory accommodation, not the target; `host_profiles.v100.constants.procs: 16` restores the
+  upstream default exactly).
+- ctrl: `train_ppo.py:94,101-104,118` (`num_envs` default 64, `n_steps` 256, `n_minibatch` 8,
+  `epoch_ppo` 3); `families.json` ctrl constants (`num_envs: 16` base, DataSphere memory
+  accommodation) and `host_profiles.v100.constants.num_envs: 64` — restoring the upstream default
+  exactly, already fixed and gated (`gate_ctrl_v100_profile_restored`) earlier this session.
+
+## Why two of four already match exactly, and it is not luck
+
+`ibac_sni` and `ctrl` match upstream exactly on the V100 profile **because their V100 host profiles
+were already built to restore the full upstream `num_envs`** — ctrl explicitly (measured 13.57 GiB
+at 16 envs, 113 GiB host, restore 64), ibac_sni structurally (16 was always the upstream default;
+`procs=1` is the DataSphere-memory accommodation, not a chosen production value, and is gated behind
+a real smoke before it may launch). `idaac` and `ppg` have no such V100 restoration: idaac's V100
+profile only raises `num_processes` to 16, still a quarter of Procgen's 64, and `ppg`'s A26 fix
+deliberately kept `num_envs` at 8 to preserve its AUXILIARY-phase cadence — which is the right call
+for that axis, and this finding is what it costs on this one.
+
+## What this means, and what I recommend
+
+This is the same shape as A26/A27: real, verified, and **not obviously wrong** — a single V100
+genuinely cannot run 64 parallel robosuite/MuJoCo environments the way Procgen's cheap 2D levels
+allow, so *some* deviation from Procgen's parallelism is forced by hardware, exactly as *some*
+retiming of PPG's auxiliary phase was forced by the 600k budget. The question is only whether it is
+declared.
+
+**It is not declared anywhere today.** `updates_per_env_frame()` in `audit_comparability_seam.py`
+currently reports `"n/a on-policy"` for all four on-policy families — correct for the *replay-ratio*
+sense that function was built for, but it means no comparability axis currently surfaces this
+number at all.
+
+**Recommended: extend `updates_per_env_frame()` with these real numbers rather than `n/a`,** and
+raise idaac's and ppg's regular-phase density as a declared design-point limitation alongside their
+already-declared Procgen-vs-continuous-control geometry limitation (review 11 §7/§8, T16/T17).
+**Not recommended: compensating by raising `num_mini_batch`/`ppo_epoch` to force a 1x match** — that
+would be inventing a new hyperparameter combination nobody validated, the same reasoning this
+project already applied when it declined to equalise the off-policy ratio.
+
+Filed as **A29** rather than applied silently, since it touches idaac and ppg's effective learning
+rate per unit of collected experience — method-defining, not a bookkeeping fix.

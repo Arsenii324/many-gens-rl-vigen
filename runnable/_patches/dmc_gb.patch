@@ -88,10 +88,10 @@ index e390dce..d707942 100644
  }
  
 diff --git a/src/train.py b/src/train.py
-index 793eb15..2bce7b5 100644
+index 793eb15..6d781f8 100644
 --- a/src/train.py
 +++ b/src/train.py
-@@ -13,27 +13,60 @@ from video import VideoRecorder
+@@ -13,27 +13,77 @@ from video import VideoRecorder
  
  def evaluate(env, agent, video, num_episodes, L, step, test_env=False):
  	episode_rewards = []
@@ -146,14 +146,31 @@ index 793eb15..2bce7b5 100644
 +		L.dump(args.train_steps)
 +	terminal_checkpoint = os.path.join(model_dir, f'{args.train_steps}.pt')
 +	if not os.path.exists(terminal_checkpoint):
-+		torch.save(agent, terminal_checkpoint)
++		try:
++			from safe_checkpoint import safe_torch_save, TERMINAL_MAX_WAIT_SECONDS
++		except ImportError:
++			TERMINAL_MAX_WAIT_SECONDS = 1800
++			def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++				import torch as _torch
++				_torch.save(obj, path, **(torch_kwargs or {}))
++				return True
++		# Codex, mailbox Q18(b): the filename is step-stamped, so a failed write here leaves no
++		# file at the expected step rather than a stale one under a fixed name -- but this is the
++		# ONLY call to this line, unconditional, so failing loudly here is strictly better than an
++		# offline evaluator finding nothing at the expected path much later with no clear cause.
++		if not safe_torch_save(agent, terminal_checkpoint, label="dmc_gb.terminal",
++								max_wait_seconds=TERMINAL_MAX_WAIT_SECONDS):
++			raise RuntimeError(
++				f"dmc_gb's terminal checkpoint write to {terminal_checkpoint} failed -- the run "
++				"cannot produce a usable terminal checkpoint. Exiting rather than reporting "
++				"success over one that does not exist.")
 +	print(f'NATIVE_FINAL_EVALUATION_COMPLETED frame={args.train_steps}', flush=True)
 +
 +
  def main(args):
  	# Set seed
  	utils.set_seed_everywhere(args.seed)
-@@ -88,6 +121,8 @@ def main(args):
+@@ -88,6 +138,8 @@ def main(args):
  	)
  
  	start_step, episode, episode_reward, done = 0, 0, 0, True
@@ -162,7 +179,7 @@ index 793eb15..2bce7b5 100644
  	L = Logger(work_dir)
  	start_time = time.time()
  	for step in range(start_step, args.train_steps+1):
-@@ -105,6 +140,7 @@ def main(args):
+@@ -105,10 +157,18 @@ def main(args):
  				if test_env is not None:
  					evaluate(test_env, agent, video, args.eval_episodes, L, step, test_env=True)
  				L.dump(step)
@@ -170,7 +187,19 @@ index 793eb15..2bce7b5 100644
  
  			# Save agent periodically
  			if step > start_step and step % args.save_freq == 0:
-@@ -142,6 +178,7 @@ def main(args):
+-				torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
++				try:
++					from safe_checkpoint import safe_torch_save
++				except ImportError:
++					def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++						import torch as _torch
++						_torch.save(obj, path, **(torch_kwargs or {}))
++						return True
++				safe_torch_save(agent, os.path.join(model_dir, f'{step}.pt'), label="dmc_gb.periodic")
+ 
+ 			L.log('train/episode_reward', episode_reward, step)
+ 
+@@ -142,6 +202,7 @@ def main(args):
  
  		episode_step += 1
  

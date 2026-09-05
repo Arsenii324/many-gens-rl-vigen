@@ -1,0 +1,38 @@
+# Validation of the dmc_gb evaluator via rad, against the frozen code revision
+# 4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2 (payload-v118).
+#
+# dmc_gb has no time -v measurement at all. soda is the campaign's longest cell (~45 h projected) and the most expensive to lose to an OOM, so measuring its family here is cheap insurance.
+#
+# Runs on gt4i.1 because dmc_gb is NOT CERTIFIABLE for memory -- no recorded fixed_peak_gib -- and
+# the larger tier is the safe direction while the number is unknown. This job produces that number.
+name: vigen-rad-functional-v118
+desc: Validate the dmc_gb endpoint evaluator via rad and measure the family memory peak.
+cmd: >-
+  timeout --foreground 10800s env
+  CELLS=rad:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v118.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

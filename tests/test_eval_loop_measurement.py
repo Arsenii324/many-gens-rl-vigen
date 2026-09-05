@@ -141,6 +141,8 @@ def test_the_recorded_return_is_the_sum_of_emitted_rewards():
             f"episode return {r} != sum of emitted rewards {sum(rewards)} — the loop is dropping "
             "or double-counting a transition, which shifts EVERY number in the project by a "
             "fixed fraction and looks entirely normal")
+    assert len(m.LAST_EPISODE_DIAGNOSTICS) == len(rets)
+    assert all(not row["diagnostics_available"] for row in m.LAST_EPISODE_DIAGNOSTICS)
 
 
 def test_per_episode_success_flags_align_with_returns():

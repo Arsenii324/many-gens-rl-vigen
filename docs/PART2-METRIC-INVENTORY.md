@@ -125,12 +125,22 @@ families:
 
 | family | baselines | mechanism |
 |---|---|---|
-| **SAC squashed Gaussian** | `rad`, `soda`, `alda` | `squash()` applies `tanh` to the *sample* and corrects `log_pi` by `log(1 - tanh²)` — `alda/models/sac.py:31`, dmc_gb's `modules.py`. A proper density on the box. |
-| **DrQv2 squashed mean + truncated noise** | `drqv2`, `svea`, `sgqn`, `curl`, `drq` | `mu = torch.tanh(mu)` then `utils.TruncatedNormal(mu, std)` (`drqv2.py` `Actor.forward`). `sgqn` and `curl` have no `tanh` of their own — they subclass `DrQV2Agent` and reuse its `Actor`, which is why they need a bare `import drqv2` / `import drq`. Exploration noise is *clipped*, not squashed. |
+| **SAC squashed Gaussian** | `rad`, `soda`, `alda`, `drq` | `squash()` applies `tanh` to the *sample* and corrects `log_pi` by `log(1 - tanh²)` — `alda/models/sac.py:31`, dmc_gb's `modules.py`. **`drq` independently, not by shared code**: `RL-ViGen-upstream/algos/drq.py`'s own `Actor.forward` builds `SquashedNormal(mu, std)` from its OWN `TanhTransform`, with the same numerically-stable Jacobian correction (`2*(log 2 - x - softplus(-2x))`). A proper density on the box, in all four cases. |
+| **DrQv2 squashed mean + truncated noise** | `drqv2`, `svea`, `sgqn`, `curl` | `mu = torch.tanh(mu)` then `utils.TruncatedNormal(mu, std)` (`drqv2.py` `Actor.forward`). `svea`/`sgqn`/`curl` have no `tanh` of their own — they subclass `DrQV2Agent` and reuse its `Actor`. Exploration noise is *clipped*, not squashed. |
 | **Unsquashed Gaussian, bounded only by the env** | `ppg`, `idaac`, `ibac_sni`, `ctrl` | the four authored heads. Mass outside the box is folded onto the boundary by robosuite's clip while the policy's own likelihood still treats it as interior. |
 
-Three families, three different induced action distributions, and the third is the only one whose
-likelihood disagrees with what the environment actually executes. All three are the respective
+**Corrected 2026-09-05** — the first version of this table put `drq` in the DrQv2 row on lineage
+(same repository, same launcher family) rather than on mechanism. Read directly: `drq.py` defines
+its OWN `SquashedNormal`/`TanhTransform` (a proper tanh-squashed density, matching the SAC family's
+construction), completely independent of `drqv2.py`'s `Actor` — it does not subclass `DrQV2Agent`
+the way `svea`/`sgqn`/`curl` do. This was already known and stated correctly elsewhere in this
+project: the P17 patch comment (`setup/apply_patches.py`) explains `drq`'s `actor_logprob` is "the
+Monte-Carlo entropy of a squashed policy... not the analytic Gaussian entropy drqv2/svea/sgqn/curl
+report under that name" — the fact was on record, it had just not propagated into this table. Four
+families by lineage, three by mechanism.
+
+Three MECHANISM families, three different induced action distributions, and the third is the only
+one whose likelihood disagrees with what the environment actually executes. All are the respective
 authors' designs; none is a porting artifact; and, as with frame stacking, no rescaling of a
 reported number touches it.
 
@@ -233,6 +243,30 @@ It also changes how `scripts/collect_metrics.py` must read those logs, and that 
 reads the regime out of the log rather than assuming it: labelling the second env `eval-easy`
 when it was actually `train` would have manufactured a generalisation gap from two measurements
 of one distribution.
+
+### Finding 8 — `critic_loss` is four different formulas under one name, across 8 of 12 baselines
+
+Found 2026-09-05 auditing metric richness project-wide, then independently re-verified line by
+line before trusting it — the first check (matching only the top-level `F.mse_loss(Q1,target_Q) +
+F.mse_loss(Q2,target_Q)` syntax) found nothing wrong, because that surface line is in fact shared;
+the divergence is in what feeds `target_Q` and what gets folded in afterward.
+
+| baseline(s) | formula actually logged under `critic_loss` |
+|---|---|
+| `drqv2`, `curl` | plain twin-Q MSE, `target_Q = reward + discount·min(tQ1,tQ2)` — no entropy term, no augmentation. `curl` never overrides `update_critic`, so this is the identical formula, not a cognate. |
+| `svea` | `critic_loss = 0.5·(critic_loss + aug_loss)` — the plain MSE **averaged with** a second MSE computed against the strongly-augmented observation (`svea.py:236-241`). The value logged is not the plain MSE; the reassignment happens before the `metrics['critic_loss'] =` line. |
+| `sgqn` | `critic_loss += 0.9·(mse(Q1,masked_Q1) + mse(Q2,masked_Q2))` (`sgqn.py:169-172`) — the plain MSE plus a mask-consistency term, likewise folded in before logging. |
+| `drq` | `target_Q = (target_Q + target_Q_aug)/2`, where `target_Q_aug` includes `− self.alpha·log_prob_aug` (`drq.py:265-283`) — dual-augmentation-averaged **and** entropy-inclusive, since `drq` is SAC-family (Finding 6). |
+| `rad`, `soda`, `alda` | SAC's own entropy-regularised target, `target_Q = r + not_done·γ·(min(tQ1,tQ2) − α·log_pi)` (`sac.py:88-91`) — same shape as `drq`'s target before its augmentation-averaging, no augmentation term. |
+
+Four distinct formulas, one shared record-column name, across eight of the twelve baselines that
+emit it at all. None is wrong — each is that baseline's own authors' definition of their own
+critic objective, and `svea`'s/`sgqn`'s extra terms are literally what makes them SVEA and SGQN
+rather than plain DrQ-v2. The finding is that a plotted `critic_loss` column pooling any two of
+these compares different objectives under one label, the same shape as this document's own k2/k3
+and `ibac_sni` `kl`/`approx_kl_k3` findings (§6) — reported here rather than resolved, because the
+resolution (report each as its own column, or a project-chosen name distinct from the authors')
+is the owner's to make, not a default to apply silently.
 
 ## 4. The observation is NOT common, in two independent ways  ·  [LIVE]
 
@@ -367,9 +401,42 @@ The same shape applies to clip fraction: add ours, do not edit theirs. It also m
 `ppg` **additively** — no clone deviation that alters a printed value, which would otherwise have
 been the first ENABLES-class change made for a diagnostic rather than for a result.
 
-The same question, smaller, applies to clip fraction: `ppg` thresholds `|ratio - 1| > clip_param`
-on the ratio, ours takes the log-ratio for precision at the extremes. Those agree on the count for
-ordinary values and can disagree on the tail, which is the region the metric exists to watch.
+**CORRECTED 2026-09-05 — this overstated the difference; the live code does not do what it says.**
+The same question, smaller, was claimed to apply to clip fraction: `ppg` thresholds
+`|ratio - 1| > clip_param` on the ratio, "ours takes the log-ratio for precision at the extremes."
+Checked against all four live implementations rather than against `scripts/metrics.py` alone (the
+subagent's report flagged this claim as not surviving that read; it does not):
+
+`scripts/metrics.py::clip_fraction(log_ratio, clip_eps)` does accept a log-ratio argument and
+internally does `r = np.exp(lr)` before comparing — but that is one `exp()` call, the same single
+operation any caller needs to turn a log-ratio into a ratio in the first place. It buys no
+precision over comparing an already-exponentiated `ratio` directly, because both paths compute the
+identical floating-point `exp()` once. The claimed benefit would only be real if some caller formed
+`ratio` a *different*, lossier way (e.g. dividing two separately-exponentiated probabilities) —
+none of the four do.
+
+More to the point: **none of the four live, inline implementations call `scripts/metrics.py` at
+all**, and none compute `clip_fraction` from a log-ratio:
+- `ppg` (`ppo.py:146`, the authors' own, pre-existing, untouched): `th.abs(ratio - 1) > clip_param`.
+- `idaac` (`idaac.py:136`): `torch.abs(ratio - 1.0) > self.clip_param`.
+- `ibac_sni` (`ppo.py:132-133`): `torch.abs(diag_ratio - 1.0) > self.clip_eps`.
+- `ctrl` (`algo.py:355`): `jnp.abs(ratio - 1.0) > clip_eps`.
+
+All four compare the already-exponentiated ratio. `scripts/metrics.py`'s function is a reference
+implementation (used for tests and offline recomputation), not the thing running in any of the
+four training loops, and its own formula reduces to the identical comparison once its one internal
+`exp()` call is accounted for — it is not a different, more precise quantity.
+
+The **k3 estimator** (`approx_kl_k3`) is the one place a real, smaller version of this asymmetry
+does exist, and it runs the OPPOSITE direction from the retracted claim: `ppg` (`logratio` is
+already the primary variable, `((ratio - 1) - logratio)`) and `ctrl` (`log_ratio` is factored out
+*before* `ratio = exp(log_ratio)`, per its own code comment) both keep the log-ratio as the primary
+quantity. `idaac` and `ibac_sni` do it the other way — they hold `ratio` and derive
+`torch.log(ratio)` *from* it (`idaac.py:137`, `ppo.py:135`), which is a round-trip through `exp`
+then `log` rather than carrying the original log-difference through. This is the inverse of what
+the retracted sentence claimed, is small (a round-trip through `exp`/`log` is close to identity for
+well-conditioned inputs), and is not a correctness bug — it is now stated accurately instead of
+guessed at.
 
 C28 is READY, so the wiring is a slot rather than a decision. **The declaration is not**, and it
 comes first: wiring a quantity into whichever baselines happen to expose the right local variable
@@ -397,6 +464,18 @@ tempting enough to wire under the same name, and doing so would produce two hone
 numbers that are not the same quantity — the failure this document's §Reconciliation exists to
 name.
 
+**A live instance of exactly this, found 2026-09-05 auditing metric richness across all twelve.**
+`ibac_sni`'s own log line prints `kl` and `approx_kl_k3` four tokens apart
+(`torch_rl/scripts/train.py:250-262`). They are not the same quantity and neither is a typo of the
+other: `kl` is the information-bottleneck term (`self.acmodel.compute_train`'s VIB KL between the
+encoder posterior and the standard-normal prior, weighted by `beta` in the loss — the mechanism
+IBAC-SNI is named for) while `approx_kl_k3` is this project's own PPO trust-region diagnostic
+(old-vs-new policy KL, the k3 estimator, C28). Both names are correct and neither should be
+renamed — `kl` is upstream's own header, `approx_kl_k3` is already under this project's own name,
+which is the resolution this section already recommends for exactly this shape of collision. Noted
+here because the two sitting on one line, unlabelled beyond their column header, is the specific
+condition under which a reader confuses them — not a defect in either number.
+
 ### Status, 2026-08-19: three of four wired
 
 `ibac_sni`, `ppg` and `idaac` emit `clip_fraction` and `approx_kl_k3`, each verified against a
@@ -415,10 +494,25 @@ existing `no_grad` block) or `idaac`, and should be before either is trusted the
 files. Storing them on the agent and reading them where `train.py` already logs keeps the change
 the same shape as the other two. The first plan was more invasive than the problem required.
 
-**`ctrl` is not wired**, and this one is structural rather than a matter of care: its loss is a
-jitted JAX function, so metrics have to be threaded out of it rather than logged beside it. That
-is a change to how someone else's code is organised, and it should be a decision rather than a
-default.
+**CORRECTED 2026-09-05 — `ctrl` IS wired; this claim is stale.** As of 2026-08-19 this was
+accurate: `ctrl`'s loss was a jitted JAX function with no threading. Verified against the live
+code: `algo.py:355-356` computes `clip_fraction`/`approx_kl_k3` inside the jitted PPO update,
+threads them out through its return tuple (`:414`), accumulates them (`:426-427`), and
+`train_ppo.py:349-361` folds the returned dict into `renamed_dict` and reaches a real
+`wandb.log(...)` call — which the offline shim (`runnable/_shim/wandb.py`) writes to a persistent
+JSONL sink, matching `docs/REGISTER.md`'s 2026-09-04 entry recording this as measured on a real job
+(`bt1ums2q8170s3cq5p9l`). Unconditional for the two PPO-family diagnostics; the *continuous-head*
+diagnostics (`log_std`/`boundary_fraction`, same lines) are conditional on a `log_std` leaf
+existing, which is correct — Procgen's discrete head has none.
+
+**One real narrowing, so this does not overclaim past what was checked**: the wiring lives in
+`loss_actor_and_critic` / `update_ppo`, the function `--algo` values `ppo` and `ppo_ctrl` call.
+`update_daac` (`algo.py:434+`, used by `daac` and `daac_ctrl`) has its own, separate loss
+functions and does **not** compute `clip_fraction`/`approx_kl_k3` — its `avg_metrics_dict` never
+gets those keys, so a `daac_ctrl` run's `wandb.log` call reaches the same sink with two fewer
+columns, silently. This project's declared default is `ppo_ctrl` (`train_ppo.py:96`,
+`runnable/_launch/ctrl.sh`), so production is covered; a future run under `--algo=daac_ctrl`
+would not be, and should not be assumed to inherit this fix without re-checking.
 
 ### Where the four on-policy call sites are, and the one that is not mechanical
 

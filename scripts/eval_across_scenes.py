@@ -55,6 +55,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+
+# [Added 2026-09-05.] Must precede any CUDA initialisation, so module scope. This file calls
+# `torch.use_deterministic_algorithms(True)` at :146, which SUCCEEDS on CUDA and then raises at the
+# first CuBLAS operation unless this is set -- see the same note in scripts/eval_grid.py. The
+# rlvigen five run through this path, so without it their CUDA evaluations carry the identical
+# latent failure that killed job bt1s5a6pub9muqgcoil9 on the idaac path.
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 import pathlib
 import sys
 import json
@@ -65,6 +72,38 @@ import numpy as np
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.metrics import bootstrap_ci, wilson_interval  # noqa: E402
+from scripts.eval_provenance import completed_episode_diagnostics, policy_scale  # noqa: E402
+
+
+LAST_PLACEMENT_WITNESSES: list[str] = []
+LAST_EPISODE_DIAGNOSTICS: list[dict] = []
+
+
+def placement_witness(observation) -> str:
+    """Hash the first post-reset observation so placement provenance is inspectable."""
+    digest = hashlib.sha256()
+
+    def add(value):
+        if isinstance(value, dict):
+            for key in sorted(value):
+                digest.update(str(key).encode())
+                add(value[key])
+        elif isinstance(value, (tuple, list)):
+            for item in value:
+                add(item)
+        else:
+            try:
+                if hasattr(value, "detach"):
+                    value = value.detach().cpu().numpy()
+                array = np.asarray(value)
+                digest.update(str(array.shape).encode())
+                digest.update(str(array.dtype).encode())
+                digest.update(array.tobytes())
+            except Exception:
+                digest.update(repr(value).encode())
+
+    add(observation)
+    return digest.hexdigest()
 
 
 def _setup() -> None:
@@ -89,6 +128,10 @@ def find_snapshot(explicit: str | None) -> pathlib.Path | None:
 
 def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: int,
               action_repeat: int, frame_stack: int, step: int):
+    global LAST_PLACEMENT_WITNESSES
+    global LAST_EPISODE_DIAGNOSTICS
+    LAST_PLACEMENT_WITNESSES = []
+    LAST_EPISODE_DIAGNOSTICS = []
     from wrappers.robo_wrapper import robo_make
     import utils
     import torch
@@ -139,11 +182,22 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
                     seed=seed, scene_id=scene_id, mode=mode)
     # Verify the scene actually applied rather than trusting the argument. `make_env` falls back
     # to robo_config.yaml for anything it is not given, so a silent fallback would leave every
-    # "scene" identical and produce a retention of exactly 1.0 -- a clean-looking null that would
-    # mean the opposite of what it appeared to.
-    env.reset()
-    env.step(np.zeros(env.action_spec().shape, dtype=np.float32))
-    applied = (getattr(env, "last_info", None) or {}).get("scene_id")
+    # "scene" identical and produce a retention of exactly 1.0. P3 hoists the constructor's
+    # authoritative values; reading them avoids a diagnostic reset/step that would consume C69 RNG.
+    resolved = getattr(env, "_vigen_regime", None)
+    if not isinstance(resolved, dict):
+        # Test doubles and older wrappers may expose the same constructor values directly. This is
+        # still a read-only check; never call reset/step merely to manufacture metadata.
+        direct_mode = getattr(env, "_mode", None)
+        direct_scene = getattr(env, "_scene_id", getattr(env, "scene_id", None))
+        if direct_mode is not None or direct_scene is not None:
+            resolved = {"mode": direct_mode, "scene_id": direct_scene}
+    if not isinstance(resolved, dict):
+        print(f"    ! could not read the env's regime back -- '{mode}'/{scene_id} is UNVERIFIED",
+              file=sys.stderr)
+        raise RuntimeError("the evaluation environment has no regime read-back; refusing "
+                           "to measure a cell")
+    applied = resolved.get("scene_id")
     if applied != scene_id:
         raise RuntimeError(f"asked for scene {scene_id}, env reports {applied!r} -- the scene "
                            "argument did not take effect and this row would be a duplicate")
@@ -155,26 +209,8 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
     # to prevent, on the other axis, and it would be more convincing because 1.0 is a number a
     # reader might accept.
     #
-    # `VGBWrapper` stores it as `_mode`; nothing exposes it through `last_info`, so walk the
-    # wrapper chain. If no wrapper reports a mode the check abstains rather than failing, because
-    # a missing attribute is a fact about the wrapper stack and not evidence about the regime --
-    # but that abstention is announced, so it cannot pass silently.
-    seen_mode, node = None, env
-    for _ in range(8):
-        if hasattr(node, "_mode"):
-            seen_mode = getattr(node, "_mode")
-            break
-        # `_gym_env` is the link `Gym2DMC` uses (`wrappers/robo_wrapper.py:29`) and the chain
-        # dead-ends there without it -- which is how the first version of this check abstained on
-        # every call. Kept in the list rather than replacing the others because the stack differs
-        # between the raw `make_env` chain and the `robo_make` one.
-        node = (getattr(node, "env", None) or getattr(node, "_env", None)
-                or getattr(node, "_gym_env", None))
-        if node is None:
-            break
-    if seen_mode is None:
-        print(f"    ! could not read the env's mode back -- '{mode}' is unverified for this scene")
-    elif seen_mode != mode:
+    seen_mode = resolved.get("mode")
+    if seen_mode != mode:
         raise RuntimeError(
             f"asked for mode {mode!r}, env reports {seen_mode!r} -- the regime argument did not "
             "take effect. Every row of this grid would be measured in the wrong regime, and a "
@@ -192,8 +228,15 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
     # a policy opening the door from one accumulating shaped reaching reward. Collected, never
     # acted on: the loop's behaviour, its RNG draws and its env interaction are unchanged.
     rets, succ, flags = [], 0, []
-    for _ in range(episodes):
+    for episode_index in range(episodes):
+        # C69: bind placement to the declared condition immediately before the measured reset.
+        # This makes the paired sequence independent of family-specific construction/probes.
+        condition = int(np.random.SeedSequence(
+            [int(seed), int(scene_id), episode_index]
+        ).generate_state(1, dtype=np.uint32)[0])
+        np.random.seed(condition)
         ts = env.reset()
+        LAST_PLACEMENT_WITNESSES.append(placement_witness(ts.observation))
         total, succeeded = 0.0, False
         while not ts.last():
             if agent is None:
@@ -220,6 +263,8 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
         rets.append(total)
         succ += int(succeeded)
         flags.append(int(succeeded))
+    LAST_EPISODE_DIAGNOSTICS.extend(completed_episode_diagnostics(
+        env, policy_scale(agent), len(rets)))
     return np.array(rets), succ, flags
 
 

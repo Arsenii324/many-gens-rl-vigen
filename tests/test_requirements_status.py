@@ -21,8 +21,21 @@ sys.path.insert(0, str(ROOT))
 
 import requirements as R  # noqa: E402
 
-MECHANICAL = {"R1", "R2", "R3", "R5"}
-JUDGEMENT = {"R4", "R6", "R7"}
+# [Claude 2026-09-04: R4 moved from JUDGEMENT to MECHANICAL, and the reason is that its question
+# changed hands, not that this test was relaxed to let a new verdict through.
+#
+# R4 asks whether the twelve can be given an EQUAL training length. That was treated as a
+# judgement while `r4()` said "no run set exists yet to compare budgets across" -- but the question
+# never needed results: each family's executed budget is its request rounded to its own rollout
+# quantum, which the descriptors state. Computed, the seven runner families that carry the twelve
+# baselines execute 599,040-600,064 frames against a 600,000 request: equal to 0.17%, and the
+# residual is arithmetic no one can choose away without editing a clone.
+#
+# What stays a judgement is the BUDGET ITSELF (§3b #5) -- a different question, and one this file
+# must not let `r4()` answer. R6 and R7 stay here: R6 needs someone to accept the evidence
+# `audit_implementations.py` produces, and R7 needs a person on a clean machine.]
+MECHANICAL = {"R1", "R2", "R3", "R4", "R5"}
+JUDGEMENT = {"R6", "R7"}
 
 
 def test_all_seven_criteria_are_covered():
@@ -129,3 +142,15 @@ def test_r1_and_r2_are_measured_against_the_registry_not_a_constant():
     for rid in ("R1", "R2"):
         state, why = R.CHECKS[rid][1]()
         assert str(len(want)) in why, f"{rid} does not report its coverage against the registry"
+
+
+def test_r4_ignores_descriptor_metadata_when_computing_budgets():
+    """Host-profile metadata must not become a fictional runner family.
+
+    R4 deliberately derives its answer from the same descriptor consumed by the runner.  The
+    descriptor also carries top-level metadata, so this pin prevents a future metadata addition
+    from turning the requirement report into an ``unknown family`` abstention.
+    """
+    state, why = R.r4()
+    assert state in {"MET", "NEEDS JUDGEMENT"}
+    assert "could not compute" not in why

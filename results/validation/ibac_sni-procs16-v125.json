@@ -1,0 +1,31 @@
+{
+  "kind": "functional_spawn_evidence",
+  "observed_at": "2026-09-05",
+  "family": "ibac_sni",
+  "job": "bt1djai23kme336auat4",
+  "config": "cfg-codex-ibac-procs16-smoke-v125.yaml",
+  "tier": "gt4i.1",
+  "status": "SUCCESS",
+  "exit_status": 0,
+  "frames": 4096,
+  "procs": 16,
+  "model_type": "impala",
+  "markers": {
+    "import_gate": "NATIVE_IMPORT_GATE_PASSED ibac_sni",
+    "final_evaluation": "NATIVE_FINAL_EVALUATION_COMPLETED frame=4096",
+    "cell_completed": "NATIVE_CELL_COMPLETED ibac_sni-s1"
+  },
+  "observed_process_count": 20,
+  "max_sum_hwm_gib": 19.25,
+  "tier_usable_ram_gib": 27.0,
+  "what_this_proves": [
+    "the Door environment factory is picklable under spawn",
+    "16 workers construct and complete a short training/evaluation cell",
+    "the measured process tree fits gt4i.1"
+  ],
+  "what_this_does_not_prove": [
+    "production V100 renderer or throughput",
+    "600000-frame competence",
+    "the final endpoint result"
+  ]
+}

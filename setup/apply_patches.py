@@ -2,7 +2,7 @@
 """Apply this repo's edits to the vendored RL-ViGen checkout.
 
 RL-ViGen is not importable as a library and is too large to vendor into git (1.8 GB), so it is
-cloned by `setup/install.sh` and patched here. These three edits are the difference between
+cloned by `setup/install.sh` and patched here. These declared edits are the difference between
 upstream and what this benchmark needs; each is stated with the defect it fixes so a reviewer can
 judge it rather than trust it.
 
@@ -196,7 +196,7 @@ ALLOWED_UNTRACKED = {
 }
 
 
-def undeclared_modifications() -> list[str]:
+def undeclared_modifications() -> list[str] | None:
     """Files modified in the vendored tree that neither a patch nor ALLOWED_MODIFIED explains.
 
     Untracked paths are judged separately, against ALLOWED_UNTRACKED -- see its note.
@@ -229,14 +229,14 @@ def undeclared_modifications() -> list[str]:
               f"own git repository (git resolves it to {resolved or 'no repository'}), so a "
               "porcelain listing there describes a different tree. This is not a pass.",
               file=sys.stderr)
-        return []
+        return None
     try:
         out = subprocess.run(["git", "-C", UPSTREAM, "status", "--porcelain"],
                              capture_output=True, text=True, timeout=30)
     except Exception:
-        return []
+        return None
     if out.returncode != 0:
-        return []
+        return None
     patched = {os.path.relpath(path, UPSTREAM) for _n, path, _f, _r in PATCHES}
     bad = []
     for line in out.stdout.splitlines():
@@ -433,7 +433,91 @@ P10_REPL = """        ob_dict, reward, done, info = self.env.step(action)
         # PATCHED (many-gens-rl-vigen P10): expose robosuite's own task-defined success flag.
         # Door's dense return is scale-arbitrary; this is the only unit-free quantity available,
         # and no baseline could see it before. See setup/apply_patches.py.
-        info["success"] = bool(self.env._check_success())"""
+        info["success"] = bool(self.env._check_success())
+        # PATCHED (many-gens-rl-vigen P20): retain the raw reward at the env boundary so vector
+        # normalisers can still emit truthful per-episode reward summaries.
+        info["_native_raw_reward"] = float(reward)
+        # PATCHED (many-gens-rl-vigen P20): retain bounded, per-episode diagnostics.  The action
+        # reaching the robosuite controller is clipped to its declared input range; recording both
+        # sides makes the amount of clipping observable without changing the policy path.
+        raw_action = np.asarray(action, dtype=float)
+        action_low, action_high = self.env.action_spec
+        executed_action = np.clip(raw_action, action_low, action_high)
+        delta = np.abs(raw_action - executed_action)
+        self._episode_rewards.append(float(reward))
+        self._episode_steps += 1
+        self._episode_clip_coordinates += int(np.count_nonzero(delta > 1e-12))
+        self._episode_clip_vectors += int(np.any(delta > 1e-12))
+        self._episode_raw_executed_l1 += float(delta.sum())
+        self._episode_raw_min = min(self._episode_raw_min, float(raw_action.min()))
+        self._episode_raw_max = max(self._episode_raw_max, float(raw_action.max()))
+        if info["success"] and self._episode_first_success is None:
+            self._episode_first_success = self._episode_steps
+        if done:
+            rewards = np.asarray(self._episode_rewards, dtype=float)
+            self.episode_diagnostics.append({
+                "episode_length": self._episode_steps,
+                "termination_reason": "time_limit" if self.step_count >= self._max_episode_steps else "terminal",
+                "time_to_success": self._episode_first_success,
+                "reward_sum": float(rewards.sum()),
+                "reward_mean": float(rewards.mean()),
+                "reward_min": float(rewards.min()),
+                "reward_max": float(rewards.max()),
+                "initial_placement": self.last_initial_placement,
+                "applied_mode": self._mode,
+                "applied_scene_id": self._scene_id,
+                "action_clip_rate_coordinate": float(self._episode_clip_coordinates /
+                                                       max(1, self._episode_steps * raw_action.size)),
+                "action_clip_rate_vector": float(self._episode_clip_vectors /
+                                                  max(1, self._episode_steps)),
+                "action_raw_executed_l1": self._episode_raw_executed_l1,
+                "action_raw_min": self._episode_raw_min,
+                "action_raw_max": self._episode_raw_max,
+            })"""
+
+
+# ---------------------------------------------------------------------------------------------
+# P20 -- expose the realized object pose after reset.
+#
+# The global NumPy stream is what samples Door's placement, but a seed is not data: a future
+# analysis needs the pose that was actually applied, especially because the vendored Door reset
+# samples twice.  The wrapper is the common boundary for all seven evaluator families, and the
+# value below is read only after the final sim.forward().  It does not alter the trajectory.
+P20_FIND = """        self.env.sim.forward()
+        return self._reformat_obs(self.env._get_observations(force_update=True))"""
+P20_REPL = """        self.env.sim.forward()
+        # PATCHED (many-gens-rl-vigen P20): retain the realized post-reset object pose.  A hash
+        # alone proves pairing but cannot support a later performance-versus-placement analysis.
+        placement = {}
+        root_body = getattr(getattr(self.env, "door", None), "root_body", None)
+        if root_body is not None:
+            body_id = self.env.sim.model.body_name2id(root_body)
+            placement["door_root_body"] = root_body
+            placement["body_pos"] = np.asarray(self.env.sim.model.body_pos[body_id], dtype=float).tolist()
+            placement["body_quat"] = np.asarray(self.env.sim.model.body_quat[body_id], dtype=float).tolist()
+        else:
+            # Keep the patch useful for other robosuite tasks without guessing a task-specific
+            # object name.  Door is the production scope and takes the branch above.
+            for label, body_id in getattr(self.env, "object_body_ids", {}).items():
+                placement[str(label)] = {
+                    "body_pos": np.asarray(self.env.sim.model.body_pos[body_id], dtype=float).tolist(),
+                    "body_quat": np.asarray(self.env.sim.model.body_quat[body_id], dtype=float).tolist(),
+                }
+        self.last_initial_placement = placement
+        # Keep bounded summaries at the common environment boundary.  Vector wrappers may
+        # auto-reset immediately after a terminal step, so the completed list intentionally
+        # survives reset and is read by the evaluator after the cell finishes.
+        if not hasattr(self, "episode_diagnostics"):
+            self.episode_diagnostics = []
+        self._episode_rewards = []
+        self._episode_steps = 0
+        self._episode_first_success = None
+        self._episode_clip_coordinates = 0
+        self._episode_clip_vectors = 0
+        self._episode_raw_executed_l1 = 0.0
+        self._episode_raw_min = float("inf")
+        self._episode_raw_max = float("-inf")
+        return self._reformat_obs(self.env._get_observations(force_update=True))"""
 
 
 
@@ -735,6 +819,18 @@ P17_REPL = """        if self.use_tb:
 # step-stamped file is complete when it exists.
 #
 # ENABLES-class: it changes what is retained, not what is learned. The training is byte-identical.
+#
+# MAINTENANCE NOTE, earned the expensive way: P18_REPL below is matched BYTE-FOR-BYTE against
+# `save_snapshot()`. That function is now also where `runnable/_shim/safe_checkpoint` gets wired in
+# (2026-09-05), and every edit to safe-checkpoint behavior inside `save_snapshot()` broke this exact
+# anchor -- five times in one session. DETECTION never failed once: `tests/test_contract.py::
+# test_upstream_patches_are_applied` runs this file's own `--check` and caught every one via the
+# ordinary suite, no manual step needed. What was wasteful was the ROUND TRIP -- edit, run the
+# suite, get told it broke, fix the anchor, re-run -- five times, for a fix that is one paragraph
+# and could have landed in the same edit that caused it. The byte-exact match itself is correct and
+# should stay (P18's job is proving the vendored tree matches its pinned commit plus exactly the
+# declared differences, which needs exact bytes). The fix is procedural: editing `save_snapshot()`
+# for ANY reason means updating P18_REPL in THE SAME edit, before running anything.
 P18_FIND = """    def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
         keys_to_save = ['agent', 'timer', '_global_step', '_global_episode']
@@ -745,8 +841,28 @@ P18_REPL = """    def save_snapshot(self):
         snapshot = self.work_dir / 'snapshot.pt'
         keys_to_save = ['agent', 'timer', '_global_step', '_global_episode']
         payload = {k: self.__dict__[k] for k in keys_to_save}
-        with snapshot.open('wb') as f:
-            torch.save(payload, f)
+        try:
+            from safe_checkpoint import safe_torch_save, TERMINAL_MAX_WAIT_SECONDS
+        except ImportError:
+            TERMINAL_MAX_WAIT_SECONDS = 1800
+            def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
+                import torch as _torch
+                _torch.save(obj, path, **(torch_kwargs or {}))
+                return True
+        terminal = self.global_frame == self.cfg.num_train_frames
+        wait_kwargs = {"max_wait_seconds": TERMINAL_MAX_WAIT_SECONDS} if terminal else {}
+        ok = safe_torch_save(payload, snapshot, label="rlvigen.snapshot", **wait_kwargs)
+        # Codex, mailbox Q18(b): save_snapshot is called from three places -- two periodic
+        # (episode-boundary logging, the 50k cadence below) and one true terminal (the caller's own
+        # `global_frame == num_train_frames` check). All three write the SAME fixed `snapshot.pt`.
+        # Fail CLOSED only for the terminal call: a periodic skip costs one point on a curve; a
+        # terminal skip leaves the fixed name the offline evaluator always reads either missing or
+        # stale, while the run still exits 0.
+        if terminal and not ok:
+            raise RuntimeError(
+                "rlvigen's terminal snapshot.pt write failed -- the run cannot produce a usable "
+                "terminal checkpoint. Exiting rather than reporting success over a missing or "
+                "stale one.")
         # PATCHED (many-gens-rl-vigen P18): keep the intermediate checkpoints this loop already
         # writes and then overwrites. Upstream saves whenever `global_step % 50_000 == 0` -- a
         # cadence that is hardcoded, not configurable -- and every save overwrites the same file,
@@ -761,11 +877,9 @@ P18_REPL = """    def save_snapshot(self):
         preserve = os.environ.get('RLVIGEN_PRESERVE_SNAPSHOTS', '').strip()
         if preserve:
             cadence = int(preserve) if preserve.isdigit() and int(preserve) > 0 else 0
-            terminal = self.global_frame == self.cfg.num_train_frames
             if not cadence or terminal or self.global_frame % cadence == 0:
                 stamped = self.work_dir / f'snapshot_{self.global_frame}.pt'
-                with stamped.open('wb') as f:
-                    torch.save(payload, f)"""
+                safe_torch_save(payload, stamped, label="rlvigen.stamped_snapshot")"""
 
 
 
@@ -826,6 +940,7 @@ PATCHES = [
                                                    "robosuite", "utils", "binding_utils.py"),
      P9_FIND, P9_REPL),
     ("P10 success flag in info", os.path.join(VGB, "vgb_wrapper.py"), P10_FIND, P10_REPL),
+    ("P20 realized placement in reset", os.path.join(VGB, "vgb_wrapper.py"), P20_FIND, P20_REPL),
     # =========================================================================================
     # PATCH ORDERING REQUIREMENTS (Audited & Fixed by Gemini, 2026-08-31):
     #
@@ -910,6 +1025,7 @@ PATCH_CLASS = {
     # missing from it is invisible to the id checker, which is how P19 shipped while four documents
     # still said the registry topped out at P18.]
     "P19": "PLATFORM",
+    "P20": "PLATFORM",   # records post-reset pose; it does not alter the environment trajectory
 }
 
 
@@ -984,6 +1100,14 @@ def main() -> int:
     # modified that nothing explains, but NOT declared differences that are absent. A fresh
     # `install.sh` produced a tree missing four hand-edits and passed. Both directions matter.
     undeclared = undeclared_modifications()
+    if undeclared is None:
+        print("SOURCE_ORIGIN_UNKNOWN -- cannot certify the vendored tree's source origin: the "
+              "nested repository check abstained. Static post-patch evaluator identity remains "
+              "a separate proof; this is not a source-origin certificate.", file=sys.stderr)
+        if os.environ.get("NATIVE_REQUIRE_SOURCE_ORIGIN") == "1":
+            print("FAILED -- source-origin certification was explicitly required.", file=sys.stderr)
+            return 3 if args.check else 1
+        undeclared = []
     if undeclared:
         print("\nUNDECLARED MODIFICATIONS in the vendored tree:")
         for rel in undeclared:

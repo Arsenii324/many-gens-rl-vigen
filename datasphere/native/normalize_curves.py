@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -52,11 +53,11 @@ ANSI = re.compile(r"\x1b\[[0-9;]*m")
 # on a task where every episode ends by time limit and three bootstrap through it, so their value
 # targets are biased relative to each other, and no column in any native log says so.
 #
-# `eval_policy_mode` was added 2026-09-02 without a schema bump, because no production data exists
-# at schema 2 yet -- only local rehearsals. It is the axis scripts/audit_eval_state.py found:
-# `idaac` SAMPLES its evaluation actions while nine others take the distribution's mode, and
-# `ctrl`'s own evaluator is discrete-only against a 7-DoF continuous action space. Two runs whose
-# returns differ because one sampled and one did not are not comparable, and nothing said so.
+# `eval_policy_mode` was added 2026-09-02 without a schema bump. It records the action rule used by
+# the evaluator that produced the row, not merely whether the original repository shipped a
+# suitable evaluator. Four paths sample (`idaac`, `ppg`, `ibac_sni`, `ctrl`) and eight take the
+# distribution's mode. Two runs whose returns differ because one sampled and one did not are not
+# comparable, and the row must say which happened.
 #
 # Duplicated from rlgen/protocol.py rather than imported: `rlgen` is not a payload member, so this
 # file cannot import it on the container. tests/test_record_conventions.py asserts the two agree,
@@ -91,13 +92,13 @@ CONVENTIONS = {
                  "eval_policy_mode": "sample"},
     "ppg":      {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
                  "training_time_eval": "none",
-                 "eval_policy_mode": "none"},
+                 "eval_policy_mode": "sample"},
     "ibac_sni": {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
                  "training_time_eval": "none",
-                 "eval_policy_mode": "separate-script"},
+                 "eval_policy_mode": "sample"},
     "ctrl":     {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
                  "training_time_eval": "continuous",
-                 "eval_policy_mode": "discrete-only"},
+                 "eval_policy_mode": "sample"},
 }
 
 
@@ -164,16 +165,22 @@ def record(**fields) -> dict:
         "episode_return_mean": None,
         "episode_return_sd": None,
         "success_rate": None,
+        "checkpoint_sha256": None,
+        "evaluator_revision": None,
         "conventions": None,
         "native": {},
     }
     base.update(fields)
+    run_provenance = base.pop("_run_provenance", None)
     # A record that cannot state its own conventions says so, rather than carrying a default that
     # would read as a measured fact.
     base["conventions"] = CONVENTIONS.get(base.get("baseline"))
     # Provenance first, caller's native blob second: a family that wants to say something about
     # `recorded_on` itself should win over the automatic stamp.
-    base["native"] = {**_recorded_on(), **(fields.get("native") or {})}
+    automatic = _recorded_on()
+    if run_provenance:
+        automatic["run_provenance"] = run_provenance
+    base["native"] = {**automatic, **(fields.get("native") or {})}
     return base
 
 
@@ -567,6 +574,17 @@ READERS = {
 def normalize(result_root: Path, eval_regime: str = "eval-easy") -> list[dict]:
     manifest_path = result_root / "run_manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.is_file() else {}
+    run_provenance = {
+        "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        if manifest_path.is_file() else None,
+        "payload_sha256": manifest.get("payload_sha256"),
+        "asset_sha256": manifest.get("asset_sha256"),
+        "container_image": manifest.get("container_image"),
+        "requirements_native_sha256": manifest.get("requirements_native_sha256"),
+        "resolved_packages": manifest.get("resolved_packages"),
+        "environment": manifest.get("environment"),
+        "egl": manifest.get("egl"),
+    }
     records: list[dict] = []
     cells_root = result_root / "cells"
     for cell in sorted(cells_root.glob("*")) if cells_root.is_dir() else []:
@@ -591,7 +609,7 @@ def normalize(result_root: Path, eval_regime: str = "eval-easy") -> list[dict]:
         if family not in READERS:
             continue
         context = {"cell": cell.name, "baseline": baseline, "family": family, "seed": seed,
-                   "_eval_regime": eval_regime}
+                   "_eval_regime": eval_regime, "_run_provenance": run_provenance}
         # The family reader first, then the W&B sink, which is family-INDEPENDENT: it reads what
         # the shim captured regardless of who logged it, and returns nothing when the file is
         # absent. Two families use it today (`alda`, `ctrl`); any clone that starts logging is

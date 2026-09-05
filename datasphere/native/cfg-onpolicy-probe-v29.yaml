@@ -19,3 +19,7 @@ env:
   docker:
     image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
 cloud-instance-type: gt4.1
+
+# SUPERSEDED 2026-09-05: requests gt4.1 for a cell set including alda, whose recorded
+# fixed peak (15.73 GiB with margin) exceeds that tier. Kept as the record of what was run;
+# resubmitting it as written would reproduce the alda SIGKILL.

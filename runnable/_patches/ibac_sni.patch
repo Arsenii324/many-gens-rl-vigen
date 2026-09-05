@@ -1,5 +1,5 @@
 diff --git a/torch_rl/model.py b/torch_rl/model.py
-index 1523a27..aacba55 100644
+index 1523a27..355804a 100644
 --- a/torch_rl/model.py
 +++ b/torch_rl/model.py
 @@ -2,6 +2,8 @@ import torch
@@ -11,7 +11,79 @@ index 1523a27..aacba55 100644
  import torch_rl
  import gym
  from bottleneck import Bottleneck
-@@ -126,7 +128,20 @@ class ACModel(nn.Module):
+@@ -15,6 +17,30 @@ def initialize_parameters(m):
+         if m.bias is not None:
+             m.bias.data.fill_(0)
+ 
++class _ImpalaResidual(nn.Module):
++    """[OURS 2026-09-04] One residual block of IBAC-SNI's OWN impala_cnn.
++
++    Ported from this repository's other branch -- `coinrun/coinrun/policies.py::impala_cnn`,
++    `residual_block` -- not from a third-party implementation, so the provenance is IBAC-SNI's own
++    code. TensorFlow original:
++
++        out = relu(inputs); out = conv(out, depth); out = relu(out); out = conv(out, depth)
++        return out + inputs
++
++    Pre-activation, and the skip is added to the UNactivated input. Kept in that order deliberately.
++    """
++
++    def __init__(self, depth):
++        super().__init__()
++        self.c1 = nn.Conv2d(depth, depth, 3, padding=1)
++        self.c2 = nn.Conv2d(depth, depth, 3, padding=1)
++
++    def forward(self, x):
++        out = self.c1(F.relu(x))
++        out = self.c2(F.relu(out))
++        return out + x
++
++
+ class ACModel(nn.Module):
+     def __init__(self, obs_space, action_space, model_type="default", use_bottleneck=False,
+                  dropout=0, use_l2a=False, use_bn=False, sni_type=None):
+@@ -118,6 +144,40 @@ class ACModel(nn.Module):
+             )
+             self.image_embedding_size = (((n-1)//2-1)//2-1)*(((m-1)//2-1)//2-1)*64
+             assert not use_bn
++        elif model_type == "impala":
++            # [OURS 2026-09-04] THE PIXEL ARCHITECTURE THIS BRANCH NEVER HAD.
++            #
++            # Every other `model_type` here is MiniGrid-shaped: the trunk downsamples once, so at
++            # 64x64 the flatten is 29*29*64 = 53,824 and the model is 3.46M parameters, against
++            # 15k at MiniGrid's native 7x7 (C3). IBAC-SNI's own pixel network is `impala_cnn` in
++            # `coinrun/coinrun/policies.py`, which pools three times -- 64 -> 32 -> 16 -> 8, giving
++            # 8*8*32 = 2,048, the same order as ppg's and idaac's. That branch is TensorFlow, which
++            # is why it was never reachable from here; this is a port of it, from THIS REPOSITORY,
++            # so nothing is borrowed from another clone.
++            #
++            # Faithful to the original's shape: conv3x3(depth) -> maxpool(3, stride 2, 'same') ->
++            # two residual blocks, for depths 16/32/32, then flatten and relu. TF's 'same' pooling
++            # on an even input matches `MaxPool2d(3, stride=2, padding=1)` exactly (64 -> 32).
++            # `USE_BATCH_NORM` is off in the original's default config and is not ported.
++            #
++            # OPT-IN AND DEFAULT-OFF. `model_type` defaults to "default", so selecting this is a
++            # deliberate act. It is NOT a bug fix -- it changes what ibac_sni IS, so numbers from
++            # "impala" and from "default" are different models and must never share a column.
++            _layers, _in = [], 3
++            for _depth in (16, 32, 32):
++                _layers += [nn.Conv2d(_in, _depth, 3, padding=1),
++                            nn.MaxPool2d(3, stride=2, padding=1),
++                            _ImpalaResidual(_depth), _ImpalaResidual(_depth)]
++                _in = _depth
++            _layers += [nn.ReLU()]
++            self.image_conv = nn.Sequential(*_layers)
++            # Measured by a dummy forward rather than a formula: the pooling is ceil-shaped, and a
++            # closed form for it is exactly the kind of expression that silently goes wrong at an
++            # odd input size.
++            with torch.no_grad():
++                self.image_embedding_size = int(
++                    self.image_conv(torch.zeros(1, 3, n, m)).numel())
++            assert not use_bn
+         print("Image embedding size: ", self.image_embedding_size)
+ 
+         # Not supported with current bottleneck
+@@ -126,7 +186,20 @@ class ACModel(nn.Module):
          self.embedding_size = self.semi_memory_size
  
          # Define actor's model
@@ -33,7 +105,7 @@ index 1523a27..aacba55 100644
              raise ValueError("Unknown action space: " + str(action_space))
  
          if use_bottleneck:
-@@ -140,7 +155,7 @@ class ACModel(nn.Module):
+@@ -140,7 +213,7 @@ class ACModel(nn.Module):
          self.actor = nn.Sequential(
              # nn.Linear(self.embedding_size, 64),
              nn.Tanh(),
@@ -42,7 +114,7 @@ index 1523a27..aacba55 100644
          )
  
          # Define critic's model
-@@ -201,17 +216,23 @@ class ACModel(nn.Module):
+@@ -201,17 +274,23 @@ class ACModel(nn.Module):
  
          return bot_mean, bot, kl
  
@@ -68,7 +140,7 @@ index 1523a27..aacba55 100644
              value = self.critic(bot).squeeze(1)
          return dist, value, kl
  
-@@ -221,15 +242,15 @@ class ACModel(nn.Module):
+@@ -221,15 +300,15 @@ class ACModel(nn.Module):
          if self.sni_type == 'vib':
              # Need both policies for training, but still only one value function:
              x_dist_run = self.actor(bot_mean)
@@ -88,24 +160,49 @@ index 1523a27..aacba55 100644
              value = self.critic(bot).squeeze(1)
              return dist_train, value, kl
 diff --git a/torch_rl/scripts/evaluate.py b/torch_rl/scripts/evaluate.py
-index dd1359e..52b23e6 100644
+index dd1359e..7432334 100644
 --- a/torch_rl/scripts/evaluate.py
 +++ b/torch_rl/scripts/evaluate.py
-@@ -48,7 +48,12 @@ utils.seed(args.seed)
+@@ -6,6 +6,8 @@ import time
+ import torch
+ from torch_rl.utils.penv import ParallelEnv
+ import multiprocessing
++import functools
++from ibac_sni_runtime import make_rlvigen_env_process
+ 
+ if __name__ == '__main__':
+     multiprocessing.set_start_method("fork")
+@@ -47,14 +49,21 @@ utils.seed(args.seed)
+ # Generate environment
  
  envs = []
- for i in range(args.procs):
+-for i in range(args.procs):
 -    env = gym.make(args.env)
-+    # Same one-line seam as scripts/train.py. This repo trains and evaluates in SEPARATE runs,
-+    # so this file is how a trained ibac_sni policy gets measured in a held-out visual regime
-+    # (RLVIGEN_MODE=eval-easy) -- the generalisation gap its training loop cannot report on its
-+    # own, obtained with the AUTHORS' OWN evaluation script rather than one we wrote.
-+    env = (utils.make_rlvigen_env(args.env, args.seed + 10000*i)
-+           if args.env.startswith("robosuite:") else gym.make(args.env))
-     env.seed(args.seed + 10000*i)
-     if args.fullObs:
-         env = gym_minigrid.wrappers.FullyObsWrapper(env)
-@@ -65,7 +70,7 @@ print("CUDA available: {}\n".format(torch.cuda.is_available()))
+-    env.seed(args.seed + 10000*i)
+-    if args.fullObs:
+-        env = gym_minigrid.wrappers.FullyObsWrapper(env)
+-    elif args.POfullObs:
+-        env = gym_minigrid.wrappers.PartialObsFullGridWrapper(env)
+-    envs.append(env)
++if args.env.startswith("robosuite:"):
++    envs.append(make_rlvigen_env_process(args.env, args.seed))
++    envs.extend(
++        functools.partial(make_rlvigen_env_process, args.env, args.seed + 10000*i)
++        for i in range(1, args.procs)
++    )
++else:
++    for i in range(args.procs):
++        env = gym.make(args.env)
++        env.seed(args.seed + 10000*i)
++        if args.fullObs:
++            env = gym_minigrid.wrappers.FullyObsWrapper(env)
++        elif args.POfullObs:
++            env = gym_minigrid.wrappers.PartialObsFullGridWrapper(env)
++        envs.append(env)
+ env = ParallelEnv(envs)
+ 
+ # Define agent
+@@ -65,7 +74,7 @@ print("CUDA available: {}\n".format(torch.cuda.is_available()))
  
  # Initialize logs
  
@@ -114,7 +211,7 @@ index dd1359e..52b23e6 100644
  
  # Run the agent
  
-@@ -76,20 +81,32 @@ obss = env.reset()
+@@ -76,20 +85,32 @@ obss = env.reset()
  log_done_counter = 0
  log_episode_return = torch.zeros(args.procs, device=agent.device)
  log_episode_num_frames = torch.zeros(args.procs, device=agent.device)
@@ -148,7 +245,7 @@ index dd1359e..52b23e6 100644
  
      mask = 1 - torch.tensor(dones, device=agent.device, dtype=torch.float)
      log_episode_return *= mask
-@@ -105,10 +122,17 @@ duration = int(end_time - start_time)
+@@ -105,10 +126,17 @@ duration = int(end_time - start_time)
  return_per_episode = utils.synthesize(logs["return_per_episode"])
  num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
  
@@ -167,14 +264,38 @@ index dd1359e..52b23e6 100644
  
  # Print worst episodes
  
+@@ -118,4 +146,4 @@ if n > 0:
+ 
+     indexes = sorted(range(len(logs["return_per_episode"])), key=lambda k: logs["return_per_episode"][k])
+     for i in indexes[:n]:
+-        print("- episode {}: R={}, F={}".format(i, logs["return_per_episode"][i], logs["num_frames_per_episode"][i]))
+\ No newline at end of file
++        print("- episode {}: R={}, F={}".format(i, logs["return_per_episode"][i], logs["num_frames_per_episode"][i]))
 diff --git a/torch_rl/scripts/train.py b/torch_rl/scripts/train.py
-index 1fd760a..c10026d 100644
+index 1fd760a..6aface4 100644
 --- a/torch_rl/scripts/train.py
 +++ b/torch_rl/scripts/train.py
-@@ -6,6 +6,16 @@ import time
+@@ -1,13 +1,34 @@
+ #!/usr/bin/env python3
+ 
++import pathlib
++import sys
++
++# Spawned environment workers import this training module as __MP_MAIN__. Put the clone's
++# top-level compatibility modules first before importing torch_rl: both the outer clone and
++# the inner package contain a module named utils, but only the outer one provides the helpers
++# used by this script and by the pickled environment factory.
++_IBAC_BASE = pathlib.Path(__file__).resolve().parents[1]
++if str(_IBAC_BASE) not in sys.path:
++    sys.path.insert(0, str(_IBAC_BASE))
++
+ import argparse
+ import gym
+ import time
  import datetime
  import torch
  import torch_rl
+-import sys
 +# [OURS] C61 policy-health diagnostics; scripts/metrics.py owns the definitions so the four
 +# PPO-family baselines report the same quantity rather than four near-misses of it.
 +import importlib.util as _ilu
@@ -185,10 +306,20 @@ index 1fd760a..c10026d 100644
 +_m = _ilu.module_from_spec(_spec)
 +_spec.loader.exec_module(_m)
 +_policy_health = _m.gaussian_policy_health
- import sys
  import multiprocessing
++import functools
  
-@@ -34,6 +44,10 @@ parser.add_argument("--frames", type=int, default=10**7,
+ try:
+     import gym_minigrid
+@@ -15,6 +36,7 @@ except ImportError:
+     pass
+ 
+ import utils
++from ibac_sni_runtime import make_rlvigen_env_process
+ from model import ACModel
+ 
+ # Parse arguments
+@@ -34,6 +56,10 @@ parser.add_argument("--frames", type=int, default=10**7,
                      help="number of frames of training (default: 10e7)")
  parser.add_argument("--log-interval", type=int, default=1,
                      help="number of updates between two logs (default: 1)")
@@ -199,127 +330,409 @@ index 1fd760a..c10026d 100644
  parser.add_argument("--save-interval", type=int, default=0,
                      help="number of updates between two saves (default: 0, 0 means no saving)")
  parser.add_argument("--tb", action="store_true", default=False,
-@@ -121,7 +135,8 @@ utils.seed(args.seed)
+@@ -95,147 +121,258 @@ assert args.sni_type is None or args.sni_type in ['vib', 'dropout']
+ if __name__ == '__main__':
+     multiprocessing.set_start_method("fork")
  
- envs = []
- for i in range(args.procs):
+-suffix = datetime.datetime.now().strftime("%y-%m-%d-%H-%M-%S")
+-default_model_name = "{}_{}_seed{}_{}".format(args.env, args.algo, args.seed, suffix)
+-model_name = args.model or default_model_name
+-model_dir = utils.get_model_dir(model_name)
+-
+-# Define logger, CSV writer and Tensorboard writer
+-
+-logger = utils.get_logger(model_dir)
+-csv_file, csv_writer = utils.get_csv_writer(model_dir)
+-if args.tb:
+-    from tensorboardX import SummaryWriter
+-    tb_writer = SummaryWriter(model_dir)
+-
+-# Log command and all script arguments
+-
+-logger.info("{}\n".format(" ".join(sys.argv)))
+-logger.info("{}\n".format(args))
+-
+-# Set seed for all randomness sources
+-
+-utils.seed(args.seed)
++def _run_training():
++    suffix = datetime.datetime.now().strftime("%y-%m-%d-%H-%M-%S")
++    default_model_name = "{}_{}_seed{}_{}".format(args.env, args.algo, args.seed, suffix)
++    model_name = args.model or default_model_name
++    model_dir = utils.get_model_dir(model_name)
++
++    # Define logger, CSV writer and Tensorboard writer
++
++    logger = utils.get_logger(model_dir)
++    csv_file, csv_writer = utils.get_csv_writer(model_dir)
++    if args.tb:
++        from tensorboardX import SummaryWriter
++        tb_writer = SummaryWriter(model_dir)
++
++    # Log command and all script arguments
++
++    logger.info("{}\n".format(" ".join(sys.argv)))
++    logger.info("{}\n".format(args))
++
++    # Set seed for all randomness sources
++
++    utils.seed(args.seed)
++
++    # Generate environments
++
++    envs = []
++    if args.env.startswith("robosuite:"):
++        # Keep one real env in the parent for the observation/action spaces; every remaining Door
++        # env is a picklable factory consumed by ParallelEnv's spawn context.  Passing constructed
++        # MuJoCo/EGL objects to the upstream fork path is what made procs=2 die on Linux.
++        envs.append(make_rlvigen_env_process(args.env, args.seed))
++        envs.extend(
++            functools.partial(make_rlvigen_env_process, args.env, args.seed + 10000*i)
++            for i in range(1, args.procs)
++        )
++    else:
++        for i in range(args.procs):
++            env = gym.make(args.env)
++            env.seed(args.seed + 10000*i)
++            if args.fullObs:
++                env = gym_minigrid.wrappers.FullyObsWrapper(env)
++            elif args.POfullObs:
++                env = gym_minigrid.wrappers.PartialObsFullGridWrapper(env)
++            envs.append(env)
++
++    # Define obss preprocessor
++
++    obs_space, preprocess_obss = utils.get_obss_preprocessor(args.env, envs[0].observation_space, model_dir)
++
++    # Load training status
++
++    try:
++        status = utils.load_status(model_dir)
++    except OSError:
++        status = {"num_frames": 0, "update": 0}
++
++    # Define actor-critic model
++
++    try:
++        acmodel = utils.load_model(model_dir)
++        logger.info("Model successfully loaded\n")
++    except OSError:
++        acmodel = ACModel(obs_space, envs[0].action_space, args.model_type,
++                          use_bottleneck=args.use_bottleneck, dropout=args.use_dropout, use_l2a=args.use_l2a,
++                          use_bn=args.use_bn, sni_type=args.sni_type)
++
++        logger.info("Model successfully created\n")
++    logger.info("{}\n".format(acmodel))
++
++    if torch.cuda.is_available():
++        acmodel.cuda()
++    logger.info("CUDA available: {}\n".format(torch.cuda.is_available()))
++
++    # Define actor-critic algo
++
++    # a2c does not yet support the bottleneck
++    assert args.algo == "ppo"
++    if args.algo == "a2c":
++        algo = torch_rl.A2CAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
++                                args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
++                                args.optim_alpha, args.optim_eps, preprocess_obss)
++        raise NotImplementedError()
++    elif args.algo == "ppo":
++        algo = torch_rl.PPOAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
++                                args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
++                                args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocess_obss,
++                                beta=args.beta, use_l2w=args.use_l2w, sni_type=args.sni_type)
++    else:
++        raise ValueError("Incorrect algorithm name: {}".format(args.algo))
++
++    # Train model
++
++    num_frames = status["num_frames"]
++    _last_stamped = [0]  # [OURS 2026-09-04] last frame count written as a stamped copy
++    total_start_time = time.time()
++    update = status["update"]
++
++    while num_frames < args.frames:
++        # Update model parameters
++
++        update_start_time = time.time()
++        logs = algo.update_parameters()
++        update_end_time = time.time()
++
++        num_frames += logs["num_frames"]
++        update += 1
++
++        # Print logs
++
++        if update % args.log_interval == 0:
++            fps = logs["num_frames"]/(update_end_time - update_start_time)
++            duration = int(time.time() - total_start_time)
++            return_per_episode = utils.synthesize(logs["return_per_episode"])
++            rreturn_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
++            # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). Only the mean is carried: min/max of
++            # a 0/1 indicator are not informative, and the std is a function of the mean.
++            success_rate = float(sum(logs["success_per_episode"])) / max(
++                1, len(logs["success_per_episode"]))
++            num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
++
++            header = ["update", "frames", "FPS", "duration"]
++            data = [update, num_frames, fps, duration]
++            header += ["rreturn_" + key for key in rreturn_per_episode.keys()]
++            data += rreturn_per_episode.values()
++            header += ["num_frames_" + key for key in num_frames_per_episode.keys()]
++            data += num_frames_per_episode.values()
++            header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm", "kl"]
++            data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["kl"]]
++            # SUCCESS RATE appended AFTER the losses, never inserted: `data` is consumed positionally
++            # by the format string below, so a field inserted mid-sequence silently shifts every one
++            # after it -- the first attempt printed the episode length in the entropy slot.
++            header += ["success_rate"]
++            data += [success_rate]
++            # [OURS] C28 family-tier diagnostics, APPENDED for exactly the reason the note above
++            # gives: `data` is positional, so these go last and the format string gains two slots at
++            # the end. See docs/PART2-METRIC-INVENTORY.md section 6 -- `clipf` is over the ACTING
++            # distribution, and `kl3` is Schulman's k3, beside (not replacing) anything upstream logs.
++            header += ["clip_fraction", "approx_kl_k3"]
++            data += [logs["clip_fraction"], logs["approx_kl_k3"]]
++            # [OURS] C61. The entropy coefficient here is 0.01, the value the authors tuned for a
++            # CATEGORICAL over Procgen's discrete actions, and this head is a diagonal Gaussian over
++            # Box(-1, 1, (7,)). For a categorical the entropy bonus is bounded by log n; for a Gaussian
++            # it is unbounded above and its gradient with respect to each log_std is a CONSTANT, so the
++            # bonus applies a steady upward force on sigma opposed only by the policy gradient.
++            #
++            # `ibac_sni` is the most exposed of the four PPO-family baselines and that is not a guess:
++            # it is the only one with NEITHER reward normalisation NOR advantage normalisation (idaac
++            # normalises advantages at algo/idaac.py:61; idaac, ppg and ctrl all normalise rewards), so
++            # the opposing force is whatever Door's shaped return happens to produce, while the entropy
++            # force is a fixed 0.01. Its log_std is also unclamped -- ppg is the only one of the four
++            # that clamps, at logstd.clamp(-5, 2) in distr_builder.py:31.
++            #
++            # Logged, not corrected. `boundary_fraction` is the number that decides whether a rising
++            # entropy is exploration or dissolution: it is the mass the policy puts outside the action
++            # box, 0.317 at sigma=1 and 0.617 at sigma=2, so a run drifting past ~0.6 is emitting
++            # mostly saturated actions whatever its mean says. Appended LAST, per the note above.
++            _logged_policy_health = getattr(acmodel, "log_std", None) is not None
++            if _logged_policy_health:
++                _health = _policy_health(acmodel.log_std.detach().cpu().numpy())
++                header += ["sigma_mean", "mean_log_std", "boundary_fraction"]
++                data += [_health["sigma_mean"], _health["mean_log_std"], _health["boundary_fraction"]]
++
++            _fmt = (
++                # `kl` is printed too, not out of curiosity: upstream's format string had 17
++                # placeholders against 18 data items, so `.format(*data)` silently dropped the LAST
++                # one -- kl. Appending success_rate therefore made "SR" display kl. Adding a slot for
++                # both makes the counts equal and the discard impossible to reintroduce unnoticed.
++                "U {} | F {:06} | FPS {:04.0f} | D {} | rR:μσmM {:.2f} {:.2f} {:.2f} {:.2f} | F:μσmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | ∇ {:.3f} | kl {:.3f} | SR {:.3f} | clipf {:.3f} | kl3 {:.4f}")
++            # A length test would have been wrong: `data` is already 21 long before these three.
++            if _logged_policy_health:
++                _fmt += " | s {:.3f} | lns {:.3f} | bf {:.3f}"
++            logger.info(_fmt.format(*data))
++
++            header += ["return_" + key for key in return_per_episode.keys()]
++            data += return_per_episode.values()
++
++            if status["num_frames"] == 0:
++                csv_writer.writerow(header)
++            csv_writer.writerow(data)
++            csv_file.flush()
++
++            if args.tb:
++                for field, value in zip(header, data):
++                    tb_writer.add_scalar(field, value, num_frames)
++
++            status = {"num_frames": num_frames, "update": update}
++
++        # Save vocabulary and model
++
++        if args.save_interval > 0 and update % args.save_interval == 0:
++            # `vocab` is attached to the preprocessor ONLY on the MiniGrid branch of
++            # utils.get_obss_preprocessor -- it tokenises the mission string. The generic
++            # Box([H,W,3]) branch, which every image env including RL-ViGen takes, attaches nothing,
++            # so this line made --save-interval crash with
++            #   AttributeError: 'function' object has no attribute 'vocab'
++            # on any non-MiniGrid env. Checkpointing is what lets a trained policy be measured in a
++            # held-out regime by this repo's own scripts/evaluate.py, so it is not optional here.
++            if hasattr(preprocess_obss, "vocab"):
++                preprocess_obss.vocab.save()
++
++            if torch.cuda.is_available():
++                acmodel.cpu()
++            utils.save_model(acmodel, model_dir)
++            # [OURS 2026-09-04] A STAMPED COPY, so intermediate checkpoints survive.
++            # `utils.save_model` writes a fixed `model.pt` (`utils/save.py:11,24-27`) and overwrites
++            # it, so ibac_sni saved on EVERY update and still ended a run with exactly one file --
++            # frequent saving, nothing kept. That is why it was endpoint-only, and it is the same
++            # save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five.
++            #
++            # Written beside `model.pt`, never over it: the checkpoint of record is untouched and
++            # scripts/evaluate.py still finds what it expects. ENABLES-class -- it changes what is
++            # retained, never what is learned. Off unless a cadence is asked for, so an unchanged
++            # command line is unchanged.
++            _stamp_every = getattr(args, "save_interval_frames", 0) or 0
++            if _stamp_every > 0 and (num_frames // _stamp_every) > (_last_stamped[0] // _stamp_every):
++                _last_stamped[0] = num_frames
++                import os as _os
++                try:
++                    from safe_checkpoint import safe_torch_save
++                except ImportError:
++                    def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++                        import torch as _torch
++                        _torch.save(obj, path, **(torch_kwargs or {}))
++                        return True
++                safe_torch_save(acmodel, _os.path.join(model_dir, "model_%d.pt" % num_frames),
++                                label="ibac_sni.stamped")
++            logger.info("Model successfully saved")
++            if torch.cuda.is_available():
++                acmodel.cuda()
++
++            utils.save_status(status, model_dir)
++
++    # Codex, mailbox Q18(b): the file ended here, inside the while loop, with no code after it. That
++    # means there was NO guaranteed final save at all -- only whatever the last qualifying periodic
++    # `update % args.save_interval == 0` happened to write, which may not coincide with the true last
++    # update if args.frames does not divide evenly. The same shape of gap dmc_gb had before its
++    # `finalize_run` hook. ENABLES-class: adds a deterministic final write: it takes no environment
++    # step and no update, and changes what is guaranteed to be retained, never what is learned.
++    #
++    # Fails CLOSED here specifically, unlike the per-call periodic saves inside the loop: this is the
++    # run's only guaranteed opportunity to leave a usable terminal checkpoint under the fixed `model.pt`
++    # name the offline evaluator always reads. A run that exits 0 without one is a run that looks
++    # successful and cannot be measured -- worse than a run that fails loudly and can be retried.
++    try:
++        from safe_checkpoint import TERMINAL_MAX_WAIT_SECONDS
++    except ImportError:
++        TERMINAL_MAX_WAIT_SECONDS = 1800
++    if not utils.save_model(acmodel, model_dir, max_wait_seconds=TERMINAL_MAX_WAIT_SECONDS):
++        raise RuntimeError(
++            "ibac_sni's guaranteed final checkpoint write failed -- the run cannot produce a usable "
++            "terminal model.pt. Exiting rather than reporting success over a missing or stale one.")
++    utils.save_status(status, model_dir)
+ 
+-# Generate environments
+-
+-envs = []
+-for i in range(args.procs):
 -    env = gym.make(args.env)
-+    env = (utils.make_rlvigen_env(args.env, args.seed + 10000*i)
-+           if args.env.startswith("robosuite:") else gym.make(args.env))
-     env.seed(args.seed + 10000*i)
-     if args.fullObs:
-         env = gym_minigrid.wrappers.FullyObsWrapper(env)
-@@ -177,6 +192,7 @@ else:
- # Train model
- 
- num_frames = status["num_frames"]
-+_last_stamped = [0]  # [OURS 2026-09-04] last frame count written as a stamped copy
- total_start_time = time.time()
- update = status["update"]
- 
-@@ -197,6 +213,10 @@ while num_frames < args.frames:
-         duration = int(time.time() - total_start_time)
-         return_per_episode = utils.synthesize(logs["return_per_episode"])
-         rreturn_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
-+        # SUCCESS RATE (see docs/PART2-METRIC-INVENTORY.md). Only the mean is carried: min/max of
-+        # a 0/1 indicator are not informative, and the std is a function of the mean.
-+        success_rate = float(sum(logs["success_per_episode"])) / max(
-+            1, len(logs["success_per_episode"]))
-         num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
- 
-         header = ["update", "frames", "FPS", "duration"]
-@@ -207,10 +227,50 @@ while num_frames < args.frames:
-         data += num_frames_per_episode.values()
-         header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm", "kl"]
-         data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["kl"]]
+-    env.seed(args.seed + 10000*i)
+-    if args.fullObs:
+-        env = gym_minigrid.wrappers.FullyObsWrapper(env)
+-    elif args.POfullObs:
+-        env = gym_minigrid.wrappers.PartialObsFullGridWrapper(env)
+-    envs.append(env)
+-
+-# Define obss preprocessor
+-
+-obs_space, preprocess_obss = utils.get_obss_preprocessor(args.env, envs[0].observation_space, model_dir)
+-
+-# Load training status
+-
+-try:
+-    status = utils.load_status(model_dir)
+-except OSError:
+-    status = {"num_frames": 0, "update": 0}
+-
+-# Define actor-critic model
+-
+-try:
+-    acmodel = utils.load_model(model_dir)
+-    logger.info("Model successfully loaded\n")
+-except OSError:
+-    acmodel = ACModel(obs_space, envs[0].action_space, args.model_type,
+-                      use_bottleneck=args.use_bottleneck, dropout=args.use_dropout, use_l2a=args.use_l2a,
+-                      use_bn=args.use_bn, sni_type=args.sni_type)
+-
+-    logger.info("Model successfully created\n")
+-logger.info("{}\n".format(acmodel))
+-
+-if torch.cuda.is_available():
+-    acmodel.cuda()
+-logger.info("CUDA available: {}\n".format(torch.cuda.is_available()))
+-
+-# Define actor-critic algo
+-
+-# a2c does not yet support the bottleneck
+-assert args.algo == "ppo"
+-if args.algo == "a2c":
+-    algo = torch_rl.A2CAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+-                            args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
+-                            args.optim_alpha, args.optim_eps, preprocess_obss)
+-    raise NotImplementedError()
+-elif args.algo == "ppo":
+-    algo = torch_rl.PPOAlgo(envs, acmodel, args.frames_per_proc, args.discount, args.lr, args.gae_lambda,
+-                            args.entropy_coef, args.value_loss_coef, args.max_grad_norm, args.recurrence,
+-                            args.optim_eps, args.clip_eps, args.epochs, args.batch_size, preprocess_obss,
+-                            beta=args.beta, use_l2w=args.use_l2w, sni_type=args.sni_type)
+-else:
+-    raise ValueError("Incorrect algorithm name: {}".format(args.algo))
+-
+-# Train model
+-
+-num_frames = status["num_frames"]
+-total_start_time = time.time()
+-update = status["update"]
+-
+-while num_frames < args.frames:
+-    # Update model parameters
+-
+-    update_start_time = time.time()
+-    logs = algo.update_parameters()
+-    update_end_time = time.time()
+-
+-    num_frames += logs["num_frames"]
+-    update += 1
+-
+-    # Print logs
+-
+-    if update % args.log_interval == 0:
+-        fps = logs["num_frames"]/(update_end_time - update_start_time)
+-        duration = int(time.time() - total_start_time)
+-        return_per_episode = utils.synthesize(logs["return_per_episode"])
+-        rreturn_per_episode = utils.synthesize(logs["reshaped_return_per_episode"])
+-        num_frames_per_episode = utils.synthesize(logs["num_frames_per_episode"])
+-
+-        header = ["update", "frames", "FPS", "duration"]
+-        data = [update, num_frames, fps, duration]
+-        header += ["rreturn_" + key for key in rreturn_per_episode.keys()]
+-        data += rreturn_per_episode.values()
+-        header += ["num_frames_" + key for key in num_frames_per_episode.keys()]
+-        data += num_frames_per_episode.values()
+-        header += ["entropy", "value", "policy_loss", "value_loss", "grad_norm", "kl"]
+-        data += [logs["entropy"], logs["value"], logs["policy_loss"], logs["value_loss"], logs["grad_norm"], logs["kl"]]
 -
 -        logger.info(
 -            "U {} | F {:06} | FPS {:04.0f} | D {} | rR:μσmM {:.2f} {:.2f} {:.2f} {:.2f} | F:μσmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | ∇ {:.3f}"
 -            .format(*data))
-+        # SUCCESS RATE appended AFTER the losses, never inserted: `data` is consumed positionally
-+        # by the format string below, so a field inserted mid-sequence silently shifts every one
-+        # after it -- the first attempt printed the episode length in the entropy slot.
-+        header += ["success_rate"]
-+        data += [success_rate]
-+        # [OURS] C28 family-tier diagnostics, APPENDED for exactly the reason the note above
-+        # gives: `data` is positional, so these go last and the format string gains two slots at
-+        # the end. See docs/PART2-METRIC-INVENTORY.md section 6 -- `clipf` is over the ACTING
-+        # distribution, and `kl3` is Schulman's k3, beside (not replacing) anything upstream logs.
-+        header += ["clip_fraction", "approx_kl_k3"]
-+        data += [logs["clip_fraction"], logs["approx_kl_k3"]]
-+        # [OURS] C61. The entropy coefficient here is 0.01, the value the authors tuned for a
-+        # CATEGORICAL over Procgen's discrete actions, and this head is a diagonal Gaussian over
-+        # Box(-1, 1, (7,)). For a categorical the entropy bonus is bounded by log n; for a Gaussian
-+        # it is unbounded above and its gradient with respect to each log_std is a CONSTANT, so the
-+        # bonus applies a steady upward force on sigma opposed only by the policy gradient.
-+        #
-+        # `ibac_sni` is the most exposed of the four PPO-family baselines and that is not a guess:
-+        # it is the only one with NEITHER reward normalisation NOR advantage normalisation (idaac
-+        # normalises advantages at algo/idaac.py:61; idaac, ppg and ctrl all normalise rewards), so
-+        # the opposing force is whatever Door's shaped return happens to produce, while the entropy
-+        # force is a fixed 0.01. Its log_std is also unclamped -- ppg is the only one of the four
-+        # that clamps, at logstd.clamp(-5, 2) in distr_builder.py:31.
-+        #
-+        # Logged, not corrected. `boundary_fraction` is the number that decides whether a rising
-+        # entropy is exploration or dissolution: it is the mass the policy puts outside the action
-+        # box, 0.317 at sigma=1 and 0.617 at sigma=2, so a run drifting past ~0.6 is emitting
-+        # mostly saturated actions whatever its mean says. Appended LAST, per the note above.
-+        _logged_policy_health = getattr(acmodel, "log_std", None) is not None
-+        if _logged_policy_health:
-+            _health = _policy_health(acmodel.log_std.detach().cpu().numpy())
-+            header += ["sigma_mean", "mean_log_std", "boundary_fraction"]
-+            data += [_health["sigma_mean"], _health["mean_log_std"], _health["boundary_fraction"]]
-+
-+        _fmt = (
-+            # `kl` is printed too, not out of curiosity: upstream's format string had 17
-+            # placeholders against 18 data items, so `.format(*data)` silently dropped the LAST
-+            # one -- kl. Appending success_rate therefore made "SR" display kl. Adding a slot for
-+            # both makes the counts equal and the discard impossible to reintroduce unnoticed.
-+            "U {} | F {:06} | FPS {:04.0f} | D {} | rR:μσmM {:.2f} {:.2f} {:.2f} {:.2f} | F:μσmM {:.1f} {:.1f} {} {} | H {:.3f} | V {:.3f} | pL {:.3f} | vL {:.3f} | ∇ {:.3f} | kl {:.3f} | SR {:.3f} | clipf {:.3f} | kl3 {:.4f}")
-+        # A length test would have been wrong: `data` is already 21 long before these three.
-+        if _logged_policy_health:
-+            _fmt += " | s {:.3f} | lns {:.3f} | bf {:.3f}"
-+        logger.info(_fmt.format(*data))
- 
-         header += ["return_" + key for key in return_per_episode.keys()]
-         data += return_per_episode.values()
-@@ -229,11 +289,35 @@ while num_frames < args.frames:
-     # Save vocabulary and model
- 
-     if args.save_interval > 0 and update % args.save_interval == 0:
+-
+-        header += ["return_" + key for key in return_per_episode.keys()]
+-        data += return_per_episode.values()
+-
+-        if status["num_frames"] == 0:
+-            csv_writer.writerow(header)
+-        csv_writer.writerow(data)
+-        csv_file.flush()
+-
+-        if args.tb:
+-            for field, value in zip(header, data):
+-                tb_writer.add_scalar(field, value, num_frames)
+-
+-        status = {"num_frames": num_frames, "update": update}
+-
+-    # Save vocabulary and model
+-
+-    if args.save_interval > 0 and update % args.save_interval == 0:
 -        preprocess_obss.vocab.save()
-+        # `vocab` is attached to the preprocessor ONLY on the MiniGrid branch of
-+        # utils.get_obss_preprocessor -- it tokenises the mission string. The generic
-+        # Box([H,W,3]) branch, which every image env including RL-ViGen takes, attaches nothing,
-+        # so this line made --save-interval crash with
-+        #   AttributeError: 'function' object has no attribute 'vocab'
-+        # on any non-MiniGrid env. Checkpointing is what lets a trained policy be measured in a
-+        # held-out regime by this repo's own scripts/evaluate.py, so it is not optional here.
-+        if hasattr(preprocess_obss, "vocab"):
-+            preprocess_obss.vocab.save()
- 
-         if torch.cuda.is_available():
-             acmodel.cpu()
-         utils.save_model(acmodel, model_dir)
-+        # [OURS 2026-09-04] A STAMPED COPY, so intermediate checkpoints survive.
-+        # `utils.save_model` writes a fixed `model.pt` (`utils/save.py:11,24-27`) and overwrites
-+        # it, so ibac_sni saved on EVERY update and still ended a run with exactly one file --
-+        # frequent saving, nothing kept. That is why it was endpoint-only, and it is the same
-+        # save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five.
-+        #
-+        # Written beside `model.pt`, never over it: the checkpoint of record is untouched and
-+        # scripts/evaluate.py still finds what it expects. ENABLES-class -- it changes what is
-+        # retained, never what is learned. Off unless a cadence is asked for, so an unchanged
-+        # command line is unchanged.
-+        _stamp_every = getattr(args, "save_interval_frames", 0) or 0
-+        if _stamp_every > 0 and (num_frames // _stamp_every) > (_last_stamped[0] // _stamp_every):
-+            _last_stamped[0] = num_frames
-+            import os as _os
-+            import torch as _torch
-+            _torch.save(acmodel, _os.path.join(model_dir, "model_%d.pt" % num_frames))
-         logger.info("Model successfully saved")
-         if torch.cuda.is_available():
-             acmodel.cuda()
+-
+-        if torch.cuda.is_available():
+-            acmodel.cpu()
+-        utils.save_model(acmodel, model_dir)
+-        logger.info("Model successfully saved")
+-        if torch.cuda.is_available():
+-            acmodel.cuda()
+-
+-        utils.save_status(status, model_dir)
+\ No newline at end of file
++if __name__ == '__main__':
++    _run_training()
 diff --git a/torch_rl/torch_rl/torch_rl/algos/base.py b/torch_rl/torch_rl/torch_rl/algos/base.py
 index bf32dba..cb19538 100644
 --- a/torch_rl/torch_rl/torch_rl/algos/base.py
@@ -499,10 +912,45 @@ index 6e1abd5..a243ffc 100644
          return logs
  
 diff --git a/torch_rl/utils/agent.py b/torch_rl/utils/agent.py
-index f3c0605..11de955 100644
+index f3c0605..5b432f3 100644
 --- a/torch_rl/utils/agent.py
 +++ b/torch_rl/utils/agent.py
-@@ -31,11 +31,21 @@ class Agent:
+@@ -7,18 +7,20 @@ class Agent:
+     - to choose an action given an observation,
+     - to analyze the feedback (i.e. reward and done state) of its action."""
+ 
+-    def __init__(self, env_id, obs_space, model_dir, argmax=False, num_envs=1):
++    def __init__(self, env_id, obs_space, model_dir, argmax=False, num_envs=1, device=None):
+         _, self.preprocess_obss = utils.get_obss_preprocessor(env_id, obs_space, model_dir)
+         self.acmodel = utils.load_model(model_dir)
+         self.argmax = argmax
+         self.num_envs = num_envs
+-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
++        self.device = torch.device(device) if device is not None else torch.device(
++            "cuda" if torch.cuda.is_available() else "cpu")
++        self.acmodel.to(self.device)
+ 
+         # if self.acmodel.recurrent:
+         #     self.memories = torch.zeros(self.num_envs, self.acmodel.memory_size)
+     #
+     def get_actions(self, obss):
+-        preprocessed_obss = self.preprocess_obss(obss)
++        preprocessed_obss = self.preprocess_obss(obss, device=self.device)
+ 
+         with torch.no_grad():
+         #     if self.acmodel.recurrent:
+@@ -27,12 +29,24 @@ class Agent:
+             dist, _, _ = self.acmodel.compute_run(preprocessed_obss)
+ 
+         if self.argmax:
+-            actions = dist.probs.max(1, keepdim=True)[1]
++            # Keep the published categorical path exactly: its deterministic action is the
++            # highest-probability class.  Robosuite uses the Gaussian policy branch instead,
++            # where a deterministic action is the distribution mean; `probs` does not exist.
++            if hasattr(dist, "probs"):
++                actions = dist.probs.max(1, keepdim=True)[1]
++            else:
++                actions = dist.mean
          else:
              actions = dist.sample()
  
@@ -519,85 +967,38 @@ index f3c0605..11de955 100644
  
          return actions
  
-+        # NOTE, not fixed because nothing here uses it: the `--argmax` branch above reads
-+        # `dist.probs`, which only a Categorical has. Under the continuous head it would raise.
-+        # Deterministic evaluation of a Gaussian policy means its mean, not an argmax.
-+
-     def get_action(self, obs):
-         return self.get_actions([obs]).item()
+@@ -48,4 +62,4 @@ class Agent:
+             return None
  
+     def analyze_feedback(self, reward, done):
+-        return self.analyze_feedbacks([reward], [done])
+\ No newline at end of file
++        return self.analyze_feedbacks([reward], [done])
 diff --git a/torch_rl/utils/general.py b/torch_rl/utils/general.py
-index bf3ecc6..7c0762e 100644
+index bf3ecc6..ecc2055 100644
 --- a/torch_rl/utils/general.py
 +++ b/torch_rl/utils/general.py
-@@ -30,4 +30,60 @@ def synthesize(array):
+@@ -4,6 +4,8 @@ import numpy
+ import torch
+ import collections
+ 
++from ibac_sni_runtime import make_rlvigen_env, make_rlvigen_env_process
++
+ def get_storage_dir():
+     if "TORCH_RL_STORAGE" in os.environ:
+         return os.environ["TORCH_RL_STORAGE"]
+@@ -30,4 +32,4 @@ def synthesize(array):
      d["std"] = numpy.std(array)
      d["min"] = numpy.amin(array)
      d["max"] = numpy.amax(array)
 -    return d
 \ No newline at end of file
 +    return d
-+
-+def make_rlvigen_env(env_id, seed):
-+    """RL-ViGen robosuite as a plain gym env, in the shape this repo's own preprocessor expects.
-+
-+    `utils.get_obss_preprocessor` already has a generic branch for `Box([H, W, 3])` -- written
-+    for RGB envs, unused by MiniGrid -- so nothing about preprocessing needs changing; the
-+    wrapper just has to present that shape. RL-ViGen yields {'rgb': (3,H,W) uint8}.
-+
-+    THE ONE DELIBERATE SCALING CHOICE: `utils.format.preprocess_images` does
-+    `torch.tensor(images, dtype=torch.float)` with NO division. That is correct for MiniGrid,
-+    whose "image" is small category indices, and wrong for 0-255 RGB -- inputs two orders of
-+    magnitude off what `initialize_parameters` assumes. Division by 255 therefore happens HERE,
-+    in the seam, rather than by editing the repo's preprocessor. Declared, not silent: every
-+    other baseline in this project feeds pixels in [0,1] too.
-+
-+    `mode` comes from RLVIGEN_MODE so train / eval-easy / eval-medium / eval-hard select the
-+    visual regime without a new CLI flag.
-+
-+    `scene_id` comes from RLVIGEN_SCENE_ID the same way, and for the same reason. It was hardcoded
-+    to 0, which is exactly the shape [C45](../../../../docs/CONSTRUCTION.md#c45) describes -- the
-+    protocol and the benchmark both say ten scenes and seven of the twelve baselines pin one. An
-+    env var rather than a parameter because the callers are the clone's own scripts and a new
-+    argument would mean editing them; this keeps the deviation inside the seam that already exists.
-+    Default 0, so every existing caller is unchanged.
-+    """
-+    import os, sys, gym, numpy as np
-+    _rlv = os.environ["RLVIGEN_ROOT"]
-+    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
-+        if _p not in sys.path:
-+            sys.path.insert(0, _p)
-+    from robosuitevgb.utils import make_env as _robo_make_env
-+
-+    class _HWCFloat(gym.ObservationWrapper):
-+        def __init__(self, env):
-+            super().__init__(env)
-+            c, h, w = env.observation_space["rgb"].shape
-+            self.observation_space = gym.spaces.Box(0.0, 1.0, (h, w, c), dtype=np.float32)
-+
-+        def observation(self, obs):
-+            return (np.asarray(obs["rgb"], dtype=np.float32).transpose(1, 2, 0) / 255.0)
-+
-+        def seed(self, seed=None):
-+            "The env is seeded at construction; RL-ViGen's own `seed` is an int attribute."
-+            return []
-+
-+    task = env_id.split(":", 1)[1]
-+    try:
-+        scene_id = int(os.environ.get("RLVIGEN_SCENE_ID", "0"))
-+    except ValueError:
-+        raise ValueError(
-+            "RLVIGEN_SCENE_ID=%r is not an integer; a scene axis that silently falls back to 0 "
-+            "would report a one-scene number as a ten-scene sweep"
-+            % os.environ.get("RLVIGEN_SCENE_ID"))
-+    return _HWCFloat(_robo_make_env(
-+        task_name=task, seed=seed, scene_id=scene_id,
-+        mode=os.environ.get("RLVIGEN_MODE", "train")))
 diff --git a/torch_rl/utils/save.py b/torch_rl/utils/save.py
-index 27b3f60..99e8fd2 100644
+index 27b3f60..ba610ab 100644
 --- a/torch_rl/utils/save.py
 +++ b/torch_rl/utils/save.py
-@@ -12,7 +12,12 @@ def get_model_path(model_dir):
+@@ -12,14 +12,35 @@ def get_model_path(model_dir):
  
  def load_model(model_dir):
      path = get_model_path(model_dir)
@@ -611,3 +1012,28 @@ index 27b3f60..99e8fd2 100644
      model.eval()
      return model
  
+-def save_model(model, model_dir):
++def save_model(model, model_dir, max_wait_seconds=None):
++    """Returns whether the write actually succeeded.
++
++    Codex, mailbox Q18(b): this writes the SAME fixed `model.pt` on every periodic call, so making
++    it unconditionally fail-closed would crash training on a single transient disk hiccup mid-run --
++    exactly the crash safe_checkpoint exists to prevent. Returning the real result instead lets the
++    caller decide per-call: tolerate a skip during training, but insist on success at the guaranteed
++    final save (see train.py's post-loop block).
++    """
+     path = get_model_path(model_dir)
+     utils.create_folders_if_necessary(path)
+-    torch.save(model, path)
++    try:
++        from safe_checkpoint import safe_torch_save
++    except ImportError:
++        def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++            import torch as _torch
++            _torch.save(obj, path, **(torch_kwargs or {}))
++            return True
++    kwargs = {"max_wait_seconds": max_wait_seconds} if max_wait_seconds is not None else {}
++    return safe_torch_save(model, path, label="ibac_sni.model", **kwargs)
+ 
+ def get_status_path(model_dir):
+     return os.path.join(model_dir, "status.json")

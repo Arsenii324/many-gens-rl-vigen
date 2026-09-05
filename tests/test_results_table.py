@@ -40,10 +40,18 @@ needs_results = pytest.mark.skipif(
     reason="no retention grids in this tree: the table has no rows to render")
 
 
+def test_legacy_episode_bootstrap_table_requires_explicit_opt_in(capsys):
+    """One-seed intervals are exploratory diagnostics, never the publication path."""
+    code = rt.main([])
+    out = capsys.readouterr().out
+    assert code == 2
+    assert "--legacy-exploratory" in out
+
+
 @needs_results
 def test_a_refused_cell_prints_REFUSED_and_never_a_number(capsys):
     """`svea`@50k has 0/10 usable scenes. A blank invites the reader to supply a guess."""
-    rt.main([])
+    rt.main(["--legacy-exploratory"])
     out = capsys.readouterr().out
     assert "REFUSED" in out, (
         "no row printed REFUSED, but svea@50k has no scene clearing the denominator rule — "
@@ -60,18 +68,18 @@ def test_a_refused_cell_prints_REFUSED_and_never_a_number(capsys):
 
 @needs_results
 def test_every_row_exposes_how_many_scenes_it_pooled(capsys):
-    """drqv2@100k averages 3 scenes and svea@100k averages 9. Hiding that equates two statistics."""
-    rt.main([])
+    """Legacy display keeps the count but cannot select a different scene set per row."""
+    rt.main(["--legacy-exploratory"])
     out = capsys.readouterr().out
     assert "/10" in out, "the usable-scene count is not on the rows"
-    assert "DIFFERENT SCENE SETS" in out, (
-        "the table stopped saying that rows with different n are not the same statistic")
+    assert "no baseline-specific scene filter" in out, (
+        "the legacy table may not pool a performance-selected scene set")
 
 
 def test_without_a_measured_floor_the_table_refuses_to_print(monkeypatch, capsys):
     """C17: a return without its floor is unreadable, and Door pays up to 0.5/step for nothing."""
     monkeypatch.setattr(rt, "FLOOR", "no-such-floor-tag")
-    code = rt.main([])
+    code = rt.main(["--legacy-exploratory"])
     out = capsys.readouterr().out
     assert code == 1 and "NO RANDOM-POLICY FLOOR" in out, (
         "with no floor measured the table still printed returns; every one of them would be "
@@ -82,7 +90,7 @@ def test_without_a_measured_floor_the_table_refuses_to_print(monkeypatch, capsys
 @needs_results
 def test_absent_baselines_are_named_as_absent_with_a_reason(capsys):
     """`curl` is absent, not poor. Printing them alike would be a claim nobody made."""
-    rt.main([])
+    rt.main(["--legacy-exploratory"])
     out = capsys.readouterr().out
     assert "ABSENT ROWS" in out and "absent is not poor" in out
     for b in ("curl", "ctrl", "ppg"):
@@ -93,7 +101,7 @@ def test_absent_baselines_are_named_as_absent_with_a_reason(capsys):
 @needs_results
 def test_the_table_does_not_rank_or_aggregate(capsys):
     """RL-ViGen's own aggregate is min-max normalised and is a different quantity."""
-    rt.main([])
+    rt.main(["--legacy-exploratory"])
     out = capsys.readouterr().out
     assert "does not rank" in out and "does not aggregate" in out
     for banned in ("BEST", "WINNER", "rank 1", "overall score"):
@@ -105,3 +113,67 @@ def test_the_denominator_rule_is_the_recorded_one():
         "the denominator threshold moved; C55 records 0.25 as a stated line, and changing it "
         "silently re-grades every refusal in the table")
     assert rt.CEILING == 250.0, "C62's shaping ceiling moved"
+
+
+def test_a_table_that_mixes_time_limit_handling_groups_warns_and_fails_strict(monkeypatch, capsys):
+    """C1: nine baselines zero the value bootstrap at Door's time limit, three (`rad`/`soda`/
+    `alda`) bootstrap through it -- CONSTRUCTION.md#c1's own DEFAULT says this split "must be
+    stated wherever these numbers appear" and "must never be averaged across." Today's real CELLS
+    never triggers this (drqv2/svea/drq all share "terminal"), so this is exercised with synthetic
+    rows rather than real grids -- the risk is future, not current: rad/soda/alda are explicitly
+    listed as "not yet run" in ABSENT, and the first cell added for any of them would otherwise
+    mix silently.
+    """
+    def fake_load(tag, mode):
+        if tag == rt.FLOOR and mode == "train":
+            return {"scenes": {"0": {"returns": [1.0, 2.0], "n_success": 0}}}
+        return None
+
+    fake_rows = {
+        "fakeA": dict(name="fakeA", seed=1, budget="50k", scene0=10.0, held=8.0,
+                      scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                      usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
+                      sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
+                      res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="terminal"),
+        "fakeB": dict(name="fakeB", seed=1, budget="50k", scene0=10.0, held=8.0,
+                      scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                      usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
+                      sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
+                      res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="bootstrap"),
+    }
+
+    monkeypatch.setattr(rt, "load", fake_load)
+    monkeypatch.setattr(rt, "row", lambda name, seed, budget, tag, floor_mean: fake_rows[name])
+    monkeypatch.setattr(rt, "CELLS", [("fakeA", 1, "50k", "fakeA"), ("fakeB", 1, "50k", "fakeB")])
+
+    code = rt.main(["--legacy-exploratory", "--strict"])
+    out = capsys.readouterr().out
+    assert "WARNING (C1)" in out, (
+        "a table pooling 'terminal' and 'bootstrap' rows must warn -- this is the exact silent "
+        "mixing CONSTRUCTION.md#c1's DEFAULT says must never happen")
+    assert "fakeA" in out and "fakeB" in out, "the warning must name which rows are in which group"
+    assert code == 1, "--strict must fail a table that mixes time-limit-handling groups"
+
+
+def test_a_table_with_one_time_limit_handling_group_does_not_warn(monkeypatch, capsys):
+    """Regression pin: today's real CELLS (`drqv2`/`svea`/`drq`, all "terminal") must not trip
+    the C1 warning -- it exists for a real future risk, not for the current, uniform table."""
+    def fake_load(tag, mode):
+        if tag == rt.FLOOR and mode == "train":
+            return {"scenes": {"0": {"returns": [1.0, 2.0], "n_success": 0}}}
+        return None
+
+    fake_row = dict(name="fakeA", seed=1, budget="50k", scene0=10.0, held=8.0,
+                     scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                     usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
+                     sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
+                     res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="terminal")
+
+    monkeypatch.setattr(rt, "load", fake_load)
+    monkeypatch.setattr(rt, "row", lambda name, seed, budget, tag, floor_mean: fake_row)
+    monkeypatch.setattr(rt, "CELLS", [("fakeA", 1, "50k", "fakeA")])
+
+    code = rt.main(["--legacy-exploratory", "--strict"])
+    out = capsys.readouterr().out
+    assert "WARNING (C1)" not in out
+    assert code == 0

@@ -22,7 +22,7 @@ is doing sampling; one 10x under is doing something else, and calling both "susp
 distinction unusable.
 
 **The floor makes weak evidence look like agreement.** Two numbers that straddle the random-policy
-floor of 1.82 ([C55](../docs/CONSTRUCTION.md#c55)) agree about nothing: both describe a policy doing
+floor of 1.842 ([C55](../docs/CONSTRUCTION.md#c55)) agree about nothing: both describe a policy doing
 nothing, and any harness reproduces that. A reconciliation on a floored checkpoint is **not
 evidence** and is reported as UNDERPOWERED, not as a pass.
 
@@ -38,7 +38,21 @@ import argparse
 import sys
 
 #: The random-policy floor on Door: uniform random, 400 episodes, zero successes (C55).
-RANDOM_FLOOR = 1.82
+# [2026-09-05] The floor has ONE home: scripts/rlvigen_reference.DOOR_RANDOM_FLOOR, measured over
+# 200 paired episodes. A local literal here drifted to 1.82 while the measurement moved to 1.842.
+# Imported rather than copied, and it fails LOUDLY rather than falling back to a stale default --
+# a wrong floor silently turns "at chance" into "competent" and back.
+def _door_random_floor() -> float:
+    import importlib.util as _u
+    import pathlib as _p
+    _spec = _u.spec_from_file_location(
+        "_rlvigen_reference", _p.Path(__file__).resolve().parent / "rlvigen_reference.py")
+    _module = _u.module_from_spec(_spec)
+    _spec.loader.exec_module(_module)
+    return float(_module.DOOR_RANDOM_FLOOR)
+
+
+RANDOM_FLOOR = _door_random_floor()
 
 BASELINES = ("drqv2", "svea", "drq", "sgqn", "curl", "rad", "soda",
              "alda", "idaac", "ppg", "ibac_sni", "ctrl")

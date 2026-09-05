@@ -1,0 +1,33 @@
+# Current-contract PPG evaluator validation.  This is a retained 10,240-frame terminal model;
+# 2x1x5 episodes test the PPG loader, sampling action path, strict regime verification and records.
+name: vigen-ppg-functional-v109
+desc: Evaluate a retained PPG terminal checkpoint through the current CUDA evaluator.
+cmd: >-
+  timeout --foreground 7200s env
+  CELLS=ppg:1
+  FRAMES=10240
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=ppg
+  OFFLINE_EVAL_BASELINE=ppg
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=10240
+  OFFLINE_EVAL_EPISODES=5
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v109.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/trio79/cells/ppg-s1/checkpoints/model005.jd: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

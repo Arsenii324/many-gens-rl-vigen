@@ -35,7 +35,7 @@ term is identified and nobody has checked it; this is the column that matters.
 
 | # | term | status | established by |
 |---|---|---|---|
-| 1 | **Checkpoint frame** | **OPEN, and newly constrained** — the intersection of checkpoint frames across the twelve is the **endpoint alone**; four families save terminal-only. A cross-baseline *curve* is not producible. | [`EVAL-PROTOCOL`](EVAL-PROTOCOL.md) §4, measured 2026-09-04 |
+| 1 | **Checkpoint frame** | **UNIFORM IN RETENTION, not in exact x-values** — all twelve now retain a terminal checkpoint and intermediate stamps on the 50k production grid. Rollout quanta mean intermediate saves can land near the requested boundary, and exact executed endpoints differ slightly; the endpoint is therefore the common reporting choice, while the complete trajectory remains reconstructible. | [`EVAL-PROTOCOL`](EVAL-PROTOCOL.md) §4, measured 2026-09-04 |
 | 2 | **Checkpoint integrity** | UNIFORM — every cell runs `family.py check-finite`; [C57](CONSTRUCTION.md#c57) is the run that motivated it (NaN training continued for 70k frames). | per-cell gate |
 | 3 | **Which modules act** (online vs EMA / target / momentum) | **VERIFIED, all twelve (2026-09-04).** Every baseline acts with its *online* actor/encoder; no EMA, target or momentum network is on any action path. **And nothing normalises OBSERVATIONS at eval** — the one place it could have bitten is `idaac`, whose checkpoint literally stores `[actor_critic, envs.ob_rms]`; `VecNormalize` is built with `ob=False` (`envs.py`, and `ctrl/vec_env.py:44,611` likewise), so the saved statistics were never applied and dropping them is correct rather than lucky. | `algos/drqv2.py:164-172`, `train.py:352-357`; `idaac/train.py:251-254`; `tests/test_record_conventions.py::test_no_baseline_normalises_observations_at_eval` |
 | 4 | **Action rule** (mode vs sample) | DECLARED SPLIT — **4 sample** (`idaac`, `ibac_sni`, `ppg`, `ctrl`) / **8 mode**. | seam audit, `reported estimator` |
@@ -56,7 +56,7 @@ term is identified and nobody has checked it; this is the column that matters.
 | 14 | **Action repeat** | UNIFORM at 1, reached four ways. | seam audit |
 | 15 | **Observation layout and scaling** | DECLARED SPLIT, 5 ways. | seam audit |
 | 16 | **Action bounds / clipping** | DECLARED SPLIT — 3 induced distributions. | seam audit, PART2 Finding 6 |
-| 17 | **Eval env vs train env construction** | **VERIFIED, all twelve (2026-09-04).** In every family the eval env comes from the *same constructor* as the training env and differs only in the regime/scene arguments: the five fall back to `robo_config.yaml` (`mode: train`, `scene_id: 0`) — so **the retention denominator really is the training distribution**; `ctrl` builds all three envs from one `_mk` lambda at one seed; `ibac_sni`'s `evaluate.py` and `train.py` use an identical `make_rlvigen_env(env, seed + 10000*i)`; `alda` uses one `_build(_mode)`; `idaac` one `make_rlvigen_venv`; `ppg`'s training call simply omits `mode`/`scene_id` and takes the same defaults ours passes explicitly. **One real difference found**: `dmc_gb`'s test env is seeded `args.seed + 42` against the train env's `args.seed`, a deliberate upstream offset that makes their eval regime a different visual draw — ours passes one seed, so our eval-easy instance is not theirs. | `train.py:78,92-95`; `robo_config.yaml:31`; `dmc_gb/src/train.py:78-95`; `ctrl/train_ppo.py:130-141`; `ibac_sni/.../evaluate.py:55-57` |
+| 17 | **Eval env vs train env construction** | **VERIFIED, all twelve (2026-09-04).** In every family the eval env comes from the *same constructor* as the training env and differs only in the regime/scene arguments: the five fall back to `robo_config.yaml` (`mode: train`, `scene_id: 0`) — so **the retention denominator really is the training distribution**; `ctrl` builds all three envs from one `_mk` lambda at one seed; `ibac_sni`'s `evaluate.py` and `train.py` use an identical `make_rlvigen_env(env, seed + 10000*i)`; `alda` uses one `_build(_mode)`; `idaac` one `make_rlvigen_venv`; `ppg`'s training call simply omits `mode`/`scene_id` and takes the same defaults ours passes explicitly. **The dmc_gb distinction is now reproduced too**: `train` uses `seed`, while every non-train evaluation regime uses the upstream `seed + 42` test-environment offset. | `train.py:78,92-95`; `robo_config.yaml:31`; `dmc_gb/src/train.py:78-95`; `eval_grid.py:dmc_eval_seed`; `ctrl/train_ppo.py:130-141`; `ibac_sni/.../evaluate.py:55-57` |
 
 ## III. The estimator — how episodes become a number
 
@@ -96,7 +96,8 @@ weights everywhere, no observation normalisation at eval, no mode-sensitive laye
 path, no step-dependence outside the five where it is inert. **Term 17 is now closed too**: every family builds its eval env from the same constructor as its
 training env, differing only in regime and scene — which is the property the whole comparison
 assumes and nothing had checked. It surfaced one real difference, `dmc_gb`'s `seed + 42` eval
-offset, now declared.
+offset; the shared evaluator now applies that offset for non-train regimes and keeps the train
+seed unchanged.
 
 **Two of those verifications found the answer was "safe for a reason, not by luck", which is the
 distinction worth keeping.** `idaac`'s checkpoint carries observation statistics that our evaluator

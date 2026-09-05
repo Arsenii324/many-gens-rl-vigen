@@ -1,6 +1,6 @@
 {
   "accepted_adaptations": [
-    "RL-ViGen patch set P1-P18 from setup/apply_patches.py",
+    "RL-ViGen patch set P1-P20 from setup/apply_patches.py",
     "SVEA Places365 loader is configured to select validation directly and reject directory fallback",
     "Native runner accepts conventional tar member prefixes and captures calibration CPU/GPU resource telemetry",
     "Preflight manifests declare zero frames and omit training-only resource claims",
@@ -39,6 +39,7 @@
     "requirements-native.txt pins kornia, einops, xmltodict and tqdm, declared by dmcontrol-generalization-benchmark's own setup/conda.yaml and installed by nothing here",
     "summarize_result.py derives the per-cell throughput and resource envelope from a returned archive rather than from a hand-read log",
     "P18 writes a step-stamped copy of each intermediate snapshot when RLVIGEN_PRESERVE_SNAPSHOTS is set; upstream saves ten times in a 500k run and keeps one, and the nine it overwrites are a budget curve",
+    "P20 records the realized post-reset Door pose and bounded episode diagnostics at the common VGBWrapper boundary; the action path is unchanged",
     "idaac finalize_run adds one held-out evaluation and the exact executed-frame marker after its unchanged loop; upstream evaluates only when j % log_interval == 0 and two episodes have finished",
     "ppg train_fn exposes seed and log_dir on the command line; get_robosuite_venv already took a seed that train_fn never passed, so every PPG run was seed 0 with an unseeded network",
     "ctrl train_ppo writes a terminal msgpack of its TrainState; upstream's own checkpoint import is commented out and checkpoint_interval is never read, so its own evaluate_ppo.py had nothing to load",
@@ -52,6 +53,8 @@
     "image_count": 36500,
     "content_sha256": "70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669"
   },
+  "container_image": "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000",
+  "requirements_native_sha256": "43983f2374fa7b6c8598f6586111fa5478a950b1c5caf978a1aa9bcfae04ee8b",
   "nested_repository_commits": {
     "root": "f041f5e170368d298e9b5b60127faa10ba5364e5",
     "runnable/alda": "f9609c242697b80a0623147468d402641766c883",

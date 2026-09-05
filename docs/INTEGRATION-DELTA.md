@@ -242,7 +242,7 @@ file is appended to, never rewritten — but from here the accounting lives in t
 - `python scripts/deviations.py` — the exhaustive per-clone change set, since every clone carries
   a `PRISTINE:` first commit and `git diff` against it *is* the statement. Currently
   **34 files, +917 / −125 (602 non-comment)** across six clones.
-- `setup/apply_patches.py` — the RL-ViGen patch registry, now P1–P18 (no P16; ids are not
+- `setup/apply_patches.py` — the RL-ViGen patch registry, now P1–P20 (no P16; ids are not
   contiguous), pinned by
   `Protocol.env_patches` and two contract tests.
 
@@ -281,11 +281,11 @@ four fields, because the point of §4 is the branch point, not its forced conseq
 
 | §4 field | |
 |---|---|
-| **Structural property of the original the mechanism depends on** | Procgen levels are persistent, visually distinct instances, and `level_seed` names one. IDAAC's encoder is trained to be *invariant* across them and its order classifier compares two trajectories from the *same* one — both are meaningless without persistent instance identity |
-| **What the target actually offers** | Nothing of the kind in train mode. One scene, all four `randomize_*` off, and initial placement redrawn per reset from the shared global RNG. Measured in [C49](CONSTRUCTION.md#c49): varying the env seed does not change the observation in train mode, while it does in eval-easy (the control that makes the null readable) |
-| **Options** | (1) disclose and keep — IDAAC runs with its instance term inert; (2) bind each parallel env to a distinct `scene_id` so the label has a referent, which changes the training distribution and collides with [C45](CONSTRUCTION.md#c45); (3) declare IDAAC unportable to this target |
-| **Choice** | **Not yet made — owner's decision.** Recorded here before any run, not after reading a result |
-| **What would show the choice was wrong** | For (1): an IDAAC row that differs from a plain-PPO row by more than [C41](CONSTRUCTION.md#c41)'s noise floor would mean the term is *not* inert and the disclosure is wrong. For (2): IDAAC's row ceasing to be comparable with the other eleven, which is the defect this project exists to avoid |
+| **Structural property of the original the mechanism depends on** | IDAAC's adversarial order classifier uses temporal position as a proxy for level identity because Procgen levels have varying episode lengths; its paper names episode-length variation as the bridge from order information to level-specific information |
+| **What the target actually offers** | Door has a fixed 500-step horizon. Adding scene IDs would create visual diversity but would not create the episode-length variation the objective relies on |
+| **Options** | (1) keep the faithful objective and disclose that this target lacks the structure from which it is expected to gain; (2) add scenes only to IDAAC, making its training distribution incomparable without repairing episode-length variation; (3) change the benchmark for all twelve |
+| **Choice** | **Option 1, settled default, 2026-09-04.** The objective remains active; the target-method mismatch is reported beside IDAAC's row |
+| **What would show the choice was wrong** | A target variant with variable episode lengths would restore the paper's stated condition and require revisiting this disposition |
 
 The pre-existing comment at `ppo_daac_idaac/envs.py:82` — *"the seed IS the level id"* — is the
 false statement. It is left in place and contradicted here rather than quietly deleted, because
@@ -319,7 +319,7 @@ is evaluated* is a branch point even though it is not a mechanism port.
 | **What the target actually offers** | `train.py` — the loop every number this project has produced came through — contains no occurrence of the string `scene`, so it evaluated `robo_make`'s default scene 0 forever, and built no train-regime env at all. `Protocol` meanwhile certified ten scenes inside its own hash, so the certification and the code disagreed and nothing noticed |
 | **Options** | (1) sweep the ten scenes and add a train-regime denominator — one edit to one loop; (2) report one scene and change `Protocol` to certify one, which is honest but makes our numbers incomparable with RL-ViGen's own; (3) leave both and caveat the results, which [C47](CONSTRUCTION.md#c47) measures as ~4× optimistic on held-out scenes |
 | **Choice** | **(1), decided by the owner 2026-08-19 and applied.** C43 and C45 are one patch, not two: both are edits to the same eval loop, and splitting them would produce a tree where the scene axis exists and the denominator does not |
-| **What would show the choice was wrong** | A ten-scene evaluation costing enough per run to make the 5-seed budget unaffordable ([C18](CONSTRUCTION.md#c18) already prices seeds at ~31% resolution, so eval cost trades directly against seed count); or scene-to-scene variance turning out smaller than the within-scene control, which would make the sweep expensive noise — [C46](CONSTRUCTION.md#c46) measured the opposite, and that measurement is the thing to re-check first |
+| **What would show the choice was wrong** | A ten-scene evaluation costing enough per run to make the 5-seed budget unaffordable ([C18](CONSTRUCTION.md#c18) already prices seeds at ~53% resolution at the operational n=3 -- corrected 2026-09-05, A28, from a stale ~31%-at-five-seeds figure that used the wrong statistical approximation -- so eval cost trades directly against seed count); or scene-to-scene variance turning out smaller than the within-scene control, which would make the sweep expensive noise — [C46](CONSTRUCTION.md#c46) measured the opposite, and that measurement is the thing to re-check first |
 
 **Defect found in this patch, 2026-08-20 — the denominator is one episode.** `train.py:152` sets
 `per = max(1, num_eval_episodes // len(scenes))`, which is `max(1, 10 // 10) = 1` at the config's
@@ -676,7 +676,7 @@ RL-ViGen five days earlier. `apt` and `pip` still worked in the failing jobs, wh
 policy allowing the platform's mirrors and not the general internet. **Until this change, no
 baseline could run at all.**
 
-**Why pristine matters here.** The runner applies P1–P18 to whatever tree it is given. The vendored
+**Why pristine matters here.** The runner applies P1–P20 to whatever tree it is given. The vendored
 working copy already has them applied — `git status` on it shows 15 modified files — so shipping
 *that* would patch a patched tree and every FIND anchor would either miss or double-apply. The
 archive is therefore built from a fresh clone, not from the tree we work in.
@@ -1008,3 +1008,16 @@ ppg**; what they establish is that the env builds, the roller counts closed epis
 shape matches (`ac_space R[7]`, a fourth independent confirmation of Door's 7-DOF), and the records
 carry their axes. The path is unverified against a *trained* ppg checkpoint, and that gap is real
 until a production cell returns one.
+
+## 2026-09-05 — P20: realized placement and episode diagnostics are retained
+
+`setup/apply_patches.py`, patch P20, against `RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb/vgb_wrapper.py`.
+
+The offline grid already paired episodes by condition seed and stored an observation fingerprint,
+but that fingerprint could not answer whether performance depended on the actual Door placement.
+P20 records the post-reset Door root-body position and quaternion, then derives a placement hash
+from those values in `scripts/eval_provenance.py`. At the same common environment boundary it
+retains raw reward summaries, time-to-success, applied mode/scene, and normalized-action clipping
+diagnostics. The action path is unchanged; the records become richer and remain bounded rather
+than storing per-step trajectories. `eval_grid.py` fails closed if a family does not expose one
+complete diagnostic row per measured episode.

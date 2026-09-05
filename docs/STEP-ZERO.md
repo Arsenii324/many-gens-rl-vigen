@@ -115,7 +115,11 @@
 >
 > ### 1c. THREE baselines now, and the ranking inverts ([C86](CONSTRUCTION.md#c86))
 >
-> `python scripts/results_table.py` — the presentation-ready table, common tier only.
+> **Historical within-run diagnostic, not a current headline table.** It now requires
+> `python scripts/results_table.py --legacy-exploratory`: episode-bootstrap intervals do not
+> quantify training-seed uncertainty, and the retained rows predate the current evaluator revision.
+> The values below are preserved as the dated observation that motivated the protocol, not as a
+> production comparison.
 >
 > | @100k | trained scene | scene ret. | **regime ret.** | usable | SR train→eval |
 > |---|---|---|---|---|---|
@@ -608,7 +612,7 @@
 >
 > **Where things stand.** All twelve baselines train on RL-ViGen robosuite by running their own
 > entry points. 34 files, +917/−125 (602 non-comment) across six clones, plus RL-ViGen patches
-> P1–P19 (no P16 — the ids are not contiguous). Part 2 (metrics on the same axes) is open, with an inventory and six findings in
+> P1–P20 (no P16 — the ids are not contiguous). Part 2 (metrics on the same axes) is open, with an inventory and six findings in
 > `docs/PART2-METRIC-INVENTORY.md`; success rate is delivered for all twelve.
 >
 > **The section below is the 2026-08-16 handoff, kept as-is.** It describes the port-era state and

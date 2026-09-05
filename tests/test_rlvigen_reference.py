@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 openpyxl = pytest.importorskip("openpyxl")
-from scripts.rlvigen_reference import XLSX, read  # noqa: E402
+from scripts.rlvigen_reference import _CANDIDATES, XLSX, read  # noqa: E402
 
 # The isolated candidate tree carries RL-ViGen slimmed to what robosuite Door needs -- 1,591 files
 # lighter than the working copy, almost all of them meshes, textures and modules for robots and
@@ -39,8 +39,14 @@ from scripts.rlvigen_reference import XLSX, read  # noqa: E402
 # Door cells from it remotely. What it also removes is `results/evaluation_score.xlsx`, which no
 # run reads and only these tests do. Absent asset, not absent evidence -- so skip rather than fail,
 # because a red suite that means "this is the slim tree" trains the reader to ignore red.
+# [Corrected 2026-09-05.] This used to skip on `XLSX`, which is `_CANDIDATES[0]` -- the vendored
+# path that does not exist in this tree. So the WHOLE module skipped while the workbook was in fact
+# reachable through the asset tarball, and none of these tests had ever run. That is the same
+# hardcoded-path assumption that made `rlvigen_reference.py` itself print "absent" for the
+# project's entire life: the fix went into the script and the test kept the old belief.
 pytestmark = pytest.mark.skipif(
-    not XLSX.is_file(), reason=f"published reference workbook absent: {XLSX}")
+    not any(candidate.is_file() for candidate in _CANDIDATES),
+    reason=f"no published reference workbook among {[str(c) for c in _CANDIDATES]}")
 
 
 def sheet(tmp_path, rows, name="Robosuite"):
@@ -58,7 +64,11 @@ def sheet(tmp_path, rows, name="Robosuite"):
 def patched(monkeypatch):
     """Point `read` at a synthetic workbook."""
     def use(path):
+        # Patch the CANDIDATE LIST, not just XLSX: `_load_workbook` walks the list, so patching
+        # only XLSX would leave the parser reading the real workbook while the test believed it was
+        # reading its synthetic one -- a test that passes for the wrong reason.
         monkeypatch.setattr("scripts.rlvigen_reference.XLSX", path)
+        monkeypatch.setattr("scripts.rlvigen_reference._CANDIDATES", [path])
     return use
 
 
@@ -101,7 +111,8 @@ class TestParserOnKnownInput:
 
 class TestTheRealFile:
     def test_the_workbook_is_present_and_parses(self):
-        assert XLSX.exists(), f"{XLSX} is missing; C31's ceiling has no source"
+        assert any(c.is_file() for c in _CANDIDATES), (
+            f"no reference workbook among {[str(c) for c in _CANDIDATES]}; C31's ceiling has no source")
         got = read()
         assert set(got) == {"door", "lift"}
 

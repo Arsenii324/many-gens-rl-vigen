@@ -42,6 +42,9 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 # `policy_mode`   how the action is read at evaluation
 # `obs_scaling`   what maps raw uint8 pixels to network input, and whether it carries state
 # `reusable`      can the baseline's own evaluation code run against our checkpoints on Door
+# `anchor`/`expect` are checked live -- tests/test_record_conventions.py::
+# test_eval_state_audit_anchors_still_hold fails STALE if the file moved. Update the anchor in the
+# SAME edit that moves the code, not after the test catches it.
 STATE = {
     "drqv2": {"policy_mode": "deterministic (dist.mean)", "obs_scaling": "stateless: /255 - 0.5 in the encoder",
               "running_stats": "none", "reusable": "yes -- Workspace.eval via agent.act(eval_mode=True)",
@@ -71,7 +74,7 @@ STATE = {
               "obs_scaling": "stateless",
               "running_stats": "none",
               "reusable": "yes in principle -- upstream keeps evaluation in scripts/evaluate.py by design",
-              "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:211", "expect": "if update % args.log_interval == 0:"},
+              "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:233", "expect": "if update % args.log_interval == 0:"},
     "ctrl":  {"policy_mode": "STOCHASTIC (samples) IN THE PATH THAT REPORTS -- train_ppo.py:244 "
                          "and :217 both pass sample=True for the ID and OOD test envs, and "
                          "those are the calls behind Eprew200/Eprew0. algo.select_action CAN "

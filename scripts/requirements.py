@@ -130,10 +130,53 @@ def r3(audit=None) -> tuple[str, str]:
         "non-comparability until that judgement is made and recorded")
 
 
-def r4() -> tuple[str, str]:
-    return "NEEDS JUDGEMENT", (
-        "equal budget 'unless the algorithm forbids it' -- the exception is the judgement, and "
-        "no run set exists yet to compare budgets across")
+def r4(requested: int = 600_000) -> tuple[str, str]:
+    """[Claude 2026-09-04: this said "no run set exists yet to compare budgets across", which was
+    true of RESULTS and false of the question. R4 asks whether the twelve can be given an equal
+    training length; that is answerable from the descriptors alone, because each family's executed
+    budget is its request rounded to its own rollout quantum. Computed rather than asserted.]
+
+    The residual is not a choice anyone is making: a family that collects `num_envs * num_steps`
+    transitions per iteration can only stop on a multiple of that, and removing the difference
+    would mean editing the clones -- the authored change the null forbids. So the honest R4 answer
+    is "equal to within each family's own quantum", with the number stated.
+    """
+    import importlib.util
+    import json as _json
+    native = ROOT / "datasphere" / "native"
+    try:
+        spec = importlib.util.spec_from_file_location("_family_for_r4", native / "family.py")
+        family = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(family)
+        # ``families.json`` has top-level metadata (currently ``_host_profiles``) beside the
+        # actual family descriptors.  Use the runner's loader rather than independently guessing
+        # the JSON shape: otherwise a new metadata key is treated as a seventh family and R4
+        # cannot compute the very budget comparison it is meant to report.
+        entries = family.load(native / "families.json")
+        executed = {}
+        for name, entry in entries.items():
+            if not isinstance(entry, dict):
+                continue
+            fields = {"run_dir": "/tmp/r4", "task": "Door", "baseline": name, "seed": 1,
+                      "frames": requested}
+            executed[name] = int(family.full_fields(name, fields).get("endpoint", requested))
+    except Exception as error:  # a missing descriptor must not silently look like agreement
+        return "NEEDS JUDGEMENT", f"could not compute executed budgets: {type(error).__name__}: {error}"
+
+    low, high = min(executed.values()), max(executed.values())
+    spread = high - low
+    share = 100.0 * spread / requested
+    worst = sorted(executed.items(), key=lambda kv: kv[1])
+    detail = ", ".join(f"{n} {v:,}" for n, v in (worst[0], worst[-1]))
+    status = "MET" if share <= 1.0 else "NEEDS JUDGEMENT"
+    return status, (
+        f"at a {requested:,}-frame request the seven runner families carrying the twelve "
+        f"baselines execute {low:,}-{high:,} "
+        f"frames -- a spread of {spread:,} ({share:.2f}%), which is each family's own rollout "
+        f"quantum and not a choice ({detail}). Equal length is therefore achievable to within "
+        "that quantum without touching a clone. The remaining judgement is the BUDGET ITSELF "
+        "(3b #5): `scripts/audit_implementations.py` shows ppg's auxiliary phase first runs at "
+        "65,536 frames, so any budget below that reports PPO in the ppg column")
 
 
 def r5() -> tuple[str, str]:
@@ -193,11 +236,23 @@ def r5() -> tuple[str, str]:
 
 
 def r6() -> tuple[str, str]:
+    """[Claude 2026-09-04: the judgement now has evidence, and it is budget-dependent.
+
+    This function can only count declarations, which is why it has always returned NEEDS
+    JUDGEMENT. `scripts/audit_implementations.py` supplies what it cannot: per baseline, whether
+    the algorithm's distinctive mechanism is defined in the clone AND executes at the budget the
+    numbers would come from. At 6e5 the answer is 12/12. At 10,000 frames it is 11/12, because
+    `ppg`'s auxiliary phase first fires at 65,536 frames -- so every ppg number this project holds
+    is PPO exactly, not a weak PPG. The verdict is therefore reported WITH a budget, and the
+    status stays NEEDS JUDGEMENT because choosing that budget is the owner's call (§3b #5).]"""
     n = len(implemented())
     return ("NEEDS JUDGEMENT" if n == 12 else "NOT MET",
             f"{n} baselines declare `implemented` in rlgen/registry.py. Whether each is a GENUINE "
             "implementation is the judgement -- the registry's own docstring records three that "
-            "were previously present in name only")
+            "were previously present in name only. EVIDENCE: `python scripts/audit_implementations.py "
+            "--frames N` checks each algorithm's distinctive mechanism is defined AND executes at "
+            "budget N -- 12/12 at 6e5, 11/12 at 1e4 (ppg's auxiliary phase first runs at 65,536 "
+            "frames, below which the ppg column is PPO). The budget is the open half, not the code")
 
 
 def r7() -> tuple[str, str]:

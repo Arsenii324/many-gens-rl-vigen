@@ -38,11 +38,44 @@ ESTIMATOR = {
 STACK = {b: 3 for b in ("drqv2", "svea", "drq", "sgqn", "curl", "rad", "soda", "alda")}
 STACK.update({b: 1 for b in ("ppg", "idaac", "ibac_sni", "ctrl")})
 
+# [Claude 2026-09-06] C1, rated the largest comparability defect found (CONSTRUCTION.md#c1): on
+# Door every episode ends by time limit, and nine of twelve zero the value bootstrap there (biasing
+# every critic target downward, every episode, throughout training) while three (`rad`/`soda`/
+# `alda`) bootstrap through it correctly. This table already declares STACK and ESTIMATOR beside
+# every row for exactly this reason -- "a bare column invites a comparison the data does not
+# support" (this file's own docstring) -- but had no column or footer note for C1 at all, despite
+# it outranking both in the project's own severity rating. Read the same way
+# `audit_comparability_seam.py::truncation()` and `results_table.py` do: from `rlgen/protocol.py`'s
+# own source text, not by importing the module.
+def _time_limit_handling() -> dict:
+    src = (Path(__file__).resolve().parents[1] / "rlgen" / "protocol.py").read_text(encoding="utf-8")
+    m = re.search(r"TIME_LIMIT_HANDLING\s*=\s*\{(.*?)\n\}", src, re.S)
+    if not m:
+        return {}
+    return dict(re.findall(r'"(\w+)":\s*"(\w+)"', m.group(1)))
+
+
+TIME_LIMIT = _time_limit_handling()
+
 # The uniform-random-policy floor on Door, measured over 400 episodes with zero successes
 # (C55). A return at or below this is indistinguishable from acting randomly, and no ratio
 # may be built on it -- C18/RIGOR.md: retention over a near-floor denominator is not a small
 # number, it is an undefined one that looks like a number.
-RANDOM_FLOOR = 1.82
+# [2026-09-05] The floor has ONE home: scripts/rlvigen_reference.DOOR_RANDOM_FLOOR, measured over
+# 200 paired episodes. A local literal here drifted to 1.82 while the measurement moved to 1.842.
+# Imported rather than copied, and it fails LOUDLY rather than falling back to a stale default --
+# a wrong floor silently turns "at chance" into "competent" and back.
+def _door_random_floor() -> float:
+    import importlib.util as _u
+    import pathlib as _p
+    _spec = _u.spec_from_file_location(
+        "_rlvigen_reference", _p.Path(__file__).resolve().parent / "rlvigen_reference.py")
+    _module = _u.module_from_spec(_spec)
+    _spec.loader.exec_module(_module)
+    return float(_module.DOOR_RANDOM_FLOOR)
+
+
+RANDOM_FLOOR = _door_random_floor()
 
 FRAME_RE = re.compile(r"NATIVE_FINAL_EVALUATION_COMPLETED frame=(\d+)")
 
@@ -170,8 +203,8 @@ def main(argv=None) -> int:
     lines.append("")
     lines.append("# Pre-production validation table")
     lines.append("")
-    lines.append("| baseline | frames | regime | eps | return | success | estimator | stack | render |")
-    lines.append("|---|---|---|---|---|---|---|---|---|")
+    lines.append("| baseline | frames | regime | eps | return | success | estimator | stack | timelimit | render |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|")
     for r in rows:
         at_floor = isinstance(r["mean"], (int, float)) and r["mean"] <= RANDOM_FLOOR
         mean = (f"{r['mean']:.3f}{' ⌊' if at_floor else ''}"
@@ -182,6 +215,7 @@ def main(argv=None) -> int:
             f"{(str(r['regime']) + ('!' if r.get('regime_substituted') else '') + ('*' if r['baseline'] == 'alda' else '')) if r['regime'] else '—'} | "
             f"{r['episodes'] or '—'} | {mean} | {succ} | "
             f"{ESTIMATOR.get(r['baseline'], '?')} | {STACK.get(r['baseline'], '?')} | "
+            f"{TIME_LIMIT.get(r['baseline'], '?')} | "
             f"{r['mujoco_gl'] or '—'} |")
 
     missing = [r["baseline"] for r in rows if r["mean"] is None]
@@ -195,8 +229,8 @@ def main(argv=None) -> int:
         lines.append(f"**No eval number for**: {', '.join(missing)} — the cell ran but its "
                      "evaluation did not land, which is an R7 break, not a low score.")
     lines.append("")
-    lines.append("**This table may not be sorted by return.** Three baselines report a SAMPLED "
-                 "return (`idaac`, `ibac_sni`, `ppg`) and nine report a mode return; the two are "
+    lines.append("**This table may not be sorted by return.** Four baselines report a SAMPLED "
+                 "return (`idaac`, `ibac_sni`, `ppg`, `ctrl`) and eight report a mode return; the two are "
                  "different quantities. Four receive a single frame and eight receive three, which "
                  "on a manipulation task makes them velocity-blind — a different POMDP, not a "
                  "weaker algorithm (C2). Rows are grouped by stack for that reason.")
@@ -226,29 +260,34 @@ def main(argv=None) -> int:
                  "generator, so an alda row and a native row under one regime label are close "
                  "neighbours, not the same condition.")
     lines.append("")
-    lines.append("**`ctrl`'s row is NOT comparable with the others and is marked accordingly.** "
-                 "`audit_comparability_seam.py::reported_estimator` states that the estimator axis "
-                 "is uniform *conditional on only ever reading the evaluation number*, and warns "
-                 "that training-curve numbers are a different estimand which pooling would "
-                 "corrupt. `ctrl`'s cell reports `Eprew200`/`Eprew0` — training-curve numbers — "
-                 "because its fixed-policy evaluator is unbuilt: `evaluate_ppo.py` calls a "
-                 "discrete-only helper while `algo.select_action` already handles both action "
-                 "spaces. So this pass violates that condition for exactly one baseline. Until "
-                 "the evaluator is adapted, `ctrl` is a pipeline check only.")
+    lines.append("**`ctrl`'s native training metrics remain separate from its offline row.** "
+                 "The offline evaluator now drives `algo.select_action(..., sample=True)` on a "
+                 "continuous 7-DoF environment and records a fixed-policy episode mean, so it is "
+                 "the same *kind* of measurement as the other offline rows. Its native "
+                 "`Eprew200`/`Eprew0` values are still successive-policy trailing-window metrics and "
+                 "must not be promoted into the shared return column.")
     lines.append("")
-    lines.append("**A blank `eps` is the symptom of that, not a formatting gap.** "
-                 "`ctrl` never performs a terminal evaluation: `train_ppo.py` steps an ID and an "
-                 "OOD test env *inside* the training loop and reports `Eprew200`/`Eprew0`, a "
-                 "running mean over a trailing window. Every other baseline here reports a "
-                 "fixed-N evaluation of the final policy. A windowed running mean and a terminal "
-                 "N-episode mean are different estimators of different quantities: the first is "
-                 "smeared over the policies of the last N episodes, the second measures only the "
-                 "policy that was saved. Comparing them as if they were the same column overstates "
-                 "`ctrl` when it is improving and understates it when it has just diverged.")
+    lines.append("**A blank `eps` in a native ctrl record remains meaningful, not a formatting gap.** "
+                 "`ctrl`'s training loop reports `Eprew200`/`Eprew0`, a running mean over a trailing "
+                 "window; its offline evaluator reports the declared fixed-N endpoint estimate. "
+                 "The two are different quantities and are kept under their native names.")
     lines.append("")
     lines.append("**`render` must be identical across rows to compare them at all** (C95): a "
                  "container-trained policy evaluated under a different rasteriser reads 12–14x "
                  "low. Any row showing `glfw` beside rows showing `egl` is not comparable.")
+    lines.append("")
+    tl_present = sorted({TIME_LIMIT.get(r["baseline"], "?") for r in rows})
+    lines.append("**`timelimit` is C1, rated the largest comparability defect found.** Door has no "
+                 "early termination, so every episode ends by time limit. `terminal` baselines "
+                 "(`drqv2 svea sgqn curl drq ctrl idaac ppg ibac_sni`) zero the value bootstrap "
+                 "there on every episode throughout training; `bootstrap` baselines (`rad soda "
+                 "alda`) bootstrap through it correctly. This biases every `terminal` critic's "
+                 "target downward relative to every `bootstrap` one before a single episode is "
+                 "evaluated, and it is not visible in `return` or `success` above -- both are "
+                 "summed real reward, not the value function. **Rows may not be ranked across this "
+                 "column** (CONSTRUCTION.md#c1's DEFAULT: declare, do not equalise)."
+                 + (f" This table currently mixes both: {', '.join(tl_present)}."
+                    if len(tl_present) > 1 else ""))
 
     text = "\n".join(lines)
     if a.out:

@@ -1,0 +1,31 @@
+# Offline-only evaluator validation for ALDA's terminal checkpoint from v83. No training occurs;
+# this closes the last unexercised run_scene_* family before production.
+name: vigen-offline-alda-v84
+desc: Evaluate the returned ALDA checkpoint in the CUDA container.
+cmd: >-
+  timeout --foreground 3600s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=alda
+  OFFLINE_EVAL_BASELINE=alda
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=2560
+  OFFLINE_EVAL_EPISODES=1
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v74.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /tmp/alda-snapshot.OhLQzD/cells/alda-s1/snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

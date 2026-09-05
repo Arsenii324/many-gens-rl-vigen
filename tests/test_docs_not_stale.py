@@ -68,6 +68,28 @@ def files_str(t) -> str:
     return f"{t[0]} files, +{t[1]}/-{t[2]} ({t[3]} non-comment)"
 
 
+def test_ppg_reconciliation_counts_the_released_mpi_workers():
+    """PPG's README launches four workers; one worker is not the released global update.
+
+    The reconciliation once treated 64×256 as the release batch and called our 8×256 run an 8×
+    reduction, omitting the documented `mpiexec -np 4` and understating the effective-batch gap.
+    """
+    readme = (ROOT / "runnable" / "ppg" / "README.md").read_text()
+    note = (ROOT / "notes" / "faithfulness-reconciliation.md").read_text()
+    assert "mpiexec -np 4" in readme
+    assert "4 MPI processes × 64 envs" in note
+    assert "× 256 steps = 65,536" in note
+    assert "32×" in note
+
+
+def test_eval_protocol_carries_the_current_operational_defaults():
+    """The protocol must not leave obsolete adaptive/100k defaults as its live instructions."""
+    protocol = (ROOT / "docs" / "EVAL-PROTOCOL.md").read_text()
+    assert "Fixed 3 for every reported row" in protocol
+    assert "50k stamp grid" in protocol
+    assert "Endpoint is the headline; trajectory is descriptive; no selected-best column" in protocol
+
+
 def per_baseline():
     """{name: (files, insertions, deletions)} from scripts/deviations.py."""
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "deviations.py")],

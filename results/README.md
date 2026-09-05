@@ -37,9 +37,11 @@ them may be compared with which is decided by `docs/EVAL-DECOMPOSITION.md` and
 - `ctrl`'s and `ibac_sni`'s rows are **outside the pooled table** for stated reasons — a different
   estimand ([`COMPARABILITY_CONTRACT`](../docs/COMPARABILITY_CONTRACT.md) §5d) and a policy whose
   action mass is mostly outside the action box ([C61](../docs/CONSTRUCTION.md#c61)).
-- Ten of twelve baselines have an **undischarged shared-evaluator burden**
-  (`scripts/audit_shared_evaluator.py`), so a number here from those ten comes from an instrument
-  not yet shown to measure what that baseline's own evaluator measures.
+- All seven evaluator families currently have an **undischarged shared-evaluator burden** under the
+  current family-specific evaluator identity (`scripts/production_gates.py`), so every baseline's
+  number here is historical evidence from an instrument not yet revalidated on the exact evaluator
+  closure that the fleet will run. The older paired rows are retained for diagnosis, not as current
+  cross-baseline evidence; the live count is recomputed by the production gate.
 
 ## Regenerating
 

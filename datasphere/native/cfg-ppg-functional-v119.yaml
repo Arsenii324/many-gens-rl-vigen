@@ -1,0 +1,38 @@
+# Validation of the ppg evaluator against the frozen code revision
+# 4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2 (payload-v119).
+#
+# These four are the families not yet measured on the CURRENT hash. alda and drqv2 were validated on
+# the previous one (4a77df8b), before CORRECTIONS #47 moved it; that evidence stands for their paths
+# because the diff is confined to ctrl, but the claim worth making is that every family was measured
+# on the hash the fleet will actually run.
+name: vigen-ppg-functional-v119
+desc: Validate the ppg endpoint evaluator on CUDA against the current frozen evaluator revision.
+cmd: >-
+  timeout --foreground 10800s env
+  CELLS=ppg:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v119.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

@@ -173,14 +173,107 @@ def test_families_with_no_eval_dial_expose_only_a_save_cadence():
     """
     for baseline in ("ppg", "ibac_sni", "ctrl", "idaac"):
         env = FAMILY.production_env(f"{baseline}:1")
-        assert set(env) <= {"SAVE_EVERY"}, f"{baseline} gained a dial it should not have: {env}"
-        assert env.get("SAVE_EVERY") == "50000", f"{baseline}: {env}"
+        # The training loops have no online evaluation dial.  The terminal and trajectory grids
+        # are container-side measurements and therefore allowed, but no training-time cadence may
+        # appear merely because the runner can now make those measurements.
+        allowed = {"SAVE_EVERY_FRAMES", "CURVE_EVAL", "ENDPOINT_EVAL",
+                   "CURVE_EVAL_REGIMES", "CURVE_EVAL_SCENES", "CURVE_EVAL_EPISODES",
+                   "ENDPOINT_EVAL_REGIMES", "ENDPOINT_EVAL_SCENES", "ENDPOINT_EVAL_EPISODES"}
+        if baseline in {"ctrl", "idaac"}:
+            allowed.add("NATIVE_ISOLATE_ONLINE_EVAL")
+        assert set(env) <= allowed, f"{baseline} gained a dial it should not have: {env}"
+        assert env.get("SAVE_EVERY_FRAMES") == "50000", f"{baseline}: {env}"
+
+
+@pytest.mark.parametrize("baseline", BASELINES)
+def test_production_enables_distinct_endpoint_and_curve_measurements(baseline):
+    """The production descriptor must activate both measured products, not merely name scopes.
+
+    ``run_probe.sh`` deliberately leaves both evaluators opt-in for cheap probes.  A production
+    invocation is different: it owes one 20-episode endpoint grid and a shallow 50k trajectory.
+    Supplying only ``*_EVAL_*`` variables makes that distinction look configured while silently
+    doing neither.
+    """
+    env = FAMILY.production_env(f"{baseline}:1")
+    assert env["ENDPOINT_EVAL"] == "1"
+    assert env["CURVE_EVAL"] == "1"
+    assert env["ENDPOINT_EVAL_REGIMES"] == "train,eval-easy,eval-medium,eval-hard"
+    assert env["ENDPOINT_EVAL_SCENES"] == "0,1,2,3,4,5,6,7,8,9"
+    assert env["ENDPOINT_EVAL_EPISODES"] == "20"
+    assert env["CURVE_EVAL_REGIMES"] == "train,eval-easy,eval-medium,eval-hard"
+    assert env["CURVE_EVAL_SCENES"] == "0,1,2,3,4,5,6,7,8,9"
+    assert env["CURVE_EVAL_EPISODES"] == "3", (
+        "A20 decided 3 episodes/stamp (DECISION-SHEET.md); this test pinned the pre-decision "
+        "value of 5, which is exactly how the decision was silently overridden in production for "
+        "as long as this assertion stayed unchanged -- Codex found it live via mailbox Q19.")
 
 
 def test_cells_spanning_families_are_refused():
     """The settings differ in kind across families, so merging them would be a category error."""
     with pytest.raises(SystemExit):
         FAMILY.production_env("drqv2:1,rad:1")
+
+
+def test_v100_profile_is_explicit_and_changes_only_its_declared_runtime_knobs(monkeypatch):
+    """A V100 run must not silently inherit T4-safe rollout and replay reductions."""
+    monkeypatch.delenv("NATIVE_HOST_PROFILE", raising=False)
+    assert FAMILY.host_profile() == "datasphere"
+    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "8"
+    assert FAMILY.production("rlvigen")["replay_capacity"] == 300_000
+
+    monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
+    assert FAMILY.host_profile() == "v100"
+    assert FAMILY.full_fields("idaac", {"frames": "600000"})["num_processes"] == "16"
+    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "8"
+    assert FAMILY.expected_endpoint("ppg", 600_000) == 600_064
+    assert FAMILY.full_fields("ibac_sni", {"frames": "600000"})["procs"] == "16"
+    assert FAMILY.full_fields("ctrl", {"frames": "600000"})["num_envs"] == "64"
+    # Door does not terminate early, so 600k action-repeat-one frames plus at most 1,200
+    # episode-reset entries fit below this cap.  A 1M cap is therefore no more faithful at
+    # the declared budget, while it needlessly prevents two-cell V100 packing.
+    assert FAMILY.production("rlvigen")["replay_capacity"] == 620_000
+    assert FAMILY.production("rlvigen")["preserve_snapshots"] == 50_000
+    assert FAMILY.production_env("drqv2:1")["NATIVE_EXTRA_OVERRIDES"] == "replay_buffer_size=620000"
+    assert FAMILY.production("ctrl")["tier"] == "gt4i.1", "unchanged profiles inherit base settings"
+
+
+def test_ibac_parallel_memory_model_refuses_the_known_unfit_t4_shape(monkeypatch):
+    """A 16-way EGL rollout measured about 1 GiB RSS per child and OOMed a 16 GiB T4.
+
+    This is a capacity guard, not a claim that 16 processes are invalid.  The declared V100
+    profile remains the upstream count; it needs its own higher-memory smoke.
+    """
+    monkeypatch.setenv("NATIVE_EXTRA_OVERRIDES", "--procs=16")
+    with pytest.raises(ValueError, match="parallel rollout memory"):
+        FAMILY.check_memory("ibac_sni:1", "gt4.1")
+
+
+def test_descriptor_can_be_resolved_for_an_explicit_profile_without_ambient_state(monkeypatch):
+    """Planners must name their profile; an inherited shell variable cannot define an artifact."""
+    monkeypatch.setenv("NATIVE_HOST_PROFILE", "datasphere")
+    try:
+        v100 = FAMILY.production("rlvigen", profile="v100")
+    except TypeError as error:
+        pytest.fail(f"family.production has no explicit profile input: {error}")
+    assert v100["replay_capacity"] == 620_000
+
+    monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
+    datasphere = FAMILY.production("rlvigen", profile="datasphere")
+    assert datasphere["replay_capacity"] == 300_000
+    assert FAMILY.expected_endpoint("idaac", 600_000, profile="v100") == 598_016
+    assert FAMILY.expected_endpoint("idaac", 600_000, profile="datasphere") == 599_040
+
+
+def test_unknown_host_profile_is_rejected_before_a_command_is_resolved(monkeypatch):
+    monkeypatch.setenv("NATIVE_HOST_PROFILE", "unreviewed-host")
+    with pytest.raises(ValueError, match="unknown host profile"):
+        FAMILY.full_fields("ibac_sni", {"frames": "600000"})
+
+
+def test_run_manifest_stamps_the_selected_host_profile():
+    runner = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
+    assert '"host_profile": os.environ.get("NATIVE_HOST_PROFILE", "datasphere")' in runner
+    assert 'python3 "$FAMILY_TOOL" host-profile' in runner
 
 
 # --- the budget floor: refuse a run that cannot produce a curve, before it is paid for ---------
@@ -244,10 +337,32 @@ def test_the_runner_prefers_the_input_and_verifies_it():
 def test_the_source_lock_is_a_payload_member():
     """The runner reads it on the container; a payload without it leaves the runner with no tree
     and no useful error, which is what the runner contract exists to prevent."""
+    import re
     contract = (ROOT / "datasphere" / "native" / "contract.py").read_text()
     assert '"datasphere/native/rlvigen-source.json",' in contract
-    assert "RUNNER_CONTRACT = 10" in contract
-    assert "--require-runner-contract 10" in RUNNER
+    # [Corrected 2026-09-05, external review 7 section 9] This used to hardcode
+    # `RUNNER_CONTRACT = 10` on both sides, so bumping the contract to 12 turned a green test red
+    # for no reason connected to what it protects. The invariant is that the runner DEMANDS the
+    # contract the builder STAMPS -- a relationship between two files, which cannot go stale.
+    declared = re.search(r"^RUNNER_CONTRACT = (\d+)", contract, re.MULTILINE)
+    required = re.search(r"--require-runner-contract (\d+)", RUNNER)
+    assert declared and required, "the runner contract is no longer stated in both places"
+    assert declared.group(1) == required.group(1), (
+        f"contract.py stamps RUNNER_CONTRACT={declared.group(1)} but run_probe.sh demands "
+        f"{required.group(1)}; a payload built here would be refused by its own runner"
+    )
+
+
+def test_result_manifest_pins_image_and_native_requirements():
+    """A package list without the CUDA userspace is not a reproducible rendering environment."""
+    assert '"container_image"' in RUNNER
+    assert '"requirements_native_sha256"' in RUNNER
+    lock = json.loads((ROOT / "datasphere" / "native" / "source-lock.json").read_text())
+    expected = ("nvidia/cuda:12.2.2-runtime-ubuntu22.04@"
+                "sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000")
+    assert lock["container_image"] == expected
+    assert expected in RUNNER
+    assert len(lock["requirements_native_sha256"]) == 64
 
 
 def test_the_archive_matches_its_lock_when_it_is_present():

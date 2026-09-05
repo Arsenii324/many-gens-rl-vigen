@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -38,6 +39,39 @@ def descriptor(family: str, path: Path | None = None) -> dict:
     if family not in families:
         fail(f"unknown family: {family} (known: {', '.join(sorted(families))})")
     return families[family]
+
+
+def host_profile(path: Path | None = None, selected: str | None = None) -> str:
+    """Resolve the named machine profile, refusing a typo before a training command is built.
+
+    The descriptor has deliberately separate DataSphere-safe and V100 production values.  Reading
+    the selector from the environment lets the same hermetic runner serve both, while retaining a
+    safe default for every existing probe configuration.
+    """
+    raw = json.loads((path or DESCRIPTORS).read_text())
+    selected = selected or os.environ.get("NATIVE_HOST_PROFILE", "datasphere")
+    known = raw.get("_host_profiles", {})
+    if selected not in known:
+        fail(f"unknown host profile {selected!r}; known: {', '.join(sorted(known))}")
+    return selected
+
+
+def resolved_descriptor(family: str, path: Path | None = None,
+                        profile: str | None = None) -> dict:
+    """Apply the selected host's declared overrides without mutating the source descriptor."""
+    entry = descriptor(family, path)
+    override = entry.get("host_profiles", {}).get(host_profile(path, profile), {})
+    unknown = set(override) - {
+        "constants", "production", "environment",
+        "constants_reason", "production_reason", "environment_reason",
+    }
+    if unknown:
+        fail(f"{family}: unsupported host-profile override section(s): {sorted(unknown)}")
+    resolved = dict(entry)
+    for section in ("constants", "production", "environment"):
+        if section in override:
+            resolved[section] = {**entry.get(section, {}), **override[section]}
+    return resolved
 
 
 def family_of(baseline: str, path: Path | None = None) -> str:
@@ -68,7 +102,7 @@ def full_fields(family: str, fields: dict, path: Path | None = None) -> dict:
     need it; deriving it in one place is what stops them from disagreeing with the code that
     verifies the marker.
     """
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path)
     merged = with_constants(entry, fields)
     if "frames" in merged and "endpoint" not in merged:
         merged["endpoint"] = str(expected_endpoint(family, int(merged["frames"]), path))
@@ -90,7 +124,7 @@ def with_constants(entry: dict, fields: dict) -> dict:
 
 
 def command(family: str, fields: dict, path: Path | None = None) -> list[str]:
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path)
     fields = full_fields(family, fields, path)
     argv = [entry["launcher"]]
     argv += [render(item, fields) for item in entry["positional"]]
@@ -99,13 +133,33 @@ def command(family: str, fields: dict, path: Path | None = None) -> list[str]:
 
 
 
-def check_budget(cells: str, frames: int, path: Path | None = None) -> None:
+#: Families whose stored `min_frames` is "one full rollout" and therefore SCALES with a
+#: process-count constant the profile can change. Mapping to the two constants whose product is
+#: that rollout. Every other family's `min_frames` is about warmup (RL-ViGen's `num_seed_frames`)
+#: or a fixed segment size, neither of which moves with the host profile.
+ROLLOUT_QUANTUM_CONSTANTS = {
+    "idaac": ("num_processes", "num_steps"),
+    "ibac_sni": ("procs", "frames_per_proc"),
+}
+
+
+def check_budget(cells: str, frames: int, path: Path | None = None,
+                  profile: str | None = None) -> None:
     """Refuse a budget too small to produce a training curve, before anything is paid for.
 
     Every RL-ViGen config sets `num_seed_frames: 4000` and the training log gets its first row
     only after the seed phase. A cell budgeted below that trains nothing, writes no curve, and
     fails `retain()` -- but only after the bootstrap, the run and a full evaluation have already
     happened. Found by a local rehearsal at 3,000 frames that did exactly this.
+
+    [Corrected 2026-09-05, external review 14 section 13.] `min_frames` for idaac and ibac_sni is
+    "one full rollout" and was stored as a STATIC number computed from the BASE process count.
+    idaac's V100 profile raises `num_processes` 4 -> 16, so one rollout is 4096 frames, not the
+    stored 1024 -- a canary submitted at, say, 2000 frames would satisfy the stale check while
+    completing ZERO rollouts (`num_updates = frames // num_steps // num_processes == 0`), training
+    nothing and proving nothing about the profile it claims to validate. `profile` now re-derives
+    the floor from ROLLOUT_QUANTUM_CONSTANTS against the profile's RESOLVED constants for the two
+    affected families, instead of trusting the stored number once a profile changes the geometry.
     """
     import os
     import re as _re
@@ -124,9 +178,21 @@ def check_budget(cells: str, frames: int, path: Path | None = None) -> None:
         # A gate added to save money should not take over the reporting of unrelated failures.
         return
     for family in resolved:
-        settings = production(family, path)
+        settings = production(family, path, profile)
         floor = settings.get("min_frames")
         reason = settings.get("min_frames_reason", "no reason recorded")
+        quantum_keys = ROLLOUT_QUANTUM_CONSTANTS.get(family)
+        if quantum_keys:
+            entry = resolved_descriptor(family, path, profile)
+            constants = entry.get("constants", {})
+            a_key, b_key = quantum_keys
+            if a_key in constants and b_key in constants:
+                rollout = int(constants[a_key]) * int(constants[b_key])
+                if floor is None or rollout != floor:
+                    floor = rollout
+                    reason = (f"one full rollout at this profile is {a_key}={constants[a_key]} x "
+                              f"{b_key}={constants[b_key]} = {rollout} frames; a smaller budget "
+                              "completes zero rollouts and trains nothing")
         if family == "rlvigen" and override:
             floor = int(override.group(1)) + 1
             reason = (f"num_seed_frames is overridden to {override.group(1)}, so the floor is that "
@@ -135,9 +201,72 @@ def check_budget(cells: str, frames: int, path: Path | None = None) -> None:
             raise SystemExit(f"{family}: {frames} frames is below its floor of {floor} -- {reason}")
 
 
-def production(family: str, path: Path | None = None) -> dict:
+def production(family: str, path: Path | None = None, profile: str | None = None) -> dict:
     """The resolved production configuration for a family, or {} if it declares none."""
-    return descriptor(family, path).get("production", {})
+    return resolved_descriptor(family, path, profile).get("production", {})
+
+
+def check_tier(cells: str, tier: str, path: Path | None = None) -> None:
+    """Reject a job tier below a family's budget-independent minimum."""
+    rank = {"gt4.1": 1, "gt4i.1": 2}
+    if tier not in rank:
+        fail(f"unknown job tier: {tier}")
+    for family in families_of_cells(cells, path):
+        entry = resolved_descriptor(family, path)
+        required = entry.get("minimum_tier", "gt4.1")
+        if rank[tier] < rank[required]:
+            fail(f"{family} requires {required}, job uses {tier}")
+
+
+def check_memory(cells: str, tier: str, path: Path | None = None,
+                 allow_unmeasured: bool = False) -> None:
+    """Reject a tier that cannot hold its measured working set plus safety margin.
+
+    Most families have one fixed peak.  IBAC-SNI also has an explicitly measured process-tree
+    model: spawned MuJoCo/EGL workers do not share the parent's address space, so a one-process
+    peak cannot certify a command that asks for sixteen.  The runner's extra overrides are part of
+    the effective command and therefore part of this preflight, rather than a loophole around it.
+    """
+    usable = {"gt4.1": 14.5, "gt4i.1": 27.0}
+    if tier not in usable:
+        fail(f"unknown job tier: {tier}")
+    unmeasured: list[str] = []
+    for family in families_of_cells(cells, path):
+        entry = resolved_descriptor(family, path)
+        settings = entry.get("production", {})
+        peak = settings.get("fixed_peak_gib")
+        margin = settings.get("memory_margin_gib", 0.0)
+        if peak is None:
+            # This used to `continue`, so a family with no measured peak fell through to the
+            # caller printing "memory ok" -- an unmeasured family certified as fitting. ctrl was
+            # certified for gt4.1 that way and SIGKILLed at 11.07 GiB RSS (bt1lhobnsq5lq4766np6).
+            # An absent measurement is not a passing one.
+            unmeasured.append(family)
+            continue
+        required = float(peak) + float(margin)
+        parallel = settings.get("parallel_rollout_memory")
+        if parallel:
+            # `--procs=16` is how the launcher receives this field; accept the whitespace form as
+            # well so a hand-written diagnostic config cannot bypass the check by changing syntax.
+            import re
+            override = re.search(r"(?:^|\s)--procs(?:=|\s+)(\d+)(?:\s|$)",
+                                 os.environ.get("NATIVE_EXTRA_OVERRIDES", ""))
+            procs = int(override.group(1)) if override else int(entry.get("constants", {}).get("procs", 1))
+            tree_required = (float(parallel["parent_gib"]) +
+                             procs * float(parallel["per_worker_gib"]) +
+                             float(parallel.get("margin_gib", 0.0)))
+            if tree_required > usable[tier]:
+                fail(f"{family}: parallel rollout memory for procs={procs} is at least "
+                     f"{tree_required:.2f} GiB (parent + workers + margin), but {tier} has "
+                     f"{usable[tier]:.1f} GiB usable")
+            required = max(required, tree_required)
+        if required > usable[tier]:
+            fail(f"{family}: measured fixed peak plus margin is {required:.2f} GiB, "
+                 f"but {tier} has {usable[tier]:.1f} GiB usable")
+    if unmeasured and not allow_unmeasured:
+        fail("no measured memory peak for " + ", ".join(sorted(unmeasured))
+             + f"; cannot certify {tier}. Record `fixed_peak_gib` from a completed run, or pass "
+               "--allow-unmeasured to accept the risk explicitly")
 
 
 def production_env(cells: str, path: Path | None = None) -> dict:
@@ -157,13 +286,40 @@ def production_env(cells: str, path: Path | None = None) -> dict:
             f"production settings are per family and these cells span {families}; "
             "submit one family per job, as production-schedule.json assumes")
     family = families[0]
+    entry = resolved_descriptor(family, path)
     settings = production(family, path)
     if not settings:
         raise SystemExit(f"{family} declares no production block in families.json")
 
     out: dict[str, str] = {}
+    has_eval_option = any("{eval_every}" in str(option) for option in entry.get("options", []))
+    if settings.get("eval_every") is None and has_eval_option:
+        # The training loops' online evaluators consume the same global NumPy stream that places
+        # Door. Production measurements come from the offline grid, so disable those evaluators
+        # explicitly rather than allowing the runner's numeric fallback to turn them back on.
+        out["NATIVE_DISABLE_ONLINE_EVAL"] = "1"
+    if settings.get("online_eval_rng_isolated") is True:
+        out["NATIVE_ISOLATE_ONLINE_EVAL"] = "1"
+    # A production cell has two measured products: one reportable endpoint grid and a shallower
+    # trajectory grid.  The runner deliberately leaves both opt-in for cheap probes, so this is
+    # where production explicitly enables them.  The shared offline fields are the full endpoint
+    # specification; a family may override only the curve depth (currently three episodes) while
+    # retaining the same certified regimes and scenes.
+    out["ENDPOINT_EVAL"] = "1"
+    out["CURVE_EVAL"] = "1"
+    for axis in ("regimes", "scenes", "episodes"):
+        endpoint_key = f"offline_eval_{axis}"
+        endpoint_value = settings.get(endpoint_key)
+        curve_value = settings.get(f"curve_eval_{axis}", endpoint_value)
+        for value, name in ((endpoint_value, f"ENDPOINT_EVAL_{axis.upper()}"),
+                            (curve_value, f"CURVE_EVAL_{axis.upper()}")):
+            if value is None:
+                continue
+            if isinstance(value, list):
+                value = ",".join(str(item) for item in value)
+            out[name] = str(value)
     for key, name in (("eval_every", "EVAL_EVERY_FRAMES"), ("eval_episodes", "EVAL_EPISODES"),
-                      ("save_every", "SAVE_EVERY")):
+                      ("save_every", "SAVE_EVERY_FRAMES")):
         value = settings.get(key)
         if value is not None:
             out[name] = str(value)
@@ -190,13 +346,13 @@ def environment_for(family: str, fields: dict, path: Path | None = None) -> dict
     ALDA takes its results directory from `ALDA_RESULTS` because its launcher reads that, not a
     flag; declaring it here keeps the runner from growing a per-family export.
     """
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path)
     fields = full_fields(family, fields, path)
     return {key: render(value, fields) for key, value in entry.get("environment", {}).items()}
 
 
 def artifact_root(family: str, fields: dict, path: Path | None = None) -> Path:
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path)
     return Path(render(entry["artifact_root"], full_fields(family, fields, path)))
 
 
@@ -308,7 +464,8 @@ def quantum_component(entry: dict, flag: str) -> int:
     return int(raw)
 
 
-def expected_endpoint(family: str, requested: int, path: Path | None = None) -> int:
+def expected_endpoint(family: str, requested: int, path: Path | None = None,
+                      profile: str | None = None) -> int:
     """The frame count this family's own loop will actually reach for a requested budget.
 
     An exact rule, not a tolerance. RL-ViGen and dmc_gb stop on the requested number. IDAAC
@@ -317,7 +474,7 @@ def expected_endpoint(family: str, requested: int, path: Path | None = None) -> 
     one. A run that lands anywhere else has not done what was asked and is a failure, which is
     the whole point of computing this instead of accepting a percentage.
     """
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path, profile)
     endpoint = entry.get("endpoint") or {"rule": "exact"}
     rule = endpoint["rule"]
     if rule == "exact":
@@ -341,7 +498,7 @@ def dependency_list(family: str, key: str, path: Path | None = None) -> list[str
     would make every job's bootstrap slower and its resolved-package manifest less honest about
     what that job actually needed.
     """
-    return list(descriptor(family, path).get(key, []))
+    return list(resolved_descriptor(family, path).get(key, []))
 
 
 def import_gate(family: str, root: Path, cells: str = "", path: Path | None = None) -> None:
@@ -351,7 +508,7 @@ def import_gate(family: str, root: Path, cells: str = "", path: Path | None = No
     path, each time for the price of a bootstrap instead of the price of a calibration. A family
     that declares no gate is skipped rather than silently passed.
     """
-    entry = descriptor(family, path)
+    entry = resolved_descriptor(family, path)
     gate = entry.get("import_gate")
     if not gate:
         return
@@ -614,6 +771,8 @@ try:
                     policy["name"] = name
                     policy["log_std"] = values
                     policy["mean_log_std"] = sum(values) / max(1, len(values))
+                    policy["min_log_std"] = min(values) if values else None
+                    policy["max_log_std"] = max(values) if values else None
                     policy["all_exactly_zero"] = all(v == 0.0 for v in values)
                     return
         if isinstance(node, dict):
@@ -724,6 +883,7 @@ def main(argv: list[str] | None = None) -> int:
 
     prod = commands.add_parser("production-env")
     prod.add_argument("--cells", required=True)
+    profile = commands.add_parser("host-profile")
     excluded = commands.add_parser("excluded-modules")
     excluded.add_argument("--cells", required=True)
     budget = commands.add_parser("check-budget")
@@ -770,6 +930,16 @@ def main(argv: list[str] | None = None) -> int:
     schedulable = commands.add_parser("check-co-schedulable")
     schedulable.add_argument("--cells", required=True)
 
+    tier = commands.add_parser("check-tier")
+    tier.add_argument("--cells", required=True)
+    tier.add_argument("--tier", required=True)
+    memory = commands.add_parser("check-memory")
+    memory.add_argument("--cells", required=True)
+    memory.add_argument("--tier", required=True)
+    memory.add_argument("--allow-unmeasured", action="store_true",
+                        help="accept a family with no recorded fixed_peak_gib; the risk is then "
+                             "explicit and attributable rather than inherited from a silent skip")
+
     grouping = commands.add_parser("families-of-cells")
     grouping.add_argument("--cells", required=True)
 
@@ -783,6 +953,9 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     try:
+        if args.command == "host-profile":
+            print(host_profile())
+            return 0
         if args.command == "needs-places365":
             return 0 if cells_need_places365(args.cells) else 1
         if args.command == "family-of":
@@ -812,6 +985,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check-co-schedulable":
             check_co_schedulable(args.cells)
             return 0
+        if args.command == "check-tier":
+            check_tier(args.cells, args.tier)
+            return 0
         if args.command == "families-of-cells":
             for name in families_of_cells(args.cells):
                 print(name)
@@ -831,6 +1007,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check-budget":
             check_budget(args.cells, args.frames)
             print(f"budget ok: {args.frames} frames")
+            return 0
+        if args.command == "check-memory":
+            check_memory(args.cells, args.tier, allow_unmeasured=args.allow_unmeasured)
+            print(f"memory ok: {args.cells} on {args.tier}")
             return 0
         if args.command == "production-env":
             resolved = production_env(args.cells)

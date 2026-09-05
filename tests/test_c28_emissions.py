@@ -1,9 +1,12 @@
-"""C28's family-tier diagnostics, where they are wired -- currently `ibac_sni` only.
+"""C28's family-tier diagnostics, where they are wired -- `ibac_sni`, `ppg`, `idaac`, and `ctrl`
+(the four on-policy PPO-family baselines this quantity applies to; see PART2's Subfamily coverage
+class). Updated 2026-09-05 -- this used to say "ibac_sni only" after idaac and ctrl were both
+already wired, which is exactly the kind of doc-vs-code drift this whole file exists to prevent.
 
 Static wiring checks, and the scope is stated because it is narrower than it looks: this proves
-the three sites still mention the metrics, **not** that the printed numbers are right. The
-correctness evidence is a run, recorded in the commit that added them (k3 non-negative across
-every logged update, clip fraction in 0.19-0.33 early in training).
+the sites still mention the metrics, **not** that the printed numbers are right. The correctness
+evidence is a run, recorded in the commit that added them (k3 non-negative across every logged
+update, clip fraction in 0.19-0.33 early in training).
 
 The failure this guards is specific and has happened in this file before: `data` is consumed
 positionally by a format string, and upstream once had 17 placeholders against 18 items so
@@ -22,8 +25,71 @@ TRAIN = ROOT / "runnable/ibac_sni/torch_rl/scripts/train.py"
 PPG = ROOT / "runnable/ppg/phasic_policy_gradient/ppo.py"
 IDAAC = ROOT / "runnable/idaac/ppo_daac_idaac/algo/idaac.py"
 IDAAC_TRAIN = ROOT / "runnable/idaac/train.py"
+CTRL_ALGO = ROOT / "runnable/ctrl/algo.py"
+CTRL_TRAIN = ROOT / "runnable/ctrl/train_ppo.py"
 
 pytestmark = pytest.mark.skipif(not ALGO.exists(), reason="ibac_sni clone absent")
+
+
+@pytest.mark.skipif(not CTRL_ALGO.exists(), reason="ctrl clone absent")
+class TestCtrlPpoBranchReachesWandbLog:
+    """CTRL's PPO update is a jitted JAX function; `docs/PART2-METRIC-INVENTORY.md` used to say
+    (correctly, as of 2026-08-19) that its metrics could not be threaded out at all. They now
+    are -- verified end-to-end, not just at the compute site (the exact gap this session's other
+    C28 fixes kept finding: something computed is not the same as something logged).
+
+    The scope is real and stated in the doc: only `loss_actor_and_critic` / `update_ppo` (the
+    `ppo` / `ppo_ctrl` `--algo` values) carries these. `update_daac` (`daac` / `daac_ctrl`) has
+    its own separate loss functions and does not. Production's declared default is `ppo_ctrl`
+    (`train_ppo.py:96`), so this test pins the covered path and the gap in the uncovered one,
+    rather than asserting blanket coverage the code does not have.
+    """
+
+    def test_the_jitted_loss_computes_both_diagnostics(self):
+        t = CTRL_ALGO.read_text()
+        assert "clip_fraction = (jnp.abs(ratio - 1.0) > clip_eps).mean()" in t
+        assert "approx_kl_k3 = ((ratio - 1.0) - log_ratio).mean()" in t
+
+    def test_both_are_threaded_through_the_has_aux_return_tuple(self):
+        t = CTRL_ALGO.read_text()
+        i = t.index("def loss_actor_and_critic")
+        j = t.index("def update_ppo")
+        body = t[i:j]
+        assert "clip_fraction, approx_kl_k3)" in body, (
+            "the diagnostics must leave loss_actor_and_critic through its aux tuple, or "
+            "update_ppo has nothing to unpack")
+
+    def test_update_ppo_accumulates_both_into_avg_metrics_dict(self):
+        t = CTRL_ALGO.read_text()
+        assert "avg_metrics_dict['clip_fraction'] += clip_fraction.mean()" in t
+        assert "avg_metrics_dict['approx_kl_k3'] += approx_kl_k3.mean()" in t
+
+    def test_update_daac_does_not_have_the_same_diagnostics(self):
+        """The stated, narrower gap: daac_ctrl runs would silently lack these two columns."""
+        t = CTRL_ALGO.read_text()
+        i = t.index("def update_daac")
+        rest = t[i + 1:]
+        j = i + 1 + rest.index("\ndef ") if "\ndef " in rest else len(t)
+        body = t[i:j]
+        assert "clip_fraction" not in body and "approx_kl_k3" not in body, (
+            "update_daac now computes these -- the PART2 caveat about daac/daac_ctrl "
+            "coverage is stale and must be removed, not left standing")
+
+    def test_ppo_branch_metric_dict_reaches_a_real_wandb_log_call(self):
+        t = CTRL_TRAIN.read_text()
+        assert "metric_dict, train_state, key = update_ppo(" in t
+        i = t.index("metric_dict, train_state, key = update_ppo(")
+        tail = t[i:i + 2200]
+        assert "for k, v in metric_dict.items():" in tail
+        assert 'renamed_dict["%s/%s" % (FLAGS.env_name, k)] = v' in tail
+        assert "wandb.log(renamed_dict, step=FLAGS.num_envs * step)" in tail
+
+    def test_production_default_algo_takes_the_wired_branch(self):
+        t = CTRL_TRAIN.read_text()
+        assert 'flags.DEFINE_enum("algo", "ppo_ctrl",' in t, (
+            "production's default --algo must contain 'ppo' to take the wired branch; "
+            "if the default changes this claim needs re-checking, not just this assertion")
+
 
 
 def test_the_algo_emits_both_quantities():
@@ -160,3 +226,74 @@ class TestIdaacIsWiredWithoutChangingItsSignature:
         assert 'getattr(agent, "last_clip_fraction", None)' in t
         key = "train" + "/" + "clip_fraction"
         assert f'logger.logkv("{key}"' in t
+
+
+class TestIdaacUpdateTupleReachesTheLog:
+    """`agent.update()`'s own return tuple -- value_loss, action_loss, and (idaac/daac) the
+    order-classifier/advantage-loss diagnostics -- used to be unpacked into local variables and
+    never logged anywhere, for the entire run, under every `--algo` variant. Found auditing metric
+    richness across all twelve baselines: idaac's own defining mechanism (the order classifier)
+    had zero visibility, so a collapsed or inert auxiliary head would have produced a plausible
+    curve with no signal anything was wrong.
+
+    Source-level, matching this file's own stated convention: proves the values reach `logkv`
+    calls, not that the printed numbers are right (that needs a run).
+    """
+
+    def test_the_idaac_branch_logs_all_seven_values(self):
+        t = IDAAC_TRAIN.read_text()
+        for key in ("order_acc", "order_loss", "clf_loss", "adv_loss",
+                    "value_loss", "action_loss", "dist_entropy"):
+            assert f'"train/{key}": {key}' in t, f"{key} is unpacked from agent.update() but never wired to _update_metrics"
+
+    def test_the_daac_and_ppo_branches_also_populate_update_metrics(self):
+        t = IDAAC_TRAIN.read_text()
+        assert t.count("_update_metrics = {") == 3, (
+            "expected one _update_metrics dict per --algo branch (idaac, daac, plain ppo)")
+
+    def test_update_metrics_is_actually_logged_not_just_assembled(self):
+        t = IDAAC_TRAIN.read_text()
+        assert "for _key, _value in _update_metrics.items():" in t
+        i = t.index("for _key, _value in _update_metrics.items():")
+        assert "logger.logkv(_key, _value)" in t[i:i + 200]
+
+
+class TestClipFractionIsRatioBasedInAllFourLiveImplementations:
+    """`docs/PART2-METRIC-INVENTORY.md` used to claim "ours takes the log-ratio for precision at
+    the extremes" for clip_fraction. Checked against all four live call sites rather than against
+    `scripts/metrics.py` alone (the reference function is not what any of the four actually run):
+    none of them compute clip_fraction from a log-ratio. All four compare the already-exponentiated
+    ratio directly. This pins that fact so the correction cannot silently go stale.
+    """
+
+    @pytest.mark.skipif(not PPG.exists(), reason="ppg clone absent")
+    def test_ppg_clip_fraction_uses_ratio_not_logratio(self):
+        t = PPG.read_text()
+        assert 'diags["clipfrac"] = (th.abs(ratio - 1) > clip_param).float().mean()' in t
+
+    @pytest.mark.skipif(not IDAAC.exists(), reason="idaac clone absent")
+    def test_idaac_clip_fraction_uses_ratio_not_logratio(self):
+        t = IDAAC.read_text()
+        assert "torch.abs(ratio - 1.0) > self.clip_param" in t
+
+    def test_ibac_sni_clip_fraction_uses_ratio_not_logratio(self):
+        t = ALGO.read_text()
+        assert "torch.abs(diag_ratio - 1.0) > self.clip_eps" in t
+
+    @pytest.mark.skipif(not CTRL_ALGO.exists(), reason="ctrl clone absent")
+    def test_ctrl_clip_fraction_uses_ratio_not_logratio(self):
+        t = CTRL_ALGO.read_text()
+        assert "jnp.abs(ratio - 1.0) > clip_eps" in t
+
+    @pytest.mark.skipif(not IDAAC.exists(), reason="idaac clone absent")
+    def test_idaac_k3_derives_log_from_ratio_the_reverse_direction(self):
+        """The one place the retracted claim's direction is real, but inverted: idaac holds
+        `ratio` and derives `torch.log(ratio)` from it, rather than carrying a primary log-ratio
+        through. If this ever changes to carry a primary log-ratio, the PART2 note describing it
+        as the reverse-direction case becomes stale and must be revisited too."""
+        t = IDAAC.read_text()
+        assert "((ratio - 1.0) - torch.log(ratio))" in t
+
+    def test_ibac_sni_k3_derives_log_from_ratio_the_reverse_direction(self):
+        t = ALGO.read_text()
+        assert "(diag_ratio - 1.0) - torch.log(diag_ratio)" in t

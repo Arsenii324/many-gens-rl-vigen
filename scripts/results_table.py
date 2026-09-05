@@ -28,11 +28,11 @@ denominator that has not been shown to differ from chance, or that solves the ta
 time. `svea` at 50k has **no** retention number for exactly this reason, and the row says so rather
 than leaving a blank a reader would fill in with a guess.
 
-**Rows pool over DIFFERENT scene sets, and the count is a column.** Each cell pools only the scenes
-whose own denominator clears the rules, so `drqv2`@100k averages 3 scenes and `svea`@100k averages
-9. That is the honest estimand — *"on scenes where the agent had learned something"* — and it is
-**not** RL-ViGen's ten-scene protocol. Two rows with different `n` are not the same average, and
-hiding that behind one column heading is the failure the whole comparability register exists for.
+**The cross-method headline never selects scenes by their performance.** The ten-scene protocol is
+used when every denominator scene clears the floor/competence gate; otherwise retention is refused.
+`usable/10` remains printed as a diagnostic, so a reader can see whether refusal came from one
+scene or all ten. This prevents a baseline-specific scene filter from turning a test set into a
+different estimand for every row.
 
 **The resolution floor is a column, not a footnote.** Each cell's own seed-only control — the same
 scene re-evaluated at a different placement seed — bounds what this design can distinguish from
@@ -59,6 +59,30 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.metrics import wilson_interval  # noqa: E402  -- the project's own, not re-derived
+
+
+def _time_limit_handling() -> dict:
+    """Per-baseline truncation-vs-termination, read the same way `audit_comparability_seam.py`'s
+    own `truncation()` does -- from `rlgen/protocol.py`'s source text, not by importing the module.
+
+    [Claude 2026-09-06] C1: nine baselines zero the value bootstrap at Door's time limit, three
+    (`rad`/`soda`/`alda`) bootstrap through it -- CONSTRUCTION.md#c1 rates this the largest
+    comparability defect found, and its own DEFAULT says the split "must be stated wherever these
+    numbers appear" and "must never be averaged across." This table's rows never mixed the two
+    groups so far (every CELLS entry today is `drqv2`/`svea`/`drq`, all "terminal") -- but `rad`,
+    `soda` and `alda` are explicitly ABSENT-with-reason above as "not yet run", so a future cell
+    from any of the three would silently mix groups in the same `regime`/`scene ret` columns with
+    no warning, which is exactly the failure C1's DEFAULT exists to prevent. Checked here rather
+    than left to a reader.
+    """
+    src = (ROOT / "rlgen" / "protocol.py").read_text(encoding="utf-8")
+    m = re.search(r"TIME_LIMIT_HANDLING\s*=\s*\{(.*?)\n\}", src, re.S)
+    if not m:
+        return {}
+    return dict(re.findall(r'"(\w+)":\s*"(\w+)"', m.group(1)))
+
+
+TIME_LIMIT_HANDLING = _time_limit_handling()
 GRIDS = ROOT / "results" / "regime-retention-c69"
 
 CEILING = 250.0        # C62: max return with the door never opening, over horizon 500
@@ -93,9 +117,9 @@ ABSENT = {
     "rad": "no cell run at the 105k protocol yet",
     "soda": "no cell run at the 105k protocol yet",
     "alda": "no cell run at the 105k protocol yet",
-    "idaac": "has checkpoints but no scene-swept evaluation (C72)",
-    "ppg": "cannot checkpoint as published (C60); eval needs _launch/ppg_eval.py",
-    "ctrl": "cannot checkpoint as published (C60) -- upstream's own commented-out import",
+    "idaac": "no cell run at the 105k protocol yet",
+    "ppg": "no cell run at the 105k protocol yet",
+    "ctrl": "no cell run at the 105k protocol yet",
     "ibac_sni": "no cell run at the 105k protocol yet",
 }
 
@@ -167,12 +191,15 @@ def row(name: str, seed: int, budget: str, tag: str, floor_mean: float):
     held = [mtr[k] for k in sorted(mtr) if k != 0]
     scene_ret = st.mean(held) / mtr[0] if mtr[0] else float("nan")
 
-    # Usable scenes: denominator above the floor AND solving at least MIN_DENOM_SUCCESS.
+    # Usable scenes: denominator above the floor AND solving at least MIN_DENOM_SUCCESS. Keep this
+    # count as a diagnostic, but do not select on it: selecting different scenes per baseline is
+    # post-selection bias and defeats the common ten-scene headline.
     usable = [k for k in sorted(mtr)
               if mtr[k] > floor_mean and (str_.get(k, 0) / eps) >= MIN_DENOM_SUCCESS]
-    if usable:
-        num = [x for k in usable for x in ev["scenes"][str(k)]["returns"]]
-        den = [x for k in usable for x in tr["scenes"][str(k)]["returns"]]
+    common = sorted(mtr) if len(usable) == len(mtr) else []
+    if common:
+        num = [x for k in common for x in ev["scenes"][str(k)]["returns"]]
+        den = [x for k in common for x in tr["scenes"][str(k)]["returns"]]
         regime = st.mean(num) / st.mean(den)
         ci = boot_ci(num, den)
     else:
@@ -187,7 +214,8 @@ def row(name: str, seed: int, budget: str, tag: str, floor_mean: float):
                 sr_tr_ci=wilson_interval(tot_tr, n_ep), sr_ev_ci=wilson_interval(tot_ev, n_ep),
                 n_ep=n_ep, n_tr=tot_tr, n_ev=tot_ev, res_floor=res_floor,
                 md5=tr.get("snapshot_md5", "?")[:8], eps=eps,
-                over_ceiling=sum(1 for k in mtr for x in tr["scenes"][str(k)]["returns"] if x > CEILING))
+                over_ceiling=sum(1 for k in mtr for x in tr["scenes"][str(k)]["returns"] if x > CEILING),
+                tl=TIME_LIMIT_HANDLING.get(name, "?"))
 
 
 CELLS_BY_NAME = [(n, t) for n, _, b, t in CELLS if b == "100k"]
@@ -199,7 +227,16 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--markdown", action="store_true")
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--legacy-exploratory", action="store_true",
+                    help="acknowledge that this one-seed, episode-bootstrap table is diagnostic "
+                         "only and cannot be a production headline")
     a = ap.parse_args(argv)
+
+    if not a.legacy_exploratory:
+        print("REFUSING TO RENDER THE LEGACY RESULTS TABLE WITHOUT --legacy-exploratory.")
+        print("Its interval resamples episodes from one trained policy; the production outer unit "
+              "is the training seed. Use the production reporting path for headline numbers.")
+        return 2
 
     fl = load(FLOOR, "train")
     if fl is None:
@@ -211,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rows = [r for c in CELLS if (r := row(*c, floor_mean))]
 
-    print("RETENTION ON ROBOSUITE DOOR — common-tier metrics only\n")
+    print("LEGACY EXPLORATORY RETENTION ON ROBOSUITE DOOR — not a production headline\n")
     print(f"  Random-policy floor (train regime): mean {floor_mean:.2f}, "
           f"successes {floor_succ}/200. Every return reads against this.")
     print(f"  Shaping ceiling {CEILING:.0f}: a return above it proves the door opened (C62).")
@@ -246,11 +283,11 @@ def main(argv: list[str] | None = None) -> int:
     print("\n  COLUMNS, and why each is here rather than in a footnote:")
     print("    scene0     mean return on the TRAINED scene, train regime.")
     print("    held-out   mean over scenes 1-9, train regime. Its ratio to scene0 is scene ret.")
-    print("    regime ret pooled eval-easy / train, over the USABLE scenes only — so rows with")
-    print("               different n are averaged over DIFFERENT SCENE SETS and are not the same")
-    print("               statistic. REFUSED means no scene cleared the rule: an absence of")
-    print("               retention, not a small one.")
-    print("    n          usable / total scenes. Read it before reading regime ret.")
+    print("    regime ret pooled eval-easy / train over ALL ten scenes, only when every denominator")
+    print("               scene clears the rule. REFUSED means at least one scene did not: an")
+    print("               absence of retention, not a small one; no baseline-specific scene filter")
+    print("               is allowed to define the headline.")
+    print("    n          usable / total scenes, diagnostic only. Read it before regime ret.")
     print("    SR tr>ev   success rate, train -> eval-easy. Reported beside return, never averaged")
     print("               with it: same name, same lineage, no evidence they are one quantity.")
     print("    res floor  this cell's own seed-only control — the same scene at a different")
@@ -309,7 +346,24 @@ def main(argv: list[str] | None = None) -> int:
     bad = [r for r in rows if r["regime"] is not None and r["usable"] < 2]
     if bad:
         print(f"\n  WARNING: {len(bad)} row(s) pool over fewer than 2 scenes.")
-    return 1 if (a.strict and bad) else 0
+
+    # [Claude 2026-09-06] C1: never let a single table pool rows across the time-limit-handling
+    # split without saying so loudly. See _time_limit_handling()'s docstring above -- today's
+    # CELLS never triggers this (drqv2/svea/drq all share "terminal"), so this has not yet fired,
+    # but rad/soda/alda are explicitly "not yet run" in ABSENT above and WOULD trigger it silently
+    # otherwise the moment a cell for any of them is added.
+    tl_groups = sorted({r["tl"] for r in rows})
+    mixed_tl = len(tl_groups) > 1
+    if mixed_tl:
+        by_group = {g: sorted({r["name"] for r in rows if r["tl"] == g}) for g in tl_groups}
+        print(f"\n  WARNING (C1): this table pools {tl_groups} time-limit conventions in one "
+              "comparison:")
+        for g, names in by_group.items():
+            print(f"    {g:<10} {', '.join(names)}")
+        print("    CONSTRUCTION.md#c1's DEFAULT is declare-and-never-rank-across. `scene ret` / "
+              "`regime ret` / `SR tr>ev` above are NOT safe to compare between these groups.")
+
+    return 1 if (a.strict and (bad or mixed_tl)) else 0
 
 
 if __name__ == "__main__":

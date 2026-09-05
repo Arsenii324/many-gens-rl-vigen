@@ -89,18 +89,26 @@ stated once. This is `PREMISES.md` Q5 and it is unresolved.
 
 | baseline | source of our implementation | headline divergence | severity |
 |---|---|---|---|
-| `drqv2` | `[RLV]` upstream | replay 1e5 vs 1e6 (retracted, see below); **stddev schedule from the wrong tier — FIXED 2026-08-10** | was **high**, not low |
+| `drqv2` | `[RLV]` upstream | replay 1e5 vs 1e6 (retracted, see below); **stddev schedule is resolved only in a composed probe, not yet certified for production** | **open** |
 | `svea` | `[RLV]` upstream | **uses SODA's overlay, not SVEA's random convolution**; DrQ-v2-based not SAC-based | **high** |
-| `sgqn` | `[RLV]` upstream | **`aux_lr` = 0.3 vs canonical 3e-4 — 1000x, on the SHARED ENCODER — FIXED 2026-08-10** | was **critical** |
+| `sgqn` | `[RLV]` upstream | **`aux_lr` = 1e-4 vs canonical 3e-4 — 3x on the shared encoder; the catastrophic 0.3 value is repaired, but canonical fidelity is not exact** | **medium** |
 | `curl` | `[RLV]` upstream | DrQ-v2-based, not SAC; lr 1e-4 vs 1e-3; paper/code disagree 5 ways | **high** |
 | `drq` | `[RLV]` upstream | lr 1e-4 vs 1e-3; **n-step FIXED 2026-08-10 (was 3 vs 1-step)** | low-medium |
 | `rad` | ours, on a recovered SAC | n-step 3 vs 1-step; `random_shift` not paper's crop/translate | medium |
 | `soda` | recovered from history | aux lr follows `[C]` 1e-3 not `[P]` 3e-4 | low |
 | `alda` | sibling port | **faithful**; benchmark extrapolated (DMControl-GB → robosuite) | low |
-| `idaac` | sibling port | rollout 256 vs `[P]` 2048 continuous; 8-sample minibatches | **high** |
-| `ppg` | ours, shared PPO core | rollout 256 vs 65 536; lr 1e-4 vs 5e-4; **continuous head has no reference** | **high** |
+| `idaac` | sibling port | per-environment rollout **256 matches `[P]`**; `num_processes=4` vs upstream 64, so **16x fewer parallel environments**; 8-sample minibatches | **high** |
+| `ppg` | ours, shared PPO core | per-environment rollout **256 matches `[P]`**; four-MPI-worker upstream run has global 65,536-sample updates, while our one-worker `num_envs=8` run has 2,048 (**32x lower effective batch**); lr 1e-4 vs 5e-4; **continuous head has no reference** | **high** |
 | `ibac_sni` | ours, shared PPO core | β and λ match `[P]`; **continuous head has no reference** | medium |
-| `ctrl` | ours, shared PPO core | **structural**: `L_clust` absent, positives drawn from the same partition not a neighbouring one | **high** |
+| `ctrl` | ours, shared PPO core | **the released code had `L_clust` lines commented out; this project restored them so the algorithm executes.** The current path uses nearest-neighbour positives; the remaining implementation quirk is inherited from the released code | **medium** |
+
+**Reconciliation note, 2026-09-05.** The two on-policy rollout entries above describe parallelism,
+not trajectory length: both retain the upstream per-environment 256-step rollout, while using fewer
+environments per update for the available pre-production hardware. `FIXED` elsewhere in this file
+means “no longer catastrophic,” not “matches the canonical reference”; the table above is the
+current wording. The `ctrl` restoration is an executable repair, while its nearest-neighbour
+construction is inherited and remains a fidelity item to verify, not a claim that `L_clust` is
+absent.
 
 ---
 
@@ -134,7 +142,7 @@ argument has to say *which* RL-ViGen.**
 | `lr` (Door) | 1e-4 all algos | `config.yaml: 1e-4` | 1e-4 | consistent |
 | training frames | **Door 6e5, Lift 8e5** | — | 5e5 | **the budget does have a source, and we are below it** |
 | discount, hidden dim, frame stack | 0.99 / 1024 / 3 | same | same | consistent |
-| **reward shaping** | **never stated** | — | `True` | **CONFIRMED ABSENT from the paper** — zero occurrences of dense/sparse/shaping for robosuite anywhere. Ours is `[OURS]`, inherited from robosuite's default via the SECANT lineage, and it is what makes a random arm score ~7.5 on `Lift`. |
+| **reward shaping** | **never stated** | `envs/robosuiteVGB/cfg/robo_config.yaml: reward_shaping: true` | `True` | **matches RL-ViGen's shipped code.** The paper leaves the choice unstated; that is a documentation gap, not an `[OURS]` intervention. Dense shaping is what makes a random arm accumulate return without success. |
 | **batch size, target tau** | **never stated** for robosuite | — | 256 / 0.01 | **CONFIRMED ABSENT** — decide-and-record items, not look-it-up items. |
 | **stddev schedule** | **Door `linear(1.0,0.1,100000)`, Lift `linear(1.0,0.1,500000)`** | `cfgs/task/easy.yaml` / `medium.yaml` | **was `...,500000)` on a Door base — FIXED 2026-08-10 to `100000`** | **previously listed here as "never stated"; that was wrong.** Table 6's `Level` row (Door **Easy**, Lift **Medium**) is not an eval difficulty — it selects a *training preset*: `easy.yaml` = `num_train_frames 1.1e6` + `linear(1.0,0.1,100000)`, `medium.yaml` = `3.1e6` + `linear(1.0,0.1,500000)`. See below. |
 
@@ -353,6 +361,26 @@ runs.
 > RL-ViGen's `algos/sgqn.py:120` defaults to **`aux_lr = 0.3`** — a factor of **1000**, consistent
 > with a decimal slip from `3e-4`.
 >
+> **[CORRECTION 2026-09-05 — THIS FIX IS NOT ON THE PRODUCTION PATH.]** Everything in the block
+> below is true of the legacy `rlgen/` package path, which loads `configs/vigen.yaml` through
+> `rlgen/registry.py`. **Production does not run that path.** `runnable/_launch/rlvigen.sh:23`
+> selects a WHOLE upstream config file (`CFG="${AGENT}_config"`) and runs RL-ViGen's own `train.py`
+> on it -- which is the project's null, "each original repository running its own train.py", so it
+> is the correct thing to run. The consequence is that the EXECUTED values for `sgqn` are
+> RL-ViGen's, from `RL-ViGen-upstream/cfgs/sgqn_config.yaml`:
+>
+> | parameter | this block claims | production actually runs |
+> |---|---|---|
+> | `aux_lr` | 8.0e-5 | **1e-4** (`sgqn_config.yaml:54`) |
+> | `sgqn_quantile` | 0.9 | **0.93** (`:56`) |
+> | `aux_beta` | 0.9 | **0.99** |
+>
+> The catastrophic `aux_lr = 0.3` constructor default IS still avoided on the production path,
+> because RL-ViGen's own config overrides it -- so the danger this block was written about is
+> genuinely absent. What is wrong is only the claim about WHICH value we run.
+> `notes/CLAIMS-LEDGER.md` already said 1e-4 and was right; this block is the stale one.
+> Surfaced by `scripts/audit_executed_hyperparameters.py`.
+>
 > We inherited it. **FIXED 2026-08-10**: `configs/vigen.yaml` now sets `aux_lr: 8.0e-5` and
 > `sgqn_quantile: 0.9`, and `rlgen/registry.py` passes `sgqn_quantile` through (without that, the
 > config could not reach the knob at all). Verified on the constructed agent via
@@ -442,7 +470,11 @@ time: **the value itself was fine.** 0.9 matches both canonical SGQN's own argpa
 stated SSL optimiser (`Adam(lr=3e-4, β1=0.9, β2=0.999)`, `sgqn_arxiv.tex:1246`). So this was an
 unrecorded *coincidence*, not a verified decision — the config could have drifted the shared
 encoder's momentum on the next unrelated refactor to `SGQNAgent`'s signature and nothing would
-have caught it. Fixed by adding an explicit `aux_beta: 0.9` line to `configs/vigen.yaml`'s `sgqn:`
+have caught it. **[CORRECTION 2026-09-05: that fix, like the `aux_lr` one above, is on the legacy
+`rlgen/` path. Production runs `runnable/_launch/rlvigen.sh`, i.e. RL-ViGen's own train.py on
+`cfgs/sgqn_config.yaml`, where `aux_beta` is 0.99 -- RL-ViGen's own value, and the correct thing to
+run under this project's null. The coincidence argument below still holds for the legacy path.]**
+Fixed by adding an explicit `aux_beta: 0.9` line to `configs/vigen.yaml`'s `sgqn:`
 block (changes no behaviour — the number was already 0.9) and two tests: one asserting the yaml
 file itself sets the key (`test_sgqn_yaml_sets_aux_beta_explicitly`, red-green verified — a test
 built from the real yaml value alone could not have caught this, since that value equals the
@@ -568,13 +600,13 @@ encoder/decoder lr 1e-3, γ 0.99, frame stack 3**, on DMControl-GB.
 Our `AldaConfig` matches on lr, batch, discount and frame stack — **faithful**, and it carries
 source tags already. The extrapolation is the benchmark: ALDA has never been evaluated on robosuite.
 
-**FIXED 2026-08-13 — `utd` (update-to-data ratio) defaulted to a value proven to diverge.**
-`AldaConfig.utd` defaulted to `1.0`; the field's own comment already derived that ALDA's design
-point translates to `0.25` updates per environment frame once `action_repeat` changes from the
-paper's 4 to RL-ViGen's 1 (one SAC update per *agent* step, and one agent step is `action_repeat`
-frames) — but the default was never corrected to match its own derivation, and nothing in
-`configs/vigen.yaml`'s `alda:` block overrode it, so every launch would have run at 4× ALDA's
-replay ratio. This is not a hypothetical: `rlgen/algos/alda/{nets,config,agent,metrics}.py` are
+**Historical retired-port finding — not a production `runnable/alda` setting.**
+`AldaConfig.utd` defaulted to `1.0`; the field's own comment derived a *physics-substep* rate of
+`0.25` when action repeat changes from the paper's 4 to RL-ViGen's 1. That derivation does not
+mean the source replay ratio was 0.25: one source action-repeat-4 transition is still one replay
+item. The default was never corrected to match that comment, and nothing in
+`configs/vigen.yaml`'s `alda:` block overrode it, so every launch would have run at the higher
+physics-substep rate. This is not a hypothetical: `rlgen/algos/alda/{nets,config,agent,metrics}.py` are
 byte-identical to the sibling gen-rebuttal project's `vigen_alda/` (verified by `diff`), which ran
 this exact configuration on real GPUs. Its `STATE.md` D1: `utd=1.0` diverged 3 Lift runs across 2
 seeds by ~141k frames (`critic/loss > 1e8`, Q above the reward ceiling, policy entropy collapsing
@@ -582,6 +614,14 @@ negative); `utd=0.25` cleared 220k on both seeds with `critic/loss` in `[0.46, 0
 `0.25`, pinned by `tests/test_sweep_gaps.py::test_alda_utd_defaults_to_its_derived_faithful_value`
 and a second test that builds through the real registry path
 (`test_alda_registry_launch_path_actually_carries_the_faithful_utd`), both red-green verified.
+
+The preceding result belongs to the retired `rlgen/algos/alda` port. Production launches
+`runnable/alda`, whose current loop performs one learner update per newly collected Door replay
+transition and has no `utd` field. Review 14 corrected the denominator: a source action-repeat-4
+transition is still one replay item, not four. Therefore `0.25` is not a source-fidelity
+restoration for the production path. The Lift/retired-port divergence remains a useful stability
+prior; a Door sensitivity probe at 1.0 versus 0.25 is required before changing the operational
+default, and any change should be labelled a target-specific adaptation.
 
 Also corroborated: the same sibling project independently confirmed `action_repeat=1` and the
 truncation-bootstrapping fix (`not_done=1` at the horizon, never at `d=1`) — both already present
@@ -632,15 +672,17 @@ All four share `rlgen/trainer_onpolicy.py`, and therefore share `PREMISES.md` P9
 environment (`num_envs=1`, hardcoded by the trainer, not a config choice — see
 `rlgen/trainer_onpolicy.py`'s own docstring).
 
-**CORRECTED 2026-08-13 — the two paragraphs this replaces were wrong, and traceably so: both read
+**Port-era audit trail (historical; superseded by the clone-era entries below).** **CORRECTED
+2026-08-13 — the two paragraphs this replaces were wrong, and traceably so: both read
 `IdaacConfig`'s bare dataclass defaults instead of the launch config that every real run actually
 uses.** That is the identical mistake the on-policy family's own `test_contract.py::KNOWN_LR_DROPS`
 exists to catch for `lr` — a value can be silently different between "what the dataclass says" and
 "what a real build constructs" — and it went unnoticed here for the same reason: nobody built the
 agent and read the constructed config back before writing the claim down. Corrected by doing that.
 
-- **Rollout size.** `configs/vigen.yaml` overrides `num_steps: 2048` in **all four** of `idaac:`,
-  `ppg:`, `ibac_sni:` and `ctrl:` — every real launch runs a 2048-sample rollout, not 256. With
+- **Rollout size in the discarded port.** `configs/vigen.yaml` overrides `num_steps: 2048` in
+  **all four** of `idaac:`, `ppg:`, `ibac_sni:` and `ctrl:` — that port ran a 2048-sample rollout,
+  not 256. With
   IDAAC's `num_mini_batch=32` that is **64 samples per minibatch**, matching Appendix E's own "32
   minibatches of a 2048 rollout = 64 samples each" exactly, not the "8 samples" previously claimed.
   Verified two ways: `IdaacConfig`'s own dataclass default is now corrected to `num_steps=2048`
@@ -648,10 +690,10 @@ agent and read the constructed config back before writing the claim down. Correc
   `RolloutStorage` tensor a training loop populates
   (`tests/test_sweep_gaps.py::test_idaac_real_minibatch_size_matches_appendix_e...`), which would
   catch a wrong answer even if the config lied again.
-- **`gamma`.** All four yaml blocks explicitly set `gamma: 0.99`, not Procgen's `0.999` — verified
-  by reading `configs/vigen.yaml` directly rather than either family's dataclass default. **The two
-  families already optimise the same discount**; there was never a live divergence here, only a
-  stale reading of it.
+- **`gamma` in the discarded port.** All four yaml blocks explicitly set `gamma: 0.99`, not
+  Procgen's `0.999` — verified by reading `configs/vigen.yaml` directly rather than either
+  family's dataclass default. **The two port-era families already optimised the same discount**;
+  there was never a live divergence here, only a stale reading of it.
 
 The properties on `IdaacConfig` that computed from `num_envs` (`rollout_size`, `minibatch_size`,
 `total_updates`) inherited a `num_envs=8` default from the sibling gen-rebuttal project, where it
@@ -660,7 +702,8 @@ the real values. Not load-bearing (`feed_forward_generator` derives its batch si
 storage tensor, never from these properties — see above), but corrected anyway: `num_envs` now
 defaults to `1`, matching what the trainer actually runs.
 
-- **`normalize_reward` is declared `True` (the default, for all four methods) and does NOTHING.**
+- **In the discarded port, `normalize_reward` is declared `True` (the default, for all four
+  methods) and does NOTHING.**
   Found 2026-08-14 while auditing this project's own pipeline for preprocessing/reward/truncation
   differences, not by inspecting `idaac/config.py` in isolation. `IdaacConfig.normalize_reward:
   bool = True` and `reward_clip: float = 10.0` are copied verbatim from gen-rebuttal's
@@ -686,9 +729,9 @@ defaults to `1`, matching what the trainer actually runs.
   reference implementations `idaac`/`ppg`/`ibac_sni`/`ctrl` are all built on — training all four
   on raw, unnormalised Door/Lift reward is a real, presently-live divergence from what their own
   declared configuration (and the paper lineage it cites) says should happen, not a cosmetic one.
-  Zero real training runs exist yet, so nothing has trained wrong silently — this is the same
-  "caught before it could matter" situation as the weight-seeding gap, not a correction to any
-  existing result.
+  That was true only of the discarded port-era state. The clone-era runners have since produced
+  real training artifacts; this reward-normalisation divergence must therefore be treated as a
+  live configuration fact and reported with any result, not as a hypothetical pre-run warning.
 
 ### `idaac` — IDAAC (Raileanu & Fergus, ICML 2021, arXiv:2102.10330)
 
@@ -696,10 +739,12 @@ The only one of the four with *any* continuous-control precedent — Appendix E,
 code was **never released**. That column specifies γ **0.99**, rollout **2048**, lr **3e-4**, 10
 PPO epochs, E_V=9, N_π=32, α_a=0.1, α_i=0.1.
 
-Ours: γ **0.99**, rollout **2048**, lr **3e-4** — all three now match, verified against the launch
-config rather than the dataclass default (§4 above). **CORRECTED 2026-08-13**: this subsection
-previously said γ 0.999 and rollout 256, an 8× and Procgen-discount error inherited from reading
-`IdaacConfig()` bare instead of a constructed run.
+**Current clone-era execution (2026-09-05):** γ **0.999**, per-environment rollout **256**, and
+lr **5e-4** come from the live launch path. The 256-step trajectory length matches the released
+per-environment default; the production accommodation is `num_processes=4` rather than the
+released 64, so each update has 1,024 rather than 16,384 samples. This is a parallelism/batch-
+diversity divergence, not a shortened trajectory. The older paragraph below is retained as a
+port-era audit trail and must not be read as the current clone configuration.
 
 Also independently corroborated by the sibling gen-rebuttal project, which shares this exact port
 (`registry.py`: "Algorithm files copied from ../gen-rebuttal/vigen-idaac"). That project ran real
@@ -710,9 +755,10 @@ the Gaussian action-head init (unsquashed mean, σ=1 too wide for `[-1,1]` actio
 `init_log_std=-1.0`, `mean_head_gain=0.01` match its fix) and an over-wide order discriminator with
 non-canonical init (our `disc_hidden=0` = IDAAC's own linear default, xavier conv init — match its
 fix). None of those three had to be independently re-discovered here; they arrived with the ported
-files. What is genuinely ours and unverified against any real run: whether γ=0.99/rollout=2048
-together still reproduce sane training dynamics on Door/Lift specifically — no real training has
-been run in this project yet (docs/dz-report-ru.md §1).
+files. The old γ=0.99/rollout=2048 claim belongs to the discarded port configuration. The live
+clone configuration is the one stated above; its evidence and unresolved transfer question are
+tracked in the production records and `notes/faithfulness-reconciliation.md`, rather than being
+inferred from this historical port paragraph.
 
 The first author has publicly stated DAAC "was quite difficult to tune" on DMC and recommends
 procedural, variable-length environments instead — a direct, author-sourced caution about
@@ -727,12 +773,13 @@ it.
 **Correct**: `n_policy_phases: 32` = N_π `[P]`, `aux_epochs: 6` = E_aux `[P]`,
 `aux_beta_clone: 1.0` = β_clone `[P]`, γ 0.999 `[P]`, λ 0.95 `[P]`, rollout length 256 `[P]`.
 
-**Divergent** `[OURS]`: PPG uses **256 parallel envs** (4 workers × 64) → **65 536** samples per
-update. Ours is **2048** (one environment, `num_steps=2048` — corrected 2026-08-13, was previously
-stated as 256, an 8× error read from the dataclass default rather than `configs/vigen.yaml`'s
-`ppg:` block; see §4) — a factor of **32**, not 256. lr 1e-4 vs 5e-4 `[P]`. Minibatches: 8 `[P]` vs
-our 32, giving 64 samples/minibatch against the paper's 8192/8=1024 — smaller, but the same order
-of magnitude apart as the rollout itself, not compounding it.
+**Current clone-era execution (2026-09-05):** the released `train.py` default is `num_envs=64`
+per MPI worker with per-environment rollout length 256. The repository's documented invocation
+launches four MPI workers whose gradients synchronize, so the effective upstream update batch is
+`4*64*256 = 65,536`. The production port uses one worker and `num_envs=8`, or 2,048 samples:
+a **32x reduction in effective batch** while retaining the exact per-environment rollout. Its lr
+is 1e-4 vs 5e-4 `[P]`, and its continuous head has no released reference. The smaller batch
+changes gradient noise and the number of updates; it is not a shortened trajectory.
 
 Worth recording: PPG's released code has **no gradient clipping at all**, and its
 `RewardNormalizer` uses γ=0.99 internally while the GAE/value path uses 0.999 — two discount
@@ -873,11 +920,12 @@ Canonical objective: Sinkhorn-Knopp online clustering (`L_clust`) + a MYOW-style
 predictive loss (`L_pred`), applied to the **encoder only**, with the policy head updated by the
 separate PPO loss.
 
-**Three structural divergences**, found 2026-08-10 by reading `rlgen/algos/onpolicy_ext.py:218`
-against the canonical record — and since **verified against the paper's own LaTeX source**
-(arXiv:2106.02193v2) and the official JAX repo (`bmazoure/ctrl_public`), both now local in `ext/`.
-One is fixed; two stand. These are more serious than the parameter table below, and the
-docstring did not declare them — it described the paper rather than the code.
+**Port-era audit trail (historical):** the following structural-divergence list was found by
+reading the discarded `rlgen/algos/onpolicy_ext.py` port. It is not the current `runnable/ctrl`
+implementation. In the live clone, `loss_cluster` is present and its gradient is applied; the
+project restored the released code's commented-out executable lines, and the nearest-neighbour
+positive path is inherited from the released repository. Current clone-era wording is in the
+summary table above and `notes/faithfulness-reconciliation.md`.
 
 0. **FIXED** — the invented `ctrl_coef` is gone. `pseudocode.tex:57` reads
    `L_CTRL = L_clust + L_pred`, a plain sum with no scalar, and the official repo has separate
@@ -1143,9 +1191,11 @@ Two protocol facts only the thread gives:
   not conflict with our "never normalised" rule — but it means **their headline aggregate and our
   per-task numbers are different quantities**, and must not be compared directly.
 
-### 6.2 SECANT settles the reward question RL-ViGen never answers
+### 6.2 RL-ViGen's config confirms the reward setting; SECANT explains its effect
 
-**`reward_shaping: True` is no longer `[OURS]`.** SECANT §5.2, verbatim: *"We use the Franka Panda
+**`reward_shaping: True` is not `[OURS]`: RL-ViGen's own
+`envs/robosuiteVGB/cfg/robo_config.yaml` sets `reward_shaping: true`.** SECANT §5.2 independently
+describes the same dense-reward setting: *"We use the Franka Panda
 robot model with operational space control, and train with **task-specific dense reward**."*
 Supplementary §2.2: *"All environments add an extra positive reward upon task completion, in
 addition to the dense reward shaping."* And for our task specifically — Door is *"shaped by the

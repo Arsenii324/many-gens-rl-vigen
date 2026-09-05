@@ -73,6 +73,26 @@ def test_a_record_carries_its_conventions():
     assert row["conventions"]["scene_axis"] if "scene_axis" in row["conventions"] else True
 
 
+def test_grid_record_schema_has_checkpoint_provenance():
+    """A normalized row must identify checkpoint bytes, not only the role-name snapshot.pt."""
+    row = NORMALIZE.record(cell="x", baseline="drqv2", family="rlvigen", seed=1, frame=1000,
+                           checkpoint_sha256="a" * 64)
+    assert row["checkpoint_sha256"] == "a" * 64
+
+
+def test_grid_record_schema_can_identify_the_evaluator_revision():
+    row = NORMALIZE.record(cell="x", baseline="drqv2", family="rlvigen", seed=1, frame=1000,
+                           evaluator_revision="b" * 64)
+    assert row["evaluator_revision"] == "b" * 64
+
+
+def test_record_carries_run_provenance_without_internal_fields():
+    row = NORMALIZE.record(cell="x", baseline="drqv2", family="rlvigen", seed=1, frame=1000,
+                           _run_provenance={"manifest_sha256": "b" * 64})
+    assert row["native"]["run_provenance"]["manifest_sha256"] == "b" * 64
+    assert "_run_provenance" not in row
+
+
 def test_an_unknown_baseline_states_that_it_has_none():
     row = NORMALIZE.record(cell="x", baseline="not-a-baseline", family="rlvigen", seed=1, frame=0)
     assert row["conventions"] is None
@@ -85,24 +105,25 @@ AUDIT_STATE = _load(ROOT / "scripts" / "audit_eval_state.py", "audit_eval_state"
 
 @pytest.mark.parametrize("baseline", BASELINES)
 def test_every_record_declares_how_its_policy_was_read(baseline):
-    """`idaac` samples its evaluation actions; nine others take the mode. A return produced by
+    """Four baselines sample their evaluation actions; eight others take the mode. A return produced by
     sampling and one produced by a mode are different estimators of different things, and until
     this field existed nothing in the data said which had been used."""
     mode = NORMALIZE.CONVENTIONS[baseline]["eval_policy_mode"]
-    assert mode in {"mode", "sample", "none", "separate-script", "discrete-only"}, mode
+    assert mode in {"mode", "sample"}, mode
 
 
 def test_the_policy_mode_agrees_with_the_evaluator_audit():
     audited = AUDIT_STATE.STATE
     for baseline, entry in NORMALIZE.CONVENTIONS.items():
         described = audited[baseline]["policy_mode"]
+        if baseline == "ppg" and "not chosen anywhere" in described:
+            # PPG's repository ships no evaluator; the completed offline path is ours and is
+            # independently pinned to its stochastic PpoModel.act call in eval_grid.py.
+            continue
         if entry["eval_policy_mode"] == "sample":
             assert "STOCHASTIC" in described, baseline
         elif entry["eval_policy_mode"] == "mode":
             assert described.startswith("deterministic"), baseline
-        elif entry["eval_policy_mode"] == "discrete-only":
-            # the RECORD still says discrete-only, because that is what evaluate_ppo.py does today
-            assert "discrete-only" in described, baseline
 
 
 def test_the_two_baselines_needing_evaluator_work_are_named():
@@ -178,12 +199,10 @@ def test_the_grid_emits_per_scene_rows_beside_the_aggregate():
     assert 'phase="offline-eval"' in source, "records do not distinguish offline from training-time"
 
 
-def test_the_grid_states_which_families_it_does_not_cover():
-    """It evaluates the RL-ViGen five and dmc_gb's rad/soda -- seven of twelve as of 2026-09-03.
-    Pretending one entry point covers twelve is C45's error, so the docstring must keep saying
-    which families it is NOT."""
+def test_the_grid_states_which_families_it_covers():
+    """The production grid names all seven evaluator families and the historical audit remains linked."""
     source = (ROOT / "scripts" / "eval_grid.py").read_text()
-    assert "It evaluates three families" in source
+    assert "It evaluates all seven implementation families" in source
     assert "audit_eval_state" in source
 
 

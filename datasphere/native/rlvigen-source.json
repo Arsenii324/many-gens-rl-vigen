@@ -7,7 +7,7 @@
     "git ls-remote from the laptop at that moment and returned exactly this commit. The container's",
     "egress changed; upstream did not.",
     "",
-    "PRISTINE, deliberately: the runner applies P1-P18 to whatever it gets, and the vendored",
+    "PRISTINE, deliberately: the runner applies P1-P20 to whatever it gets, and the vendored",
     "working copy already has them applied (15 files modified under git status). Shipping the",
     "working copy would patch a patched tree.",
     "",

@@ -1,0 +1,48 @@
+# [Claude 2026-09-04: one variable changed against bt1ptu2e6stuko76s6dd — the TIER.
+#
+# WHAT HAPPENED. In v82, `rad` completed (and `run_curve_eval` returned stamps=3, so the dmc_gb
+# evaluator family is exercised and works), while `alda` died on **signal 9 — SIGKILL** with a
+# high-water of 11.0 GiB and still climbing. A missing dependency raises ModuleNotFoundError and
+# exits through Python; it does not get the process killed by the kernel. Reaching 11 GiB also
+# proves alda's imports and trainer construction succeeded, so dependency selection was NOT the
+# cause in that job.
+#
+# WHY THE TIER. `plan_production.py` already carried the answer before the job ran:
+# `ALDA_FIXED_GIB = 15.3` ("fixed working set, budget-independent", measured at 10k) against
+# gt4.1's `usable_ram_gib = 14.5`. **ALDA does not fit gt4.1 by construction.** Submitting v82 to
+# gt4.1 was my error, not a code defect. gt4i.1 gives 27.0 GiB usable, which is the tier `ctrl`
+# already uses for its own reasons.
+#
+# DELIBERATELY THE SAME PAYLOAD (v69) as the failed run. Changing the payload as well as the tier
+# would confound the test; if this succeeds, the tier was the cause and nothing else needed fixing.
+#
+# WHAT THIS ALSO BUYS: `run_scene_alda` is the LAST of the seven evaluator families never exercised.
+# A pass here takes evaluator coverage to 7/7 before any production checkpoint depends on it.
+#
+# WHAT WOULD FALSIFY THE DIAGNOSIS: another signal 9 (then it is not the 14.5 GiB ceiling), or a
+# ModuleNotFoundError (then dependency selection was a second, independent defect after all).
+name: vigen-alda-tier-v85
+desc: Does ALDA survive on gt4i.1? One variable changed from the SIGKILLed v82 run.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  SAVE_EVERY_FRAMES=2500
+  CURVE_EVAL=1
+  CURVE_EVAL_EPISODES=3
+  CURVE_EVAL_REGIMES=train,eval-easy
+  CELLS=alda:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=3 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v69.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

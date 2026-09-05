@@ -1,0 +1,49 @@
+# [Claude 2026-09-04: the last unexercised path before production, and it is two paths at once.
+#
+# WHAT HAS NEVER RUN. (1) `run_curve_eval` -- the loop that evaluates each intermediate checkpoint
+# in the container and sends home records instead of weights. Its shell logic is covered locally
+# (`tests/test_curve_eval_shell.py`, stubbed evaluator, real filenames from the jobs that produced
+# them), but it has never invoked a real evaluator. (2) FOUR OF THE SEVEN EVALUATOR FAMILIES in
+# `eval_grid.py` have never been exercised at all -- only rlvigen, idaac and ctrl ever have. This
+# job runs `ppg` and `ibac_sni` for the first time, and idaac again as a control.
+#
+# WHY THAT MATTERS MORE THAN IT SOUNDS. If `run_scene_ppg` or `run_scene_ibac_sni` is broken, the
+# first evidence would be a production checkpoint failing to evaluate -- after the training was
+# paid for. Worse, if one silently ignored its `mode` argument it would return a plausible number
+# from the WRONG REGIME and a retention of about 1.0 would look like invariance; that is why
+# `verify_regime` was added to all six non-rlvigen families today, and this job is the first thing
+# that can tell whether the read-back actually resolves in the container or abstains.
+#
+# WHAT MUST APPEAR: NATIVE_CURVE_EVAL_BEGIN/COMPLETED per cell; one record per intermediate stamp
+# reaching records.jsonl through the per-cell glob added today; and for each family either a
+# regime read-back that agrees, or the explicit "could not read back" abstention on stderr -- which
+# is a result too, and one worth knowing before it matters.
+#
+# 10,000 frames and 3 episodes per scene: this validates PLUMBING, not policies. A 10k ppg run
+# executes zero auxiliary phases (`scripts/audit_implementations.py`) and every number here will
+# sit at the C55 floor of 1.82. That is expected and is not what is being measured.]
+name: vigen-curve-preflight-v81
+desc: First real run of run_curve_eval and of the ppg and ibac_sni evaluator families.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  SAVE_EVERY_FRAMES=2500
+  CURVE_EVAL=1
+  CURVE_EVAL_EPISODES=3
+  CURVE_EVAL_REGIMES=train,eval-easy
+  CELLS=idaac:1,ppg:1,ibac_sni:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=3 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v68.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1

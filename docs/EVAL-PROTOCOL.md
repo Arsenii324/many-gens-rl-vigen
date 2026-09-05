@@ -20,16 +20,30 @@ preference — a container-trained policy read 12-14x low when evaluated locally
 
 | | |
 |---|---|
-| **Metrics reported** | **All three: return, success rate, and retention (eval ÷ train).** They rank differently — a random arm scores ~7.5 on Lift with zero successes — so the table carries all three and the reader picks. |
-| **Checkpoints** | **Endpoint is the headline; intermediate stamps are retained for the curve.** All seven families now write stamped intermediate checkpoints on a common **50k** grid, so *"best over the trajectory"* stays constructible from retained data rather than foreclosed by the endpoint. |
+| **Metrics reported** | **Full matrix:** `R_train`, `R_OOD`, `Δ = R_OOD − R_train`, success rate, retention and floor-adjusted retention, per regime and scene. Success and absolute returns lead; retention is secondary and only interpreted for competent policies. |
+| **Checkpoints** | **Endpoint is the headline; trajectory is descriptive; no selected-best column.** All seven families write stamped intermediate checkpoints on a common **50k** grid, so any future trajectory analysis remains constructible without selecting on the reported holdout. |
 | Regimes | `train`, `eval-easy`, `eval-medium`, `eval-hard`. `train` is the retention denominator and is scene 0, verified to be what the training env actually is (`robo_config.yaml` defaults `mode: train`, `scene_id: 0`). |
 | Scenes | Ten certified, per regime, **pending P-C76** — the one UNITS split and the only thing keeping R3 NOT MET. Our harness can sweep ten for all twelve at **zero clone deviations**, which is why option (1) is cheaper than the branch point assumes. |
-| Episodes | 10-20 per (regime, scene) cell. Per-scene rows always retained, never only the pooled mean. |
-| Eval seed | One fixed constant, shared across every baseline and training seed, so checkpoints are compared on identical door placements (a paired comparison; [C69](CONSTRUCTION.md#c69)). |
-| **Training seeds** | **Spent adaptively, not uniformly** — one everywhere to find who is competent, then concentrated where the comparison is live. §4b states what 1 / 2 / 3+ seeds each license; one seed licenses existence and floor claims only, never a ranking. |
-| Budget | 5e5 suffices for the internal comparison (`drqv2` reached success 1.00 at **75k**). 6e5 buys one extra thing: it is RL-ViGen's own published Door budget, so production seed 1 of `drqv2` doubles as the [C48](CONSTRUCTION.md#c48) external anchor at no extra training cost. |
+| Episodes | **3 per scene at each 50k trajectory stamp; 20 per scene at the endpoint.** Per-scene and per-episode rows are retained, never only the pooled mean. |
+| Eval seed | One fixed constant, expanded into a per-(scene, episode) condition seed and shared across every baseline and training seed. The seed is applied immediately before each measured reset, so checkpoints are compared on identical door-placement conditions despite family-specific construction (a paired comparison; [C69](CONSTRUCTION.md#c69)). |
+| **Training seeds** | **Fixed 3 for every reported row.** A one-seed pilot may establish that a method runs or sits at floor, but never licenses a ranking or substitutes for a missing production seed. |
+| Budget | **6e5 Door frames.** 5e5 likely suffices internally (`drqv2` reached success 1.00 at 75k), but 6e5 is RL-ViGen's published Door budget, gives PPG nine auxiliary phases rather than a token one, and makes seed 1 of `drqv2` the [C48](CONSTRUCTION.md#c48) external anchor at no extra training cost. |
 | **Compute** | **1-2 V100, not the grant.** The grant arithmetic in `plan_production.py` is therefore a bound on *that* route, not on this one; what carries over is the per-cell hours and the archive sizes. |
-| Storage | Checkpoints stay remote, records come back (§6). A 6e5 cell is ~1.5 GB of archive; twelve baselines × three seeds is ~53 GB, against ~30 GB free locally. |
+| Storage | Retain every production checkpoint on the production host; export episode records separately. C95 still requires evaluation in the matched renderer/image, not on this laptop. |
+
+### Current operational defaults — 2026-09-05, awaiting owner settlement
+
+These are the defaults the project implements and validates now; `OWNER` means formal settlement is
+still open, not that an arbitrary alternative may be substituted. They supersede earlier adaptive
+seed and 100k-cadence passages below, which remain only as dated reasoning.
+
+- **Fixed 3 for every reported row.** No outcome-dependent allocation; report an absent/failed cell
+  rather than redistributing its seeds.
+- **50k stamp grid**, three episodes per intermediate scene and twenty at the endpoint; retain all
+  checkpoints on the production host and every episode record.
+- **Endpoint is the headline; trajectory is descriptive; no selected-best column.**
+- Report the full metric matrix above. The provisional headline contrast is appearance generalisation
+  with scene held fixed (P-C76 estimand B); all other estimands remain reported, not hidden.
 
 **The limitation to state in the write-up, not bury.** RL-ViGen **equalises** the observation
 across its own five — `robo_config.yaml` drives `camera_heights`/`camera_widths` from one value and
@@ -48,10 +62,13 @@ a second resolution needs an encoder edit. Equalising across the twelve would ne
 (`cam-easy`/`cam-hard`) — viewpoint rather than appearance generalisation, unreachable from our
 harness without a patch, and 1.5x the grid. See §2.
 
-**What is not yet earned.** Ten of twelve baselines have an **undischarged shared-evaluator
-burden** (`scripts/audit_shared_evaluator.py`): our harness has been shown to measure what their
-own evaluator measures for `drqv2` and `idaac` only. That is a statement about the instrument, not
-about the baselines, and it is the honest caveat on any number the other ten produce.
+**What is not yet earned.** All twelve baselines have an **undischarged shared-evaluator burden**
+under the current evaluator identity (`scripts/audit_shared_evaluator.py`). Earlier paired results
+for `drqv2` and `idaac` remain useful historical measurements, but [C96](CONSTRUCTION.md#c96)
+showed that their global provenance field did not certify the action-path code that produced them.
+The live gate correctly begins again at zero of seven families until each family is rerun with a
+reviewed runtime-import manifest. That is a statement about the instrument, not about the
+baselines, and it is the honest caveat on every pre-production number.
 
 ---
 
@@ -104,21 +121,24 @@ set is then a parameter of our harness, not of anyone's `train.py`.
 **Proposal: a common evaluation grid for all twelve — same scenes, same seeds, same episode count,
 same regimes — implemented entirely in our evaluator, with zero clone deviations.**
 
-What this costs is real but different: extending `eval_grid.py` to three more families (`alda`,
-`ctrl`, `ibac_sni`; `rlvigen`, `dmc_gb`, `idaac`, `ppg` already exist). That is **our** code, so it
-adds nothing to `deviations.py` and re-opens no faithfulness ledger. `ctrl` needs a JAX path — its
-checkpoint is a flax msgpack and its policy is JAX — which is the largest single piece of work here.
+What this costs is real but different: `eval_grid.py` now has seven family-specific paths. That is
+**our** code, so it adds nothing to `deviations.py` and re-opens no faithfulness ledger. `ctrl`'s
+JAX path is the largest one, because its checkpoint is a flax msgpack and its policy is JAX.
 
 **What it does not equalise, on purpose.** The *estimator* stays each baseline's own: our harness
-calls their `act`, so `idaac`/`ibac_sni`/`ppg` keep sampling and the other nine keep taking a mode
+calls their `act`, so `idaac`/`ibac_sni`/`ppg`/`ctrl` keep sampling and the other eight keep taking a mode
 (`COMPARABILITY_CONTRACT` §5c). Equalising that would replace their policies with ours. It is
 declared, not removed.
 
 **The burden of proof is OURS, per baseline, and it is mostly undischarged.** A shared evaluator
 distinct from each method's own evaluator is a new instrument, and for every baseline we must show
 it measures what that baseline's own evaluator measures. `scripts/audit_shared_evaluator.py` tracks
-this and currently reports **1 of 12**: `drqv2` PASS (131.57 against 135.71), `idaac` UNDERPOWERED,
-ten UNRECONCILED.
+this and, **as corrected on 2026-09-05, reports ZERO discharged under the current evaluator
+revision** -- see production_gates. The two results below stand as history, not as standing
+discharges: both were measured before per-episode placement seeding, deterministic kernels and
+strict regime verification, and before this session's ctrl reward-units and ppg collection-order
+fixes. The former reading was **2 of 12**: `drqv2` PASS (131.57 against 135.71) and
+`idaac` CONSISTENT; ten remain UNRECONCILED.
 
 Two rules it encodes, both learned here rather than assumed:
 
@@ -126,7 +146,7 @@ Two rules it encodes, both learned here rather than assumed:
   evaluator is generous" and "our harness handicaps their policy" predict the same observation.
   C95 was exactly that shape, at 12–14x, with nothing crashing. `idaac`'s 1.663 against 3.01 sits
   in that direction.
-- **A comparison at the floor is not evidence.** Two numbers straddling 1.82 agree about nothing —
+- **A comparison at the floor is not evidence.** Two numbers straddling 1.842 agree about nothing —
   both describe a policy doing nothing, which any harness reproduces.
 
 **The harness running is not the discharge, and neither is the ratio.** Six families exist and
@@ -147,7 +167,7 @@ baseline's own evaluator on the same checkpoint.
 For `drqv2` it holds — 131.57 against a logged 135.71. For `idaac` (`bt1dbmtc04sg5nhc18r6`), on its
 own 9,216-frame checkpoint: **our harness 1.663, its own evaluator 3.01** on eval-easy. That is
 ~1.8x, not C95's 12–14x, so it is *not* evidence of the failure mode — but it is not evidence of
-agreement either, because **both numbers straddle the 1.82 random floor** and `idaac` samples. At
+agreement either, because **both numbers straddle the 1.842 random floor** and `idaac` samples. At
 ten episodes of a stochastic policy at chance, this comparison has no power.
 
 **So the guard cannot be completed with any checkpoint pre-production currently has**: every
@@ -211,7 +231,9 @@ data. **A summary statistic chosen at write time cannot be un-chosen.**
 ## 3. The competence gate (§3b #15)
 
 *A method that never learns has gap ≈ 0, which reads as perfect generalization.* Today: six of
-twelve sat at or below the 1.82 random floor ([C55](CONSTRUCTION.md#c55)) with success 0.00.
+twelve sat at or below the then-current 1.82 random floor ([C55](CONSTRUCTION.md#c55)) with
+success 0.00. (That observation stands as recorded; the floor has since been re-measured
+under the current paired evaluator at **1.842**, which does not change the reading.)
 
 **Proposal**: a baseline receives a retention *ratio* only if its train-regime denominator clears
 the floor by a stated margin **and** its train-regime success is non-zero. Below that it is
@@ -249,57 +271,40 @@ consistent with §2's principle.
 > | `rlvigen` | **distinct** | saves at hardcoded 50k boundaries and overwrites; patch **P18** preserves copies, `RLVIGEN_PRESERVE_SNAPSHOTS` filters which |
 > | `dmc_gb` | **distinct** | `model/{frames}.pt`, one file per stamp. `--save_freq` is passed by `families.json`'s `options`, not the launcher, and has always been live — now 50000, was 100000 |
 > | `alda` | **distinct** | `save_checkpoint` writes `sac_{env}_step_{env_steps}.pt` (`alda_trainer.py:688`), so its `save_every: 50000` yields a real curve |
-> | `ibac_sni` | one path | `--save-interval 1` is passed **literally** in `options`, so it saves every update — into `utils/save.py`'s fixed `model.pt`, overwritten each time. Frequent saving, one surviving file |
-> | `idaac` | one path | guarded by `if j == num_updates - 1` (`train.py:245`) — terminal by upstream design, not by configuration |
-> | `ppg`, `ctrl` | one path | terminal save, added by us; upstream saved nothing usable |
+> | `ibac_sni` | **distinct** | *was* one path (`--save-interval 1` saved every update into a fixed, overwritten `model.pt`); `--save_interval_frames` now writes `model_<frames>.pt` beside it |
+> | `idaac` | **distinct** | *was* guarded by `if j == num_updates - 1` (terminal by upstream design); `--save_interval_frames` now stamps on frame-boundary crossings |
+> | `ppg` | **distinct** | upstream already implemented `save_mode="all"` and its own `train.py` hardcoded `"last"`; exposing `--save_mode`/`--ic_per_save` was enough. Names by **save index** (`model000.jd` …), not by frame |
+> | `ctrl` | **distinct** | `checkpoint_interval` was *declared at `train_ppo.py:98` and never read*; wiring it writes `checkpoint_<frames>.msgpack` |
 >
-> So **eight of twelve can produce a checkpoint curve** and four cannot, which is a better position
-> than the first pass reported. The conclusion below is unchanged, because the *intersection* across
-> all twelve is still the endpoint alone.
+> **Updated 2026-09-04, third pass — all twelve can now produce a checkpoint curve, and it is
+> validated on hardware.** The four "one path" rows above were closed by one minimal intervention
+> each, every one changing what is *retained* and never what is learned. Confirmed by running them:
+> `bt1h3l1rl7v7n4bve0au` returned **5** stamps for `ibac_sni`, **4** for `idaac` and **6** for
+> `ppg`; `bt1791fdh5uctgr1ckhk` returned `ctrl`'s. **So the intersection across all twelve is no
+> longer the endpoint alone** — the cross-baseline offline curve is now buildable, which is what
+> makes "endpoint" and "best over the trajectory" both reconstructible from retained data, as the
+> owner asked. The endpoint remains the *reported* number (§4's conclusion); what changed is that
+> it is now a choice rather than the only option.
 >
-> **So the intersection of checkpoint frames across the twelve is the endpoint alone.** The
-> `drqv2` 100k cell makes it concrete: **5 eval points, 2 checkpoints**, so three of its
-> during-train eval points cannot be reproduced offline, swept over scenes, or placed beside
-> another baseline. A cross-baseline *curve* is not a thing this project can currently produce;
-> a cross-baseline *endpoint table* is.
->
-> **The cost of changing that is graded, and the grades are what make it decidable:**
-> `ibac_sni` has a **live** `--save-interval` (`torch_rl/scripts/train.py:286`, default 0) and
-> `dmc_gb` a live `--save_freq` — configuration, zero fidelity cost. `ctrl` **declares**
-> `checkpoint_interval` (`train_ppo.py:98`) and never reads it, so wiring it is a small declared
-> deviation nearer RESTORES than ENABLES. `idaac` and `ppg` have no mechanism, so periodic saving
-> there is authored behaviour and a genuine deviation.
->
-> **A second measured fact about the during-train curve, while reading the same code**: the
-> RL-ViGen five split `num_eval_episodes` *across* the ten scenes — `per = num_eval_episodes //
-> len(scenes)` (`train.py:152`). At the shipped default of `num_eval_episodes: 10` that is **one
-> episode per scene**, and the per-scene number in `eval.csv` is a single episode of a stochastic
-> task. Our probes pass `EVAL_EPISODES=20`, giving two. Nothing is wrong with the code; the point
-> is that a during-train per-scene value is far noisier than its presence in a CSV suggests, and
-> the pooled ten-scene mean is the only part of it worth reading at these settings.
->
-> **DEFAULT SET, awaiting approval: report the cross-baseline table at the ENDPOINT**, the one
-> frame all twelve supply; take the two free configuration wins so `dmc_gb` and `ibac_sni` gain a
-> curve at no fidelity cost; leave `idaac`/`ppg` terminal-only rather than author saving into two
-> clones for a curve nobody has yet asked for. This does **not** settle §3b #3's headline
-> question below — it removes the option of pretending a twelve-baseline curve is available.
+> **Superseded by the third-pass result above.** The earlier text correctly identified endpoint-only
+> retention as the conservative interim default, but it predates the four retention-only fixes and
+> their hardware validation. It is retained in the dated register as an audit trail, not as the
+> current state of the production tree. The live default remains endpoint headline plus retained
+> intermediate curve; checkpoint selection is still not allowed to use the reported held-out metric.
 
-**Open, not decided**: whether the headline is the endpoint or the best-on-a-held-out-criterion.
-Selecting the best checkpoint *by the metric being reported* is a garden-of-forking-paths hazard
-and I would refuse it; selecting by a separate criterion is defensible.
+**Operational default, awaiting settlement**: endpoint headline, trajectory descriptive, no
+selected-best column. Selecting the best checkpoint *by the metric being reported* is a
+garden-of-forking-paths hazard; a future selected-best analysis needs a separately reserved
+criterion and equal candidate opportunity, neither of which the current protocol claims.
 
 ---
 
 ## 4b. Seeds, and what a given seed count licenses (§3b #4)
 
-**DEFAULT SET 2026-09-04, awaiting approval.** The seed count is the axis that actually costs
-compute, so the rule is about *claims*, not about a number to buy in advance.
-
-**Seeds are spent adaptively, not uniformly.** Spreading three seeds across twelve baselines before
-knowing which reach competence buys precision on rows that are at the floor, where
-[C55](CONSTRUCTION.md#c55) already says the ratio is undefined rather than small. The order is:
-one seed everywhere to find who is competent (§3 gate), then seeds concentrated on the comparisons
-that are actually live.
+**Operational default 2026-09-05, awaiting approval: Fixed 3 for every reported row.** The former
+adaptive proposal is withdrawn: one seed everywhere followed by outcome-dependent concentration
+lets early noise decide which methods receive replication. A floor-level method is still a reported
+row, not a reason to remove its predeclared seeds.
 
 **What each seed count licenses, stated so a later table cannot quietly exceed it:**
 
@@ -307,16 +312,14 @@ that are actually live.
 |---|---|
 | **1** | *existence* — "this baseline reaches success 1.00 in the training regime at 100k"; and *floor* — "this baseline is indistinguishable from random in eval-easy". Both are about one run and neither orders two baselines. |
 | **2** | the above, plus "the effect reproduced", which is a statement about reproducibility, not about size. |
-| **3+** | a ranking claim, and only between baselines that each have 3+, at the resolution [C18](CONSTRUCTION.md#c18) allows — **~31% at five seeds**, worse at three. |
+| **3+** | a ranking claim, and only between baselines that each have 3+, at the resolution [C18](CONSTRUCTION.md#c18) allows — **CORRECTED 2026-09-05 (A28): ~53% at the operational n=3, ~35% at five.** The ~31%-at-five figure this row previously carried used the normal approximation, which understates the requirement at small n; the t-corrected multiplier agrees with it only at n≈50. **Corrected once more, review 14 section 24**: calling these figures "floors" overclaimed what a single same-seed pair supports -- the adjustment direction (genuine seed variance adds to backend-only noise) is structurally sound, but the CV itself is a one-pair point estimate with real sampling uncertainty of its own. Treat ~53%/~35% as illustrative under the current thin evidence, not as guaranteed bounds. Full derivation: `notes/FINDING-resolving-power-at-n3.md`. |
 
 **The two results in hand are both single-seed and both stay inside row 1**: `drqv2`'s 0.30%
 retention is an existence-plus-floor claim, and `ibac_sni`'s entropy collapse is an existence claim
 about one run. Neither orders anything, and the write-ups say so.
 
-**This is a rule about reporting, so it costs nothing and can be adopted before the budget is
-decided.** It is also the rule that makes the cheap production shapes usable: a one-seed sweep is
-not a weak version of the three-seed answer, it is a *different and legitimate* question — who is
-competent — asked first because the answer changes where seeds are worth spending.
+One-seed runs remain legitimate plumbing or diagnostic pilots, but are not production rows and do
+not change the fixed seed allocation for any reported baseline.
 
 ---
 
@@ -329,16 +332,73 @@ requested 10,000, because each family floors to its own rollout quantum. The tab
 No harmonisation. A phasic or on-policy method spending its budget differently is part of what is
 being compared.
 
+**A related but distinct axis, added 2026-09-05 (A29):** this section is about the
+executed FRAME COUNT rounding to each family's rollout quantum. A separate question -- how many
+gradient updates each family takes PER frame of that budget -- is not harmonised either, and is
+now a declared comparability-seam axis (`updates per env frame`,
+`scripts/audit_comparability_seam.py`) rather than an implicit assumption: idaac and ppg run their
+regular-phase updates 4x-32x denser than their Procgen source because a single V100 cannot match
+Procgen's parallelism (`notes/FINDING-on-policy-update-density.md`). Same "report it, don't
+harmonise" stance as this section takes for frame-count rounding; stated separately because it is a
+different quantity.
+
 ---
 
 ## 6. Storage, and the local-space constraint
 
 At 6e5 with the 50k grid: ~12 stamps × 12 baselines × N seeds. A `drqv2` snapshot is ~104 MB, so
-one seed is ~15 GB and three seeds ~45 GB. **This lives on the production machine, not here** —
-local free space is ~12 GB.
+one seed is ~15 GB and three seeds ~45 GB. **This lives on the production machine, not here.**
+
+*(Local free space was ~12 GB when this was written and is **73.1 GB** as of 2026-09-04 — the
+owner cleared space. The rule is unchanged, because §6a's reason for it is C95 rather than
+capacity, but the number is corrected so nothing else is argued from the old one.)*
 
 **Proposal**: checkpoints stay remote; only *records* (JSONL, kilobytes) come back by default. A
 checkpoint is fetched locally only for a specific investigation, and deleted after.
+
+### 6a. The intermediate curve is evaluated in the container — and it is not free
+
+*(2026-09-04. The numbers above were re-measured from real `retained.json` files rather than
+estimated: `drqv2` 104.1 MB, `alda` 103.9, `ctrl` 39.8, `ibac_sni` 27.6, `idaac` and `ppg` 5.0.)*
+
+**[C95](CONSTRUCTION.md#c95) removes the choice about *where* the intermediate grid is evaluated**:
+a container-trained checkpoint read on this laptop gives a different number, because the renderer
+differs. Weights that cannot be validly evaluated where they land are worth nothing there, so the
+grid is evaluated in the container or not at all.
+
+> **Correction, 2026-09-04, hours after this section was written.** It originally argued from a
+> second fact — that 13 checkpoints per cell × 12 baselines × 3 seeds is **35.5 GB** against
+> "roughly 30 GB free", and so *does not fit*. The owner then cleared space and the real figure is
+> **73.1 GB**: it fits. That leg is withdrawn. The conclusion is unchanged because it never rested
+> on it, but the arithmetic is still worth keeping in view — 35.5 GB is about half the free disk,
+> spent on data with no valid local use. `plan_production.checkpoint_storage_gb` computes it, from
+> checkpoint sizes measured on real jobs rather than estimated.
+
+So the weights are evaluated where they were produced and only records travel:
+`run_probe.sh::run_curve_eval` walks the retained stamps after `retain`, runs `eval_grid.py` on
+each, and `CURVE_EVAL_DISCARD_WEIGHTS=1` deletes each intermediate once evaluated — never the
+terminal `snapshot.pt`. It is **opt-in**, so no ordinary probe starts paying for it.
+
+**What it costs, which is the part that needs a decision.** Derived from the same measured
+throughputs the cost model uses, at 6e5 × 3 seeds:
+
+| stamp grid | episodes | stamps | job-hours | RUB | vs the ~525 h of training |
+|---|---|---|---|---|---|
+| 50k | 20 | 13 | 260.6 | 43,891 | +51% |
+| 50k | 10 | 13 | 130.3 | 21,946 | +25% |
+| 50k | 5 | 13 | 65.1 | 10,973 | +13% |
+| 100k | 5 | 7 | 35.1 | 5,909 | +7% — historical lower-cost option |
+| 200k | 5 | 4 | 20.0 | 3,376 | +4% |
+
+**The table above is historical and its episode counts are superseded — CORRECTED 2026-09-05,
+external review 14 section 14, which found exactly this kind of contradiction survives a
+"superseded" label when the very next sentence reads as current.** A20 decided **three** episodes
+per intermediate cell, not five; `families.json`'s `curve_eval_episodes: 3` is what every family
+actually runs (`test_production_defaults.py` pins this). The table's cost arithmetic used 5/10/20
+because it was written before A20; it is kept for the cost *shape* (more episodes costs
+proportionally more), not for its episode counts. **Current operational default: 50k stamp grid,
+three episodes per intermediate cell, twenty at the endpoint.** Production retains the weights, so
+any stamp can later be re-evaluated more deeply than three episodes if a specific cell warrants it.
 
 **The mechanism now exists rather than being a rule to remember.** `run_probe.sh` emits
 `records.jsonl` as an optional **separate job output** (`RECORDS_OUT`), so a caller can declare
@@ -356,9 +416,12 @@ extracted selectively to avoid unpacking four checkpoints I did not need.
 - **§3b #4 seeds** and **§3b #5 budget** — untouched here; #5 in particular deserves the owner's
   "can numbers decide it" question taken seriously rather than defaulted to 6e5 because RL-ViGen
   says so.
-- **Evaluator family coverage — 7 families, 12 of 12 rows. COMPLETE as of 2026-09-04.**
+- **Evaluator construction coverage — 7 families, 12 of 12 rows, exercised as of 2026-09-04.**
   `rlvigen` (five baselines), `dmc_gb` (two), `idaac`, `ppg`, and — added 2026-09-03/04 —
-  `ibac_sni` and `alda`. All six drive the baseline's **own** action path.
+  `ibac_sni`, `alda`, and `ctrl`. All seven drive the baseline's **own** action path.  This is
+  construction coverage, not a standing equivalence discharge: [C96](CONSTRUCTION.md#c96) found
+  that the earlier global revision could not tie those executions to the current action path, so
+  the seven families must be revalidated under their family-specific source/config identities.
 
   Two things the new ones settle, both by reading each repo's own evaluator rather than improvising:
 
@@ -388,10 +451,10 @@ extracted selectively to avoid unpacking four checkpoints I did not need.
   argument, so our harness constructs any RL-ViGen regime through *its* wrappers. That is the
   harness widening the grid, not a change to alda.
 
-  **Validation status, stated because it is not the same as "works".** All six run and produce
-  plausible magnitudes. Only the natives are checked against their own trainer's number (131.57
-  against a logged 135.71). The one non-native comparison attempted was underpowered — see the
-  guard note in §1 — so the rest rest on construction rather than measurement.
+  **Validation status, stated because it is not the same as "works".** All seven family paths run
+  and produce plausible magnitudes. Only two baselines are checked against their own evaluator's
+  number so far; the remaining ten rest on construction rather than measurement. That is a burden
+  on confidence in the instrument, not evidence that those baselines are poor.
 
 - **Whether our harness driving a foreign `act` is faithful** — §1's guard is stated, not run, for
-  the seven non-native families.
+  ten of the twelve baselines; `drqv2` and `idaac` are the two discharged comparisons.

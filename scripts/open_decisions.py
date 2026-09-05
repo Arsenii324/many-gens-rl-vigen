@@ -141,6 +141,38 @@ def undispositioned_findings(limit: int = 200) -> list[tuple[str, str]]:
     return out[-limit:]
 
 
+def decision_sheet(root: pathlib.Path) -> list[tuple[str, str]]:
+    """The session decision sheet, which this script could not see until 2026-09-05.
+
+    `notes/DECISION-SHEET.md` holds owner-facing items with a recommended default each, and nothing
+    here referenced it -- so the project had TWO decision surfaces that did not know about each
+    other, which is the "one number, one home" rule broken at the level of the record of what is
+    undecided. This closes it by reading the sheet rather than duplicating it: rows live there, this
+    only surfaces them.
+    """
+    sheet = root / "notes" / "DECISION-SHEET.md"
+    if not sheet.is_file():
+        return []
+    rows: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for line in sheet.read_text(encoding="utf-8", errors="replace").splitlines():
+        m = re.match(r"\|\s*\*\*(A\d+)\*\*\s*\|\s*([^|]+?)\s*\|", line)
+        if m and m.group(1) not in seen:
+            seen.add(m.group(1))
+            rows.append((m.group(1), " ".join(m.group(2).split())))
+    # later "### A9 ..." revision headings supersede or add items
+    for m in re.finditer(r"^#+\s*(A\d+)[^\n]*?—\s*([^\n]+)$",
+                         sheet.read_text(encoding="utf-8", errors="replace"), re.M):
+        tag = m.group(1)
+        note = " ".join(m.group(2).split())
+        if tag in seen:
+            rows = [(t, q + f"   [revised: {note[:60]}]") if t == tag else (t, q) for t, q in rows]
+        else:
+            seen.add(tag)
+            rows.append((tag, note))
+    return sorted(rows, key=lambda r: int(r[0][1:]))
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--strict", action="store_true")
@@ -177,6 +209,15 @@ def main(argv=None) -> int:
     print("  preference, a trade-off or an authority I do not have is the owner's. Only the second")
     print("  kind belongs on this list, and an item that turns out to need work should be moved")
     print("  off it rather than left to look like a decision nobody is taking.")
+    sheet = decision_sheet(ROOT)
+    if sheet:
+        print(f"\n  DECISION SHEET -- notes/DECISION-SHEET.md, answerable by exception   ({len(sheet)})")
+        print("  Each carries a recommended default that will be acted on absent an answer.")
+        for tag, question in sheet:
+            print(f"    {tag:<6} {question[:150]}")
+    else:
+        print("\n  DECISION SHEET: notes/DECISION-SHEET.md not found")
+
     print("\n  NOT A COMPLETENESS CLAIM: a decision written down nowhere is invisible here.")
     return 0
 

@@ -1,0 +1,51 @@
+# [Claude 2026-09-05: close the last evaluator-coverage gap. `run_scene_alda` is the only one of the
+# seven evaluator families that has never executed.
+#
+# WHY THE PREVIOUS ATTEMPT DID NOT CLOSE IT. bt1s7mph7hp31qcr1ilb trained alda fine on gt4i.1 (peak
+# 14.73 GiB, confirming the tier diagnosis) but emitted NATIVE_CURVE_EVAL_NO_STAMPS, so the curve
+# evaluator had nothing to run on. The cause is exact: alda's save cadence is an internal config
+# value, `checkpoint_n_steps: int = 50_000` (trainers/alda_trainer.py:72), fired by
+# `step % self.checkpoint_n_steps == 0` (:614). At 10,000 frames it never fires. SAVE_EVERY_FRAMES
+# does not reach it, because alda's descriptor `options` pass only n_train_steps and seed.
+#
+# THE OVERRIDE. alda's launcher takes `--spec.trainer.config.X=Y`, so the cadence is reachable
+# without touching the clone: checkpoint_n_steps=2500 over a 10,000-frame run gives saves at 2500,
+# 5000, 7500 and 10000 -- four stamps, of which three are intermediate.
+#
+# WHAT THIS ESTABLISHES: whether `run_scene_alda` loads an alda checkpoint and evaluates it at all.
+# Nothing about alda's competence -- at 10k it sits at the C55 floor and is expected to.
+#
+# A DESCRIPTOR GAP THIS EXPOSES, worth fixing separately: alda's production `save_every: 50000` is
+# annotated "its own cadence ... unchanged". That is true only because the internal default happens
+# to equal the desired value. Nothing plumbs it, so a different production cadence would silently
+# not apply -- the same shape as the CTRL_DEFAULTS duplication.
+#
+# gt4i.1 because alda does not fit gt4.1 (14.73 GiB measured against 14.5 usable). Note the
+# descriptor's own production block already says `"tier": "gt4i.1"` -- the knowledge existed and the
+# hand-written cfg bypassed it, which is why the submission path needs the RAM invariant.
+name: vigen-alda-curve-v89
+desc: Exercise run_scene_alda for the first time by overriding alda's internal checkpoint cadence.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  NATIVE_EXTRA_OVERRIDES=--spec.trainer.config.checkpoint_n_steps=2500
+  SAVE_EVERY_FRAMES=2500
+  CURVE_EVAL=1
+  CURVE_EVAL_EPISODES=3
+  CURVE_EVAL_REGIMES=train,eval-easy
+  CELLS=alda:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=3 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v90.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

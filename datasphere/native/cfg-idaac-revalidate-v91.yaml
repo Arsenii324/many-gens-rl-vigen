@@ -1,0 +1,53 @@
+# [Claude 2026-09-05] Recompute the idaac evaluator discharge on the CURRENT evaluator.
+#
+# WHY. The discharge -- ours 9.023 sd 6.488 N=20 against idaac's native 5.347 N=10, verdict
+# CONSISTENT -- is one of only TWO of twelve evaluator burdens discharged, and is load-bearing for
+# R6 and for every "the shared evaluator is validated" claim. It was produced 04 Sep 16:55.
+# `scripts/eval_grid.py` was modified 05 Sep 01:25 in four measurement-affecting ways:
+#   * per-episode condition seeding -> a DIFFERENT sequence of door placements;
+#   * torch.use_deterministic_algorithms(True) -> the old number used backend-selected kernels,
+#     and Door success is threshold-sensitive (C70);
+#   * strict regime verification -> the old cell could have recorded an unverified regime;
+#   * run_scene_idaac no longer hardcodes CPU -> the old number was computed on CPU.
+# So the recorded discharge is not comparable with anything measured next. See
+# notes/RESULTS-VALIDITY.md.
+#
+# WHAT THIS RUNS. The same checkpoint (idaac 100k, seed 1, 5,031,219 bytes, from
+# bt1lnh6b11u231cvh4ho), the same grid -- train + eval-easy, scene 0, 20 episodes -- through the
+# current evaluator on CUDA.
+#
+# WHAT IT ESTABLISHES. If the new numbers land near 9.02 / 9.53, the discharge survives the
+# evaluator changes and "2 of 12" stands. If they move materially, the discharge was an artefact of
+# the old evaluator and must be withdrawn until recomputed -- which would also mean the only
+# surviving discharge is drqv2's.
+#
+# NOT a fidelity question and not expensive: one checkpoint, 40 episodes, no training.
+name: vigen-idaac-revalidate-v93
+desc: Recompute the idaac evaluator discharge on the post-fix evaluator.
+cmd: >-
+  timeout --foreground 3600s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=idaac
+  OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_EPISODES=20
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v95.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/idaac-100k-snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

@@ -1,0 +1,32 @@
+# Re-run v123 after closing its second, concrete spawn failure. v123 correctly kept workers out of
+# train.py, then failed *while unpickling* `utils.general.make_rlvigen_env_process`: RL-ViGen's
+# top-level utils.py won that name before the driver could bootstrap the IBAC compatibility package.
+# The factory now has the collision-free `ibac_sni_runtime` identity, tested in a fresh interpreter
+# whose cwd deliberately puts RL-ViGen's utils.py first. This remains a functional worker-lifecycle
+# smoke, not competence evidence or a production result.
+name: vigen-codex-ibac-procs16-smoke-v124
+desc: Re-test IBAC-SNI Door spawn/factory execution at the intended upstream procs=16 on gt4.1.
+cmd: >-
+  timeout --foreground 3600s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=ibac_sni:1
+  FRAMES=2560
+  TASK=Door
+  SEED=1
+  EVAL_EPISODES=1
+  CELL_TIMEOUT_SECONDS=1800
+  NATIVE_EXTRA_OVERRIDES=--procs=16
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-codex-ibac-procs16-v124.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

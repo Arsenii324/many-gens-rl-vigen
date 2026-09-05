@@ -1,0 +1,31 @@
+# v124 proved the repaired spawn factories construct all 16 clean workers, then established that
+# the 16 GiB gt4.1 cgroup cannot hold their EGL/MuJoCo process tree (17.91 GiB measured lower
+# bound including only a 1 GiB margin).  This is the same *functional* 16-process smoke on the
+# allowed 32 GiB gt4i.1 tier.  It is not a production performance result and it does not replace
+# the later production-V100 renderer/throughput control.
+name: vigen-codex-ibac-procs16-smoke-v125
+desc: Validate a complete IBAC-SNI 16-worker Door rollout on an allowed high-memory T4 tier.
+cmd: >-
+  timeout --foreground 3600s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  CELLS=ibac_sni:1
+  FRAMES=4096
+  TASK=Door
+  SEED=1
+  EVAL_EPISODES=1
+  CELL_TIMEOUT_SECONDS=1800
+  NATIVE_EXTRA_OVERRIDES=--procs=16
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-codex-ibac-procs16-v124.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

@@ -70,10 +70,27 @@ def _setup_env_path() -> None:
             sys.path.insert(0, p)
 
 
-def run(task: str, mode: str, episodes: int, seed: int, max_steps: int) -> dict | None:
+def run(task: str, mode: str, episodes: int, seed: int, max_steps: int,
+        scene_id: int = 0, paired: bool = True) -> dict | None:
+    """`paired` measures the floor on the SAME placements the fleet's episodes will see.
+
+    [Added 2026-09-05] Reviews 7 and 8 both asked for the 1.818 floor to be re-measured under the
+    current evaluator, because the number predates per-episode condition seeding. The marginal
+    placement distribution is unchanged by that switch -- both draw uniformly -- so the floor's
+    expected value should not move, and this is a confirmation rather than a correction.
+
+    But re-measuring it *paired* is strictly more useful than re-measuring it: with the same
+    `placement_condition_seed(seed, scene, i)` the baselines use, episode i of the floor runs the
+    identical physical placement as episode i of every baseline. The floor stops being a
+    population constant compared across samples and becomes a per-episode control.
+
+    The action stream is a separate `default_rng(seed)` and is deliberately NOT reseeded here, so
+    re-seeding the global placement stream cannot change which random actions are taken.
+    """
     import robosuitevgb.utils as ru
+    from scripts.eval_grid import seed_episode_placement
     try:
-        env = ru.make_env(task_name=task, seed=seed, scene_id=0, mode=mode)
+        env = ru.make_env(task_name=task, seed=seed, scene_id=scene_id, mode=mode)
     except Exception as e:
         print(f"  could not build {task}/{mode}: {type(e).__name__}: {str(e)[:70]}")
         return None
@@ -83,7 +100,10 @@ def run(task: str, mode: str, episodes: int, seed: int, max_steps: int) -> dict 
     ever = False
     t0 = time.time()
     steps_total = 0
+    conditions = []
     for ep in range(episodes):
+        if paired:
+            conditions.append(seed_episode_placement(seed, scene_id, ep))
         env.reset()
         ep_ret, ep_success, n = 0.0, False, 0
         for _ in range(max_steps):
@@ -104,7 +124,8 @@ def run(task: str, mode: str, episodes: int, seed: int, max_steps: int) -> dict 
         ever = ever or ep_success
     dt = time.time() - t0
     return dict(returns=np.array(returns), successes=successes, n=episodes, ever=ever,
-                lengths=np.array(lengths), steps=steps_total, seconds=dt)
+                lengths=np.array(lengths), steps=steps_total, seconds=dt,
+                paired=paired, scene_id=scene_id, placement_condition_seeds=conditions)
 
 
 def main() -> int:
@@ -116,6 +137,11 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-steps", type=int, default=500, help="the protocol horizon")
     ap.add_argument("--size", default="84")
+    ap.add_argument("--scene-id", type=int, default=0)
+    ap.add_argument("--unpaired", action="store_true",
+                    help="draw placements from the running global stream, as before 2026-09-05. "
+                         "The default pairs each episode with placement_condition_seed(seed, "
+                         "scene, i), the same condition the fleet's episode i will run under")
     a = ap.parse_args()
 
     _setup_env_path()
@@ -127,7 +153,8 @@ def main() -> int:
     for task in a.task.split(","):
         task = task.strip()
         print(f"  running {task} ...", flush=True)
-        r = run(task, a.mode, a.episodes, a.seed, a.max_steps)
+        r = run(task, a.mode, a.episodes, a.seed, a.max_steps,
+                scene_id=a.scene_id, paired=not a.unpaired)
         if r:
             rows.append((task, r))
 

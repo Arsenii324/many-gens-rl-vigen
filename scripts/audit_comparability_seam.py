@@ -72,11 +72,22 @@ that the metrics are comparable.**
 """
 from __future__ import annotations
 
+import argparse
 import ast
+import importlib.util
+import json
 import pathlib
 import re
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+PRODUCTION_FRAMES = 600_000
+HOST_PROFILE = "datasphere"
+
+_family_spec = importlib.util.spec_from_file_location(
+    "_native_family_for_seam", ROOT / "datasphere" / "native" / "family.py")
+_family = importlib.util.module_from_spec(_family_spec)
+_family_spec.loader.exec_module(_family)
 
 BASELINES = ["drqv2", "drq", "svea", "sgqn", "curl", "rad", "soda", "alda",
              "idaac", "ppg", "ctrl", "ibac_sni"]
@@ -196,14 +207,46 @@ def reward_pipeline() -> tuple[dict, str]:
     fragility is sharp -- moving one wrapper, or reading the venv's reward instead of the monitor's,
     silently changes the units of every number a baseline reports, and nothing raises.
     """
+    # [Corrected 2026-09-05.] The REPORTED half used to be the literal string "raw" for all
+    # twelve, on the strength of the wrapper-order argument above -- which is about each family's
+    # NATIVE evaluator. But this file's own header says the final number is produced by
+    # `eval_grid.py`, and that path is not the native one. On 2026-09-05 external review 8 found
+    # `eval_grid`'s ctrl evaluator summing the OUTERMOST VecNormalize reward, so ctrl's reported
+    # return really was in units of a running statistic while this axis said UNIFORM.
+    #
+    # The docstring above had already named the hazard exactly -- "reading the venv's reward
+    # instead of the monitor's silently changes the units of every number a baseline reports, and
+    # nothing raises". It was prose, not a check. This derives it.
+    grid = (ROOT / "scripts" / "eval_grid.py").read_text()
+    # AST, not a regex over the block: the block contains a COMMENT explaining the flag, and a
+    # regex matched that comment rather than the call -- so the check passed while the call had
+    # been reverted. An audit that can be satisfied by its own explanatory prose is worse than no
+    # audit, because it reads as evidence.
+    ctrl_raw = False
+    for node in ast.walk(ast.parse(grid)):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "RLViGenVecEnvCustom"):
+            for keyword in node.keywords:
+                if (keyword.arg == "normalize_rewards" and isinstance(keyword.value, ast.Constant)
+                        and keyword.value.value is False):
+                    ctrl_raw = True
+    idaac_block = re.search(r"def run_scene_idaac.*?(?=\ndef )", grid, re.S)
+    idaac_raw = bool(idaac_block and re.search(r"episode\[.r.\]|\[.episode.\]", idaac_block.group(0)))
+    ppg_block = re.search(r"def run_scene_ppg.*?(?=\ndef )", grid, re.S)
+    ppg_raw = bool(ppg_block and "recent_eprets" in ppg_block.group(0))
+    reported_raw = {"ctrl": ctrl_raw, "idaac": idaac_raw, "ppg": ppg_raw}
+
     out = {}
     for b in BASELINES:
         norm = _grep(SRC_ROOT[b], r"VecNormalize\(|RewardNormalizer\(")
-        out[b] = ("raw | learner: NORMALISED by running return std, clipped" if norm
-                  else "raw | learner: raw")
-    return out, ("DERIVED for the presence of a normaliser; the wrapper order that keeps the "
-                 "REPORTED number raw is RECORDED (idaac envs.py:104-105, ctrl vec_env.py:38-44, "
-                 "ppg ppo.py:222)")
+        learner = ("NORMALISED by running return std, clipped" if norm else "raw")
+        reported = "raw" if reported_raw.get(b, True) else "NORMALISED by the production evaluator"
+        out[b] = f"{reported} | learner: {learner}"
+    return out, ("DERIVED on both halves now: the learner's from the presence of a normaliser, and "
+                 "the REPORTED half from what scripts/eval_grid.py actually accumulates per family "
+                 "-- ctrl's normalize_rewards flag, idaac's VecMonitor read, ppg's recent_eprets. "
+                 "The wrapper order that keeps each NATIVE evaluator raw remains RECORDED (idaac "
+                 "envs.py:104-105, ctrl vec_env.py:38-44, ppg ppo.py:222)")
 
 
 def frame_stack() -> tuple[dict, str]:
@@ -401,31 +444,34 @@ def observation_layout() -> tuple[dict, str]:
 
 
 def evaluation_scene_set() -> tuple[dict, str]:
-    """What each baseline's evaluator VARIES — and it is not the same thing. [C72](../docs/CONSTRUCTION.md#c72)
+    """The scene set of the REPORTED production measurement.
 
-    This is the axis that decides whether "retention" means one thing across the twelve, and it was
-    missing from the first two versions of this script. Adding it changes the audit's headline from
-    *every UNITS axis is uniform* to *one UNITS axis splits* -- which is worse news and the correct
-    news.
+    The final number is produced by ``eval_grid.py`` from a retained checkpoint, not by a
+    baseline's training-time progress evaluator. The production descriptor is the source of truth
+    for that grid, and it is deliberately common across the twelve. Training-time progress logging
+    is a separate, non-reported axis below.
 
-    `scripts/eval_across_scenes.py` sweeps **ten scenes**, of which nine are held out, and reports a
-    mean over that sweep. Every one of the other seven baselines' evaluators constructs its env
-    with **`scene_id=0`** and varies only the visual regime: `idaac` at `envs.py:101`, `ibac_sni`
-    at `general.py:74`, `rad`/`soda` through `dmc_gb`'s `wrappers.py:23` default, `alda` at
-    `alda_trainer.py:142` via `env_config.get('scene_id', 0)`, `ctrl` and `ppg` likewise by taking
-    the default.
+    """
+    import json
+    descriptors = json.loads((ROOT / "datasphere" / "native" / "families.json").read_text())
+    out = {}
+    for baseline in BASELINES:
+        family = next(name for name, entry in descriptors.items()
+                      if not name.startswith("_") and baseline in entry["baselines"])
+        settings = descriptors[family]["production"]
+        scenes = settings["offline_eval_scenes"]
+        regimes = settings["offline_eval_regimes"]
+        out[baseline] = f"{len(scenes)} scenes, {regimes} | production offline eval_grid"
+    return out, ("DERIVED from each family's production descriptor: all twelve use the same "
+                 "offline grid (four regimes x ten scenes); eval_grid.py is the reporting path")
 
-    So a native's number is *mean return over ten scenes* and the other seven's is *mean return at
-    scene 0*. Those are different estimands, not one estimand measured with different precision --
-    the distinction the `reported estimator` axis turns on, and this axis falls on the other side of
-    it. Two numbers produced this way cannot be put on one axis by any amount of care in reading
-    them.
 
-    **What this does NOT say.** It does not say the seven are broken or that their evaluators are
-    wrong; each measures what its authors' script measures. It says the scene sweep exists in one
-    place and the endpoint this project reports is defined by it. Closing the split means either
-    giving the seven evaluators a scene sweep -- work, not a units conversion -- or redefining the
-    endpoint to what all twelve can produce. That is a decision, and it is the owner's.
+def training_time_scene_coverage() -> tuple[dict, str]:
+    """What each baseline's TRAINING-TIME progress evaluator varies. [C72]
+
+    This is not the reported endpoint, but it remains important provenance: several source loops
+    log only scene 0 while the offline measurement later sweeps ten scenes. Conflating this with
+    the reported scene set was the false R3 split this audit used to emit.
     """
     out = {}
     for b in BASELINES:
@@ -433,7 +479,7 @@ def evaluation_scene_set() -> tuple[dict, str]:
             out[b] = "ten scenes, nine held out | our eval_across_scenes.py sweeps them"
         else:
             out[b] = "scene 0 only | its own evaluator varies the regime, not the scene"
-    return out, ("DERIVED: every non-native evaluator builds its env with scene_id=0 "
+    return out, ("DERIVED: every non-native TRAINING-TIME evaluator builds its env with scene_id=0 "
                  "(idaac envs.py:101, ibac_sni general.py:74, dmc_gb wrappers.py:23, "
                  "alda alda_trainer.py:142; ctrl and ppg take the same default)")
 
@@ -614,17 +660,15 @@ def replay_capacity() -> tuple[dict, str]:
     budget samples a recency window. Those are different training distributions, which is what
     makes R4's "equal training length" mean different things per baseline.
 
-    At **6e5** every off-policy baseline here is in the first case, by three different mechanisms,
-    so this axis is uniform in EFFECT and split in mechanism -- the same shape as `reward pipeline`
-    and `effective action repeat`, and fragile in the same way.
+    The result is host-profile-specific. DataSphere's 300k accommodation evicts before 6e5; the
+    V100 profile's 620k capacity retains the whole run. Reporting one while launching the other
+    would manufacture or hide a comparability split.
 
-    **The fragility is not hypothetical and it is ours, not upstream's.** `plan_production.py`
-    exposes `--rlvigen-capacity` with a default of **300_000**, well below 6e5, as a way to fit the
-    21 GiB a drqv2 cell would otherwise reach. Applying it would make the RL-ViGen five evict while
-    `rad`/`soda` (capacity = train_steps, by construction) never do -- an operational memory
-    workaround that silently splits this axis and changes what those five learn. It is a knob
-    default, NOT a measured property of the clone, and `plan_production`'s `replay_capacity: 300000`
-    output reads like the latter.
+    **The split is ours, not upstream's.** `families.json` applies `replay_capacity=300000` to the
+    RL-ViGen five at the current DataSphere production shape, well below 6e5, so they evict while
+    `rad`/`soda` (capacity = train_steps, by construction) never do. It is the operational memory
+    accommodation that makes the five runnable on the allowed tiers. The V100 migration target is
+    1e6, but it is deliberately unapplied here because this descriptor also drives probes.
 
     Prior art checked before deriving: `FAITHFULNESS.md:132` RETRACTED a replay-capacity finding
     against the retired port, on the grounds that RL-ViGen's replay is disk-backed (one `.npz` per
@@ -632,6 +676,11 @@ def replay_capacity() -> tuple[dict, str]:
     That retraction is about MEMORY and leaves the eviction question untouched.
     """
     out = {}
+    try:
+        declared_rlvigen_cap = _family.production(
+            "rlvigen", profile=HOST_PROFILE).get("replay_capacity")
+    except (OSError, KeyError, ValueError, TypeError):
+        declared_rlvigen_cap = None
     cfg = ROOT / "RL-ViGen-upstream" / "cfgs" / "config.yaml"
     rlvigen_cap = None
     if cfg.exists():
@@ -648,18 +697,31 @@ def replay_capacity() -> tuple[dict, str]:
         alda_cap = m.group(1).replace("_", "") if m else None
     for b in BASELINES:
         if LAUNCHER.get(b) == "rlvigen.sh":
-            out[b] = (f"uniform over the whole run | {rlvigen_cap} nominal, disk-backed, "
-                      "exceeds 6e5" if rlvigen_cap else "unread | unread")
+            cap = declared_rlvigen_cap if declared_rlvigen_cap is not None else rlvigen_cap
+            if cap is None:
+                out[b] = "unread | unread"
+            elif int(cap) < PRODUCTION_FRAMES:
+                out[b] = (f"recency ring | {int(cap)} < {PRODUCTION_FRAMES}; evicts oldest "
+                          "episodes under the declared production override")
+            else:
+                out[b] = (f"uniform over the whole run | {int(cap)} >= {PRODUCTION_FRAMES}; "
+                          "disk-backed nominal capacity")
         elif LAUNCHER.get(b) == "dmc_gb.sh":
-            out[b] = ("uniform over the whole run | capacity = train_steps, never evicts BY "
-                      "CONSTRUCTION" if dmc_is_budget else "unread | unread")
+            out[b] = (f"uniform over the whole run | capacity = train_steps = {PRODUCTION_FRAMES}, "
+                      "never evicts BY CONSTRUCTION" if dmc_is_budget else "unread | unread")
         elif b == "alda":
-            out[b] = (f"uniform over the whole run | {alda_cap}, exceeds 6e5"
-                      if alda_cap else "unread | unread")
+            if alda_cap is None:
+                out[b] = "unread | unread"
+            elif int(alda_cap) < PRODUCTION_FRAMES:
+                out[b] = f"recency ring | {int(alda_cap)} < {PRODUCTION_FRAMES}"
+            else:
+                out[b] = f"uniform over the whole run | {int(alda_cap)} >= {PRODUCTION_FRAMES}"
         else:
             out[b] = "current rollout only | on-policy, no replay exists"
-    return out, ("DERIVED from RL-ViGen-upstream/cfgs/config.yaml, dmc_gb/src/train.py:111 and "
-                 "alda_trainer.py:53; eviction judged against the 6e5 budget")
+    return out, (f"DERIVED for host profile {HOST_PROFILE!r} from family.py's resolved rlvigen "
+                 "production override, "
+                 "RL-ViGen-upstream/cfgs/config.yaml, dmc_gb/src/train.py:111 and "
+                 f"alda_trainer.py:53; eviction compared against the {PRODUCTION_FRAMES} budget")
 
 
 def x_axis_accounting() -> tuple[dict, str]:
@@ -702,11 +764,85 @@ def x_axis_accounting() -> tuple[dict, str]:
         "normalize_curves.py takes as `frame`")
 
 
+def updates_per_env_frame() -> tuple[dict, str]:
+    """How much LEARNING happens per unit of the common x-axis.
+
+    [Claude 2026-09-05; corrected after review 14.] `x_axis_accounting` establishes that all
+    twelve count the same UNIT -- environment transitions -- and that is true and was the right
+    question. This axis asks the other half of it: at a common 600k-frame budget, how many learner
+    updates does each family take per newly collected replay transition? The answer is not common.
+
+    Do not use action repeat as the denominator here. A source action-repeat-4 transition is one
+    replay item, not four. `action_repeat=1` is correct for robosuite (RL-ViGen Supplementary
+    Table 2), but it remains a separate physics-substep condition axis. The native five's 0.5
+    value comes directly from `update_every_steps=2`; RAD/SODA/ALDA are approximately 1.0 per new
+    replay transition. Their source action-repeat-4 configuration should be reported separately,
+    not converted into a claimed 0.25 replay ratio.
+
+    The native-five 0.5 versus RAD/SODA/ALDA 1.0 difference is a real training-rate condition and
+    should be reported. For `alda`, the old Lift stability result matters beyond bookkeeping:
+    FAITHFULNESS.md:603-616 measured `utd=1.0` diverging where `0.25` did not, fixed it, and pinned
+    the fix with two tests that import the RETIRED `rlgen` port -- while production launches
+    `runnable/alda`, which has no such knob. See notes/FINDING-update-to-data-ratio.md and A27.
+
+    The four on-policy families have no per-step replay ratio; their analogue is epochs x
+    minibatches per rollout and is deliberately not forced into this column.
+    """
+    five = "0.5 | update_every_steps=2 at action_repeat=1 (source ~1 per replay transition)"
+    out = {b: five for b in ("drqv2", "drq", "svea", "sgqn", "curl")}
+    for b in ("rad", "soda"):
+        out[b] = "1.0 | one update per new replay transition, ar dead-knob=1; source ar=4"
+    out["alda"] = "1.0 | alda_trainer.py:649, one update per new replay transition; source ar=4, see A27"
+    # On-policy: grad steps per env frame = (epochs x minibatches) / (num_envs x num_steps).
+    # [Claude 2026-09-05, notes/FINDING-on-policy-update-density.md, A29.] `ibac_sni` and `ctrl`
+    # match their upstream default exactly once on the V100 profile that restores full parallelism
+    # (16 and 64 envs respectively, both upstream's own defaults). `idaac` and `ppg` do not: both
+    # run fewer parallel envs than Procgen's 64 (a single V100 cannot run that many robosuite/MuJoCo
+    # envs the way Procgen's cheap 2D levels allow), with epochs/minibatches unchanged, so their
+    # regular-phase density is elevated. This is independent of PPG's AUXILIARY-phase cadence,
+    # already corrected to match its reference exactly (A26) -- that fix and this finding are
+    # different axes of the same mechanism (rollout size vs. fixed epoch/minibatch counts).
+    out["idaac"] = "0.00195/frame (policy), 0.01758/frame (value) | 16x256 rollout vs upstream 64x256 -- 4x, see A29"
+    out["ppg"] = "0.00391/frame regular-phase | 8x256 rollout vs upstream 64x256(1-rank)/262144(4-rank) -- 8x-32x, see A29"
+    out["ibac_sni"] = "0.015625/frame | 16x128 rollout, matches upstream's own default exactly (both 16x128)"
+    out["ctrl"] = "0.001465/frame | v100 profile 64x256, matches upstream's own default exactly (both 64x256)"
+    return out, "DERIVED from each training loop and its effective action_repeat"
+
+
+def warmup_length() -> tuple[dict, str]:
+    """Frames of random/undertrained action before the first learner update, per family.
+
+    [Claude 2026-09-05.] Not previously an axis, found while checking update density from every
+    side. Every value below is each family's own UNMODIFIED upstream default -- faithful by
+    design, the same reasoning as `observation_layout` -- so this is declared, not a defect: the
+    five and rad/soda/alda's warmup differs 4x (`num_seed_frames: 4000` vs `init_steps: 1000`)
+    purely because that is each source's own choice, and neither this project's launchers nor
+    `families.json` override it for production (only `smoke_all.sh`'s cheap functional smoke does,
+    which is expected and does not affect production runs).
+
+    Materially small either way: 4000 or 1000 against a 600k-frame budget is 0.67% or 0.17%, a
+    one-time startup cost rather than something that compounds across the run the way the
+    updates-per-env-frame axis does. Declared for completeness, not raised as a decision.
+
+    The four on-policy families have no separate warmup phase: their first collected rollout IS
+    the data for their first update, so there is no pre-update random-action period to report.
+    """
+    five = "4000 frames | num_seed_frames: 4000, RL-ViGen-upstream/cfgs/config.yaml:13, unmodified"
+    out = {b: five for b in ("drqv2", "drq", "svea", "sgqn", "curl")}
+    for b in ("rad", "soda"):
+        out[b] = "1000 frames | --init_steps default 1000, dmc_gb/src/arguments.py:20, unmodified"
+    out["alda"] = "1000 frames | init_steps: int = 1000, alda_trainer.py:51, unmodified"
+    for b in ("idaac", "ppg", "ibac_sni", "ctrl"):
+        out[b] = "0 (no separate warmup phase) | on-policy: first rollout is the first update's data"
+    return out, "DERIVED from each training loop's own unmodified upstream default"
+
+
 AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("success definition and who computes it", UNITS, success_source),
         ("episode horizon", UNITS, horizon),
         ("reported estimator", UNITS, reported_estimator),
         ("evaluation scene set", UNITS, evaluation_scene_set),
+        ("training-time scene coverage", CONDITIONS, training_time_scene_coverage),
         ("truncation at time limit", CONDITIONS, truncation),
         ("render resolution", CONDITIONS, image_size),
         ("crop policy -- what the policy SEES", CONDITIONS, crop_policy),
@@ -716,7 +852,9 @@ AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("effective action repeat", CONDITIONS, action_repeat),
         ("induced action distribution", CONDITIONS, action_distribution),
         ("observation layout and pixel scaling", CONDITIONS, observation_layout),
-        ("regimes reachable in one run", CONDITIONS, regimes_in_one_run)]
+        ("regimes reachable in one run", CONDITIONS, regimes_in_one_run),
+        ("updates per env frame", CONDITIONS, updates_per_env_frame),
+        ("warmup length before first update", CONDITIONS, warmup_length)]
 
 #: Empty as of 2026-08-26, and that is a statement about this list rather than about the twelve.
 #: Every axis anyone has NAMED is now derived or recorded here; it does not follow that the axes
@@ -774,7 +912,12 @@ NOT_COVERED: list[str] = [
 OUT_OF_SCOPE_ROUTED_ELSEWHERE = "reward scale of the source domains -> C75"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    global HOST_PROFILE
+    if argv is not None:
+        parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+        parser.add_argument("--host-profile", choices=("datasphere", "v100"), required=True)
+        HOST_PROFILE = parser.parse_args(argv).host_profile
     try:
         assert_inputs_present()
     except EmptyInput as e:
@@ -840,4 +983,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

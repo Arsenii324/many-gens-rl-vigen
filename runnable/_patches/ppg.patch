@@ -43,11 +43,12 @@ index 41c447f..b368221 100644
          raise ValueError(f"Expected ScalarType, got {type(ac_space)}")
  
 diff --git a/phasic_policy_gradient/envs.py b/phasic_policy_gradient/envs.py
-index 0292a29..5107737 100644
+index 0292a29..958b663 100644
 --- a/phasic_policy_gradient/envs.py
 +++ b/phasic_policy_gradient/envs.py
-@@ -1,6 +1,10 @@
+@@ -1,6 +1,11 @@
  import numpy as np
++import hashlib
  import gym3
 -from procgen import ProcgenGym3Env
 +# [Gemini 2026-08-31] ProcgenGym3Env is optional for Robosuite continuous control
@@ -58,13 +59,15 @@ index 0292a29..5107737 100644
  
  def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
      if rendering:
-@@ -14,7 +18,41 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
+@@ -14,7 +19,87 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
          env = gym3.ViewerWrapper(env, info_key="rgb")
      return env
  
 +def get_robosuite_venv(*, env_id, num_envs, seed=0, scene_id=0, mode="train", **_ignored):
 +    """RL-ViGen robosuite as a gym3 venv. `_ignored` swallows procgen-only kwargs."""
 +    import os, sys, gym
++    condition_seed = _ignored.get("condition_seed")
++    placement_witnesses = []
 +    _rlv = os.environ["RLVIGEN_ROOT"]
 +    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
 +        if _p not in sys.path:
@@ -87,11 +90,55 @@ index 0292a29..5107737 100644
 +            "not a method, and the env is already seeded by make_env(seed=...) above."
 +            return []
 +
-+    return gym3.ConcatEnv([
-+        gym3.FromGymEnv(_HWCUint8(_robo_make_env(
-+            task_name=env_id, seed=seed + i, scene_id=scene_id, mode=mode)))
-+        for i in range(num_envs)
-+    ])
++    class _ConditionSeed(gym.Wrapper):
++        def __init__(self, env):
++            super().__init__(env)
++            self._episode_index = 0
++
++        def reset(self, **kwargs):
++            if condition_seed is not None:
++                value = int(np.random.SeedSequence(
++                    [int(condition_seed), int(scene_id), self._episode_index]
++                ).generate_state(1, dtype=np.uint32)[0])
++                np.random.seed(value)
++                self._episode_index += 1
++            observation = self.env.reset(**kwargs)
++            digest = hashlib.sha256()
++            value = observation
++            if isinstance(value, dict):
++                for key in sorted(value):
++                    array = np.asarray(value[key])
++                    digest.update(str(key).encode() + str(array.shape).encode())
++                    digest.update(array.tobytes())
++            else:
++                array = np.asarray(value)
++                digest.update(str(array.shape).encode() + array.tobytes())
++            placement_witnesses.append(digest.hexdigest())
++            return observation
++
++    applied_regimes = []
++
++    def _make_one(i):
++        # ConcatEnv hides the Gym wrappers it receives.  Retain the construction-time read-back
++        # here, before it is hidden, so the offline evaluator can refuse a silently ignored
++        # mode/scene without consuming a reset (which would perturb C69's global placement RNG).
++        base = _robo_make_env(task_name=env_id, seed=seed + i, scene_id=scene_id, mode=mode)
++        applied_regime = {
++            "mode": getattr(base, "_mode", None),
++            "scene_id": getattr(base, "_scene_id", None),
++        }
++        if None in applied_regime.values():
++            raise RuntimeError("RL-ViGen did not expose its applied mode/scene at construction")
++        applied_regimes.append(applied_regime)
++        return gym3.FromGymEnv(_ConditionSeed(_HWCUint8(base)))
++
++    venv = gym3.ConcatEnv([_make_one(i) for i in range(num_envs)])
++    applied_regime = applied_regimes[0]
++    if any(item != applied_regime for item in applied_regimes[1:]):
++        raise RuntimeError("RL-ViGen vector members disagree about the requested regime")
++    venv._vigen_regime = dict(applied_regime)
++    venv._placement_witnesses = placement_witnesses
++    return venv
 +
  def get_venv(num_envs, env_name, **env_kwargs):
 +    if env_name.startswith("robosuite:"):
@@ -99,13 +146,25 @@ index 0292a29..5107737 100644
 +            env_id=env_name.split(":", 1)[1], num_envs=num_envs, **env_kwargs)
      venv = get_procgen_venv(num_envs=num_envs, env_id=env_name, **env_kwargs)
  
-     return venv
+-    return venv
 \ No newline at end of file
++    return venv
 diff --git a/phasic_policy_gradient/log_save_helper.py b/phasic_policy_gradient/log_save_helper.py
-index af09fe3..bd2028e 100644
+index af09fe3..ad1474a 100644
 --- a/phasic_policy_gradient/log_save_helper.py
 +++ b/phasic_policy_gradient/log_save_helper.py
-@@ -69,6 +69,11 @@ class LogSaveHelper:
+@@ -1,3 +1,10 @@
++try:
++    from safe_checkpoint import safe_torch_save
++except ImportError:
++    def safe_torch_save(obj, path, torch_kwargs=None, **_kwargs):
++        import torch as _torch
++        _torch.save(obj, path, **(torch_kwargs or {}))
++        return True
+ import os
+ import time
+ import resource
+@@ -69,6 +76,11 @@ class LogSaveHelper:
          self.roller_stats = {
              "EpRewMean": self._nanmean([] if roller is None else roller.recent_eprets),
              "EpLenMean": self._nanmean([] if roller is None else roller.recent_eplens),
@@ -117,8 +176,17 @@ index af09fe3..bd2028e 100644
          }
          if roller is not None and self.log_new_eps:
              assert roller.has_non_rolling_eps, "roller needs keep_non_rolling"
+@@ -131,7 +143,7 @@ class LogSaveHelper:
+         basename += f"{suffix}.jd"
+         fname = os.path.join(logger.get_dir(), basename)
+         logger.log("Saving to ", fname, f"IC={self.total_interact_count}")
+-        th.save(self.model, fname, pickle_protocol=-1)
++        safe_torch_save(self.model, fname, torch_kwargs={"pickle_protocol": -1}, label="ppg.model")
+         self.save_idx += 1
+ 
+     def _nanmean(self, xs):
 diff --git a/phasic_policy_gradient/ppg.py b/phasic_policy_gradient/ppg.py
-index 69e951c..3566caf 100644
+index 69e951c..ad6b40f 100644
 --- a/phasic_policy_gradient/ppg.py
 +++ b/phasic_policy_gradient/ppg.py
 @@ -6,6 +6,7 @@ import itertools
@@ -152,6 +220,21 @@ index 69e951c..3566caf 100644
          pd = self.make_distr(pivec)
  
          aux = {}
+@@ -185,7 +195,13 @@ def aux_train(*, model, segs, opt, mbsize, name2coef):
+         mb = tree_map(lambda x: x.to(tu.dev()), mb)
+         pd, _, aux, _state_out = model(mb["ob"], mb["first"], mb["state_in"])
+         name2loss = {}
+-        name2loss["pol_distance"] = td.kl_divergence(mb["oldpd"], pd).mean()
++        # PPO's continuous log-probability sums over the 7 action coordinates.  The original PPG
++        # line was written for a categorical distribution, where KL is already scalar per sample;
++        # applying its mean reduction to the adapted diagonal Normal weakens beta_clone by the
++        # action dimension.  Sum event coordinates, then average batch/time, preserving the PPG
++        # coefficient's scale at this continuous design point.
++        kl = td.kl_divergence(mb["oldpd"], pd)
++        name2loss["pol_distance"] = kl.sum(-1).mean() if kl.ndim > 1 else kl.mean()
+         name2loss.update(model.compute_aux_loss(aux, mb))
+         assert set(name2coef.keys()).issubset(name2loss.keys())
+         loss = 0
 diff --git a/phasic_policy_gradient/ppo.py b/phasic_policy_gradient/ppo.py
 index 807c681..3d5f482 100644
 --- a/phasic_policy_gradient/ppo.py

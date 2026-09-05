@@ -1,0 +1,49 @@
+# [Claude 2026-09-04: the other half of the evaluator coverage gap.
+#
+# `bt1sgcg49j6d6jk84vuj` exercises `run_scene_ppg` and `run_scene_ibac_sni` for the first time.
+# That leaves `run_scene_dmc_gb` (which serves rad and soda) and `run_scene_alda` — two more of the
+# seven evaluator families in `eval_grid.py` that have NEVER executed. Together the two jobs take
+# evaluator coverage from 3/7 to 7/7 before any production checkpoint depends on them.
+#
+# These two need their own job because their clones are not in the trio's payload: a job carries
+# only the families it declares, by design.
+#
+# `rad` is the interesting one. Its augmentation is size-coupled — `random_crop` needs a 100-pixel
+# render, and at 84 `crop_max = 84 - 84 = 0` makes its own guard return the input unchanged, at
+# which point RAD silently IS SAC. Patch P6 exists to supply the 100. So this job also checks that
+# the evaluator reproduces the training-time render size rather than quietly evaluating a different
+# observation than the policy was trained on.
+#
+# WHAT MUST APPEAR: NATIVE_CURVE_EVAL_BEGIN/COMPLETED per cell; records reaching records.jsonl via
+# the per-cell glob; and for each family either a regime read-back that agrees or the explicit
+# abstention on stderr. As with v81 this validates PLUMBING — at 10,000 frames, with 4,000 of them
+# a random seed policy for the dmc_gb family, every number will sit at the C55 floor.]
+name: vigen-curve-preflight2-v82
+desc: First run of the dmc_gb and alda evaluator families, closing evaluator coverage at 7/7.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  SAVE_EVERY_FRAMES=2500
+  CURVE_EVAL=1
+  CURVE_EVAL_EPISODES=3
+  CURVE_EVAL_REGIMES=train,eval-easy
+  CELLS=rad:1,alda:1 FRAMES=10000 TASK=Door SEED=1
+  EVAL_EPISODES=3 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v69.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4.1
+
+# SUPERSEDED 2026-09-05: requests gt4.1 for a cell set including alda, whose recorded
+# fixed peak (15.73 GiB with margin) exceeds that tier. Kept as the record of what was run;
+# resubmitting it as written would reproduce the alda SIGKILL.

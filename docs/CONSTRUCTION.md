@@ -111,7 +111,7 @@ has not yet been stress-tested against an item it did not already have to descri
 |---|---|---|---|---|
 | [C1](#c1) | Time-limit handling splits 3 / 9 | INHERITED + FALSE-CERT | **OPEN** | your decision |
 | [C2](#c2) | Frame stack: 3 frames ×8, 1 frame ×4 | INHERITED | **OPEN** | your decision |
-| [C3](#c3) | `ibac_sni` at 64×64 is a 227× model | OURS | **OPEN** | your decision |
+| [C3](#c3) | Historical `ibac_sni` 64×64 trunk mismatch — repaired by the source-backed Impala default | OURS | MONITORED | — |
 | [C4](#c4) | float64 vs float32 alpha, CUDA only | UNDECLARED | **OPEN** | your decision |
 | [C5](#c5) | Render resolution 100→84 / 84 / 64 | INHERITED | MONITORED | — |
 | [C6](#c6) | Three action-distribution families | INHERITED | MONITORED | — |
@@ -158,7 +158,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C47](#c47) | Held-out scenes retain ~25% of training-scene return, at 50k and 100k | DESIGN-GAP | RESOLVED | — |
 | [C48](#c48) | Nothing has ever reproduced a published RL-ViGen number | DESIGN-GAP | **OPEN** | your decision |
 | [C49](#c49) | The env `seed` argument is inert in train mode | INHERITED | RESOLVED | — |
-| [C50](#c50) | IDAAC's instance labels have no referent on this target | OURS | **OPEN** | your decision |
+| [C50](#c50) | IDAAC's target lacks the variation its objective assumes | OURS | MONITORED | — |
 | [C51](#c51) | Training happens on one visual instance, with zero randomisation | INHERITED | MONITORED | — |
 | [C52](#c52) | Four baselines do not reproduce at a fixed seed | DESIGN-GAP | RESOLVED | — |
 | [C53](#c53) | Brief required identical eval CODE; R3 relaxed to metric comparability, dissolving the conflict | DESIGN-GAP | **RESOLVED** | — |
@@ -169,7 +169,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C58](#c58) | Six of twelve leave no record of what they trained on | DESIGN-GAP | **OPEN** | your decision |
 | [C59](#c59) | The comparison's collector could not read the comparison's runs | DESIGN-GAP | RESOLVED | — |
 | [C60](#c60) | Checkpoint cadences exceed surviving budgets; two baselines never save | INHERITED | **OPEN** | your decision |
-| [C61](#c61) | Entropy coefficient tuned for a categorical, applied to a Gaussian | INHERITED | **OPEN** | your decision |
+| [C61](#c61) | `ibac_sni` categorical-era entropy inflates its Gaussian | INHERITED | MONITORED | — |
 | [C62](#c62) | Door's shaping ceiling is 250; it re-reads every return we hold | INHERITED | RESOLVED | — |
 | [C63](#c63) | C54's −0.887 distance↔return correlation is a signature of an under-trained policy | OURS | RESOLVED | `918c2d84` |
 | [C64](#c64) | FAITHFULNESS's `sgqn` "ours" column describes the retired port; the clone runs 1e-4/0.93 | FALSE-CERTIFICATION | OPEN | — |
@@ -204,10 +204,11 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C93](#c93) | greenmark's tree id is unstable while a run writes into results/, so any green stamp taken during a run is void — and tree_id ignores the CODE_PREFIXES split that the rest of the file uses | OURS | OPEN | — |
 | [C94](#c94) | greenmark cannot see the gitignored vendored tree, so an upstream-only edit reports "no pending changes" and skips the suite that holds the only instrument which would catch it; the test pinning this defect checks a string, not the pipeline | OURS | OPEN | — |
 | [C95](#c95) | a container-trained checkpoint may not be evaluated on this laptop: the same 60k snapshot reads train 131.5 in the container on BOTH CUDA and CPU and 13.85 here, so the device is exonerated and the **renderer** (`MUJOCO_GL=egl` vs macOS `glfw`) is the cause; the container figure also reproduces the run's own logged 135.71, validating `eval_grid.py`. Mechanism settled; recomputation of locally-produced numbers outstanding | OURS | OPEN | — |
+| [C96](#c96) | the shared-evaluator ledger's one global code revision was both too broad and too narrow: a training-only patch invalidated every family, while a change to a family evaluator's local runtime could leave its revision unchanged | OURS + FALSE-CERTIFICATION | READY | a revalidation slot |
 
-**27 OPEN · 2 READY · 1 BLOCKED · 31 MONITORED · 34 RESOLVED · 95 total.**
+**24 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 34 RESOLVED · 96 total.**
 
-**17 items need a judgement that is yours** — [C1](#c1), [C2](#c2), [C3](#c3), [C4](#c4), [C16](#c16), [C29](#c29), [C30](#c30), [C43](#c43), [C45](#c45), [C48](#c48), [C50](#c50), [C54](#c54), [C57](#c57), [C58](#c58), [C60](#c60), [C61](#c61), [C84](#c84). The `READY` items need only a slot,
+**14 items need a judgement that is yours** — [C1](#c1), [C2](#c2), [C4](#c4), [C16](#c16), [C29](#c29), [C30](#c30), [C43](#c43), [C45](#c45), [C48](#c48), [C54](#c54), [C57](#c57), [C58](#c58), [C60](#c60), [C84](#c84). The `READY` items need only a slot,
 and C21 is waiting on compute access. *(This line read "7 items — C1, C2, C3, C4, C16, C29, C30"
 until 2026-08-18 while the table marked eleven: C33, C37, C43 and C45 had been added to the
 table without it. Four decisions the owner was never told were waiting. Now derived and
@@ -462,9 +463,9 @@ block on frame stacking, which is why the four were grouped in the first place. 
 the owner's recollection that such a block existed; the block is real for `idaac` and arguably
 `ctrl`, and does not exist for `ppg`.
 
-### C3 — `ibac_sni` at 64×64 is a 227× model {#c3}
+### C3 — Historical `ibac_sni` 64×64 trunk mismatch; production uses the source-backed Impala repair {#c3}
 
-> **DEFAULT SET, 2026-09-04 — keep 64x64 and keep saying it is ours.** This is the one resolution in
+> **SUPERSEDED DEFAULT, 2026-09-04 — keep 64x64 and keep saying it is ours.** This was the one resolution in
 > the project taken from **no reference for this target**, and that is exactly why it should not be
 > changed on judgement: swapping it would replace an unjustified number with a differently
 > unjustified number while silently altering the model's width (the embedding is
@@ -571,8 +572,8 @@ the owner's recollection that such a block existed; the block is real for `idaac
 
 **Class** OURS · **Status** OPEN
 
-**Handicap — affects:** ibac_sni
-*the one resolution in the project taken from no reference for this target, giving a 227x model*
+**Historical handicap — affects:** ibac_sni
+*the former 64×64 MiniGrid trunk, superseded by the source-backed Impala production default*
 
 `ibac_sni`'s `torch_rl` branch is MiniGrid, which has no image-size precedent; 64 was borrowed
 from the paper's own CoinRun branch. It is **the one resolution in the project not taken from a
@@ -607,8 +608,8 @@ magnitude larger than its reference at the same nominal algorithm.*
 
 ---
 
-**DEFAULT: KEEP 64x64, and mark `ibac_sni`'s row as the one resolution in the project with no
-referent for this target.** C1 and C2 keep an author's choice; this is not one — 64 was taken from
+**SUPERSEDED DEFAULT (2026-09-04): KEEP 64x64 with the MiniGrid trunk, and mark `ibac_sni`'s row as
+the one resolution in the project with no referent for this target.** C1 and C2 keep an author's choice; this is not one — 64 was taken from
 the paper's *CoinRun* branch, not from anything about robosuite, and the MiniGrid branch the code
 comes from has no image precedent at all. So the fidelity argument does not apply and the honest
 statement is narrower: **64 is the best available referent, not a justified one.** It is kept
@@ -617,7 +618,10 @@ themselves used elsewhere. **The consequence is carried, not hidden**: the archi
 width from the input, so this makes `ibac_sni` a 227x model, and any `ibac_sni` number is
 conditional on a choice this project made rather than inherited. **What would overturn this**: a
 resolution used by the paper for a continuous-control target, if one exists — that would be a real
-referent and should replace 64 immediately.
+referent and should replace 64 immediately. **This default is superseded:** the source-backed
+Impala port now pairs the paper's 64x64 pixel resolution with its own pixel trunk and is the
+launcher default. The former MiniGrid result remains a named legacy ablation, not the production
+configuration.
 
 ### C4 — float64 vs float32 alpha, visible only on CUDA {#c4}
 
@@ -818,7 +822,21 @@ is **~17.4%**. Converting that to a detectable difference:
 Inverted: a 20% difference needs **12** seeds, 10% needs **48**, and 5% needs **190**.
 
 **So the five-seed plan resolves differences of about thirty percent, not five points.** That is
-the sentence to carry into any comparison this project reports. It does not make five seeds
+the sentence to carry into any comparison this project reports.
+
+> **CORRECTED 2026-09-05, twice over — and the corrected sentence is the one to carry.**
+> **(1) The plan is no longer five seeds.** `production-schedule-v100.json` sets
+> `"seeds": [101, 102, 103]`, n = 3. **(2) The table above used the NORMAL approximation**
+> (`plan_seed_budget.py`'s `z = 2.802`), which is asymptotic and least valid at exactly the n this
+> project plans; at n = 3 the correct t multiplier (df = 4) is 3.717. Recomputed: **n=3 resolves
+> 52.7%, not 39.7%**; n=5 resolves 35.1%, not 30.8%; the two methods agree at n=50 (9.8%), which is
+> the signature of a correct t-correction. A 20% difference needs **13** seeds, not 12.
+> `plan_seed_budget.py` now uses t and solves the inverse by iteration.
+>
+> **So the sentence to carry is: the three-seed production plan resolves differences of roughly
+> fifty percent.** Both inputs remain floors — the CV is from a same-seed pair (backend
+> nondeterminism only) and the t-correction only raises the requirement. Full working:
+> `notes/FINDING-resolving-power-at-n3.md`; the seed count itself is **A28**. It does not make five seeds
 wrong — five seeds is a large improvement on one, and it is what the reference specifies — but it
 bounds what a five-seed table can claim, and the bound is much weaker than the phrase "5 seeds
 and 95% CIs" suggests to a reader.
@@ -3351,7 +3369,7 @@ of training diversity now has a measurement standing against it.
 > license dropping the term — that would be an authored deviation removing the method's signature
 > component, which is the opposite of what this project measures.
 
-**Class** OURS · **Status** OPEN · **Cross-ref** [C49](#c49)
+**Class** OURS · **Status** MONITORED · **Cross-ref** [C49](#c49)
 
 **Handicap — affects:** idaac
 *its instance-invariance loss runs against a label with no referent here, so the mechanism is inert while still costing compute*
@@ -3450,9 +3468,9 @@ defect this project exists to avoid.
 
 ---
 
-**DEFAULT SET, 2026-09-04 — option (a): one scene, and the vacuity is the result.** The 2026-09-02
-block already argued this and called itself a *recommendation*; this states it as the default the
-work proceeds on, still awaiting the owner's formal settlement.
+**SETTLED DEFAULT, 2026-09-04 — option (a): one scene, and the vacuity is the result.** Extra
+scenes would not restore the episode-length variation the original objective relies on, while
+they would make IDAAC's training distribution incomparable with the other eleven.
 
 **The mechanism argument, corrected and sharpened.** My earlier summary of this entry said IDAAC's
 "instance labels have no referent". `SUPERVISOR-BRIEFING.md`:279 corrects that and the correction
@@ -4091,6 +4109,21 @@ the correction is the more useful finding.** [C17](#c17) measured it on 2026-08-
 either — and closed as RESOLVED. The number this entry re-derives at larger sample (1.818 over
 200 episodes) agrees with it.
 
+**Re-measured 2026-09-05, under the current evaluator and PAIRED seeding** (reviews 7 and 8 both
+asked for this, since 1.818 predates per-episode condition seeding): `scripts/probe_floor.py
+--episodes 200` gives Door **mean 1.842, sd 2.839, 95% CI [1.511, 2.271], max 28.755, 0/200
+successes, flag never fired**. 1.818 lies inside that interval, so the switch left the floor where
+it was — as expected, since both schemes draw from the same marginal placement distribution.
+
+The probe now seeds each episode with the same `placement_condition_seed(seed, scene, i)` the
+baselines use, so this is no longer only a population constant: **floor episode *i* runs the
+identical physical placement as baseline episode *i***, which makes it a per-episode control rather
+than a number compared across samples.
+
+**The dispersion is the part to carry forward.** A single chance episode reached **28.755**. Any
+competence claim that quotes a mean against this floor without the spread is quoting the wrong
+statistic.
+
 So the gap was never *measuring* chance. It was that the measurement sat in the register while
 [C47](#c47) computed a retention ratio two days later without consulting it, and nothing
 connected the two. A floor recorded as a fact in one entry does not reach the instrument that
@@ -4680,6 +4713,68 @@ not a choice anyone is free to make differently.
 
 ### C61 — A hyperparameter tuned for a 15-way categorical is applied to a 7-D Gaussian {#c61}
 
+> **CURRENT DISPOSITION, 2026-09-04 — resolved for production: `ibac_sni --entropy-coef 0.0`.**
+> This is baseline-specific: IDAAC, PPG and CTRL remain healthy at 0.01. On the final IMPALA
+> architecture, a controlled same-code/seed/task comparison measured mean log-std **0.5381** at
+> 24,960 frames with 0.01 versus **0.0329** at 25,088 with 0.0, so the entropy bonus is causal.
+> Why IBAC-SNI is uniquely sensitive remains a research question, not a reason to run the known
+> destructive setting in production.
+
+> ### SUPERSEDED FOR `ibac_sni` LATER THE SAME DAY — the diagnostic arrived, and it points at a
+> ### value. Default is now `--entropy-coef 0.0` for `ibac_sni`; the other three keep 0.01.
+>
+> The block below set the default at 0.01 and said explicitly what would move it: *"changing the
+> coefficient is itself an undeclared deviation and would need evidence pointing at a value; no
+> such evidence existed."* It now exists, from a controlled pair differing in that one flag —
+> identical code, seed, architecture, task and container:
+>
+> | coefficient | job | `mean_log_std` | entropy | at frame 24,960 |
+> |---|---|---|---|---|
+> | 0.01 | `bt1i1s0j8qhbal67gjnn` | 0.0026 → **1.4472** over 100k, monotonic | 9.95 → 20.03 | **0.5381** |
+> | 0.0 | `bt1338ue402pkpua43g0` | **flat at 0.033** through 25,088 | 10.16 | **0.0313** |
+>
+> **The drift is not small on this baseline, and it is caused by the bonus.** The competing
+> explanation — the policy gradient widening σ because returns carry no signal — is refuted, since
+> the returns carry no more signal in the second run and σ does not move. σ ≈ 4.3 against actions
+> in [−1, 1] is a policy that is noise, which is why `ibac_sni` never left the [C55](#c55) floor.
+>
+> **Why 0.0 — and a claim withdrawn the same hour.** I first argued that a Gaussian's entropy is
+> unbounded, so *any* positive coefficient must inflate σ without limit. **This project's own data
+> refutes that**, and the check cost nothing because the curves were already retained. At the same
+> nominal 0.01:
+>
+> | baseline | `mean_log_std` | at | note |
+> |---|---|---|---|
+> | `idaac` | **0.0206** | 100k frames | flat |
+> | `ctrl` | **0.0034** | 10k frames | flat |
+> | `ppg` | **0.0008** | 4k frames | flat, and it clamps (`log_std_clamped_fraction`) |
+> | `ibac_sni` | **1.4472** | 100k frames | runaway |
+>
+> So 0.01 is **not** inherently wrong for a continuous head, and three of the four are fine on it.
+> The honest statement is narrower: *something specific to `ibac_sni` lets the entropy term
+> dominate*, and the coefficient is the lever that demonstrably removes it. **The default is
+> therefore an empirical workaround with the cause not yet isolated, not a principled setting** —
+> which is a weaker justification than the one first written here, and it should be read that way.
+>
+> What survives of the mechanism argument is direction, not magnitude: for a Gaussian
+> `dH/d(log σ) = 1` per dimension, so the bonus contributes a **constant upward push at every
+> gradient step**, whereas a categorical's push vanishes as it approaches uniform. Drift therefore
+> accumulates per *gradient step*, not per frame — and `ibac_sni` takes far more per frame than its
+> siblings (`frames_per_proc` 128, `epochs` 4, `procs` 1 ≈ 3,100 steps over 100k, against `idaac`'s
+> ≈ 780). In a policy that is learning, the surrogate objective pushes back; `ibac_sni` is not.
+>
+> **The discriminating run**, which would turn the workaround into a diagnosis: `ibac_sni` at
+> **0.01 with the bottleneck off** (`--sni_type ''`, no `--use_bottleneck` — plain PPO). If σ stays
+> flat, the VIB/SNI bottleneck is destroying the advantage signal that would otherwise counteract
+> the bonus; if it still runs away, the update schedule is the cause. Either answer is actionable
+> and neither is expensive.
+>
+> **Zero is the ordinary continuous-control setting**, not an exotic one: the 0.01 convention comes
+> from discrete, Atari-style work, and continuous PPO implementations commonly default the entropy
+> bonus to 0. The principled alternatives are clamping log_std (`ppg`; SAC by construction) and
+> SAC-style automatic temperature against a target entropy of −dim(A) — **which eight of our twelve
+> baselines already use**, and which is a code change rather than a configuration one.
+>
 > ### DEFAULT SET, 2026-09-04 — leave the coefficient at 0.01 on all four, and decide it on the
 > ### diagnostic rather than in advance. The first measurement is in and the feared drift is small.
 >
@@ -4757,8 +4852,9 @@ not a choice anyone is free to make differently.
 > is **0.592 against 0.024 — twenty-five times the drift**, and monotone at every stamp.
 >
 > **This is the entry's own prediction, confirmed on the baseline it named.** `ibac_sni` has no
-> clamp, no advantage normalisation, and the 227x model of [C3](#c3); the 2026-09-02 update called
-> it the exposed one on mechanism alone and it is.
+> clamp and no advantage normalisation. The 100k measurement here was on the former 6.9M-parameter
+> MiniGrid trunk; the launcher's current source-backed Impala default is a separate configuration
+> and must be judged from its own curve.
 >
 > **So the default above is superseded for `ibac_sni` specifically.** Its own escalation rule —
 > *"either fires → the coefficient is decided per baseline on that evidence, and the affected cells
@@ -4796,11 +4892,12 @@ not a choice anyone is free to make differently.
 > all). Either fires → the coefficient is decided per baseline on that evidence, and the affected
 > cells are re-run rather than reported with a caveat.
 >
-> **Unchanged and still owed to the owner**: `ibac_sni` remains the exposed one — no clamp, no
-> advantage normalisation, and the 227x model of [C3](#c3) — and it has produced no checkpoint from
-> which its log-std can be read. Its first competent cell is the measurement this default most
-> needs, and until then the default rests on `idaac` alone. Recorded as a default awaiting
-> approval, not as a settled decision.
+> **Unchanged and still owed to the owner**: `ibac_sni` remains the exposed one — no clamp and no
+> advantage normalisation — but the old 6.9M-parameter measurement is superseded as a production
+> configuration by the source-backed Impala default. The 100k Impala run already produced the
+> diagnostic curve; the remaining question is the owner's coefficient/configuration decision,
+> not whether the policy scale can be read. Recorded as a default awaiting approval, not as a
+> settled decision.
 
 > ### Update, 2026-09-02: the risk is not equal across the four, and one locator below is wrong
 >
@@ -6237,7 +6334,7 @@ The mechanism runs. What changes is what it **means**, and the change is silent.
 | [C6](#c6) | the action-distribution family the method assumes | three different families across twelve baselines; four had **no continuous head at all** and one was authored (`AUDIT-2026-08-17.md` §3) |
 | [C61](#c61) | an entropy coefficient calibrated to a 15-way categorical (max entropy ln 15 = 2.708) | a 7-D Gaussian at σ=1, entropy 9.93 — the same coefficient now scales a term **3.67× larger** |
 | [C2](#c2) | frame stack as the unit of temporal context | 3 frames for eight baselines, 1 for four |
-| [C3](#c3) | an encoder sized for its source domain | 64×64 here makes `ibac_sni` a **227×** model |
+| [C3](#c3) | an encoder sized for its source domain | the former 64×64 MiniGrid trunk made `ibac_sni` a **227×** model; production now uses the source-backed Impala repair |
 | [C5](#c5) | render resolution and field of view | three different resolutions across the twelve |
 | [C74](#c74) | a notion of *distinguishable instance* | measured absent for `idaac` ([C49](#c49)); reasoned for five others |
 | [C50](#c50) | `level_seed` as a persistent visual identity | a label with no referent |
@@ -6989,9 +7086,14 @@ decisions need base runs under them**, not because the code is unexamined.
 ### C86 — Three baselines at one budget: the ranking inverts between performance and retention {#c86}
 **Class** OURS · **Status** MONITORED · **Cross-ref** [C62](#c62), [C55](#c55), [C77](#c77), [C81](#c81), [C83](#c83), [C84](#c84), [RESEARCH-FRAME.md](RESEARCH-FRAME.md)
 
-`python scripts/results_table.py`. Three RL-ViGen natives, 105k protocol, 20 episodes × 10 scenes ×
-2 regimes each, all uncontaminated and mode-verified, against a measured random floor of **1.81**
-(0/200 successes).
+**Historical measurement notice (2026-09-05).** These retained rows predate the evaluator's
+per-episode condition seeding, deterministic-torch and strict-regime revisions. They remain the
+dated observation that motivated this finding, but are not comparable with new measurements and
+cannot be a production headline; see [`notes/RESULTS-VALIDITY.md`](../notes/RESULTS-VALIDITY.md).
+The renderer now requires `--legacy-exploratory` explicitly.
+
+`python scripts/results_table.py --legacy-exploratory`. Three RL-ViGen natives, 105k protocol, 20
+episodes × 10 scenes × 2 regimes each, against a measured random floor of **1.81** (0/200 successes).
 
 | @ 100k | trained scene | scene ret. | **regime ret.** | 95% CI | usable | SR train→eval | res. floor |
 |---|---|---|---|---|---|---|---|
@@ -7499,6 +7601,40 @@ stands unchanged and is now explained rather than merely observed.
 **What would show this wrong** A local run reaching container numbers on any configuration, or a
 container run reproducing the laptop's numbers under EGL. The device leg is closed: two devices,
 one platform, same answer.
+
+### C96 — The shared-evaluator ledger certified neither the code that acted nor a stable scope {#c96}
+**Class** OURS + FALSE-CERTIFICATION · **Status** READY · **Cross-ref** [C76](#c76), [C95](#c95), [`EVAL-PROTOCOL.md`](EVAL-PROTOCOL.md), [`REGISTER.md`](REGISTER.md)
+
+The former evaluator identity was a single global hash. It included all of
+`setup/apply_patches.py`, although a checkpoint-only evaluation never imports a training-time
+checkpoint-writing edit; it did not include the family-specific runtime modules that make a
+checkpoint act. Thus the same field could make evidence stale for an irrelevant edit and remain
+unchanged after a relevant one. It could not honestly certify the claimed property.
+
+The two direct controls are deliberately asymmetric. In a temporary copy, changing
+`runnable/ibac_sni/torch_rl/scripts/train.py` leaves IBAC-SNI's evaluator revision unchanged:
+that driver is not on the offline action path. Changing
+`runnable/ctrl/vec_env.py` moves CTRL's revision and no other family's. The first catches the
+over-broad half; the second catches the blind half. Both are pinned by
+`tests/test_family_evaluator_revision.py`; `tests/test_payload_contract_covers_provenance.py`
+also makes every statically declared runtime member reach the matching evaluation payload (or the
+separately declared RL-ViGen source archive).
+
+**Decision** The ledger now carries a family-specific static runtime closure, a family-specific
+configuration revision, and a dynamic import manifest captured by the evaluation process.
+`scripts/production_gates.py` refuses a shared-evaluator discharge without all three. The dynamic
+manifest is evidence to review, not a false automatic proof: a dynamic import path or a
+pickle-created object can still expose an unlisted local module.
+
+**Effect** All earlier shared-evaluator discharges are historic measurements under a superseded
+identity, not current evidence. The live gate therefore starts at 0/7 evaluator families rather
+than carrying forward a plausible-but-unlicensed 2/12. This is not a statement that the old
+numbers are false; it is a statement that they no longer establish the current evaluator's
+equivalence.
+
+**What remains** Re-run each family against its native evaluator on the current payload, inspect
+the emitted import manifest, and record the paired result. This needs a bounded container slot,
+not an owner choice; the endpoint protocol remains blocked on those discharges.
 
 ## Working agreement
 

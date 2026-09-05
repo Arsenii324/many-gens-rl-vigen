@@ -293,7 +293,12 @@ class Protocol:
                           # images are drawn nor in what order, so a number produced with it is
                           # still upstream's -- but it IS a difference from the pinned tree and the
                           # hash must carry it. Added the same day it was written, unlike P15/P17/P18.
-                          "P19-places-loader-workers")
+                          "P19-places-loader-workers",
+                          # P20 (PLATFORM). Records the realized post-reset Door placement and
+                          # bounded action/reward diagnostics. It does not alter the environment
+                          # trajectory, but it changes the emitted measurement record, so a
+                          # protocol hash must distinguish pre-P20 from post-P20 rows.
+                          "P20-placement-and-episode-diagnostics")
     robot: str = "Panda"
     controller: str = "OSC_POSE"
 

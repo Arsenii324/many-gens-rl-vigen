@@ -25,7 +25,7 @@ export RLVIGEN_ROOT="$REPO/RL-ViGen-upstream"
 # and the public repo never does. Supplying it is launch environment, not a source change.
 export RCALL_LOGDIR="${RCALL_LOGDIR:-/tmp/ppg}"
 export RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-64}"
-export PYTHONPATH="$REPO/runnable/ppg"
+export PYTHONPATH="$REPO/runnable/ppg:$REPO/runnable/_shim"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   export MUJOCO_GL="${MUJOCO_GL:-glfw}"
   export PYGLFW_LIBRARY="${PYGLFW_LIBRARY:-/opt/homebrew/lib/libglfw.dylib}"

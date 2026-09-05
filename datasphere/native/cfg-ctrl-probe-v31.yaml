@@ -21,3 +21,7 @@ env:
   docker:
     image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
 cloud-instance-type: gt4.1
+
+# SUPERSEDED 2026-09-05: the tier it requests is below the minimum its family now declares
+# (ctrl and alda both require gt4i.1). Kept as the record of what was run; resubmitting it as
+# written would be SIGKILLed, which is how this was discovered.

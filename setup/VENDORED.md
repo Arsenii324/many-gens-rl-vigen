@@ -18,7 +18,7 @@ and its modules use absolute imports rooted at the repo directory. `rlgen/envs.p
 the repo root on `sys.path` and imports `wrappers.robo_wrapper` — the seam, and the only place
 this repo touches upstream directly.
 
-### Five patches — `setup/apply_patches.py`
+### Declared patches — `setup/apply_patches.py`
 
 *(P4 and P5 were added after this section was first written. P4 makes the Places365 overlay follow
 the caller's device instead of assuming CUDA — without it SVEA and SGQN die at their first update
@@ -65,6 +65,15 @@ possible.
 empty `success` column for a whole run before the walk was taught the three different link names;
 the sibling project records the identical failure — "the chain stops at Gym2DMC, which is how the
 first version of this check silently reported None".)*
+
+**P20 — the episode record keeps the realized pose and boundary diagnostics.** The Door sampler
+draws from the process-global NumPy stream and the vendored Door reset samples twice; recording
+only the requested seed or an observation hash cannot support a later performance-versus-placement
+analysis. After the final post-reset `sim.forward()`, the wrapper records the Door root body's
+position and quaternion. At the action boundary it also records raw reward summaries, time-to-
+success, normalized-action clipping and raw-to-executed distance. These are read by
+`scripts/eval_grid.py` and do not alter the policy or environment trajectory. The episode hash is
+derived from the stored pose rather than being used as a substitute for it.
 
 ## robosuite — install RL-ViGen's fork, editable
 

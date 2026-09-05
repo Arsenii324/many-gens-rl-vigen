@@ -1,0 +1,37 @@
+# Validation of soda against the frozen code revision 3cb5adb149ea7b8bca3e2f6db0418b8508cc7a0f77d6acdb2fa7d39c3021cdc0
+# (payload-v121). soda has never been individually run in this project before -- only its family-mate
+# was validated (drqv2/svea for rlvigen, rad for dmc_gb). This closes that gap.
+name: vigen-soda-functional-v121
+desc: Validate the dmc_gb endpoint evaluator via soda, never previously run, on the current frozen revision.
+cmd: >-
+  timeout --foreground 10800s env
+  CELLS=soda:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  PLACES365_EXPECTED_COUNT=36500
+  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  RLVIGEN_PLACES_WORKERS=0  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT} \${PLACES365_VAL}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v121.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - places365-val.tgz: PLACES365_VAL
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

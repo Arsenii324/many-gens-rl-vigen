@@ -34,9 +34,9 @@ def entries():
 
 def test_the_markers_are_still_there(entries):
     """The silent failure: markers removed, index shrinks, nothing looks wrong."""
-    assert len(entries) >= 5, (
-        f"only {len(entries)} handicap entries parsed. SYSTEM.md lists five as the known set "
-        "(C1, C3, C5, C50, C61); fewer means the `**Handicap — affects:**` markers were lost, not "
+    assert len(entries) >= 4, (
+        f"only {len(entries)} current handicap entries parsed. SYSTEM.md lists four as the known set "
+        "(C1, C5, C50, C61); fewer means the `**Handicap — affects:**` markers were lost, not "
         "that the handicaps went away.")
 
 
@@ -54,7 +54,7 @@ def test_the_memberships_that_were_measured(entries):
     should fail, and these three are where a drop would do the most damage.
     """
     by_id = {e["id"]: set(e["affects"]) for e in entries}
-    assert "ibac_sni" in by_id.get("C3", set()), "C3 is ibac_sni's alone; losing it hides a 227x model"
+    assert not by_id.get("C3"), "C3 is historical after the production Impala repair and must not be indexed as live"
     assert "idaac" in by_id.get("C50", set()), "C50 is IDAAC's inert instance-invariance loss"
     assert by_id.get("C61", set()) == {"idaac", "ppg", "ctrl", "ibac_sni"}, (
         "C61 covers exactly the four Procgen-native clones, verified per file; a change here means "

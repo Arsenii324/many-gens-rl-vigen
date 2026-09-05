@@ -1,0 +1,35 @@
+# Matched current-payload counterpart of cfg-idaac-determinism-off-v106.yaml.
+# This is a functional/timing control only: the same 100k snapshot, endpoint scope,
+# two regimes, scene and five episodes per regime.  C70 is the sole varying factor.
+name: vigen-idaac-determinism-on-v107
+desc: Current-payload CUDA control for the IDAAC deterministic-evaluation functional check.
+cmd: >-
+  timeout --foreground 7200s env
+  CELLS=idaac:1
+  FRAMES=100000
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  RLGEN_DETERMINISTIC_EVAL=1
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=idaac
+  OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_EPISODES=5
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v106.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/idaac-100k-snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

@@ -1,0 +1,91 @@
+# v105 = v104 plus CUBLAS_WORKSPACE_CONFIG=:4096:8, set at module scope in both
+# evaluator entry points.
+#
+# v104 (bt1s5a6pub9muqgcoil9) got past construction AND past the device placement, then
+# died at the first CuBLAS op: torch.use_deterministic_algorithms(True) SUCCEEDS on CUDA
+# and raises later unless that variable is set. So determinism -- which is OURS, C70 --
+# has never completed a CUDA evaluation since the day it was added, on ANY family:
+# eval_across_scenes.py:146 does the same thing for the rlvigen five.
+#
+# This is the FOURTH defect in this one job's path, each hidden behind the previous.
+#
+# v104 = v103 plus the agent device-placement fix.
+#
+# v103 (bt16ikro8c3mu3id9p8n) got PAST construction -- the regime read-back fix worked --
+# and then died inside the policy: 'Input type (torch.cuda.FloatTensor) and weight type
+# (torch.FloatTensor) should be the same'. idaac pickles an nn.Module directly, and the
+# loader only moved module ATTRIBUTES, which for an nn.Module is nothing. ppg had an
+# explicit branch for that shape; idaac did not. Now keyed on shape, not family name.
+#
+# Two fail-closed guards were stacked here: the construction guard hid the device bug
+# until it was fixed. Expect that pattern to continue -- each fix can reveal the next.
+#
+# v103 = v102 on payload-v103, which carries the idaac regime read-back fix.
+#
+# v102 (bt1p4ei1s64o50oka946) died at ppo_daac_idaac/envs.py:136 -- 'RL-ViGen adapter lost
+# P3's applied regime read-back during construction'. The guard read `_vigen_regime` off
+# venv.envs[0], but P3 sets that inside RL-ViGen's `robo_make` and this adapter calls
+# robosuitevgb.utils.make_env directly, which P3 does not patch. It raised on EVERY
+# construction, so idaac could not be evaluated at all. Reproduced and fixed locally; the
+# adapter now derives the regime from `_mode`/`_scene_id` on the base env, which is what
+# ibac_sni already did and what verify_regime walks for.
+#
+# This job answers TWO questions: does idaac evaluate end-to-end and emit records with
+# diagnostics_available, and what does an episode actually cost under the current evaluator
+# (notes/EVALUATOR-THROUGHPUT.md -- currently unmeasured, and two prior attempts failed for
+# unrelated reasons). Wall time minus ~600s of bootstrap, divided by 10, is the answer.
+#
+# v102. TWO changes from v100, and the reason for each matters.
+#
+# 1. timeout 3600s -> 7200s. v100 (bt14het9mvpvvu8vatgo) died at ~62 minutes with exit 5 and no
+#    stdout to download. It did NOT train: run_probe.sh:871 short-circuits to run_offline_eval
+#    whenever OFFLINE_EVAL_SNAPSHOT is set, so CELLS/FRAMES only feed the budget gate and the
+#    manifest. The evaluation ALONE exceeded the hour: ~9 minutes of bootstrap (measured from
+#    bt11qe3gunam3cnjml0u, which failed early at the same stage) plus 40 rendered episodes.
+#
+# 2. episodes 20 -> 5. This job is NOT the discharge and must not be quoted as one. Per
+#    notes/RESULTS-VALIDITY.md the evaluator changed again after payload-v100 was built, and
+#    reviews 7 and 8 both say to freeze the configuration first and revalidate every family once
+#    under one revision. So the only question worth buying compute for right now is FUNCTIONAL:
+#    does the shared evaluator run idaac end-to-end on CUDA, under strict regime verification, and
+#    emit records carrying diagnostics_available=true? Five episodes per regime answers that.
+#
+# What to read in the result: NATIVE_OFFLINE_EVAL_COMPLETED, 2 records, and
+# native.episode_diagnostics[*].diagnostics_available. ppg was measured locally as true; idaac is
+# the family this cannot be inferred for.
+# v100 = Codex's v99 configuration, repointed at payload-v105.tgz.  v99 could not have run: its
+# payload predates the contract fix and omits rlgen/protocol.py, which scripts/eval_provenance.py
+# hashes into the evaluator revision, so the job dies at "cannot stamp evaluator revision" AFTER
+# paying for its bootstrap -- the failure that killed bt11qe3gunam3cnjml0u and bt1muhrpsvpdn8kio2tm.
+# Surfaced by external review 6; the containment is tests/test_payload_contract_covers_provenance.py.
+name: vigen-idaac-functional-v105
+desc: Functional check that the shared evaluator runs idaac end-to-end on CUDA and emits complete records.
+cmd: >-
+  timeout --foreground 7200s env
+  CELLS=idaac:1
+  FRAMES=100000
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=idaac
+  OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_EPISODES=5
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v105.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/idaac-100k-snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

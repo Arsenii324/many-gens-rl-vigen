@@ -262,6 +262,17 @@ def evaluate(protocol: Protocol,
                       scalars=summarize(records, protocol, mode))
 
 
+def _diag_pstdev(rets):
+    if len(rets) <= 1:
+        return 0.0
+    try:
+        return float(st.pstdev(rets))
+    except AttributeError as error:
+        import sys
+        print("DIAG_PSTDEV_FAILURE", [(type(x).__name__, repr(x)) for x in rets], file=sys.stderr)
+        raise
+
+
 def summarize(records: Sequence[EpisodeRecord], protocol: Protocol, mode: str) -> dict[str, float]:
     """Records -> scalars, using only tag constants. The single place aggregation happens."""
     if not records:
@@ -274,12 +285,12 @@ def summarize(records: Sequence[EpisodeRecord], protocol: Protocol, mode: str) -
     out: dict[str, float] = {}
     if is_train:
         out[T.TRAIN_EVAL_RETURN_MEAN] = _reduce(rets, protocol.aggregation)
-        out[T.TRAIN_EVAL_RETURN_STD] = float(st.pstdev(rets)) if len(rets) > 1 else 0.0
+        out[T.TRAIN_EVAL_RETURN_STD] = _diag_pstdev(rets)
         if succ:
             out[T.TRAIN_EVAL_SUCCESS_RATE] = float(sum(succ) / len(succ))
     else:
         out[T.EVAL_RETURN_MEAN] = _reduce(rets, protocol.aggregation)
-        out[T.EVAL_RETURN_STD] = float(st.pstdev(rets)) if len(rets) > 1 else 0.0
+        out[T.EVAL_RETURN_STD] = _diag_pstdev(rets)
         out[T.EVAL_RETURN_MEDIAN] = float(st.median(rets))
         out[T.EVAL_EPISODE_LEN_MEAN] = float(st.mean(lens))
         out[T.EVAL_EPISODES] = float(len(rets))

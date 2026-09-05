@@ -22,6 +22,17 @@
   "rlvigen": {
     "repository": "RL-ViGen-upstream",
     "launcher": "runnable/_launch/rlvigen.sh",
+    "host_profiles": {
+      "v100": {
+        "production": {
+          "replay_capacity": 620000,
+          "replay_capacity_reason": "At the declared 600k-frame, action_repeat=1 budget, Door has no early termination: at most 1,200 horizon-limited episodes add one reset timestep each, so 601,200 transitions are retained. 620k is therefore non-evicting with 18,800 transitions of headroom, while 1M is behaviorally identical at this budget but wastes 24 GiB per cell and prevents two-cell packing on the measured 113-GiB V100 host.",
+          "replay_capacity_floor": "620k over RL-ViGen's four workers is 155,000 transitions per worker, far above the 500-step Door horizon. The margin is for reset entries, not a change in sampling semantics.",
+          "preserve_snapshots": 50000,
+          "preserve_snapshots_reason": "Found 2026-09-05: the base 100000 was a DataSphere-container disk-space decision (20.2 GiB free in the container), the same class of gap already fixed for ctrl/idaac/ibac_sni/ppg's process counts -- a V100 host-profile override existed here for replay_capacity but was never extended to this setting. Production runs on our own V100 disk with the already-decided policy 'retain every checkpoint' (retention-and-eval-depth.md), and the real per-stamp cost is ~104 MB (measured, drqv2) -- 12 stamps is ~1.16 GiB/cell, nowhere near the container limit that justified 100000. Restored to 50000 to match the other six families and A20's 12-stamp cadence."
+        }
+      }
+    },
     "positional": [
       "{baseline}",
       "{task}"
@@ -92,8 +103,24 @@
       "replay_capacity_reason": "Uncapped, a cell reaches 38.8 GiB of worker-resident replay at 600k (63,504 B per retained transition, one 84x84x9 uint8 observation) and NO allowed tier holds it -- gt4i.1 gives about 27 GiB. At 300k a cell is 21.0 GiB and fits, at any budget up to 1M. This is the decision that makes these five runnable at all, not a tuning preference.",
       "replay_semantics": "A cap turns the buffer into a recency ring: _try_fetch walks newest-first and breaks on the first episode already held, _store_episode evicts oldest-first and unlinks the file. Disk stays flat either way because _save_snapshot is hardcoded False (replay_buffer.py:94).",
       "replay_capacity_floor": "max_size // num_workers must exceed the longest episode or that worker fetches nothing and starves -- _try_fetch breaks on `fetched_size + eps_len > max_size` before storing. At 300k over 4 workers that is 75,000 against a 500-step episode.",
-      "eval_every": 25000,
+      "eval_every": null,
+      "eval_every_reason": "disabled for production: online evaluation consumes Door's global placement RNG; the container-side offline grid is the measurement and the final hook still emits the endpoint artifact",
       "eval_episodes": 20,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "eval_episodes_reason": "num_eval_episodes is a TOTAL divided by scenes: per = max(1, n // len(scenes)). 20 over ten certified scenes is 2 per scene. This is a progress curve, not a measurement -- 20 episodes PER scene is what the offline evaluator does on the saved checkpoint, and asking the training loop for it would roughly triple the cost of every run.",
       "tier": "gt4i.1",
@@ -105,7 +132,11 @@
       "preserve_snapshots_reason": "P18 now reads this as a CADENCE. 100000 keeps six of the twelve saves a 600k run makes, plus the endpoint: about 1.7 GiB for drqv2 and 3.2 GiB for drq per cell, against 20.2 GiB free in the container. Keeping all twelve would double that for a curve twice as dense than any plot needs.",
       "resume_note": "train.py:380 resumes automatically from a snapshot.pt found in the run directory, but keys_to_save is ['agent','timer','_global_step','_global_episode'] -- THE REPLAY BUFFER IS NOT SAVED. Resuming an off-policy run therefore restarts it with an empty buffer, which is a different experiment, so splitting a long run across jobs is not available to these five.",
       "min_frames": 4001,
-      "min_frames_reason": "cfgs/*.yaml all set num_seed_frames: 4000, and train.csv gets its first row only after the seed phase ends. A budget at or below 4000 trains nothing, writes no training curve, and fails retain() -- after a full bootstrap and a full evaluation have already been paid for."
+      "min_frames_reason": "cfgs/*.yaml all set num_seed_frames: 4000, and train.csv gets its first row only after the seed phase ends. A budget at or below 4000 trains nothing, writes no training curve, and fails retain() -- after a full bootstrap and a full evaluation have already been paid for.",
+      "memory_note": "Measured from bt1anj1cm0ni7p20ted3 (svea, RSS 3496732 KiB, clean exit): 3.33 GiB. svea holds Places365 overlays and is the family's heaviest declared member.",
+      "fixed_peak_gib": 3.33,
+      "memory_margin_gib": 2.0,
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     }
   },
   "dmc_gb": {
@@ -177,8 +208,24 @@
       "replay_capacity": null,
       "replay_capacity_option": null,
       "replay_capacity_reason": "DECIDED 2026-09-02: leave rad/soda UNCAPPED. utils.ReplayBuffer takes capacity=args.train_steps (train.py:111) with no flag and prefill_memory touches every slot at construction, so a cap needs a source change -- an ENABLES-class change to what two of twelve baselines measure. Priced both ways with plan_production.py at 600k x 3 seeds: uncapped is 103,350 RUB over 9.4 days with both on gt4i.1 alone; capped at 300k is 94,696 RUB over 10.0 days on gt4.1. The cap saves 8,654 RUB (8%) and COSTS 0.6 days, because gt4.1 is cheaper per hour and slower. Not worth a fidelity change. An earlier pass of this file declared 300000 here for symmetry with the RL-ViGen five; symmetry was the wrong reason -- their cap is what makes them runnable at all, and this one buys 8%.",
-      "eval_every": 25000,
+      "eval_every": null,
+      "eval_every_reason": "disabled for production: online evaluation consumes Door's global placement RNG; the container-side offline grid is the measurement and the final hook still emits the endpoint artifact",
       "eval_episodes": 20,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "save_every_reason": "[Claude 2026-09-04] 50000, down from 100000, so dmc_gb shares the RL-ViGen five's stamp grid and a cross-baseline curve has more than one comparable frame. It writes model/{frames}.pt per stamp, so unlike ibac_sni the stamps survive. CORRECTION: an earlier version of this note called the 100000 INERT on the grounds that runnable/_launch/dmc_gb.sh never passes --save_freq. That was wrong -- `options` above passes `--save_freq {save_every}`, so this key has always been live, and the launcher needed no change.",
       "tier": "gt4i.1",
@@ -187,7 +234,11 @@
       "eval_episodes_reason": "--eval_episodes is per regime and literal here, not divided by scenes as RL-ViGen's is. Same number, different meaning; this is the integration tax, recorded rather than unified.",
       "tier_reason": "uncapped, a 600k cell holds ~19.3 GiB (rad) to 20.4 GiB (soda) preallocated at 30,000 B per budgeted frame, which fits gt4i.1 alone and not gt4.1",
       "min_frames": 1001,
-      "min_frames_reason": "train.py seeds the buffer for init_steps (1000) before the first update; below that train.log has no row and the curve is empty."
+      "min_frames_reason": "train.py seeds the buffer for init_steps (1000) before the first update; below that train.log has no row and the curve is empty.",
+      "memory_note": "Measured from bt1fttbvedaunks2r7eh (rad, RSS 2772676 KiB, clean exit): 2.64 GiB. soda, the family's heaviest cell by wall-clock, is untested for memory; treated as representative pending direct measurement.",
+      "fixed_peak_gib": 2.64,
+      "memory_margin_gib": 2.0,
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     }
   },
   "idaac": {
@@ -198,6 +249,13 @@
       "num_steps": "256",
       "num_mini_batch": "8",
       "log_interval": "25"
+    },
+    "host_profiles": {
+      "v100": {
+        "constants": {
+          "num_processes": "16"
+        }
+      }
     },
     "constants_note": [
       "[Claude 2026-09-02 06:30 MSK] num_processes is an OWNER DECISION recorded here as the current",
@@ -283,17 +341,38 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "save_every_reason": "[Claude 2026-09-04] Intermediate checkpoints enabled at the owner's request; see the clone edit for the mechanism. Previously: upstream saves on the final update only (C60). Left alone: an intermediate cadence is an ENABLES change and the terminal checkpoint is what the offline evaluator needs.",
       "tier": "gt4.1",
       "cells_per_job": 2,
       "eval_every_reason": "no eval cadence flag exists. Evaluation rides inside `j % args.log_interval == 0`, in UPDATES of num_processes x num_steps = 1024 frames. log_interval 25 puts it at 25,600 frames, which is the nearest expressible value to the 25,000 the other families use.",
+      "online_eval_rng_isolated": true,
       "training_time_eval": "periodic, one regime. evaluate() is described upstream as 'the full distribution of levels', which on Procgen is a held-out split; on this target the scene is a literal 0 (C45), so its train and test envs are the same distribution and the split is vacuous. Reported, not fixed.",
       "min_frames": 1024,
-      "min_frames_reason": "one update is num_processes x num_steps = 1024 frames; below one update nothing is logged and no checkpoint is written."
+      "min_frames_reason": "one update is num_processes x num_steps = 1024 frames; below one update nothing is logged and no checkpoint is written.",
+      "fixed_peak_gib": 3.17,
+      "memory_margin_gib": 2.0,
+      "memory_note": "Measured from idaac100k: peak RSS 3.17 GiB. clean exit.",
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     }
   },
   "alda": {
+    "minimum_tier": "gt4i.1",
     "repository": "runnable/alda",
     "launcher": "runnable/_launch/alda.sh",
     "environment": {
@@ -302,7 +381,9 @@
     "positional": [],
     "options": [
       "--spec.trainer.config.n_train_steps={frames}",
-      "--spec.trainer.config.seed={seed}"
+      "--spec.trainer.config.seed={seed}",
+      "--spec.trainer.config.eval_n_steps={eval_every}",
+      "--spec.trainer.config.checkpoint_n_steps={save_every}"
     ],
     "artifact_root": "{run_dir}/alda_robosuite_door/seed_{seed}",
     "required_curves": [],
@@ -365,17 +446,35 @@
       "Guessing the rest of a list someone else already observed is cheaper than three more bootstraps."
     ],
     "production": {
-      "eval_every": 10000,
+      "eval_every": null,
+      "eval_every_reason": "eval_n_steps, overridable through the spec",
       "eval_episodes": 10,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "save_every_reason": "its own cadence (trainers/alda_trainer.py:73,614), unchanged",
       "tier": "gt4i.1",
       "cells_per_job": 1,
       "memory_note": "15.3 GiB fixed working set, independent of budget",
-      "eval_every_reason": "eval_n_steps, overridable through the spec",
+      "fixed_peak_gib": 14.73,
+      "memory_margin_gib": 1.0,
       "training_time_eval": "periodic and the richest of the twelve: alda_trainer.py:146-148 builds env='train', color_env='eval-easy' and distract_env='eval-hard', and 607-611 evaluates all three at 10 episodes each every eval_n_steps. IT IS THE ONLY BASELINE THAT CONSTRUCTS eval-hard. That is also why its throughput cannot be assumed from the others: 30 episodes every 10,000 steps, and it has no completed CUDA run to measure.",
       "min_frames": 1001,
-      "min_frames_reason": "its trainer starts updating after init_steps and evaluates at eval_n_steps 10000; below the first update there is no curve."
+      "min_frames_reason": "its trainer starts updating after init_steps and evaluates at eval_n_steps 10000; below the first update there is no curve.",
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     },
     "payload_members_note": "runnable/_shim/alda_models/models is declared explicitly because the package MUST be named `models` -- ALDA's trainer does `from models.sac import ...` -- and the payload builder forbids a `models` component in whatever part of a path a declaration does not name. Naming it exactly leaves `__init__.py` as the remainder. It replaced an absolute symlink that the builder silently wrote no entry for at all, which is why job bt18fm6ds7a1kpetgqpe failed its import gate on the container while passing locally."
   },
@@ -386,14 +485,24 @@
       "num_envs": "8",
       "nstep": "256"
     },
+    "host_profiles": {
+      "v100": {
+        "constants": {
+          "num_envs": "8"
+        },
+        "constants_reason": "[Claude 2026-09-05] REVERTED from 16 to the base 8, and this is a fidelity fix, not a tuning preference. PPG's defining auxiliary phase fires every num_envs x nstep x n_pi interactions. At the base 8 x 256 x 32 that is 65,536 -- EXACTLY the cadence implied by the only published continuous-control PPG design point (IDAAC's continuous-control appendix: 2048-step rollouts, one process, n_pi=32). The V100 override to 16 doubled it to 131,072, moving the run off that reference for throughput, with no recorded reason -- the only value in this file's V100 profiles that carried none. External review 11 section 7 raised the cadence as the clearest 'handicapped baseline?' attack surface on this project; it computed 16x against a 4-rank Procgen configuration, which is the worst-case reading, but the finding survives at any reading because the base config already matched the right reference and the override was what broke it. Reverting preserves n_pi=32, PPG's own defining constant, rather than compensating by halving it. COST: 8 envs instead of 16 is less parallel rollout collection, so PPG's wall-clock per cell rises -- the fidelity/throughput trade is real and is surfaced as decision A26 rather than settled here."
+      }
+    },
     "constants_note": [
-      "[Claude 2026-09-02 08:50 MSK] num_envs 8 is the value this project's own smoke used and is an",
-      "OWNER DECISION recorded as the current best hypothesis. PPG's paper uses 256 parallel envs",
-      "(4 workers x 64); 256 robosuite Door environments in one process is not runnable on a T4.",
-      "The rollout is therefore 8*256 = 2,048 samples against the paper's 65,536, and with nminibatch",
-      "8 that is 256 per minibatch against the paper's 8,192. See the production report's on-policy",
-      "section: at a 500k-transition budget the smaller rollout also buys more updates, which is the",
-      "reason not to compensate by raising nstep."
+      "[Claude 2026-09-02 08:50 MSK, corrected 2026-09-05] num_envs 8 is the value this project's",
+      "own smoke used and is an OWNER DECISION recorded as the current best hypothesis. PPG's",
+      "released train.py default is 64 environments with nstep 256, launched through four MPI",
+      "workers whose gradients synchronize in one update: 4*64*256 = 65,536 samples. The",
+      "production port uses one worker and 8*256 = 2,048 samples, a 32x reduction in effective",
+      "batch while retaining the exact per-environment rollout length. With nminibatch 8 that is",
+      "256 per minibatch against the released global 8,192. See the production report's on-policy",
+      "section: the smaller rollout buys more updates, which is the reason not to compensate by",
+      "raising nstep."
     ],
     "positional": [
       "{task}",
@@ -478,13 +587,32 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "save_every_reason": "[Claude 2026-09-04] 50000, now that ppg CAN keep intermediate checkpoints: train.py exposes --save_mode/--ic_per_save (defaults unchanged) and options pass save_mode=all, so LogSaveHelper writes model<NNN>.jd per save instead of overwriting one file. Previously: C60 records ppg as never saving: ic_per_save is never set by any launcher. Our clone writes a terminal checkpoint, and a completed cell proves it -- retain() fails closed on an absent checkpoint and ppg's cell passed.",
       "tier": "gt4.1",
       "cells_per_job": 2,
       "training_time_eval": "NONE. train.py evaluates nothing at any point -- there is no eval call, no test env, no cadence. Its curve is training return only.",
       "min_frames": 2048,
-      "min_frames_reason": "one iteration is num_envs x nstep = 2048 frames."
+      "min_frames_reason": "one iteration is num_envs x nstep = 2048 frames.",
+      "fixed_peak_gib": 4.2,
+      "memory_margin_gib": 2.0,
+      "memory_note": "Measured from probeppg: peak RSS 4.2 GiB. clean exit.",
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     },
     "checkpoint_note": "model_terminal.jd, NOT model.jd. `model.jd` is LogSaveHelper's output, and the helper saves once in its own __init__ before any gradient step whenever ic_per_save > 0 -- which it is, by a default of 100_000 (log_save_helper.py:34,50-51). A probe below 100k interacts therefore leaves ONLY the untrained construction save on disk, and the 2026-09-02 ppg cell retained exactly that: pi_logstd at its [0]*7 initialisation while the run's own Opt/entropy of 9.936886 implies 0.000617 (log_std=0 gives 9.932570). At 600k the helper does write a trained model, but at the last 100,000 boundary rather than the declared endpoint. train.py now writes model_terminal.jd after learn() returns; model.jd is left untouched beside it."
   },
@@ -495,6 +623,14 @@
       "procs": "1",
       "frames_per_proc": "128",
       "model_name": "cell"
+    },
+    "host_profiles": {
+      "v100": {
+        "constants": {
+          "procs": "16"
+        },
+        "constants_reason": "Use the upstream IBAC-SNI process count after the Door-specific spawn/factory repair: MuJoCo/EGL environments are constructed inside clean workers and each worker receives an independent NumPy seed. The bounded Linux/EGL procs=16 functional smoke passed on gt4i.1 (bt1djai23kme336auat4); the production V100 renderer, throughput and competence remain separate gates."
+      }
     },
     "constants_note": [
       "[Claude 2026-09-02 13:00 MSK] procs is 1, and that is now MEASURED rather than assumed. With 2 it",
@@ -576,16 +712,43 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
-      "save_every_reason": "[Claude 2026-09-04] Intermediate checkpoints enabled at the owner's request; see the clone edit for the mechanism. Previously: --save-interval 1, upstream's own cadence. [Claude 2026-09-04: this key is null because the cadence is NOT set through it -- `options` above passes `--save-interval 1` literally, so ibac_sni saves EVERY UPDATE. It nevertheless yields one checkpoint per run, because torch_rl's utils/save.py writes to a fixed `model.pt` and overwrites it each time -- the same save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five. So a per-frame CURVE for ibac_sni needs preserved COPIES, not a different interval, and changing this key would only fight the literal flag.]",
+      "save_every_reason": "[Claude 2026-09-04] Intermediate checkpoints enabled at the owner's request; see the clone edit for the mechanism. Previously: --save-interval 1, upstream's own cadence. [Claude 2026-09-04: this key is null because the cadence is NOT set through it -- `options` above passes `--save-interval 1` literally, so ibac_sni saves EVERY UPDATE. It nevertheless yields one checkpoint per run, because torch_rl's utils/save.py writes to a fixed `model.pt` and overwrites it each time -- the same save-and-overwrite shape patch P18 exists to defeat for the RL-ViGen five. So a per-frame CURVE for ibac_sni needs preserved COPIES, not a different interval, and changing this key would only fight the literal flag.] [CORRECTED 2026-09-05: the conclusion above is now stale. `torch_rl/scripts/train.py:320` writes `model_%d.pt % num_frames` BESIDE the fixed `model.pt`, so the stamped copies this note says are needed do exist and ibac_sni yields a per-frame curve like every other family. The reasoning about `--save-interval 1` and the overwrite is still accurate; only 'a per-frame CURVE needs preserved COPIES' now reads as an open problem when it is solved.]",
       "tier": "gt4.1",
       "cells_per_job": 3,
       "training_time_eval": "NONE in training. Evaluation is a separate script (scripts/evaluate.py) by upstream's own design -- the same separation this project's offline evaluator uses.",
       "min_frames": 128,
-      "min_frames_reason": "one update is procs x frames_per_proc = 128 frames."
+      "min_frames_reason": "one update is procs x frames_per_proc = 128 frames.",
+      "fixed_peak_gib": 1.97,
+      "memory_margin_gib": 2.0,
+      "parallel_rollout_memory": {
+        "parent_gib": 1.23,
+        "per_worker_gib": 0.98,
+        "margin_gib": 1.0,
+        "measured_at_procs": 16,
+        "source_job": "bt1kgfmbbjhnslfjekg1"
+      },
+      "memory_note": "Procs=1 peak 1.97 GiB came from ibac100k. The old claim that all parallel workers were structurally unrunnable is superseded: bt1kgfmbbjhnslfjekg1 spawned 16 clean worker environments after the factory repair, then cgroup-OOM-killed its 16 GiB gt4.1 parent. That job measured a 1.23 GiB parent and approximately 0.98 GiB per EGL/MuJoCo worker before death. family.check_memory now calculates parent + procs*worker + margin from this model: gt4.1 refuses procs=16 before submission, while gt4i.1's 27 GiB usable envelope can run the functional smoke. This is capacity evidence, not a reason to replace the upstream V100 procs=16 profile with 1.",
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     }
   },
   "ctrl": {
+    "minimum_tier": "gt4i.1",
     "repository": "runnable/ctrl",
     "launcher": "runnable/_launch/ctrl_cell.sh",
     "constants": {
@@ -593,7 +756,21 @@
       "n_steps": "256",
       "n_minibatch": "8",
       "cluster_len": "10",
-      "n_minibatch_ctrl": "8"
+      "n_minibatch_ctrl": "8",
+      "num_clusters": "200",
+      "n_att_heads": "2",
+      "embedding_type": "concat",
+      "lr": "0.0005",
+      "lr_ctrl": "0.0001",
+      "max_grad_norm": "0.5"
+    },
+    "host_profiles": {
+      "v100": {
+        "constants": {
+          "num_envs": "64"
+        },
+        "constants_reason": "The separate production host has 113 GiB available RAM; CTRL's measured 16-env peak was 13.57 GiB, so the upstream 64-env rollout is approximately 54 GiB and fits when CTRL runs alone. Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate."
+      }
     },
     "constants_note": [
       "[Claude 2026-09-02 12:20 MSK] CORRECTED. The first version of this descriptor carried the",
@@ -693,20 +870,20 @@
       "    installs the base requirements with torch filtered out. That is why excluded_base_requirements",
       "    exists and why it is not a general escape hatch: it applies only to a family that cannot",
       "    share a job anyway.",
-   "[Claude 2026-09-04] A CTRL JOB MUST SET `CUDA_ROOT=/usr/local/cuda` IN ITS cmd ENV, or it",
-   "fails ctrl's import gate before any cell: flax -> jax -> jax/_src/lib `_cuda_path()` raises",
-   "`TypeError: expected str, bytes or os.PathLike object, not NoneType` from",
-   "`nvidia.cuda_nvcc.__file__` being None. jax consults CUDA_ROOT/CUDA_HOME first and returns",
-   "early when set; only when unset does it fall through to that broken branch. So the variable",
-   "does not merely help, it SKIPS the defect. cfg-preprod-ctrl-v52.yaml had it and succeeded;",
-   "probes derived from torch job configs (v68, v70) did not and failed.",
-   "TWO WRONG EXPLANATIONS WERE RULED OUT BY EVIDENCE, both recorded because each was plausible:",
-   "(1) dependency drift -- jax is pinned but its nvidia-*-cu12 wheels are not. WRONG: the",
-   "successful cell resolved a byte-identical 109-package set, nvidia-cuda-nvcc-cu12==12.9.86",
-   "included, with all five pip steps and their install order identical. (2) the tier -- the",
-   "successful cell ran on gt4i.1 and the first failure on gt4.1. WRONG: v70 re-ran on gt4i.1 and",
-   "failed identically. The `cuda: false` in environment.json is a CONSEQUENCE, not a clue: that",
-   "probe computes the flag by importing jax, so it fails for the same reason."
+      "[Claude 2026-09-04] A CTRL JOB MUST SET `CUDA_ROOT=/usr/local/cuda` IN ITS cmd ENV, or it",
+      "fails ctrl's import gate before any cell: flax -> jax -> jax/_src/lib `_cuda_path()` raises",
+      "`TypeError: expected str, bytes or os.PathLike object, not NoneType` from",
+      "`nvidia.cuda_nvcc.__file__` being None. jax consults CUDA_ROOT/CUDA_HOME first and returns",
+      "early when set; only when unset does it fall through to that broken branch. So the variable",
+      "does not merely help, it SKIPS the defect. cfg-preprod-ctrl-v52.yaml had it and succeeded;",
+      "probes derived from torch job configs (v68, v70) did not and failed.",
+      "TWO WRONG EXPLANATIONS WERE RULED OUT BY EVIDENCE, both recorded because each was plausible:",
+      "(1) dependency drift -- jax is pinned but its nvidia-*-cu12 wheels are not. WRONG: the",
+      "successful cell resolved a byte-identical 109-package set, nvidia-cuda-nvcc-cu12==12.9.86",
+      "included, with all five pip steps and their install order identical. (2) the tier -- the",
+      "successful cell ran on gt4i.1 and the first failure on gt4.1. WRONG: v70 re-ran on gt4i.1 and",
+      "failed identically. The `cuda: false` in environment.json is a CONSEQUENCE, not a clue: that",
+      "probe computes the flag by importing jax, so it fails for the same reason."
     ],
     "excluded_base_requirements": [
       "torch",
@@ -718,14 +895,34 @@
     "production": {
       "eval_every": null,
       "eval_episodes": null,
+      "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
+      "offline_eval_scenes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "offline_eval_episodes": 20,
+      "curve_eval_episodes": 3,
       "save_every": 50000,
       "save_every_reason": "[Claude 2026-09-04] 50000, wired to the repository's OWN declared-but-unread checkpoint_interval (train_ppo.py:98); train_ppo.py now writes checkpoint_<frames>.msgpack on each boundary as well as at the end. Previously: C60: upstream CANNOT checkpoint -- train_ppo.py:12 has the flax checkpoint import commented out. Our clone writes a terminal msgpack via flax.serialization.to_bytes. UNVERIFIED: ctrl has no successful CUDA run yet.",
-      "tier": "gt4.1",
+      "tier": "gt4i.1",
       "cells_per_job": 1,
-      "cells_per_job_reason": "co_schedulable false -- its jax[cuda12] stack cannot share an environment with the torch families",
+      "cells_per_job_reason": "co_schedulable false; its JAX stack cannot share with torch, and the only successful cells measured 13.4 GiB on gt4i.1, leaving too little proven margin on gt4.1",
+      "online_eval_rng_isolated": true,
       "training_time_eval": "CONTINUOUS, not periodic: train_ppo.py:99-100 builds env_test_ID (train, 200 levels) and env_test_OOD (eval-easy) and steps both inside the training loop. There is no cadence and no episode count to set. It is the only baseline that reports both regimes continuously.",
       "min_frames": 4112,
-      "min_frames_reason": "[Claude 2026-09-04] Raised from 1024. The old floor guaranteed one ROLLOUT (n_steps x num_envs = 256 x 4) and the gate's stated purpose is to refuse a budget too small to produce a CURVE -- which is a stronger condition, and ctrl is the family where they differ. bt14kc47s66282ic8ssb ran 2560 frames: it passed the gate, trained, retained a valid 7.4 MB checkpoint, and wrote ZERO curve rows -- no Eprew200 line in train_console.log and only the wandb `init` event in the sink. ctrl's logging branch fires every 4112 frames (observed at 4112 and 8224 in the 10k cell bt1fer7809i7bpob7g2f), so a budget under 4112 yields a successful job carrying no measurement at all -- the most expensive kind of empty result, because nothing about it looks failed."
+      "min_frames_reason": "[Claude 2026-09-04] Raised from 1024. The old floor guaranteed one ROLLOUT (n_steps x num_envs = 256 x 4) and the gate's stated purpose is to refuse a budget too small to produce a CURVE -- which is a stronger condition, and ctrl is the family where they differ. bt14kc47s66282ic8ssb ran 2560 frames: it passed the gate, trained, retained a valid 7.4 MB checkpoint, and wrote ZERO curve rows -- no Eprew200 line in train_console.log and only the wandb `init` event in the sink. ctrl's logging branch fires every 4112 frames (observed at 4112 and 8224 in the 10k cell bt1fer7809i7bpob7g2f), so a budget under 4112 yields a successful job carrying no measurement at all -- the most expensive kind of empty result, because nothing about it looks failed.",
+      "fixed_peak_gib": 13.57,
+      "memory_margin_gib": 2.0,
+      "memory_note": "Measured from ctrlgood: peak RSS 13.57 GiB. a cell that exited 0, so this is a true peak. It supersedes the 11.07 GiB LOWER BOUND taken from the SIGKILL in bt1lhobnsq5lq4766np6 -- a killed process reports what it had, not what it wanted. 13.57 + 2.0 exceeds gt4.1's 14.5 usable, which is what the kill demonstrated empirically.",
+      "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     },
     "excluded_base_requirements_note": "captum and kornia are here because EXCLUDING torch BY NAME DOES NOTHING: both depend on it, so pip resolved torch transitively and -- with our pin removed -- took the newest, torch 2.14.0, dragging in CUDA 13 runtime wheels (nvidia-cublas-13.1.1.3, nvidia-cudnn-cu13-9.24, nvidia-cuda-runtime-13.0.96) onto a container whose driver is CUDA 12.2. Job bt1amu1210ol8ofufa16 then warned 'The NVIDIA driver on your system is too old (found version 12020)' and died without a traceback. captum is sgqn's attribution dependency and kornia is svea/soda's augmentation one; ctrl is JAX and uses neither.",
     "pip_requirements_note": "Back to the pinned jax 0.4.35: bumping to 0.4.38 produced the IDENTICAL failure (bt1g0diufvr8jb26ctvj), so the version was never the cause and carrying the bump would be a deviation bought for nothing. The cause is in jax's `_cuda_path()`: it tries CUDA_ROOT first and only then `_try_cuda_nvcc_import()`, which walks `nvidia.cuda_nvcc.__path__` looking for `bin/ptxas`, leaves its result None when no path has one, and hands that to pathlib -- 'expected str, bytes or os.PathLike object, not NoneType'. Setting CUDA_ROOT in the job short-circuits it before the buggy branch. See the job config's env. procgen added 2026-09-03: ctrl's vec_env imports ProcgenVecEnvCustom at MODULE level, so the import runs even on the robosuite path where RLViGenVecEnvCustom is the class actually used. Job bt1pp3mv0c1l8c94ag2j reached that import -- which means CUDA_ROOT did fix jax's _cuda_path -- and failed with ModuleNotFoundError: No module named 'procgen'."
@@ -749,5 +946,15 @@
     "idaac and ibac_sni pass a literal 0, and alda, ctrl, ppg, rad/soda thread a parameter nothing",
     "moves. Extending that is seven clone deviations, a decision and not a slot. The offline",
     "evaluator is what makes the axis uniform across twelve, downstream, without touching training."
-  ]
+  ],
+  "_host_profiles": {
+    "datasphere": {
+      "description": "Probe-safe defaults for the allowed gt4.1 and gt4i.1 tiers."
+    },
+    "v100": {
+      "description": "Measured 16-core, 113-GiB, V100-32GiB production host; select explicitly with NATIVE_HOST_PROFILE=v100.",
+      "source": "notes/remote-infra.txt",
+      "selection_rule": "Apply the four declared family overrides together, then recompute the production schedule on measured V100 throughput."
+    }
+  }
 }

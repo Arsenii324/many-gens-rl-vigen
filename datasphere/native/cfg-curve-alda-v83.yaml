@@ -1,0 +1,29 @@
+# Corrected successor to v82. That job put ALDA on gt4.1 despite the already-measured 15.3 GiB
+# fixed working set and was SIGKILLed during environment construction. This job isolates ALDA on
+# its declared minimum tier and exercises its still-unrun offline evaluator with one episode per
+# regime. It is a plumbing validation, not a policy result.
+name: vigen-curve-alda-v83
+desc: Exercise the final unrun evaluator family on ALDA's required tier.
+cmd: >-
+  timeout --foreground 5400s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  SAVE_EVERY_FRAMES=1280
+  CURVE_EVAL=1
+  CURVE_EVAL_EPISODES=1
+  CURVE_EVAL_REGIMES=train,eval-easy
+  CELLS=alda:1 FRAMES=2560 TASK=Door SEED=1
+  EVAL_EPISODES=1 CELL_TIMEOUT_SECONDS=3600
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v70.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04
+cloud-instance-type: gt4i.1

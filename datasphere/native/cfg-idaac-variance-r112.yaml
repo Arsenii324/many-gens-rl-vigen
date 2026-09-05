@@ -1,0 +1,46 @@
+# Variance replicate. IDENTICAL to cfg-idaac-determinism-repeat-v111 in every field --
+# same payload-v106, same checkpoint, same seed, RLGEN_DETERMINISTIC_EVAL=1 -- because the
+# point is to measure how much an identical configuration varies run to run.
+#
+# Two runs already differ: bt1baht74a35e6uq582c and bt1e78hbs4s946aje3q9 disagree on 2 of 5
+# train episodes by up to 0.358, with identical revision/payload/checkpoint and det=True.
+# Two points is an anecdote. These two replicates make four, which is a variance estimate.
+#
+# It decides a real thing: reviews 7 and 8 both require the shared-evaluator discharge to
+# agree 'within a predeclared Monte-Carlo tolerance', and that tolerance must exceed this
+# number. Without it the tolerance would be guessed.
+#
+# Exact repeat of cfg-idaac-determinism-on-v107.yaml: tests C70's claimed repeatability, not
+# performance.  Payload, checkpoint, scope, seed and deterministic setting must stay identical.
+name: vigen-idaac-variance-r112
+desc: Exact repeat of the deterministic IDAAC CUDA control for C70 reproducibility.
+cmd: >-
+  timeout --foreground 7200s env
+  CELLS=idaac:1
+  FRAMES=100000
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  RLGEN_DETERMINISTIC_EVAL=1
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=idaac
+  OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_EPISODES=5
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v106.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/idaac-100k-snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

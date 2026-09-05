@@ -36,16 +36,28 @@ done
 
 bash "$HERE/ppg.sh" "$TASK" "$NENV" "$@"
 
-MODEL="$LOG_DIR/model.jd"
-if [[ ! -s "$MODEL" ]]; then
-  echo "ppg saved no model at $MODEL" >&2
+# [Claude 2026-09-04: this asserted `model.jd` alone, which is what upstream's default
+# `save_mode='last'` writes. Once the descriptor began passing `--save_mode all` -- the setting
+# that produces the intermediate curve -- the terminal file became `model_terminal.jd`, this check
+# failed on a run that had trained fine and saved correctly, and job bt16323qtaqci9p8vke8 reported
+# `ppg saved no model` seconds after printing NATIVE_PPG_TERMINAL_SAVE for that very file.
+# `families.json` already declared `checkpoint: model_terminal.jd`; only this line was stale.
+# Accept either, and say which was found, so the two save modes stay runnable side by side.]
+MODEL=""
+for candidate in "$LOG_DIR/model_terminal.jd" "$LOG_DIR/model.jd"; do
+  if [[ -s "$candidate" ]]; then MODEL="$candidate"; break; fi
+done
+if [[ -z "$MODEL" ]]; then
+  echo "ppg saved no model: neither $LOG_DIR/model_terminal.jd nor $LOG_DIR/model.jd exists" >&2
+  ls -la "$LOG_DIR" >&2 || true
   exit 1
 fi
+echo "NATIVE_PPG_TERMINAL_CHECKPOINT $MODEL" >&2
 
 PY="${PYTHON_BIN:-${PYTHON:-python3}}"
 export RLVIGEN_ROOT="$REPO/RL-ViGen-upstream"
 export RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-64}"
-export PYTHONPATH="$REPO/runnable/ppg"
+export PYTHONPATH="$REPO/runnable/ppg:$REPO/runnable/_shim"
 if [[ "$(uname -s)" == "Darwin" ]]; then
   export MUJOCO_GL="${MUJOCO_GL:-glfw}"
   export PYGLFW_LIBRARY="${PYGLFW_LIBRARY:-/opt/homebrew/lib/libglfw.dylib}"

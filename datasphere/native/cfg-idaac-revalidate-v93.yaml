@@ -1,0 +1,38 @@
+# Recompute IDAAC's evaluator-agreement row on the current, provenance-aware evaluator.
+#
+# v91 omitted CELLS/FRAMES, so the runner applied its 10k default and failed the IDAAC budget
+# gate. v92 added those values but reused payload-v80, whose manifest declares dmc_gb,alda rather
+# than idaac; it consequently failed after bootstrap with ppo_daac_idaac absent. This immutable
+# retry is deliberately self-contained: the current IDAAC-only payload, a pinned container digest,
+# and the exact 100k checkpoint under test.
+name: vigen-idaac-revalidate-v93
+desc: Recompute the IDAAC evaluator discharge on the current CUDA evaluator.
+cmd: >-
+  timeout --foreground 3600s env
+  CELLS=idaac:1
+  FRAMES=100000
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  OFFLINE_EVAL_SNAPSHOT=${SNAPSHOT}
+  OFFLINE_EVAL_FAMILY=idaac
+  OFFLINE_EVAL_BASELINE=idaac
+  OFFLINE_EVAL_SEED=1
+  OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_EPISODES=20
+  OFFLINE_EVAL_REGIMES=train,eval-easy
+  OFFLINE_EVAL_SCENES=0
+  OFFLINE_EVAL_DEVICES=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-idaac-revalidate-v93.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - /Users/a2mogus/.claude/jobs/d037da9e/tmp/idaac-100k-snapshot.pt: SNAPSHOT
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

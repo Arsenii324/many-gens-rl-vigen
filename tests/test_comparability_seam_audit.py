@@ -65,6 +65,26 @@ def test_horizon_is_uniform():
     assert len(set(values.values())) == 1, f"episode horizon is no longer uniform: {values}"
 
 
+def test_replay_audit_compares_the_effective_capacity_to_the_production_budget():
+    """A 300k cap in a 600k run is a recency ring, not whole-run replay."""
+    values, provenance = acs.replay_capacity()
+    for baseline in acs.NATIVES:
+        assert "recency ring" in values[baseline], values[baseline]
+        assert "300000 < 600000" in values[baseline], values[baseline]
+    assert "uniform over the whole run" in values["rad"], values["rad"]
+    assert "600000" in provenance
+
+
+def test_replay_audit_resolves_the_named_v100_profile(monkeypatch):
+    """The V100's 620k buffer is whole-run replay; reporting the 300k T4 ring is a false split."""
+    monkeypatch.setattr(acs, "HOST_PROFILE", "v100", raising=False)
+    values, provenance = acs.replay_capacity()
+    for baseline in acs.NATIVES:
+        assert "uniform over the whole run" in values[baseline], values[baseline]
+        assert "620000" in values[baseline], values[baseline]
+    assert "v100" in provenance
+
+
 def test_the_audit_could_report_a_split_that_is_not_there():
     """Anti-vacuity: the split-detection must respond to the data, not print a fixed answer.
 
@@ -203,18 +223,15 @@ def test_observation_layout_splits_five_ways_and_none_of_it_is_a_defect():
 #: The only axis deciding what a number MEANS on which the twelve disagree — C72, expressed as a
 #: comparability axis. Named rather than counted, so that a SECOND one appearing is a regression
 #: with a name attached rather than a tally going from 1 to 2.
-KNOWN_UNITS_SPLIT = {"evaluation scene set"}
+KNOWN_UNITS_SPLIT = set()
 
 
-def test_the_only_units_split_is_the_scene_set_and_every_other_split_is_conditions():
-    """R3's actual shape, pinned. A new UNITS split is a much worse event than a new CONDITIONS one.
+def test_the_reported_units_are_uniform_and_training_time_splits_are_conditions():
+    """R3 audits the reported offline measurement, not progress logs.
 
     A CONDITIONS split leaves the numbers commensurable and is what `RESEARCH-FRAME.md`'s claim
-    already declares and quantifies. A UNITS split means two numbers are not the same quantity, and
-    no care in reading them repairs it. Exactly one is currently known: our evaluator sweeps ten
-    scenes while all seven non-native evaluators pin `scene_id=0`, so "mean over ten scenes" and
-    "mean at scene 0" are being compared. Closing it is a decision — sweep in seven more places, or
-    redefine the endpoint — not a conversion.
+    already declares and quantifies. The production offline grid now sweeps ten scenes for all
+    twelve; the source loops' scene-0 limitation remains a CONDITIONS fact about progress logging.
     """
     split = set()
     for title, kind, fn in acs.AXES:
@@ -226,19 +243,21 @@ def test_the_only_units_split_is_the_scene_set_and_every_other_split_is_conditio
     assert not new, (
         f"a NEW axis deciding what a number MEANS went non-uniform: {sorted(new)}. Two baselines' "
         "numbers may no longer be the same quantity — this is not a 'declare and quantify' case.")
-    healed = KNOWN_UNITS_SPLIT - split
-    assert not healed, (
-        f"{sorted(healed)} no longer splits. If the seven evaluators genuinely gained a scene "
-        "sweep that is good news — update KNOWN_UNITS_SPLIT and C72. If instead the axis stopped "
-        "being derived, the audit went blind on its most consequential finding.")
+    assert not split, f"reported offline measurement has a UNITS split: {sorted(split)}"
 
 
-def test_the_scene_split_separates_exactly_the_natives_from_the_rest():
-    """C72's content: the scene sweep exists in our instrument and in no baseline's own evaluator."""
+def test_the_reported_scene_set_is_common():
+    """The production checkpoint grid uses the same scene set for every baseline."""
     values, provenance = acs.evaluation_scene_set()
+    assert len(set(values.values())) == 1, f"reported scene grid split: {set(values.values())}"
+    assert "offline grid" in provenance
+
+
+def test_training_time_scene_coverage_keeps_the_historical_split():
+    values, provenance = acs.training_time_scene_coverage()
     sweeps = {b for b, v in values.items() if v.startswith("ten scenes")}
-    assert sweeps == set(acs.NATIVES), f"who sweeps scenes changed: {sweeps}"
-    assert "scene_id=0" in provenance, "the provenance stopped naming what it was derived from"
+    assert sweeps == set(acs.NATIVES), f"who sweeps training-time scenes changed: {sweeps}"
+    assert "scene_id=0" in provenance
 
 
 def test_the_audit_refuses_to_run_on_a_missing_source_tree(tmp_path):

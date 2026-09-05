@@ -45,7 +45,7 @@ line-by-line and should not be trusted as complete.
 | eval mode | `utils.eval_mode(agent)` | identical | none |
 | success | `env.last_info['success']`, any step | identical | none (patch P11's convention) |
 | env | `robo_make(name, action_repeat, frame_stack, seed, mode, scene_id)` | identical call | none |
-| extra | — | a verification `reset()`/`step()` and an 8-step probe **before** the episode loop, to read back the applied scene and regime | **DELIBERATE, ours.** It consumes RNG draws before the first episode, so our placement sequence is offset from theirs by a fixed amount. Harmless for a mean over N episodes; **not** harmless for an episode-by-episode comparison, and it is the reason our 131.57 and their 135.71 should not be expected to match exactly. |
+| extra | — | a read-back of the applied scene/regime without probing, followed by a per-(scene, episode) placement seed immediately before each measured reset | **DELIBERATE, ours.** Read-back is fail-closed and RNG-neutral; the condition seed makes episode-level pairing independent of wrapper construction and reset counts. The environment's realized `scene_id` remains recorded in the per-step info where the family exposes it. |
 
 ### `rad soda` — dmc_gb
 
@@ -96,9 +96,11 @@ line-by-line and should not be trusted as complete.
 
 ### `ctrl`
 
-**No family exists.** JAX end to end, a flax msgpack checkpoint, and an `evaluate_ppo.py` whose
-helper is discrete-only. Nothing to declare yet, and nothing may be reported for `ctrl` through the
-shared evaluator until there is.
+**Current clone-era status:** JAX end to end, a flax msgpack checkpoint, and a shared evaluator
+that reconstructs CTRL's model/optimizer state before `flax.serialization.from_bytes`. The
+checkpoint round trip and `run_scene_ctrl` have been exercised on a real checkpoint. The released
+`evaluate_ppo.py` helper is discrete-only, so the shared evaluator remains an authored continuous-
+action adaptation; there is no native continuous evaluator against which to claim equivalence.
 
 ---
 

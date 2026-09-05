@@ -1,0 +1,73 @@
+{
+  "_comment": "One entry per evaluator family, written when a real job's records prove the endpoint path: complete diagnostics, distinct placement seeds, physical pairing with 0 unpaired. family_code_revision and family_config_revision must match the selected family closure; runtime_imports_checked records review of the captured dynamic-import manifest. The retained legacy common code_revision is historical only and cannot certify the new closure.",
+  "rlvigen": {
+    "job": "bt1anj1cm0ni7p20ted3",
+    "baseline": "svea",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "dmc_gb": {
+    "job": "bt1fttbvedaunks2r7eh",
+    "baseline": "rad",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "idaac": {
+    "job": "bt1mjgl6r12pir8jnhe5",
+    "baseline": "idaac",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "alda": {
+    "job": "bt1pb2kceart31caaqkq",
+    "baseline": "alda",
+    "code_revision": "4a77df8be2c5a197484237f2e7f11141ce3f9c371351d6e7c687cf0ae1440e82",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "ctrl": {
+    "job": "bt1t3njt0m37dujrio2u",
+    "baseline": "ctrl",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "ppg": {
+    "job": "bt1ek01uo43rskotpm8b",
+    "baseline": "ppg",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  },
+  "ibac_sni": {
+    "job": "bt10rvhafr2muvjkpc9g",
+    "baseline": "ibac_sni",
+    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
+    "family_code_revision": null,
+    "family_config_revision": null,
+    "runtime_imports_checked": false,
+    "paired": true,
+    "diagnostics_complete": true
+  }
+}
