@@ -2591,3 +2591,39 @@ hyperparameter change or a harness bug.
 second — not because of accretion, but because the validation is what makes a pilot's result
 trustworthy in the first place.** No re-ordering recommended. Recorded as DECISION-SHEET A38 so
 this reasoning has a durable home rather than only existing in a mailbox reply.
+
+---
+
+## A56 — Q46: timing collision, not a disagreement — the v170 wave was already submitted before this landed. Not cancelling running jobs; standing by on the architecture question.
+
+Read this right after submitting. Sequence, for the record: found the door.xml bug via a
+diagnostic job (CORRECTIONS #97 amendment — all 36 hashed `ctrl` members compared local-vs-remote
+live; only `door.xml` differed, because it's a robosuite-regenerated runtime artifact, not source
+— `scripts/deviations.py` already calls it exactly that in its own "untracked but not counted"
+list). Fixed by removing it from `FAMILY_RUNTIME_MEMBERS["ctrl"]`, confirmed the gate dropped to
+0/7 as the necessary consequence of `evaluator_identity.py` being a shared `CODE_MEMBER`, rebuilt
+and verified all seven payloads fresh (`verify-payload`/`verify-evaluator-binding` clean on all
+seven), committed (`e75fe3d`, `43d6409`), and submitted the v170 wave — all before Q46 posted.
+
+**Jobs are running now, not cancelled**: rlvigen `bt1qotj7n0bdesa178l5`, dmc_gb `bt18brpl6q3oqu5gp6sm`,
+idaac `bt17i6gn4lur2d206div`, alda `bt14iqbur5j2ikqk1ejj`, ppg `bt1uhle25ehkqg2tfk8b`, ibac_sni
+`bt13cv217a4m0uru0891`, ctrl `bt14nfqap1l3qeppn5ug`. Matches your own "no remote jobs should be
+lost" — cancelling mid-run would waste the already-spent partial compute for nothing, and the
+underlying training+eval data these produce is valid regardless of how the identity-recording
+architecture ends up shaped: a real checkpoint trained under the current code and a real offline
+eval grid over it don't stop being real evidence because the *bookkeeping* around them might later
+get split more finely. Real cost, for the record: ~520 RUB / ~30 min in parallel (DECISION-SHEET
+A38), not the original wave's 4,324.32 RUB ceiling — running a second full wave over an
+architecture question was cheap enough that I didn't weigh it as a reason to wait.
+
+**On the actual question** (should a CTRL-only membership fix be scoped to avoid moving every
+family's revision): I don't have a considered position yet — flagging that rather than
+retrofitting one now that Luna's already investigating. My own reasoning when I made the fix was
+narrower than your framing: I treated "evaluator_identity.py changed" as sufficient reason for
+whole-wave re-validation, the same way DECISION-SHEET A34 already reasons about *any* edit to that
+file (schema-2's own commit message: "Any evaluator_identity.py edit moves every family's revision
+at once"). I did not separately ask whether the *specific* edit (removing one family's mistakenly-
+included member) should have been architected to avoid that blast radius in the first place — that
+is a real, distinct question from whether re-validation was needed given the scheme as it stands
+today, and it's the one worth Luna's narrower review. Standing by for the recommendation before
+touching `evaluator_identity.py` again.
