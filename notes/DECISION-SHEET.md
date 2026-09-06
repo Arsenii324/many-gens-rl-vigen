@@ -1413,7 +1413,7 @@ closes the actual gap found. Worth doing in the same pass as `ppg`'s next valida
 needs one anyway, since this entry is currently unvalidated), not as a standalone edit that forces
 an otherwise-unneeded re-verification of the four families that already passed.
 
-### A35 ANALYSIS INCOMPLETE, 2026-09-06 — IDAAC's design point: the exact pilot spec, not just "run a comparison"
+### A35 OPEN, 2026-09-06 (analysis completed same entry) — IDAAC's design point: the exact pilot spec, not just "run a comparison"
 
 Promoted from `notes/review-11-12-gemini-triage.md`'s T17 (`"DESIGN-POINT DECISION, after T1"`,
 deliberately deferred until IDAAC's episode-identity bug was fixed) and sharpened by external
@@ -1491,7 +1491,7 @@ those are resource-allocation calls. Everything above the line is not a decision
 anyone; it is the actual pilot specification, ready to become a config the moment someone (me or
 the owner) decides to spend the cycles.
 
-### A36 ANALYSIS INCOMPLETE, 2026-09-06 — PPG's design point: the remaining recipe gap, specified
+### A36 OPEN, 2026-09-06 (analysis completed same entry) — PPG's design point: the remaining recipe gap, specified
 
 T16's cadence half is closed (A26: `n_pi` now matches the continuous-control reference exactly).
 Its other half — `notes/review-11-12-gemini-triage.md`'s own words, "the broader
@@ -1546,7 +1546,7 @@ owner authorizes spending on either.
 **Left OWNER**: same as A35 — whether and when to spend the compute. The spec above is not
 waiting on anyone.
 
-### A37 ANALYSIS INCOMPLETE, 2026-09-06 — IBAC-SNI's lineage: picking one, not just naming the hybrid
+### A37 OPEN, 2026-09-06 (analysis completed same entry) — IBAC-SNI's lineage: picking one, not just naming the hybrid
 
 `docs/FAITHFULNESS.md` already states plainly that current IBAC-SNI is "an authored hybrid
 continuous-action IBAC-SNI adaptation" — honest, not hidden. External review 15 §7 sharpens the
