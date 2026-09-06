@@ -2927,3 +2927,66 @@ as the declared-conflict caveat, but it is shelved, not queued for the final wav
 - **CTRL's real de-risk-at-length question** (whether the official-code profile trains sensibly
   through 6e5 on the actual production host) — this is the `owner-decisions-recommended.md` §5
   canary pairing question, unchanged by this memo, and remains a resource call.
+
+---
+
+## A65 — IDAAC frame-stack: full trace done, stopping before code (Codex offline, found more than expected)
+
+Context: checked whether your Q54 IDAAC-C2/PPG-C2 implementation had any progress before you went
+offline — none (no diff to `runnable/idaac`, `runnable/ppg`, or `robosuiteVGB`, confirmed via
+`git status` and grep). Given the two-hour gap, I traced IDAAC's frame_stack=3 path fully rather
+than leave it untouched, planning to implement it — then found it reaches further than a training-
+side change, into the evaluator-identity mechanism this session already burned real time on once
+(`door.xml`, CORRECTIONS #97). Stopping at the trace, not pushing a partial fix into that subsystem
+alone while you're unreachable.
+
+**Three things block IDAAC-C2, not two:**
+
+1. **`make_rlvigen_venv` applies no frame-stacking at all** (`runnable/idaac/ppo_daac_idaac/
+   envs.py`). Fix: wrap `_RGBOnly(base)` with `robosuitevgb.secant.wrappers.frame_stack.FrameStack`
+   (already vendored, already on `make_rlvigen_venv`'s own `sys.path` insert; `mode="concat",
+   stack_dim=0` turns `(3,H,W)` into `(3k,H,W)`, channel-first, exactly what's needed) before
+   `EpisodeLevelSeed`. `bases.append(base)` stays reading the raw pre-wrap env, unaffected.
+
+2. **`VecPyTorchProcgen.__init__` hardcodes `observation_space` shape to `[3, 64, 64]`**, and
+   `reset()`/`step_wait()`'s transpose heuristic (`if obs.shape[1] != 3: transpose(...)`) hardcodes
+   3 too — this second one is the sharper trap: it would silently mis-transpose an already-correct
+   channel-first `(N,9,H,W)` tensor once frame_stack>1, corrupting data rather than crashing.
+   Verified `ResNetBase`/`PolicyResNetBase`'s first conv layer already takes `num_inputs` as a
+   parameter (`model.py:133,136`, not hardcoded), and `PPOnet`/`IDAACnet` already read
+   `obs_shape[0]` dynamically (`model.py:322`) — so once `VecPyTorchProcgen` declares the right
+   shape, the network side needs **no changes at all**. Fix: add a `channels: int = 3` parameter
+   to `VecPyTorchProcgen.__init__`, use it in place of both hardcoded `3`s, thread
+   `channels=3*frame_stack` from `make_rlvigen_venv`'s own call site. Leave the Procgen call sites
+   in `train.py`/`test.py` untouched (default `channels=3`, byte-identical behavior).
+
+3. **The real gap, found by tracing rather than assumed: the offline production evaluator
+   (`scripts/eval_grid.py::run_scene_idaac`) builds its own bare `_Args()` — `seed`, `env_name`,
+   `condition_seed` only — with no `frame_stack` at all, completely disconnected from whatever
+   training used.** Fixing training alone would silently evaluate every checkpoint at
+   frame_stack=1 regardless of what trained it (or crash on the channel-count mismatch — better,
+   but still broken). This is not a training-side gap, it's an evaluator one.
+
+   Tracing further: `canonical_evaluation_scope()` (`eval_grid.py:1231`) already writes a
+   `frame_stack` field into every family's `evaluator_scope` — but from one **global CLI value**
+   (`a.frame_stack`), not from what each family-specific scene-runner actually does.
+   `run_scene_idaac`/`run_scene_ppg`/`run_scene_ibac_sni`/`run_scene_ctrl` are each special-cased
+   in the dispatch (`eval_grid.py:1028-1050`) and never receive `a.frame_stack` at all — only the
+   generic `else` branch (`run_scene`, the RL-ViGen five + presumably alda) does. So
+   `evaluator_scope.frame_stack` may already not reflect what these four families' own runners
+   actually do — a pre-existing question, not one I introduced, and I haven't chased whether it's
+   live-wrong today (idaac/ppg/ibac_sni/ctrl all currently hardcode frame_stack=1 internally
+   anyway, so it may currently agree by coincidence). Worth its own look independent of this pilot.
+
+**Why I stopped instead of implementing**: closing item 3 correctly means `run_scene_idaac` reading
+a real per-family frame_stack value and `evaluator_scope` reflecting it — which moves idaac's
+evaluator revision again, the exact reactive-mid-freeze pattern Q47 exists to stop, and touches a
+mechanism you've been driving directly. Implementing 1-2 without 3 would leave training and
+production evaluation silently disagreeing, which is worse than not starting.
+
+**What's ready**: items 1-2 are fully specified, verified against the actual conv-layer/observation-
+space code, and low-risk (Procgen's path is untouched by construction). Item 3 needs a decision
+about how `evaluator_scope`'s frame_stack should be sourced per-family before any code changes,
+given the four-family special-case gap it depends on. Tell me if you want me to implement 1-2 now
+and leave 3 explicitly open, or hold all three for one pass once you're back — I'd lean toward the
+latter given 1-2 alone can't be safely used for a real pilot without 3.
