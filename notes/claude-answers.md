@@ -3126,3 +3126,47 @@ re-verified). Commit `7c96ae6`.
 SODA remains unexamined beyond sharing RAD's crop-size branch — named explicitly as still open,
 not silently closed alongside RAD. Full pytest suite green (exit 0) after this and the two other
 touched files.
+
+---
+
+## A71 — hand-off: context window closing, work committed through 41a6d21 (2026-09-07)
+
+Session ending on token limit. Everything below is committed; nothing load-bearing is only in
+chat context.
+
+**Done this session, all committed** (`7c96ae6`, `72c9393`, `41a6d21`):
+- RAD's crop mechanism traced and closed (empty `RAD` class, crop lives in shared replay buffer's
+  `sample()`, calls `random_crop` not `random_shift`); fixed `CLAIMS-LEDGER.md`'s wrong function
+  name for `rad`.
+- `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`: fixed two overbroad `EXACT SOURCE MATCH` verdicts
+  review 18 named and this project had twice flagged-but-not-fixed. CURL's backbone is
+  `DrQV2Agent` (`RL-ViGen-upstream/algos/curl.py:54`), not SAC — downgraded to SOURCE CONFLICT.
+  SVEA had no augmentation row at all; added one (`svea.py:12,299` calls `random_overlay`, SODA's
+  augmentation family, not SVEA's own `random_conv`, which doesn't exist anywhere in the tree).
+- Independently verified two more blind spots: DrQ-v2's replay arithmetic (601,200 transitions at
+  600k frames, 620k V100 / 300k DataSphere both confirmed against `families.json:28-30,101`) and
+  CTRL's JAX/Flax/Optax versions (`ext/ctrl_public/requirements.txt`, exact match).
+- Landed your own already-verified, uncommitted work: IBAC-SNI arXiv-ID fix (four files) and
+  `cfg-ctrl-paper-profile-v175.yaml`'s retirement.
+- `notes/review-17-18-response/*.md` all updated to reflect every closure above.
+- Full `pytest tests/ -q` confirmed green (exit 0) mid-session, after the RAD/CLAIMS-LEDGER fix.
+
+**Deliberately left uncommitted, yours to finish**: `scripts/build_external_review_artifact.py`
+(522 lines) and its supporting files (`notes/EXTERNAL-REVIEW-ARTIFACT-BLUEPRINT.md`,
+`notes/ai-help-16.md`, `notes/ai-review-17-external.md`, `notes/ai-review-18-external.md`,
+`notes/ctrl-v170-operational-triage.md`, `notes/review-17-triage.md`, `notes/review-18-triage.md`,
+`tests/test_external_review_artifact.py`, `tests/test_ibac_source_provenance.py`,
+`notes/START-HERE.md`'s new section 5b pointing at these). Their tests already pass against the
+current tree (checked, not guessed), but I did not read the 522-line script closely enough to put
+my name on committing it — that felt like the wrong kind of ownership-taking versus a bounded,
+already-verified fix. `production_gates.py` still reads 30 pass / 1 fail (source tree frozen,
+~13 uncommitted paths now, down from 23) / 9 owner; no regression.
+
+**Not yet touched, still open** (from the standing plan, unchanged since before this session):
+SODA itself (only its shared crop-size branch was confirmed, no independent code read of SODA's
+own train-mode guard or aux-lr claim); the IDAAC-C2 throughput/memory numbers (still guessed, not
+measured — no remote job has run the new recipe yet); Phase 1's batched ratification ask; Phase 4's
+production-host handoff. See `notes/review-17-18-response/04-blind-spots-and-unverified-claims.md`
+for the full, current list of what's still open versus closed.
+
+Mailbox quiet since your own Q55; no new questions from me require an answer before you resume.
