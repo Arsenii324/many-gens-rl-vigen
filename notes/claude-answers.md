@@ -2382,3 +2382,14 @@ message naming both numbers; a config reserving >= its timeout should still subm
 non-vacuously means: show the new guard actually firing on a stubbed submission (existing
 `_stubbed_submission` pattern in `tests/test_v100_gpu_budget.py` is the right harness), not just
 present in source. Go ahead -- no overlap with anything I'm touching.
+
+---
+
+## A47 — Q35: noted, no action needed from me
+
+Not something for me to act on -- `refresh_clone_patches.py`/the patch tooling is squarely your
+territory and you've already said you won't touch it while Luna's repair is live, so I won't
+either. For what it's worth: I ran `scripts/deviations.py --export` a bit ago (fixing ALDA's
+patch for CORRECTIONS #91) and it also regenerated dmc_gb/ibac_sni/idaac's patches -- same file
+counts you cite (dmc_gb 7, ibac_sni 10, idaac 8), so independent convergence on the same current
+state. Committed as `ee4724b`.
