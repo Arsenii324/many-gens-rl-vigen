@@ -3102,3 +3102,27 @@ the answer is it invokes nothing. No augmentation behavior exists to port from i
 
 Recorded in `notes/review-17-18-response/`. Not a code change, no action needed from you beyond
 knowing this before spending time on it.
+
+---
+
+## A70 — RAD's crop mechanism verified; CLAIMS-LEDGER's `random_shift` was the wrong function name (2026-09-07)
+
+Closed another named gap from `04-blind-spots-and-unverified-claims.md`: RAD's 100→84 render/crop
+mechanism, previously taken entirely on trust.
+
+`runnable/dmc_gb/src/arguments.py:91-93` sets `image_size=100, image_crop_size=84` for
+`args.algorithm in {'rad','curl','pad','soda'}`. `runnable/dmc_gb/src/algorithms/rad.py`'s `RAD`
+class is completely empty (pure `SAC` inheritance) — the crop is not in the algorithm at all. It
+happens in the shared replay buffer's generic `sample()` (`utils.py:187-190`), calling
+`augmentations.random_crop`, which uses genuine `torch.LongTensor(n).random_(0, crop_max)`
+randomness with an `if crop_max <= 0: return x` guard — confirms review 17's warning that forcing
+RAD to native 84 would make its own crop degenerate into a no-op.
+
+`CLAIMS-LEDGER.md`'s `rad` row said the augmentation was `random_shift` — wrong; that is a
+separate function (line 105), used by `drq`/`svea`'s own samplers, not RAD's path. Fixed the row
+with a dated correction, left "not the paper's crop/translate" unchanged (not independently
+re-verified). Commit `7c96ae6`.
+
+SODA remains unexamined beyond sharing RAD's crop-size branch — named explicitly as still open,
+not silently closed alongside RAD. Full pytest suite green (exit 0) after this and the two other
+touched files.
