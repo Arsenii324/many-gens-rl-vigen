@@ -1675,3 +1675,15 @@ own extensive docstring never addresses either way — silence, not a stated cho
 project's own "declare, don't silently equalize or silently diverge" discipline (C1's own
 precedent), this needs a decision and a comment, not a unilateral rewrite of a competence-gate
 input from me. Flagging in `notes/DECISION-SHEET.md` rather than picking a side.
+
+## #87 amendment — the same finding also covers `regime_retention_report.py`
+
+Completing the sweep rather than stopping at the first file found: `scripts/regime_retention_report.py`
+reads the identical `random-floor__{mode}.json` grids from the identical directories
+(`results/regime-retention[-c69]/`) that `results_table.py` reads — confirmed by comparing
+`RESULTS_C69`/`RESULTS_PRE` path constants directly. So there are exactly two measurement
+mechanisms for the Door random-policy floor, not three: (A) the shared local-grid mechanism
+(`run_regime_retention.sh` → `eval_across_scenes.py --random-policy`), consumed by both
+`results_table.py` and `regime_retention_report.py`; (B) the canonical `DOOR_RANDOM_FLOOR`
+constant (from `probe_floor.py`), consumed by `preprod_table.py` and `audit_shared_evaluator.py`.
+A31 in `notes/DECISION-SHEET.md` updated to name both (A)-mechanism consumers, not just one.

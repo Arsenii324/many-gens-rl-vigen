@@ -1240,11 +1240,13 @@ per family, which is scope beyond a same-session correction.
 
 `scripts/rlvigen_reference.py::DOOR_RANDOM_FLOOR` is the declared single home for the Door
 random-policy floor, established after the same number lived in five places at once (Q12).
-`scripts/preprod_table.py` imports it correctly. `scripts/results_table.py` does not — it measures
-its own floor locally, from a `random-floor__train.json` grid produced by a separate pipeline
-(`run_regime_retention.sh` → `eval_across_scenes.py --random-policy`), never `probe_floor.py` (the
-source of `DOOR_RANDOM_FLOOR`'s 1.842). No comment in `results_table.py` explains or defends the
-divergence from the established policy; it looks like Q12's sweep simply never reached this file.
+`scripts/preprod_table.py` imports it correctly. `scripts/results_table.py` and
+`scripts/regime_retention_report.py` do not — both measure the floor locally, from the identical
+`random-floor__{mode}.json` grids in `results/regime-retention[-c69]/`, produced by a separate
+pipeline (`run_regime_retention.sh` → `eval_across_scenes.py --random-policy`), never
+`probe_floor.py` (the source of `DOOR_RANDOM_FLOOR`'s 1.842). Neither file's comments explain or
+defend the divergence from the established policy; it looks like Q12's sweep simply never reached
+either.
 
 A stale, cross-tree data point (the ~2-week-old canonical `ccm-intro` tree's own copy of this
 grid, mean≈1.8102 over 200 episodes — closer to C55's superseded 1.818 than the current 1.842)
@@ -1252,16 +1254,17 @@ suggests this isn't only a theoretical risk, but I cannot confirm that number re
 workspace would measure today; full detail and that caveat in `CORRECTIONS.md` #87.
 
 **Options**:
-1. Import `DOOR_RANDOM_FLOOR` in `results_table.py` too, dropping its own local measurement.
-   Consistent with the established policy; loses whatever value (if any) came from measuring the
-   floor via the exact same harness as this table's own cells.
-2. Keep the local measurement, but say so explicitly — a comment stating this table deliberately
-   ties its competence gate to its own evaluator pipeline rather than the canonical constant, and
-   why. Consistent with this project's "declare, don't silently diverge" discipline.
+1. Import `DOOR_RANDOM_FLOOR` in `results_table.py` and `regime_retention_report.py` too, dropping
+   the shared local measurement both currently use. Consistent with the established policy; loses
+   whatever value (if any) came from measuring the floor via the exact same harness as their own
+   cells.
+2. Keep the local measurement, but say so explicitly in both files — a comment stating they
+   deliberately tie their competence gate to this evaluator pipeline rather than the canonical
+   constant, and why. Consistent with this project's "declare, don't silently diverge" discipline.
 3. Leave silent. Not defensible — matches exactly the failure Q12 was raised to prevent.
 
 **My reading**: (1), unless someone can state a real reason for (2) — `results_table.py` is
-explicitly "LEGACY EXPLORATORY," so there is no obvious reason its competence gate should use a
-different, less-measured (20 vs 200 episodes, per the shell driver's own flag) floor than the
-table meant to supersede it. But this changes a competence-gate input in a comparison-bearing
-table, so it is yours to decide, not mine to silently pick.
+explicitly "LEGACY EXPLORATORY," and `regime_retention_report.py` is drqv2-only, so neither has an
+obvious reason to use a different, less-measured (20 vs 200 episodes, per the shell driver's own
+flag) floor than the table meant to supersede them. But this changes a competence-gate input in
+comparison-bearing tables, so it is yours to decide, not mine to silently pick.
