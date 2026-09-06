@@ -1687,3 +1687,53 @@ mechanisms for the Door random-policy floor, not three: (A) the shared local-gri
 `results_table.py` and `regime_retention_report.py`; (B) the canonical `DOOR_RANDOM_FLOOR`
 constant (from `probe_floor.py`), consumed by `preprod_table.py` and `audit_shared_evaluator.py`.
 A31 in `notes/DECISION-SHEET.md` updated to name both (A)-mechanism consumers, not just one.
+
+## #88 — real, first-ever-exercised bug in Codex's evaluator-identity binding: macOS AppleDouble sidecars leaked into runtime-member hashes
+
+Found the hard way: submitted the C95 renderer-parity probe (job `bt18a8fjl3qrp5jv50g6`, drqv2-s2
+@ 100k on g1.1) and it failed at `datasphere/native/contract.py verify-evaluator-binding` with
+`evaluator runtime member hash mismatch for rlvigen` — no detail beyond the family name. This is
+production_gates.py's own "0/7 evaluator families validated on their CURRENT family closures"
+OWNER item made concrete: the mechanism had never actually been exercised end to end before this
+job, on any family.
+
+**Root-caused rather than guessed at.** Exhausted every local hypothesis first — a fresh local
+build's manifest matched a fresh recomputation exactly (0 diffs); extracting the pinned RL-ViGen
+archive fresh and applying the current 28 patches in full isolation reproduced the baked-in hash
+exactly (0 diffs); running the same editable `pip install -e RL-ViGen-upstream/envs/robosuiteVGB`
+locally changed none of the hashed files. Everything reproducible on this machine matched. Rather
+than keep guessing, added temporary diagnostic output to `verify_bindings` (print the exact
+differing/extra keys instead of just raising) and resubmitted the identical job on `gt4i.1`
+instead of `g1.1` (the failure happens before any GPU-specific step, so the cheaper tier answers
+the same question) — job `bt1r24168a2h0dhdgplh`.
+
+**The diagnostic output was unambiguous**: `only_in_actual(payload)=[]`, `differing_keys=[]`,
+`only_in_expected(recomputed)` listed ~30 files, every one `._`-prefixed
+(`._curl.py`, `.___init__.py`, `secant/envs/robosuite/._adapter.py`, etc.) — macOS AppleDouble
+sidecar files (extended-attribute/resource-fork data). macOS's own `tar` silently folds these into
+extended attributes on extraction, so they are invisible on this (and presumably any macOS)
+development machine; GNU tar on the remote Linux container has no such concept and extracts them
+as literal, ordinary files. `_runtime_tree_members`'s filter only checked file suffix
+(`.py`/`.yaml`/`.yml`/`.xml`), and `._curl.py`'s suffix is still `.py`, so every AppleDouble
+sidecar silently passed as if it were a real runtime member — inflating the REMOTE recomputation's
+member set relative to what was baked into the payload on this (or any) macOS machine. This bug
+could not have been caught by any test run so far, because every prior run of this code — local
+development, unit tests, and the one prior evaluator-identity CI-style check — happened on macOS,
+where the extra files never exist.
+
+**Fixed**: `_runtime_tree_members` now also excludes any file whose basename starts with `._`.
+Verified the fix directly: re-injected simulated AppleDouble files (binary content, `._curl.py`
+and `.___init__.py`) into the isolated fresh-archive-plus-patches reconstruction and confirmed
+they no longer appear in the recomputed member set (count stays at the correct 45, matching the
+baked-in manifest exactly once the file itself was updated in both places).
+
+**Added `test_runtime_tree_members_excludes_macos_appledouble_sidecar_files`** to
+`tests/test_evaluator_identity_binding.py`, using real temp files (not a mock) with genuine binary
+sidecar-like content. Non-vacuity proven: reverted the fix, confirmed the test fails with the
+exact leaked-file names named in the assertion message, restored, re-ran clean.
+
+**Cost of finding this**: two small jobs, ~9 minutes on g1.1 (~$0.41, reconciled) and a few
+minutes on gt4i.1 for the diagnostic — real money, but this is exactly the kind of defect that
+would otherwise have silently blocked every evaluator-family validation this project needs before
+it can leave OWNER status on "shared evaluator validated," discovered locally-free investigation
+having been exhausted first.

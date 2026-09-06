@@ -1,0 +1,48 @@
+# [Claude 2026-09-06] CTRL's restored upstream num_envs=64 (families.json host_profiles.v100)
+# has never been measured directly -- the ~54 GiB figure on record is a LINEAR EXTRAPOLATION from
+# the 16-env measurement (13.57 GiB), not something a real run has confirmed. This job sets
+# NATIVE_HOST_PROFILE=v100 so family.py environment picks up the 64-env override, and lets
+# run_probe.sh's own background sampler (measure_resources.py, already wired into run_measured())
+# capture real peak RSS/GPU memory into resources.json -- no separate instrumentation needed.
+#
+# FRAMES=20000, not the usual 10000 smoke value: at num_envs=64 and n_steps=256, one full PPO
+# rollout is 64*256=16,384 env-steps, so 10,000 would not complete even one update and could
+# under-measure peak memory (buffers not yet fully populated). 20,000 guarantees at least one
+# complete rollout+update cycle. Otherwise mirrors cfg-ctrl-functional-v117.yaml (the last known-
+# working CUDA-CTRL config, post double-reset fix), including its endpoint-eval functional check.
+#
+# Payload rebuilt fresh (payload-v129-ctrl.tgz, contract.py build-payload --families ctrl) against
+# the current source tree.
+name: vigen-ctrl-v100-memory-v130
+desc: Measure CTRL's real peak memory at upstream's num_envs=64 on g1.1 (V100), never measured directly before.
+cmd: >-
+  timeout --foreground 3600s env
+  NATIVE_V100_RESERVATION_MINUTES=45
+  NATIVE_HOST_PROFILE=v100
+  CELLS=ctrl:1
+  FRAMES=20000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=20000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v129-ctrl.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: g1.1

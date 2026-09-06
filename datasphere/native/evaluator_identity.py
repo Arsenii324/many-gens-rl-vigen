@@ -264,6 +264,16 @@ def _runtime_tree_members(root: Path, relative: str) -> tuple[str, ...]:
             continue
         if candidate.name in _TRAINING_ONLY_RUNTIME_BASENAMES or candidate.name.endswith("_test.py"):
             continue
+        # [Claude 2026-09-06] macOS's `tar` silently folds AppleDouble sidecar files
+        # (`._<name>`, extended-attribute/resource-fork data) into the parent file's metadata on
+        # extraction -- they never appear as visible files on this development machine. GNU tar on
+        # the remote Linux container has no such concept and extracts them as literal, ordinary
+        # files, and `._curl.py`'s suffix is still `.py`. First exercised for real by
+        # bt18a8fjl3qrp5jv50g6 (2026-09-06): every one of ~30 "only in the fresh recomputation"
+        # files this check found was a `._`-prefixed sidecar of a real member (e.g. `._curl.py`
+        # beside `curl.py`), invisible on every machine this code had run on until it hit Linux.
+        if candidate.name.startswith("._"):
+            continue
         files.append(candidate.relative_to(root).as_posix())
     return tuple(sorted(files))
 

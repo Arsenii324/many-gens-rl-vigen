@@ -1,0 +1,32 @@
+# [Claude 2026-09-06] Diagnostic re-run of cfg-renderer-parity-v100-v128.yaml's failure
+# (evaluator runtime member hash mismatch for rlvigen, job bt18a8fjl3qrp5jv50g6). Local
+# reconstruction (fresh archive extraction + current patches + editable pip installs) produced a
+# byte-identical match to what was baked into the payload, so the cause is not reproducible
+# locally -- this run carries a temporary diagnostic patch to evaluator_identity.py that prints
+# the exact differing keys/hashes instead of just raising, so the actual remote-environment cause
+# can be seen directly. On gt4i.1 (T4), not g1.1: the failure happens before any GPU/CUDA-specific
+# step, so a cheaper tier answers the same question. Revert the diagnostic patch once answered.
+name: vigen-native-renderer-parity-diag-v132
+desc: Diagnose the evaluator-identity runtime-member hash mismatch with verbose output, on the cheapest working tier.
+cmd: >-
+  timeout --foreground 1200s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy,eval-medium,eval-hard
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=10
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v131-diag.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

@@ -284,3 +284,31 @@ def test_submit_rejects_current_contract_but_unbound_payload_before_cloud(tmp_pa
     assert result.returncode != 0
     assert "evaluator identity" in result.stderr.lower()
     assert not invoked.exists(), "unbound payload reached datasphere execute"
+
+
+def test_runtime_tree_members_excludes_macos_appledouble_sidecar_files(tmp_path):
+    """First-ever real exercise of this check (job bt18a8fjl3qrp5jv50g6, 2026-09-06) failed with
+    an unhelpful "runtime member hash mismatch" -- diagnosed by adding temporary verbose output
+    and resubmitting: every extra file the remote recomputation saw was a `._`-prefixed macOS
+    AppleDouble sidecar (e.g. `._curl.py` beside `curl.py`). macOS's own `tar` folds these into
+    extended attributes on extraction and they are invisible on this development machine, which is
+    exactly why nobody caught this before the first Linux run. `._curl.py`'s suffix is still
+    `.py`, so the suffix-only filter let them through as if they were real runtime members.
+    """
+    from datasphere.native import evaluator_identity
+
+    tree = tmp_path / "some_family_dir"
+    tree.mkdir()
+    (tree / "curl.py").write_text("real content")
+    (tree / "._curl.py").write_bytes(b"\x00\x05\x16\x07")  # AppleDouble sidecars are binary
+    (tree / ".___init__.py").write_bytes(b"\x00\x05\x16\x07")
+    (tree / "__init__.py").write_text("")
+
+    members = evaluator_identity._runtime_tree_members(tmp_path, "some_family_dir")
+
+    assert "some_family_dir/curl.py" in members
+    assert "some_family_dir/__init__.py" in members
+    assert not any(Path(m).name.startswith("._") for m in members), (
+        f"AppleDouble sidecar file leaked into runtime members: {members}"
+    )
+    assert len(members) == 2, f"expected exactly the two real files, got: {members}"
