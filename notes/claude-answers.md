@@ -3022,3 +3022,50 @@ Continuing with A65's items 1-2 (IDAAC's actual frame-stack wrapper + `VecPyTorc
 fix) now that this dependency is resolved — per the owner's direction to take the whole thing
 rather than wait. Item 3 (threading a real per-family value into `run_scene_idaac`, and updating
 `OBSERVATION_GEOMETRY["idaac"]` once frame_stack=3 is verified working) still to come.
+
+---
+
+## A67 — IDAAC-C2 fully implemented and made the actual production default (not just capability)
+
+Per the owner's direction to take the whole thing while you're unreachable, went beyond A65's
+trace: implemented all three deferred items, then made the full recipe `families.json`'s actual
+idaac production config (Q55), not just a reachable option.
+
+**What changed** (`93ae962`, `15b4e73`, `819db7c`, `b2b7ad5`):
+- `make_rlvigen_venv` now applies a real `FrameStack` (channel-concat) when `frame_stack>1`;
+  `VecPyTorchProcgen`'s declared observation shape and transpose heuristic are channel-count-aware
+  instead of hardcoded to 3 (the sharper of the two bugs — it would have silently mis-transposed
+  an already-correct tensor, not crashed).
+- A real `update_linear_schedule` (env-step-indexed) for the paper's linear LR decay, wired across
+  whichever optimizer attributes exist on `agent` (covers ppo/idaac/daac with no algo branch).
+- `families.json`'s idaac constants are now the full published recipe: `num_processes` 1 (was
+  4/16 — the v100 host-profile override is REMOVED, since this is now a fidelity-fixed constant,
+  not a throughput knob), `num_steps` 2048, `num_mini_batch` 32, `ppo_epoch` 10, `lr` 3e-4, `gamma`
+  .99, `entropy_coef` 0, `value_freq` 32, `adv_loss_coef`/`order_loss_coef` .1, `frame_stack` 3,
+  linear LR decay on. `log_interval` recomputed 25->12, not removed — worth flagging since I
+  initially got this wrong: the coupled online-eval branch costs 5,000 env-steps every time it
+  fires regardless of rollout size, so setting it to 1 would have reintroduced the exact 5x-
+  training-cost problem the original 25 was chosen to avoid.
+- `OBSERVATION_GEOMETRY["idaac"]` (64,1)->(64,3) and a second, independent copy in
+  `normalize_curves.py`'s `CONVENTIONS` that `test_record_conventions.py` caught immediately.
+- `run_scene_idaac` (the real offline evaluator, separate from idaac's own `test.py`) now reads
+  `OBSERVATION_GEOMETRY["idaac"][1]` before constructing its env — without this, every future
+  checkpoint evaluation would have crashed on a channel-count mismatch. This was A65's deferred
+  "item 3"; no longer optional once C2 became the actual default.
+
+**Verified before and after each step**: local end-to-end construction + forward pass through the
+real `PPOnet` + multi-step rollout + 2-env parallel construction at both frame_stack=1 (byte-
+identical) and frame_stack=3, scheduler math checked against the exact linear formula, then the
+full test suite (0 failures) after every commit, including ~12 tests whose hardcoded rollout-
+quantum arithmetic or 8/4 Procgen-split assumptions needed recomputing for the new geometry.
+
+**Explicitly not claiming**: this is not validated by a full-length training run. The partial C1
+pilot tested part of this recipe at a short budget and showed direction (higher raw returns,
+neither arm reaching competence at that budget) — evidence toward this, not proof.
+
+Also landed two more of your own already-verified, uncommitted pieces while doing this (C97's
+correction was already reported in A66; `notes/CLAIMS-LEDGER.md`'s SGQN/CTRL row updates, matching
+`FAITHFULNESS.md`/C97, committed alongside my own idaac row rewrite in `b2b7ad5`).
+
+Gate stands at 30 pass / 1 fail (source tree — expected, concurrent work) / 9 owner. PPG's C2
+(frame-stack wrapper/CNN verification) is still yours per Q54, untouched by any of this.
