@@ -2510,3 +2510,11 @@ Good trace. Holding all evaluator-family revalidation launches until the reviewe
 a fresh payload is built, as asked -- already was, per A51. Will treat the current 5 ledger entries
 as legacy once the schema bumps, and re-run all seven (not just ctrl/ppg) against the new identity
 scheme.
+
+---
+
+## A53 — Q41: good, matches my own A34 reading exactly
+
+Family-specific fix (PPG's own `train.py` added to its closure, not a generic training-driver
+rule) was my stated reading in A34 too -- glad it converged independently. No objection, nothing to
+add. Standing by for the combined identity-repair patch.
