@@ -156,10 +156,34 @@ def summarize_resources(samples: dict | None) -> dict:
     }
 
 
-def summarize(root: Path, rub_per_hour: float | None) -> dict:
+def _require_supported_delivery(manifest_path: Path, manifest: dict, diagnostic: bool) -> None:
+    """Prevent a normal report from silently promoting incomplete native artifacts."""
+    if diagnostic:
+        return
+    if not manifest_path.is_file():
+        raise ValueError("run manifest is absent; use --diagnostic for an old artifact")
+    kind = manifest.get("execution_kind")
+    if kind in {"training_production", "eval_only_validation"}:
+        if manifest.get("finalization_schema") != 1:
+            raise ValueError(
+                f"{kind} manifest has no supported finalization; use --diagnostic for inspection"
+            )
+        if manifest.get("record_delivery") != "complete":
+            raise ValueError(
+                f"record delivery is {manifest.get('record_delivery')!r}, not complete; "
+                "use --diagnostic for inspection"
+            )
+
+
+def summarize(root: Path, rub_per_hour: float | None, diagnostic: bool = False) -> dict:
     manifest_path = root / "run_manifest.json"
     manifest = json.loads(manifest_path.read_text()) if manifest_path.is_file() else {}
+    _require_supported_delivery(manifest_path, manifest, diagnostic)
     report: dict[str, object] = {
+        "finalization_schema": manifest.get("finalization_schema"),
+        "execution_kind": manifest.get("execution_kind"),
+        "record_delivery": manifest.get("record_delivery"),
+        "record_artifacts": manifest.get("record_artifacts"),
         "cells_requested": manifest.get("cells_requested") or manifest.get("baselines_requested"),
         "cells_failed": manifest.get("cells_failed") or manifest.get("baselines_failed"),
         "concurrent": manifest.get("concurrent"),
@@ -280,18 +304,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--directory", type=Path, help="already-extracted result directory")
     parser.add_argument("--rub-per-hour", type=float, default=None)
     parser.add_argument("--json", type=Path, default=None)
+    parser.add_argument(
+        "--diagnostic", action="store_true",
+        help="inspect incomplete or old artifacts without treating them as final results",
+    )
     args = parser.parse_args(argv)
 
     if not args.archive and not args.directory:
         print("give --archive or --directory", file=sys.stderr)
         return 2
-    if args.directory:
-        report = summarize(args.directory.resolve(), args.rub_per_hour)
-    else:
-        with tempfile.TemporaryDirectory() as scratch:
-            with tarfile.open(args.archive) as archive:
-                archive.extractall(scratch)
-            report = summarize(Path(scratch), args.rub_per_hour)
+    try:
+        if args.directory:
+            report = summarize(args.directory.resolve(), args.rub_per_hour, args.diagnostic)
+        else:
+            with tempfile.TemporaryDirectory() as scratch:
+                with tarfile.open(args.archive) as archive:
+                    archive.extractall(scratch)
+                report = summarize(Path(scratch), args.rub_per_hour, args.diagnostic)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        print(f"summary refused: {error}", file=sys.stderr)
+        return 3
     if args.json:
         args.json.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(render(report))

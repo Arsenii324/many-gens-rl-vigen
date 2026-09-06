@@ -400,13 +400,24 @@ def test_every_baseline_has_a_launch_script_and_a_readme():
         assert os.access(os.path.join(ROOT, "baselines", n, "train.sh"), os.X_OK)
 
 
-def test_upstream_patches_are_applied():
-    """A run against unpatched upstream measures the training distribution and calls it eval."""
+def test_upstream_patch_check_records_unknown_source_origin_without_invalidating_static_identity():
+    """Archive extraction lacks Git provenance, but post-patch bytes can still be validated."""
     if not os.path.isdir(os.path.join(ROOT, "RL-ViGen-upstream")):
         pytest.skip("RL-ViGen-upstream not present")
     r = subprocess.run([sys.executable, os.path.join(ROOT, "setup", "apply_patches.py"),
                         "--check"], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout + r.stderr
+    assert "SOURCE_ORIGIN_UNKNOWN" in r.stderr
+
+
+def test_source_origin_can_be_made_a_separate_explicit_gate():
+    if not os.path.isdir(os.path.join(ROOT, "RL-ViGen-upstream")):
+        pytest.skip("RL-ViGen-upstream not present")
+    environment = {**os.environ, "NATIVE_REQUIRE_SOURCE_ORIGIN": "1"}
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "setup", "apply_patches.py"),
+                        "--check"], capture_output=True, text=True, cwd=ROOT, env=environment)
+    assert r.returncode == 3, r.stdout + r.stderr
+    assert "source-origin certification was explicitly required" in r.stderr
 
 
 def test_every_runnable_baseline_has_a_config_entry():
@@ -574,6 +585,22 @@ def test_env_patches_matches_the_patch_script():
     assert proto_families == script_families, (
         f"Protocol.env_patches names {sorted(proto_families)} but setup/apply_patches.py applies "
         f"{sorted(script_families)}. The protocol hash would certify the wrong tree.")
+
+
+def test_p20_replaces_the_entire_reset_tail():
+    """P20 must consume the old return it replaces, not concatenate a second one.
+
+    The original P20 anchor stopped at ``sim.forward()`` while its replacement also supplied the
+    reset return.  Applying it to the pristine archive therefore generated invalid Python only
+    in remote jobs, whose sources are patched from scratch.
+    """
+    import sys
+    sys.path.insert(0, ROOT)
+    from setup.apply_patches import P20_FIND, P20_REPL
+
+    reset_return = "return self._reformat_obs(self.env._get_observations(force_update=True))"
+    assert reset_return in P20_FIND
+    assert P20_REPL.count(reset_return) == 1
 
 
 # ================================================================================================

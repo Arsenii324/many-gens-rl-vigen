@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# A V100 run must select its profile explicitly.  Keeping the DataSphere default here preserves
+# every existing probe config, while the manifest below makes the effective host observable.
+# Whether the CALLER named a host must be captured BEFORE the default is applied, or the
+# production guard below can never fire: after this line the variable is always set, so testing it
+# for emptiness tests nothing. (Written after doing exactly that.)
+if [[ -n "${NATIVE_HOST_PROFILE:-}" ]]; then
+  NATIVE_HOST_PROFILE_EXPLICIT=1
+else
+  NATIVE_HOST_PROFILE_EXPLICIT=0
+fi
+export NATIVE_HOST_PROFILE_EXPLICIT
+export NATIVE_HOST_PROFILE="${NATIVE_HOST_PROFILE:-datasphere}"
+
 run_measured() {
   local output_dir="$1"
   shift
@@ -147,6 +160,7 @@ run_one_cell() {
   if [[ -n "${NATIVE_LAUNCHER:-}" ]]; then
     argv[0]="$NATIVE_LAUNCHER"
   fi
+
   local time_wrapper=()
   if [[ -z "${NATIVE_NO_TIME_WRAPPER:-}" ]]; then
     time_wrapper=(/usr/bin/time -v)
@@ -179,6 +193,56 @@ run_one_cell() {
   done < <(python3 "$FAMILY_TOOL" environment --family "$family" --baseline "$baseline" --task "$task" \
     --frames "$frames" --eval-every "$eval_every" --eval-episodes "$eval_episodes" \
     --save-every "$cell_save_every" --seed "$seed" --run-dir "$run_dir")
+  # [Added 2026-09-05, Codex Q8.] THE EFFECTIVE CONFIGURATION, WRITTEN ONCE, BESIDE THE CELL.
+  #
+  # `notes/record-completeness-spec.md` asks for "the resolved values actually used, not the
+  # template". A `host_profile` label in the manifest is necessary and not sufficient: reconstructing
+  # what a cell ran by re-reading `families.json` later gives the WRONG answer the moment a
+  # descriptor is edited, and descriptors were edited three times in this session alone.
+  #
+  # So the rendered argv is captured here, at the only moment it is known, and never derived again.
+  mkdir -p "$cell_out"
+  printf '%s\0' "${argv[@]}" | env \
+      _EC_CELL="$identifier" _EC_FAMILY="$family" _EC_BASELINE="$baseline" _EC_SEED="$seed" \
+      _EC_TASK="$task" _EC_FRAMES="$frames" _EC_SAVE_EVERY="$cell_save_every" \
+      _EC_EVAL_EVERY="$eval_every" _EC_EVAL_EPISODES="$eval_episodes" \
+      _EC_CELL_ENVIRONMENT="$(printf '%s\n' ${cell_environment[@]+"${cell_environment[@]}"})" \
+      python3 -c '
+import json, os, sys
+argv = [a for a in sys.stdin.buffer.read().decode("utf-8", "replace").split("\0") if a]
+keep = ("NATIVE_HOST_PROFILE", "NATIVE_FAMILY", "NATIVE_LAUNCHER", "NATIVE_EXTRA_OVERRIDES",
+        "NATIVE_DISABLE_ONLINE_EVAL", "NATIVE_CONCURRENT", "CURVE_EVAL", "ENDPOINT_EVAL",
+        "RLGEN_DETERMINISTIC_EVAL", "CUBLAS_WORKSPACE_CONFIG", "MUJOCO_GL", "SAVE_EVERY",
+        "SAVE_EVERY_FRAMES", "EVAL_EVERY_FRAMES", "EVAL_EPISODES")
+json.dump({
+    "cell": os.environ.get("_EC_CELL"),
+    "family": os.environ.get("_EC_FAMILY"),
+    "baseline": os.environ.get("_EC_BASELINE"),
+    "seed": os.environ.get("_EC_SEED"),
+    "task": os.environ.get("_EC_TASK"),
+    "frames_requested": os.environ.get("_EC_FRAMES"),
+    "save_every": os.environ.get("_EC_SAVE_EVERY"),
+    "eval_every": os.environ.get("_EC_EVAL_EVERY"),
+    "eval_episodes": os.environ.get("_EC_EVAL_EPISODES"),
+    # Same default as the record path and as family.host_profile(), which is the authority. These
+    # disagreed: this site stamped null where the record stamped "datasphere", so the two artifacts
+    # describing a SINGLE run host contradicted each other in the default case -- which is every run
+    # made so far. A reader could not tell a real profile change from an artifact of two defaults.
+    "host_profile": os.environ.get("NATIVE_HOST_PROFILE", "datasphere"),
+    "argv": argv,
+    "runner_environment": {k: os.environ[k] for k in keep if k in os.environ},
+    # The family-specific environment `family.py environment` resolved for THIS cell -- e.g. ALDA
+    # runs with ALDA_RESULTS pointing at its own directory. Written after that resolution, not
+    # before: an "effective" config that omits the environment the process actually ran under is
+    # not effective, and this artifact was first placed where it could not see it (Codex Q10).
+    "cell_environment": [line for line in
+                         os.environ.get("_EC_CELL_ENVIRONMENT", "").split("\n") if line],
+}, sys.stdout, indent=2, sort_keys=True)
+' > "$cell_out/effective_config.json" || {
+    echo "=== NATIVE_EFFECTIVE_CONFIG_FAILED $identifier ===" >&2
+    return 1
+  }
+  echo "=== NATIVE_EFFECTIVE_CONFIG $identifier argv=${#argv[@]} env=${#cell_environment[@]} profile=${NATIVE_HOST_PROFILE:-unset} ==="
   run_measured "$cell_out" ${time_wrapper[@]+"${time_wrapper[@]}"} ${cell_timeout[@]+"${cell_timeout[@]}"} \
     env ${cell_environment[@]+"${cell_environment[@]}"} \
     bash "${argv[@]}" ${extra_overrides[@]+"${extra_overrides[@]}"} || return 1
@@ -192,11 +256,27 @@ run_one_cell() {
   python3 "$FAMILY_TOOL" retain --family "$family" --baseline "$baseline" --task "$task" \
     --frames "$frames" --save-every "$cell_save_every" --seed "$seed" --run-dir "$run_dir" \
     --output "$cell_out" || return 1
-  # [Claude 2026-09-02 10:40 MSK: a checkpoint full of NaNs is indistinguishable from a bad run in
-  # every other artifact this project keeps -- docs/CONSTRUCTION.md#c57 records exactly that, for
-  # 70,000 frames. Cheap here; expensive after seven hours.]
-  python3 "$FAMILY_TOOL" check-finite --family "$family" --root "$work_root" \
+  # [Codex 2026-09-05.] Check the retained terminal checkpoint before paying for any intermediate
+  # or endpoint grid. A non-finite checkpoint is already a failed cell; evaluating it first only
+  # burns GPU time and can create misleading partial records.
+  "${CELL_PYTHON:-python3}" "$FAMILY_TOOL" check-finite --family "$family" --root "$work_root" \
     --checkpoint "$cell_out/snapshot.pt" || return 1
+  if [[ "${CURVE_EVAL:-0}" == "1" ]]; then
+    # A PRODUCTION trajectory must be complete or the cell fails: a curve with holes cannot be
+    # distinguished later from one that was never asked for, and the checkpoints have already been
+    # retained above, so failing here costs the evaluation and keeps the expensive artifact.
+    # CURVE_EVAL_STRICT defaults to whether this is a production cell (production_env sets
+    # ENDPOINT_EVAL=1), so a cheap exploratory probe keeps its non-fatal behaviour and production
+    # cannot mistake a partial curve for a complete one.
+    run_curve_eval_with_policy "$cell_out" "$family" "$baseline" "$seed" "$cell_save_every" || return 1
+  fi
+  if [[ "${ENDPOINT_EVAL:-0}" == "1" ]]; then
+    run_endpoint_eval "$cell_out" "$family" "$baseline" "$seed" "$expected_endpoint" || return 1
+  else
+    # Loud, not silent: a training cell that produced no endpoint grid has produced no reportable
+    # number, and that must be visible in the log rather than discovered during analysis.
+    echo "=== NATIVE_NO_ENDPOINT_GRID $baseline (set ENDPOINT_EVAL=1 to evaluate the final checkpoint) ===" >&2
+  fi
   return 0
 }
 
@@ -294,18 +374,61 @@ if [[ "${1:-}" == "--cells-need-places365" ]]; then
   exit "$?"
 fi
 
+require_production_configuration() {
+  # A production-length run must NAME its host. `host_profile()` defaults to "datasphere" so that
+  # every existing probe config keeps working -- but that same default is the silent failure the
+  # whole migration document exists to prevent: DataSphere-shaped values (num_envs, procs, the
+  # 300k replay cap) executing on a 16-core/113-GiB V100, producing valid-looking numbers of a
+  # rescaled experiment, stamped with a profile that is honest and wrong. Too small on the big
+  # machine SUCCEEDS QUIETLY; only too large fails loudly. So refuse the default at production
+  # scale, where the cost of being wrong is the whole campaign.
+  if [[ "${FRAMES:-10000}" -ge 600000 && "${NATIVE_HOST_PROFILE_EXPLICIT:-0}" != "1" ]]; then
+    echo "REFUSING: FRAMES=${FRAMES} is production scale and NATIVE_HOST_PROFILE is unset." >&2
+    echo "  Set it explicitly (v100 | datasphere). Inheriting the probe default here would run" >&2
+    echo "  hardware-adapted values on hardware they were not chosen for, and succeed." >&2
+    exit 3
+  fi
+  # Codex, mailbox Q18(c): a SEPARATE, pre-existing flag from the one above, and nothing enforced
+  # it at production scale. `apply_production_settings` -- which applies families.json's cadence,
+  # replay cap and preserve-snapshots settings -- returns immediately if NATIVE_PRODUCTION is unset.
+  # Without this guard, a job with NATIVE_HOST_PROFILE correctly set but NATIVE_PRODUCTION forgotten
+  # would train a full 600k+ run at PROBE-scale cadence/replay settings and complete looking
+  # successful -- the same "too small on the big machine succeeds quietly" failure as above, for a
+  # different knob.
+  if [[ "${FRAMES:-10000}" -ge 600000 && -z "${NATIVE_PRODUCTION:-}" ]]; then
+    echo "REFUSING: FRAMES=${FRAMES} is production scale and NATIVE_PRODUCTION is unset." >&2
+    echo "  Without it, apply_production_settings silently applies NOTHING -- the run would train" >&2
+    echo "  at probe-scale cadence and replay settings and complete looking successful." >&2
+    exit 3
+  fi
+}
+
 apply_production_settings() {
   [[ -n "${NATIVE_PRODUCTION:-}" ]] || return 0
-  local prod_key prod_value
+  local prod_key prod_value current
+  # A probe may intentionally override a resolved setting, but a production-scale job must not
+  # silently become a different experiment because its YAML happened to export SAVE/EVAL knobs.
+  # Strict mode is automatic at the 600k boundary; the explicit variable remains useful for a
+  # smaller rehearsal that wants to exercise the same refusal path.
+  local strict="${NATIVE_PRODUCTION_STRICT:-0}"
+  if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
+    strict=1
+  fi
   while IFS='=' read -r prod_key prod_value; do
     [[ -z "$prod_key" || "$prod_key" == \#* ]] && continue
     if [[ "$prod_key" == "NATIVE_PRODUCTION_UNAPPLIED" ]]; then
       echo "=== NATIVE_PRODUCTION_UNAPPLIED $prod_value ===" >&2
       continue
     fi
-    if [[ -z "${!prod_key:-}" ]]; then
+    current="${!prod_key:-}"
+    if [[ -z "$current" ]]; then
       export "$prod_key=$prod_value"
       echo "=== NATIVE_PRODUCTION_SET $prod_key=$prod_value ==="
+    elif [[ "$strict" == "1" && "$current" != "$prod_value" ]]; then
+      echo "=== NATIVE_PRODUCTION_CONFLICT $prod_key=$current expected=$prod_value ===" >&2
+      echo "    production settings are frozen at scale; remove the job-config override or set" >&2
+      echo "    NATIVE_PRODUCTION_STRICT=0 only for a deliberately non-production rehearsal" >&2
+      return 3
     else
       echo "=== NATIVE_PRODUCTION_KEPT $prod_key=${!prod_key} (job config overrides the default) ==="
     fi
@@ -324,15 +447,23 @@ if [[ "${1:-}" == "--run-cells" ]]; then
   out_arg="${2:?output directory}"
   mkdir -p "$work_arg" "$out_arg"
   export DEFAULT_SEED="${SEED:-1}"
+  echo "=== NATIVE_HOST_PROFILE $(python3 "$FAMILY_TOOL" host-profile) ==="
   apply_production_settings "$cells_arg"
+  require_production_configuration
   python3 "$FAMILY_TOOL" check-budget --cells "$cells_arg" --frames "${FRAMES:-10000}"
+  if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
+    run_eval_every=2147483647
+  else
+    run_eval_every="${EVAL_EVERY_FRAMES:-${FRAMES:-10000}}"
+  fi
   run_cell_list "$cells_arg" "${TASK:-Door}" "${FRAMES:-10000}" \
-    "${EVAL_EVERY_FRAMES:-${FRAMES:-10000}}" "${EVAL_EPISODES:-2}" "$out_arg" "$work_arg"
+    "$run_eval_every" "${EVAL_EPISODES:-2}" "$out_arg" "$work_arg"
   exit "$?"
 fi
 
 code="${1:?payload archive}"
 result="${2:?result archive}"
+require_production_configuration
 asset_archive="${3:-}"
 out="/tmp/native-out"
 work="/tmp/native-work"
@@ -377,6 +508,167 @@ cd "$work"
 # rather than by remembering to pass a flag.
 #
 # Two candidate causes remain conflated -- CUDA versus CPU, and EGL versus GLFW rendering.
+# [Claude 2026-09-04: evaluate the intermediate checkpoint grid WHERE IT WAS PRODUCED, and let only
+# the records travel.
+#
+# C95 decides this on its own: a container-trained checkpoint CANNOT be validly evaluated on the
+# laptop the archives come home to, because the renderer differs (EGL there, glfw here). So the
+# intermediate grid is evaluated where it was produced or it is not evaluated at all, and what
+# travels is records rather than weights.
+#
+# [CORRECTED 2026-09-04, same day: this block first argued from storage as well -- 35.5 GB of
+# checkpoints against "roughly 30 GB free". The owner then cleared space and the real figure is
+# **73.1 GB**, so the weights WOULD fit and that leg of the argument is withdrawn. The design does
+# not change, because it never rested on the storage: weights that cannot be validly evaluated
+# where they land are worth nothing however much room there is for them. Recorded rather than
+# quietly deleted, because a conclusion propped up by a premise that turned out false should be
+# re-derived in the open -- and the size still matters as a secondary fact, since 35.5 GB is half
+# the free disk for data with no local use. `plan_production.checkpoint_storage_gb` computes it.]
+#
+# Off by default (CURVE_EVAL unset): a probe that only wants training must not start paying for a
+# ten-scene grid per stamp. `CURVE_EVAL_DISCARD_WEIGHTS=1` additionally removes each intermediate
+# after it has been evaluated, leaving the terminal `snapshot.pt` untouched -- that one is the
+# checkpoint of record and is never deleted here.]
+ppg_checkpoint_frame() {
+  local cell_out="$1" stamp="$2" save_every="$3" actual
+  # PPG's model<N>.jd is indexed by save order. LogSaveHelper logs the exact interaction count
+  # beside every save, so prefer that authoritative value over reconstructing a requested cadence.
+  actual="$(grep 'Saving to .*IC=' "$cell_out/training.log" 2>/dev/null \
+    | grep -oE 'IC=[0-9]+' | cut -d= -f2 | sed -n "$((10#$stamp + 1))p" || true)"
+  if [[ -n "$actual" ]]; then
+    printf '%s\n' "$actual"
+  else
+    # Keep old archives usable when their training log predates the save-line instrumentation.
+    printf '%s\n' "$(( (10#$stamp + 1) * save_every ))"
+  fi
+}
+
+# [Added 2026-09-05, Codex Q7.] THE TERMINAL GRID A TRAINING JOB OWES.
+#
+# `run_curve_eval` visits `cells/*/checkpoints` and evaluates intermediate stamps at a deliberately
+# SHALLOW depth. Nothing evaluated the cell's FINAL checkpoint, so a training job produced curve
+# rows and no reportable endpoint -- the headline number had to come from a separate offline job,
+# paying a second bootstrap and shipping a checkpoint out of the container that C95 says must be
+# evaluated where it trained.
+#
+# Scope is separate from the curve's on purpose: the endpoint is the reported quantity (4 regimes x
+# 10 scenes x 20 episodes by default) and an intermediate stamp is descriptive. Sharing one
+# CURVE_EVAL_* scope would have forced a choice between a full grid at every stamp and a shallow
+# endpoint, which is exactly the reconciliation Q7 asked for.
+#
+# Opt-in like CURVE_EVAL, because a probe that only wants training must not silently start paying
+# for an 800-episode grid. When a training job finishes WITHOUT one, that is announced rather than
+# passed over in silence -- an absent endpoint must not look like a completed one.
+run_endpoint_eval() {
+  local cell_out="$1" family="$2" baseline="$3" seed="$4" frame="$5"
+  local snapshot="$cell_out/snapshot.pt"
+  if [[ ! -s "$snapshot" ]]; then
+    echo "=== NATIVE_ENDPOINT_EVAL_NO_CHECKPOINT $baseline ===" >&2
+    return 1
+  fi
+  local started
+  started="$(date +%s)"
+  echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame epoch=$started ==="
+  set +e
+  python3 scripts/eval_grid.py \
+    --family "$family" \
+    --baseline "$baseline" \
+    --task "${TASK:-Door}" \
+    --seed "$seed" \
+    --snapshot "$snapshot" \
+    --frame "$frame" \
+    --regimes "${ENDPOINT_EVAL_REGIMES:-train,eval-easy,eval-medium,eval-hard}" \
+    --scenes "${ENDPOINT_EVAL_SCENES:-0,1,2,3,4,5,6,7,8,9}" \
+    --episodes "${ENDPOINT_EVAL_EPISODES:-20}" \
+    --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
+    --device "${ENDPOINT_EVAL_DEVICE:-cuda}" \
+    --eval-scope endpoint \
+    --append \
+    --out "$cell_out/offline_eval_endpoint.jsonl" 2>&1 | tee -a "$cell_out/training.log"
+  local rc=${PIPESTATUS[0]}
+  set -e
+  echo "=== NATIVE_ENDPOINT_EVAL_SECONDS $(( $(date +%s) - started )) ==="
+  if [[ "$rc" -ne 0 ]]; then
+    echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline rc=$rc ===" >&2
+    return 1
+  fi
+  echo "=== NATIVE_ENDPOINT_EVAL_COMPLETED $baseline frame=$frame ==="
+  return 0
+}
+
+run_curve_eval() {
+  local cell_out="$1" family="$2" baseline="$3" seed="$4" save_every="$5"
+  local dir="$cell_out/checkpoints"
+  [[ -d "$dir" ]] || { echo "=== NATIVE_CURVE_EVAL_NO_STAMPS $baseline ===" >&2; return 1; }
+  local failed=0
+  local count=0 item base stamp frame
+  for item in "$dir"/*; do
+    [[ -s "$item" ]] || continue
+    base="$(basename "$item")"
+    # the stamp is the last integer in the filename. For six families that integer IS the frame;
+    # ppg names by SAVE INDEX (model<N>.jd), so use its save log's exact interaction count.
+    stamp="$(echo "$base" | grep -oE '[0-9]+' | tail -1 || true)"
+    [[ -n "$stamp" ]] || { echo "=== NATIVE_CURVE_EVAL_UNSTAMPED $base ===" >&2; continue; }
+    if [[ "$family" == "ppg" ]]; then
+      frame="$(ppg_checkpoint_frame "$cell_out" "$stamp" "$save_every")"
+    else
+      frame="$stamp"
+    fi
+    echo "=== NATIVE_CURVE_EVAL_BEGIN $baseline frame=$frame file=$base ==="
+    set +e
+    python3 scripts/eval_grid.py \
+      --snapshot "$item" \
+      --family "$family" \
+      --baseline "$baseline" \
+      --seed "$seed" \
+      --frame "$frame" \
+      --regimes "${CURVE_EVAL_REGIMES:-train,eval-easy}" \
+      --scenes "${CURVE_EVAL_SCENES:-0}" \
+      --episodes "${CURVE_EVAL_EPISODES:-3}" \
+      --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
+      --device "${CURVE_EVAL_DEVICE:-cuda}" \
+      --eval-scope curve \
+      --append \
+      --out "$cell_out/offline_eval_curve.jsonl" 2>&1 | tee -a "$cell_out/training.log"
+    local rc=${PIPESTATUS[0]}
+    set -e
+    if [[ "$rc" -ne 0 ]]; then
+      echo "=== NATIVE_CURVE_EVAL_FAILED $baseline frame=$frame rc=$rc ===" >&2
+      failed=$(( failed + 1 ))
+    else
+      count=$((count + 1))
+      if [[ "${CURVE_EVAL_DISCARD_WEIGHTS:-0}" == "1" ]]; then
+        rm -f "$item"
+      fi
+    fi
+  done
+  # [Corrected 2026-09-05, Codex Q10.] This used to log each failure and then return success, so a
+  # trajectory could be silently PARTIAL while the cell and the job both went green -- an absent
+  # stamp is indistinguishable from one that was never scheduled. The count is reported either way
+  # and the caller decides how fatal it is.
+  if [[ "$failed" -gt 0 ]]; then
+    echo "=== NATIVE_CURVE_EVAL_PARTIAL $baseline stamps=$count failed=$failed ===" >&2
+    return 1
+  fi
+  if [[ "$count" -eq 0 ]]; then
+    echo "=== NATIVE_CURVE_EVAL_NO_STAMPS $baseline ===" >&2
+    return 1
+  fi
+  echo "=== NATIVE_CURVE_EVAL_COMPLETED $baseline stamps=$count ==="
+}
+
+run_curve_eval_with_policy() {
+  if run_curve_eval "$@"; then
+    return 0
+  fi
+  if [[ "${CURVE_EVAL_STRICT:-${ENDPOINT_EVAL:-0}}" == "1" ]]; then
+    echo "=== NATIVE_CURVE_EVAL_FATAL ${3:-unknown} (production trajectory is incomplete) ===" >&2
+    return 1
+  fi
+  echo "=== NATIVE_CURVE_EVAL_TOLERATED ${3:-unknown} (exploratory probe; trajectory is partial) ===" >&2
+  return 0
+}
+
 # OFFLINE_EVAL_DEVICES runs the same grid once per device inside ONE job, both under EGL: if both
 # land near 41 the renderer is the cause, and if the CPU pass lands near 3 the device is.
 run_offline_eval() {
@@ -389,8 +681,15 @@ run_offline_eval() {
   fi
   local status=0
   local device
-  for device in $(echo "${OFFLINE_EVAL_DEVICES:-cuda}" | tr ',' ' '); do
-    echo "=== NATIVE_OFFLINE_EVAL_BEGIN device=$device checkpoint=$(basename "$snapshot") ==="
+  for device in $(echo "${OFFLINE_EVAL_DEVICES:-${OFFLINE_EVAL_DEVICE:-cuda}}" | tr ',' ' '); do
+    # [Added 2026-09-05.] Wall-clock markers around the eval phase. Throughput under the current
+  # evaluator is an open question (notes/EVALUATOR-THROUGHPUT.md) and it could not be answered from
+  # job duration, because that is dominated by a ~10-minute bootstrap that installs torch. Two
+  # echoed epochs make s/episode a subtraction instead of an inference -- and inferring it from
+  # total wall time is precisely how a "4x regression" got claimed and then withdrawn.
+  local _eval_started
+  _eval_started="$(date +%s)"
+  echo "=== NATIVE_OFFLINE_EVAL_BEGIN device=$device checkpoint=$(basename "$snapshot") epoch=$_eval_started ==="
     set +e
     python3 scripts/eval_grid.py \
       --snapshot "$snapshot" \
@@ -403,10 +702,12 @@ run_offline_eval() {
       --episodes "${OFFLINE_EVAL_EPISODES:-20}" \
       --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
       --device "$device" \
+      --eval-scope "${OFFLINE_EVAL_SCOPE:-endpoint}" \
       --out "$output_dir/offline_eval_$device.jsonl" 2>&1 | tee -a "$output_dir/training.log"
     local rc=${PIPESTATUS[0]}
     set -e
     if [[ "$rc" -eq 0 ]]; then
+      echo "=== NATIVE_OFFLINE_EVAL_SECONDS $(( $(date +%s) - _eval_started )) ==="
       echo "=== NATIVE_OFFLINE_EVAL_COMPLETED device=$device ==="
     else
       echo "=== NATIVE_OFFLINE_EVAL_FAILED device=$device rc=$rc ===" >&2
@@ -416,7 +717,11 @@ run_offline_eval() {
   return "$status"
 }
 
-cells="${CELLS:-${BASELINES:-${BASELINE:-drqv2}}}"
+# Offline-only jobs have no CELLS/BASelines argument, but their evaluator family still needs its
+# per-family dependency install. Falling back to drqv2 here made ALDA's offline evaluator reach
+# `from colorlog import ...` without ever installing colorlog; the training path was unaffected
+# because normal jobs always set CELLS explicitly.
+cells="${CELLS:-${BASELINES:-${BASELINE:-${OFFLINE_EVAL_FAMILY:-drqv2}}}}"
 frames="${FRAMES:-10000}"
 task="${TASK:-Door}"
 # [Claude 2026-09-02 18:30 MSK: NATIVE_PRODUCTION applies the settings families.json records for
@@ -425,12 +730,32 @@ task="${TASK:-Door}"
 # longer do is deviate by omission. A declared setting with no lever prints
 # NATIVE_PRODUCTION_UNAPPLIED rather than being silently dropped.]
 apply_production_settings "$cells"
-eval_every="${EVAL_EVERY_FRAMES:-$frames}"
+if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
+  # Every production training loop has a final-evaluation hook. A very large positive cadence
+  # suppresses periodic evaluation without passing a family-specific `None` spelling through
+  # argparse/Hydra; the final hook still supplies the endpoint artifact and curve.
+  eval_every=2147483647
+else
+  eval_every="${EVAL_EVERY_FRAMES:-$frames}"
+fi
 eval_episodes="${EVAL_EPISODES:-2}"
 # [Claude 2026-09-02 11:35 MSK: the checkpoint cadence, separate from the evaluation cadence. It
 # defaults to the whole budget -- save once, at the end -- and a production job sets it to keep the
 # budget curve a long run writes anyway.]
-save_every="${SAVE_EVERY_FRAMES:-$frames}"
+# [Claude 2026-09-04: this read only SAVE_EVERY_FRAMES while `family.py` emitted, and all three
+# checkpoint-cadence cfgs set, SAVE_EVERY. The name did not match, the runner fell back to the whole
+# budget, and job bt1791fdh5uctgr1ckhk therefore launched --checkpoint_interval=10000 against a
+# 10000-frame budget: one save, at the end, nothing for retention to keep -- and it reported
+# SUCCESS. A probe whose only purpose is a cadence, that validates no cadence and passes, is worse
+# than one that fails. Both names are accepted; the alias is announced so the drift stays visible.]
+if [[ -n "${SAVE_EVERY:-}" && -n "${SAVE_EVERY_FRAMES:-}" && "$SAVE_EVERY" != "$SAVE_EVERY_FRAMES" ]]; then
+  echo "NATIVE_KNOB_CONFLICT SAVE_EVERY=$SAVE_EVERY vs SAVE_EVERY_FRAMES=$SAVE_EVERY_FRAMES" >&2
+  exit 3
+fi
+if [[ -z "${SAVE_EVERY_FRAMES:-}" && -n "${SAVE_EVERY:-}" ]]; then
+  echo "NATIVE_KNOB_ALIAS SAVE_EVERY -> SAVE_EVERY_FRAMES ($SAVE_EVERY)" >&2
+fi
+save_every="${SAVE_EVERY_FRAMES:-${SAVE_EVERY:-$frames}}"
 seed="${SEED:-1}"
 export DEFAULT_SEED="$seed"
 export NATIVE_CELLS="$cells"
@@ -440,7 +765,17 @@ export NATIVE_SAVE_EVERY_FRAMES="$save_every"
 # [Claude 2026-09-02 06:45 MSK: the runner and the payload are separate job inputs and can drift.
 # Refuse a payload built for an older runner here, immediately after extraction, rather than
 # after a full bootstrap.]
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 10
+# An offline-only job gets its selected family from OFFLINE_EVAL_FAMILY rather than CELLS.  The
+# payload allowlist is family-scoped, so archive integrity alone is not enough: a rlvigen-only
+# archive is valid but cannot unpickle or evaluate an IDAAC checkpoint.  Resolve the actual family
+# set before any pip/apt work and require that the archive declares all of it.
+payload_families="$(python3 "$FAMILY_TOOL" families-of-cells --cells "$cells")"
+payload_families="${payload_families//$'\n'/,}"
+payload_families="${payload_families%,}"
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 13 \
+  --require-families "$payload_families" \
+  --require-evaluator-identity \
+  --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'
 # [Claude 2026-09-02 19:05 MSK: as early as the payload allows -- after the contract check, which
 # is what makes family.py trustworthy, and before the family dependency installs and the clone.
 # A budget below a family's floor trains nothing and fails at retain(), which is otherwise
@@ -546,7 +881,7 @@ clone_rlvigen() {
 # platform's mirrors and not the general internet.
 #
 # RLVIGEN_ARCHIVE is a job input carrying a PRISTINE tree at $RLVIGEN_COMMIT -- pristine because
-# the runner applies P1-P18 itself immediately below, and the vendored working copy has them
+# the runner applies P1-P20 itself immediately below, and the vendored working copy has them
 # applied already (15 modified files under `git status`). Shipping the working copy would patch a
 # patched tree.
 #
@@ -585,6 +920,19 @@ print(json.dumps({dist.metadata["Name"]: dist.version for dist in importlib.meta
 PY
 python3 setup/apply_patches.py
 python3 setup/apply_patches.py --check
+# The payload's runner contract and allowlist are not the evaluator identity. After the separately
+# supplied pristine RL-ViGen tree has been patched, compare the exact family closure bytes before
+# any Robosuite or family import. If the archive input is absent, the existing clone-at-commit path
+# remains in force; the closure comparison still applies, but this gate does not claim an archive
+# origin certificate.
+if [[ -n "${RLVIGEN_ARCHIVE:-}" && -f "${RLVIGEN_ARCHIVE}" ]]; then
+  python3 datasphere/native/contract.py verify-evaluator-binding \
+    --archive "$code" --source "$work" --families "$payload_families" \
+    --rlvigen-archive "$RLVIGEN_ARCHIVE"
+else
+  python3 datasphere/native/contract.py verify-evaluator-binding \
+    --archive "$code" --source "$work" --families "$payload_families"
+fi
 # [Codex 2026-09-01 15:20 MSK: verify the source-hashed exceptional import closure before any wrapper import or timed calibration]
 python3 datasphere/native/contract.py verify-robosuite-closure --source RL-ViGen-upstream --requirements requirements-native.txt --closure datasphere/native/robosuite-import-closure.json
 export MUJOCO_GL=egl PYOPENGL_PLATFORM=egl WANDB_MODE=offline WANDB_DISABLED=true
@@ -741,37 +1089,97 @@ if [[ "${PREFLIGHT_ONLY:-0}" != "1" ]]; then
 fi
 export BLOCKED_FAMILIES="${BLOCKED_FAMILIES# }"
 
+# The exact "else\n  run_cell_list" / "\nfi\n# [Claude" text below is matched literally by
+# tests/test_datasphere_native_contract.py::test_runner_sets_completion_only_on_success_and_
+# records_failure_marker, which slices this block out of the file by string search rather than
+# parsing bash. Reshaping the else-branch's first line or the blank-line/comment layout around
+# the closing `fi` will break that slice without touching its behavior -- update the test's split
+# markers in the SAME edit if this block's literal text must change.
 cell_status=0
+export FAILURE_MARKER=""
 if [[ "${PREFLIGHT_ONLY:-0}" == "1" ]]; then
   : > "$out/training.log"
   export FINAL_EVALUATION_MARKER=""
   export FAILED_CELLS=""
 elif [[ -n "${OFFLINE_EVAL_SNAPSHOT:-}" ]]; then
-  run_offline_eval "$out" || cell_status=1
-  export FINAL_EVALUATION_MARKER="NATIVE_OFFLINE_EVAL_COMPLETED"
+  # [Corrected 2026-09-05: a completion marker used to export unconditionally even when
+  # run_offline_eval failed, so the manifest could claim NATIVE_OFFLINE_EVAL_COMPLETED for a run
+  # that returned nonzero. The marker now reflects cell_status, not the shell's own exit path.]
+  if run_offline_eval "$out"; then
+    export FINAL_EVALUATION_MARKER="NATIVE_OFFLINE_EVAL_COMPLETED"
+  else
+    cell_status=1
+    export FINAL_EVALUATION_MARKER=""
+    export FAILURE_MARKER="NATIVE_OFFLINE_EVAL_FAILED"
+  fi
   export FAILED_CELLS=""
 else
-  run_cell_list "$cells" "$task" "$frames" "$eval_every" "$eval_episodes" "$out" "$work" || cell_status=1
-  export FINAL_EVALUATION_MARKER="NATIVE_FINAL_EVALUATION_COMPLETED frame=$frames"
+  run_cell_list_ok=1
+  # [Corrected 2026-09-05, external review: the analogous training-path bug -- a failed
+  # run_cell_list (nonzero via `|| cell_status=1`) still exported the COMPLETED marker
+  # unconditionally right after. run_cell_list already exports the real FAILED_CELLS before
+  # returning nonzero; this branch must not overwrite it and must not claim completion on failure.]
+  if run_cell_list "$cells" "$task" "$frames" "$eval_every" "$eval_episodes" "$out" "$work"; then
+    export FINAL_EVALUATION_MARKER="NATIVE_FINAL_EVALUATION_COMPLETED"
+  else
+    cell_status=1
+    export FINAL_EVALUATION_MARKER=""
+    export FAILURE_MARKER="NATIVE_FINAL_EVALUATION_FAILED cells=$FAILED_CELLS"
+  fi
 fi
+# Record provenance before the normalizer runs.  The normalized rows inherit this manifest, so the
+# execution kind cannot be inferred later from whether a file happened to be nonempty.
+if [[ "${PREFLIGHT_ONLY:-0}" == "1" ]]; then
+  EXECUTION_KIND="preflight"
+elif [[ -n "${OFFLINE_EVAL_SNAPSHOT:-}" ]]; then
+  EXECUTION_KIND="eval_only_validation"
+elif [[ "${NATIVE_PRODUCTION:-0}" == "1" ]]; then
+  EXECUTION_KIND="training_production"
+else
+  EXECUTION_KIND="exploratory"
+fi
+export EXECUTION_KIND
 # [Claude 2026-09-02 00:50 MSK: one manifest entry per baseline. A single job now carries several
 # calibrations, so a single top-level `baseline`/`snapshot_retained` pair could no longer say which
 # run it described.]
 python3 - <<'PY' > "$out/run_manifest.json"
+import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 OUT = Path("/tmp/native-out")
 preflight_only = os.environ.get("PREFLIGHT_ONLY", "0") == "1"
+offline_eval = bool(os.environ.get("OFFLINE_EVAL_SNAPSHOT"))
+production = os.environ.get("NATIVE_PRODUCTION", "0") == "1"
+execution_kind = (
+    "preflight" if preflight_only else
+    "eval_only_validation" if offline_eval else
+    "training_production" if production else
+    "exploratory"
+)
 requested = [spec.strip() for spec in os.environ.get("NATIVE_CELLS", "").split(",") if spec.strip()]
 failed = [name for name in os.environ.get("FAILED_CELLS", "").split() if name.strip()]
 default_seed = os.environ.get("SEED", "1")
 
 
 def identify(spec):
-    baseline, _, seed = spec.partition(":")
-    return baseline, (seed or default_seed)
+    # Exact shape asserted by tests/test_datasphere_native_contract.py's manifest tests (they
+    # build NATIVE_CELLS from already-formed identifiers, not real colon specs) -- if this
+    # function's branching changes, run that file before trusting the manifest again.
+    if ":" in spec:
+        baseline, _, seed = spec.partition(":")
+        return baseline, (seed or default_seed)
+    # No colon: `spec` is already a formed "baseline-sSEED" identifier rather than a real
+    # `--cells baseline:seed` entry. Real `NATIVE_CELLS` is always colon-form (line ~747); this
+    # branch exists so a caller building NATIVE_CELLS directly from identifiers (a test fixture,
+    # or a future caller that already knows the identifier) resolves to the SAME identifier
+    # instead of silently getting a second "-s{default_seed}" appended onto it.
+    match = re.match(r"^(.+)-s([^-]+)$", spec)
+    if match:
+        return match.group(1), match.group(2)
+    return spec, default_seed
 
 
 def read_json(path):
@@ -782,6 +1190,36 @@ def rows(path):
     return max(0, len(path.read_text().splitlines()) - 1) if path.exists() else 0
 
 
+def final_marker(path):
+    """Return the endpoint marker actually emitted by this cell's own evaluator.
+
+    IDAAC floors and PPG ceils a requested budget, and a job may contain several cells. The
+    top-level requested-frame marker cannot describe either case. `run_one_cell` has already
+    verified the family's exact endpoint; the manifest records the observed per-cell marker so
+    it remains truthful without re-deriving the endpoint from a later-edited descriptor.
+    """
+    if not path.exists():
+        return None
+    hits = re.findall(r"NATIVE_FINAL_EVALUATION_COMPLETED frame=([0-9]+)",
+                      path.read_text(errors="replace"))
+    return f"NATIVE_FINAL_EVALUATION_COMPLETED frame={hits[-1]}" if hits else None
+
+
+def cell_failure_marker(path):
+    """The line explaining why a FAILED cell failed, from its own log.
+
+    [Added 2026-09-05, external review pointing at run_probe.sh:1070-1071.] A cell can fail
+    AFTER emitting a real completion marker -- training finishes and saves, then endpoint
+    evaluation dies -- so a cell's own log can contain BOTH a success line and a failure line.
+    Only called for cells already known to be in `failed`; this never overrides `completed`.
+    """
+    if not path.exists():
+        return None
+    hits = re.findall(r"NATIVE_\w*_FAILED[^\n]*", path.read_text(errors="replace"))
+    return hits[-1] if hits else None
+
+
+frames_requested = int(os.environ.get("FRAMES", "10000"))
 cells = {}
 for spec in requested:
     baseline, seed = identify(spec)
@@ -789,18 +1227,32 @@ for spec in requested:
     directory = OUT / "cells" / identifier
     log = directory / "training.log"
     snapshot = directory / "snapshot.pt"
-    marker = os.environ.get("FINAL_EVALUATION_MARKER") or ""
+    cell_failed = identifier in failed
+    marker = final_marker(log)
     cells[identifier] = {
         "baseline": baseline,
         "seed": seed,
-        "completed": identifier not in failed and directory.exists(),
-        "final_evaluation_marker": marker if (log.exists() and marker and marker in log.read_text(errors="replace")) else None,
+        "completed": not cell_failed and directory.exists(),
+        "frames_requested": frames_requested,
+        "observed_endpoint": (int(re.search(r"frame=([0-9]+)", marker).group(1))
+                              if marker else None),
+        "final_evaluation_marker": final_marker(log),
+        "terminal_status": "completed",
+        "failure_marker": None,
         "snapshot_retained": snapshot.exists() and snapshot.stat().st_size > 0,
         "snapshot_bytes": snapshot.stat().st_size if snapshot.exists() else 0,
         "train_curve_rows": rows(directory / "train.csv"),
         "eval_curve_rows": rows(directory / "eval.csv"),
         "resource_samples": read_json(directory / "resources.json"),
     }
+    # A cell can emit a real completion marker and still be in `failed` -- training saved, then
+    # endpoint evaluation died. `failed` is the authoritative signal; the log's own success text
+    # must not override it, or a failed cell reads as a completed one from its own marker alone.
+    if cell_failed:
+        cells[identifier]["observed_endpoint"] = None
+        cells[identifier]["final_evaluation_marker"] = None
+        cells[identifier]["terminal_status"] = "failed"
+        cells[identifier]["failure_marker"] = cell_failure_marker(log)
 
 json.dump({
     "command": "runnable/_launch/rlvigen.sh",
@@ -810,21 +1262,41 @@ json.dump({
     "concurrent": os.environ.get("NATIVE_CONCURRENT") == "1",
     "baseline": identify(requested[0])[0] if len(requested) == 1 else None,
     "frames": os.environ.get("FRAMES", "10000"),
+    "frames_requested": frames_requested,
+    "failure_marker": os.environ.get("FAILURE_MARKER") or None,
     "eval_every_frames": os.environ.get("NATIVE_EVAL_EVERY_FRAMES"),
     "eval_episodes": os.environ.get("NATIVE_EVAL_EPISODES"),
     "extra_overrides": os.environ.get("NATIVE_EXTRA_OVERRIDES") or None,
+    "host_profile": os.environ.get("NATIVE_HOST_PROFILE", "datasphere"),
     "eval_scenes": os.environ.get("RLVIGEN_EVAL_SCENES") or "0,1,2,3,4,5,6,7,8,9",
     "cell_timeout_seconds": os.environ.get("CELL_TIMEOUT_SECONDS") or None,
     "seed": default_seed,
     "preflight_only": preflight_only,
+    "finalization_schema": 1,
+    "execution_kind": execution_kind,
+    "record_delivery": "pending",
+    "record_artifacts": {"inputs": [], "output": None},
+    "record_delivery_error": None,
     "final_evaluation_marker": os.environ.get("FINAL_EVALUATION_MARKER") or None,
     "snapshot_retained": bool(cells) and all(entry["snapshot_retained"] for entry in cells.values()),
     "payload_sha256": os.environ["PAYLOAD_SHA256"],
     "asset_sha256": os.environ["ASSET_SHA256"],
+    # Immutable environment identity: package versions alone do not identify the CUDA userspace
+    # that loads MuJoCo and JAX. Keep the image and direct native-input digest beside each result.
+    "container_image": os.environ.get("NATIVE_CONTAINER_IMAGE", "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000"),
+    "requirements_native_sha256": hashlib.sha256(Path("requirements-native.txt").read_bytes()).hexdigest()
+        if Path("requirements-native.txt").is_file() else None,
     "resolved_packages": read_json(OUT / "resolved_packages.json"),
     "environment": read_json(OUT / "environment.json"),
     "egl": read_json(OUT / "egl.json"),
     "resource_high_water_source": "GNU time -v in each cells/<baseline>-s<seed>/training.log",
+    # [Added 2026-09-05.] Each cell's EFFECTIVE configuration, carried in the manifest so it also
+    # reaches the lightweight RECORDS_OUT bundle -- offline rows inherit the manifest, and a caller
+    # who skips result.tgz would otherwise get rows with no record of what produced them. The files
+    # themselves remain in the archive; this is the copy that travels with the numbers.
+    "effective_configs": {path.parent.name: read_json(path)
+                          for path in sorted((OUT / "cells").glob("*/effective_config.json"))}
+        if (OUT / "cells").is_dir() else {},
 }, (OUT / "run_manifest.json").open("w"), sort_keys=True)
 PY
 # [Claude 2026-09-02 12:45 MSK: one common record per measurement, derived from each family's own
@@ -832,8 +1304,60 @@ PY
 # stays the source of truth -- and training-unaffecting by construction, because it runs here. It
 # makes `regime` and `scene_set` explicit on every row, which is what stops a cross-baseline table
 # from putting a ten-scene average and a single-scene number in the same column.]
-python3 datasphere/native/normalize_curves.py --directory "$out" --output "$out/records.jsonl" || \
-  echo "records.jsonl could not be derived; the native curves are unaffected" >&2
+normalize_records() {
+  local target="$1" normalizer_status=0 marker required_delivery=0
+  python3 datasphere/native/normalize_curves.py --directory "$target" \
+    --output "$target/records.jsonl" || normalizer_status="$?"
+  if [[ "$normalizer_status" -eq 0 ]]; then
+    return 0
+  fi
+  marker="NATIVE_RECORDS_NORMALIZATION_FAILED rc=$normalizer_status"
+  echo "=== $marker ===" >&2
+  # The archive is still the evidence boundary.  A production failure is recorded now, before
+  # RECORDS_OUT enrichment and tar, and the final nonzero exit happens only after that archive is
+  # written below.  An earlier cell failure owns the failure marker and must not be replaced.
+  if [[ "${EXECUTION_KIND:-}" == "training_production" ||
+        "${EXECUTION_KIND:-}" == "eval_only_validation" ||
+        "${ENDPOINT_EVAL:-0}" == "1" ]]; then
+    required_delivery=1
+  fi
+  if [[ "$cell_status" -eq 0 && "$required_delivery" -eq 1 ]]; then
+    python3 - "$target/run_manifest.json" "$marker" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+marker = sys.argv[2]
+manifest = json.loads(path.read_text())
+manifest["final_evaluation_marker"] = None
+manifest["failure_marker"] = marker
+manifest["records_normalization_status"] = "failed"
+manifest["records_normalization_failure_marker"] = marker
+path.write_text(json.dumps(manifest, sort_keys=True) + "\n")
+PY
+    export FINAL_EVALUATION_MARKER=""
+    export FAILURE_MARKER="$marker"
+    cell_status=1
+  else
+    echo "=== NATIVE_RECORDS_NORMALIZATION_TOLERATED (exploratory or earlier cell failure) ===" >&2
+  fi
+  return 0
+}
+
+finalize_record_delivery() {
+  local target="$1" delivery_path="${2:-}" execution_status="${3:-1}" collection_status="${4:-0}"
+  local -a command=(python3 datasphere/native/contract.py finalize-records
+                    --manifest "$target/run_manifest.json"
+                    --execution-status "$execution_status"
+                    --collection-status "$collection_status")
+  if [[ -n "$delivery_path" ]]; then
+    command+=(--records-out "$delivery_path")
+  fi
+  "${command[@]}"
+}
+
+normalize_records "$out"
 
 # [Claude 2026-09-03] The records are also emitted as a SEPARATE output when the caller asks for
 # one, so the cheap artefact can be fetched without the expensive one.
@@ -858,21 +1382,127 @@ python3 datasphere/native/normalize_curves.py --directory "$out" --output "$out/
 #
 # Both sources are concatenated because both are records in the same schema; an eval-only job
 # contributes only the second, a training job only the first, and a job that does both gets both.
+record_collection_status=0
 if [[ -n "${RECORDS_OUT:-}" ]]; then
-  : > "$RECORDS_OUT"
+  # Check before truncating: RECORDS_OUT is a delivery destination, never a native
+  # source.  resolve(strict=False) catches relative paths and symlink aliases even
+  # when the destination has not been created yet; samefile additionally catches
+  # an existing hard link to a source.
+  if python3 - "$out" "$RECORDS_OUT" <<'ALIAS_GUARD'
+import os
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).resolve()
+destination = Path(sys.argv[2]).resolve(strict=False)
+sources = [root / "records.jsonl"]
+sources.extend(sorted(root.glob("offline_eval_*.jsonl")))
+sources.extend(sorted(root.glob("cells/*/offline_eval_*.jsonl")))
+
+for source in sources:
+    resolved_source = source.resolve(strict=False)
+    if destination == resolved_source:
+        print(f"source alias: {sys.argv[2]} -> {source}", file=sys.stderr)
+        raise SystemExit(1)
+    try:
+        if destination.exists() and source.exists() and os.path.samefile(destination, source):
+            print(f"source alias: {sys.argv[2]} is the same file as {source}", file=sys.stderr)
+            raise SystemExit(1)
+    except OSError:
+        # The lexical/resolved comparison above remains authoritative when a
+        # filesystem identity query is unavailable.
+        pass
+ALIAS_GUARD
+  then
+    if ! : > "$RECORDS_OUT"; then
+      echo "=== NATIVE_RECORDS_OUT_UNWRITABLE path=$RECORDS_OUT ===" >&2
+      record_collection_status=1
+    else
   # An `if` rather than `[[ -s "$src" ]] && cat ...`: under `set -e` a false test as the LAST
   # command of a loop body is the exit status of the body, and that is how two jobs died silently
   # earlier in this project. An unmatched glob simply fails `-s` and is skipped.
-  for src in "$out/records.jsonl" "$out"/offline_eval_*.jsonl; do
+  # [Claude 2026-09-04: the per-CELL glob was missing, and the curve evaluation writes there.
+  # `run_curve_eval` emits one record per intermediate checkpoint into
+  # `$out/cells/<cell>/offline_eval_curve.jsonl`; a collector that looks only in `$out` would have
+  # left the entire offline curve -- the whole point of retaining intermediate checkpoints -- to
+  # ride home inside result.tgz and be reported as NATIVE_RECORDS_EMPTY. That is the same failure
+  # this block was written to fix, one directory level down.]
+  # [Claude 2026-09-05, external review 7 section 7] OFFLINE ROWS USED TO COME HOME WITHOUT RUN
+  # PROVENANCE. normalize_curves.py attaches `_run_provenance` (manifest/payload/asset digests,
+  # container image, resolved packages, EGL state) to every TRAINING row it writes into
+  # records.jsonl. The offline_eval_*.jsonl rows were concatenated raw, so the lightweight records
+  # bundle -- the exact mechanism that exists so the caller can skip downloading result.tgz --
+  # carried evaluation rows that were not independently auditable. The facts were only in the
+  # archive we were trying to avoid fetching.
+  #
+  # Enriched here rather than in eval_grid.py because the manifest is a property of the JOB, and
+  # eval_grid does not know it is running inside one; it is also written after eval_grid returns.
+  for src in "$out/records.jsonl" "$out"/offline_eval_*.jsonl "$out"/cells/*/offline_eval_*.jsonl; do
     if [[ -s "$src" ]]; then
-      cat "$src" >> "$RECORDS_OUT"
-    fi
-  done
-  if [[ -s "$RECORDS_OUT" ]]; then
-    echo "=== NATIVE_RECORDS_EMITTED $(wc -l < "$RECORDS_OUT") rows -> $(basename "$RECORDS_OUT") ==="
-  else
-    echo "=== NATIVE_RECORDS_EMPTY no records were derived; the archive still holds the native curves ===" >&2
+      case "$src" in
+        *offline_eval_*)
+          if ! python3 - "$src" "$out/run_manifest.json" >> "$RECORDS_OUT" <<'ENRICH'
+import json, sys
+rows, manifest_path = sys.argv[1], sys.argv[2]
+try:
+    with open(manifest_path) as handle:
+        manifest = json.load(handle)
+except (OSError, ValueError) as error:
+    # Loud, never silent, and never fatal: the rows themselves are the expensive thing and they
+    # are already measured. An unprovenanced row is a finding, not a reason to discard a run.
+    print(f"=== NATIVE_RECORDS_NO_MANIFEST {type(error).__name__}: offline rows ship unenriched ===",
+          file=sys.stderr)
+    manifest = None
+with open(rows) as handle:
+    for line in handle:
+        line = line.strip()
+        if not line:
+            continue
+        if manifest is None:
+            print(line)
+            continue
+        try:
+            row = json.loads(line)
+        except ValueError:
+            print(line)
+            continue
+        row.setdefault("_run_provenance", manifest)
+        print(json.dumps(row, sort_keys=True))
+ENRICH
+          then
+            echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
+            record_collection_status=1
+          fi
+          ;;
+        *)
+          if ! cat "$src" >> "$RECORDS_OUT"; then
+            echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
+            record_collection_status=1
+          fi
+          ;;
+      esac
   fi
+  done
+    if [[ -s "$RECORDS_OUT" ]]; then
+      echo "=== NATIVE_RECORDS_EMITTED $(wc -l < "$RECORDS_OUT") rows -> $(basename "$RECORDS_OUT") ==="
+    else
+      echo "=== NATIVE_RECORDS_EMPTY no records were derived; the archive still holds the native curves ===" >&2
+    fi
+    fi
+  else
+    echo "=== NATIVE_RECORDS_OUT_SOURCE_ALIAS path=$RECORDS_OUT ===" >&2
+    record_collection_status=1
+  fi
+fi
+
+# Finalization is part of the evidence boundary.  A required delivery failure updates the
+# manifest, but this status is propagated only after the archive below has been written.
+finalization_status=0
+if finalize_record_delivery "$out" "${RECORDS_OUT:-}" "$cell_status" "$record_collection_status"; then
+  :
+else
+  finalization_status=$?
+  cell_status=1
 fi
 
 tar -czf "$result" -C "$out" .
@@ -885,5 +1515,9 @@ fi
 if [[ "$cell_status" -ne 0 ]]; then
   echo "native probe failed for cells: ${FAILED_CELLS:-unknown}" >&2
   exit 1
+fi
+if [[ "$finalization_status" -ne 0 ]]; then
+  echo "native record delivery failed" >&2
+  exit "$finalization_status"
 fi
 echo "native probe completed successfully"

@@ -10,11 +10,27 @@ through the planner. The lesson is pinned below.
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("_gates", ROOT / "scripts" / "production_gates.py")
 gates = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gates)
+
+
+def test_absolute_script_invocation_from_elsewhere_emits_json(tmp_path):
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "production_gates.py"), "--json"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode in (0, 1), result.stderr
+    assert "ModuleNotFoundError" not in result.stderr
+    rows = json.loads(result.stdout)
+    assert isinstance(rows, list) and rows
+    assert all({"gate", "status", "detail"} <= row.keys() for row in rows)
 
 
 def test_every_gate_returns_a_known_status_and_a_reason():

@@ -27,13 +27,28 @@ this project's status documents drifted in the first place.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
 
+# Resolve the repository from this file, not from the caller's cwd, before importing local
+# packages.  Direct absolute-path execution does not otherwise put the repository root on sys.path.
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from datasphere.native.evaluator_identity import (
+    canonical_evaluation_scope,
+    evaluator_family_code_revision,
+    evaluator_family_config_revision,
+    evaluator_family_revision,
+    measurement_revision,
+    scope_revision,
+)
+
 IBAC_PROCS_SMOKE_EVIDENCE = ROOT / "results" / "validation" / "ibac_sni-procs16-v125.json"
 
 PASS, FAIL, OWNER = "PASS", "FAIL", "OWNER"
@@ -168,6 +183,102 @@ def gate_idaac_evaluator_device():
 EVALUATOR_FAMILIES = ("rlvigen", "dmc_gb", "idaac", "alda", "ppg", "ibac_sni", "ctrl")
 
 
+def _validation_entry_problem(root: Path, family: str, entry: dict,
+                              code_revision: str, config_revision: str,
+                              static_revision: str) -> str | None:
+    """Return a fail-closed explanation for one scope-attested validation entry.
+
+    This binds the ledger claim to retained evaluator rows.  It cannot establish that the job or
+    environment was honest; those remain review obligations, as does the dynamic import manifest.
+    """
+    required = (
+        "validation_kind", "evaluator_revision", "evaluator_scope",
+        "evaluator_scope_revision", "evaluator_measurement_revision",
+        "evaluation_records_path", "evaluation_records_sha256",
+    )
+    missing = [key for key in required if key not in entry or entry[key] in (None, "")]
+    if missing:
+        return "missing scope attestation fields: " + ", ".join(missing)
+    if entry["validation_kind"] != "functional_endpoint":
+        return "validation_kind is not functional_endpoint"
+
+    scope = entry["evaluator_scope"]
+    try:
+        canonical = canonical_evaluation_scope(scope)
+    except (TypeError, ValueError) as error:
+        return f"invalid evaluator_scope: {error}"
+    if canonical != scope:
+        return "evaluator_scope is not canonical"
+    if canonical["family"] != family:
+        return f"evaluator_scope family is {canonical['family']!r}, expected {family!r}"
+    if canonical["eval_scope"] != "endpoint":
+        return "evaluator_scope is not an endpoint scope"
+    if entry["evaluator_revision"] != static_revision:
+        return "evaluator_revision does not match the current family revision"
+    expected_scope_revision = scope_revision(canonical)
+    if entry["evaluator_scope_revision"] != expected_scope_revision:
+        return "evaluator_scope_revision does not match evaluator_scope"
+    expected_measurement_revision = measurement_revision(static_revision, expected_scope_revision)
+    if entry["evaluator_measurement_revision"] != expected_measurement_revision:
+        return "evaluator_measurement_revision does not match static revision and scope"
+
+    relative = entry["evaluation_records_path"]
+    if not isinstance(relative, str) or not relative or Path(relative).is_absolute():
+        return "evaluation_records_path must be a relative repository path"
+    root = root.resolve()
+    artifact = (root / relative).resolve()
+    try:
+        artifact.relative_to(root)
+    except ValueError:
+        return "evaluation_records_path escapes the repository"
+    try:
+        mode = artifact.lstat().st_mode
+    except OSError as error:
+        return f"evaluation evidence is unreadable: {error}"
+    if not stat.S_ISREG(mode):
+        return "evaluation evidence is not a regular file"
+    try:
+        raw = artifact.read_bytes()
+    except OSError as error:
+        return f"evaluation evidence is unreadable: {error}"
+    digest = hashlib.sha256(raw).hexdigest()
+    if entry["evaluation_records_sha256"] != digest:
+        return "evaluation evidence SHA256 does not match"
+
+    rows = []
+    try:
+        text = raw.decode("utf-8")
+        for line_number, line in enumerate(text.splitlines(), 1):
+            if not line.strip():
+                continue
+            value = json.loads(line)
+            if not isinstance(value, dict):
+                return f"evaluation JSONL line {line_number} is not an object"
+            rows.append(value)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        return f"evaluation evidence is malformed JSONL: {error}"
+    applicable = [row for row in rows if row.get("phase") == "offline-eval"]
+    if not applicable:
+        return "evaluation evidence has no offline-eval rows"
+    expected_row_values = {
+        "family": family,
+        "baseline": canonical["baseline"],
+        "evaluator_revision": static_revision,
+        "evaluator_code_revision": code_revision,
+        "evaluator_config_revision": config_revision,
+        "evaluator_scope": canonical,
+        "evaluator_scope_revision": expected_scope_revision,
+        "evaluator_measurement_revision": expected_measurement_revision,
+    }
+    for index, row in enumerate(applicable):
+        mismatched = [key for key, expected in expected_row_values.items()
+                      if row.get(key) != expected]
+        if mismatched:
+            return (f"offline-eval row {index} disagrees with ledger identity: "
+                    + ", ".join(mismatched))
+    return None
+
+
 def gate_shared_evaluator_validated():
     """Review 2 gate #9 / review 1 #9.
 
@@ -178,52 +289,58 @@ def gate_shared_evaluator_validated():
     returns the same string regardless of what has actually run is not a gate, it is a comment with
     extra steps.
 
-    Now reads `validated_evaluator_families.json`, a ledger written when a real job's records prove
-    the endpoint path (complete diagnostics, physical pairing, 0 unpaired).  It requires each
-    entry's *family* code and descriptor revisions to equal the current ones, and records that the
-    job's dynamic import manifest was reviewed.  A common evaluator hash cannot make this claim:
-    it missed CTRL's vec_env and overreacted to IBAC's training-only checkpoint driver.
+    Now reads `validated_evaluator_families.json`, a ledger written when a human-reviewed artifact
+    proves the functional endpoint path (complete diagnostics, physical pairing, 0 unpaired).
+    Each entry must bind a shallow-but-explicit endpoint scope and its measurement revision to the
+    current family closure.  A common evaluator hash cannot make this claim: it missed CTRL's
+    vec_env and overreacted to IBAC's training-only checkpoint driver.
     """
     ledger_path = ROOT / "datasphere" / "native" / "validated_evaluator_families.json"
     try:
         ledger = json.loads(ledger_path.read_text())
     except (OSError, ValueError) as error:
         return OWNER, f"could not read the validation ledger: {type(error).__name__}"
-    try:
-        sys.path.insert(0, str(ROOT))
-        from scripts.eval_provenance import (evaluator_family_code_revision,
-                                             evaluator_family_config_revision)
-    except Exception as error:
-        return OWNER, f"could not compute the current evaluator code revision: {error}"
+    sys.path.insert(0, str(ROOT))
 
-    current_hits, stale, missing = [], [], []
+    current_hits, stale, missing, invalid = [], [], [], []
     for family in EVALUATOR_FAMILIES:
         entry = ledger.get(family)
         if not entry:
             missing.append(family)
             continue
+        if not isinstance(entry, dict):
+            invalid.append(f"{family} (ledger entry is not an object)")
+            continue
         try:
             code_revision = evaluator_family_code_revision(ROOT, family)
             config_revision = evaluator_family_config_revision(ROOT, family)
+            static_revision = evaluator_family_revision(ROOT, family)
         except Exception as error:
             return OWNER, f"could not compute {family} evaluator identity: {error}"
         if (entry.get("family_code_revision") != code_revision or
-                entry.get("family_config_revision") != config_revision):
+                entry.get("family_config_revision") != config_revision or
+                entry.get("evaluator_revision") != static_revision):
             stale.append(family)
+            continue
+        problem = _validation_entry_problem(ROOT, family, entry, code_revision,
+                                            config_revision, static_revision)
+        if problem:
+            invalid.append(f"{family} ({problem})")
         elif not (entry.get("paired") and entry.get("diagnostics_complete") and
                   entry.get("runtime_imports_checked")):
             missing.append(f"{family} (recorded but not paired+complete)")
         else:
             current_hits.append(family)
 
-    if not missing and not stale:
+    if not missing and not stale and not invalid:
         return PASS, (f"all {len(EVALUATOR_FAMILIES)} evaluator families validated on their current "
                       f"family closures: {', '.join(current_hits)}")
     return OWNER, (
         f"{len(current_hits)}/{len(EVALUATOR_FAMILIES)} evaluator families validated on their CURRENT "
         f"family closures: {', '.join(current_hits) or 'none'}. "
         + (f"On a SUPERSEDED revision, needs re-run: {', '.join(stale)}. " if stale else "")
-        + (f"Never validated: {', '.join(missing)}." if missing else ""))
+        + (f"Never validated: {', '.join(missing)}. " if missing else "")
+        + (f"Invalid attestation: {', '.join(invalid)}." if invalid else ""))
 
 
 def gate_estimands_frozen():

@@ -1,5 +1,5 @@
 {
-  "_comment": "One entry per evaluator family, written when a real job's records prove the endpoint path: complete diagnostics, distinct placement seeds, physical pairing with 0 unpaired. family_code_revision and family_config_revision must match the selected family closure; runtime_imports_checked records review of the captured dynamic-import manifest. The retained legacy common code_revision is historical only and cannot certify the new closure.",
+  "_comment": "One entry per evaluator family, written after human review of a retained endpoint artifact: complete diagnostics, distinct placement seeds, physical pairing with 0 unpaired, and a functional_endpoint scope attestation. family_code_revision, family_config_revision, and evaluator_revision must match the selected family closure; evaluator_scope and its scope/measurement revisions must match every applicable offline-eval row; evaluation_records_path and evaluation_records_sha256 bind the ledger to the artifact. These mechanics bind claims but do not prove source/job honesty or exhaust dynamic imports. The retained legacy common code_revision is historical only and cannot certify the new closure.",
   "rlvigen": {
     "job": "bt1anj1cm0ni7p20ted3",
     "baseline": "svea",
@@ -8,7 +8,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "dmc_gb": {
     "job": "bt1fttbvedaunks2r7eh",
@@ -18,7 +25,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "idaac": {
     "job": "bt1mjgl6r12pir8jnhe5",
@@ -28,7 +42,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "alda": {
     "job": "bt1pb2kceart31caaqkq",
@@ -38,7 +59,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "ctrl": {
     "job": "bt1t3njt0m37dujrio2u",
@@ -48,7 +76,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "ppg": {
     "job": "bt1ek01uo43rskotpm8b",
@@ -58,7 +93,14 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   },
   "ibac_sni": {
     "job": "bt10rvhafr2muvjkpc9g",
@@ -68,6 +110,13 @@
     "family_config_revision": null,
     "runtime_imports_checked": false,
     "paired": true,
-    "diagnostics_complete": true
+    "diagnostics_complete": true,
+    "validation_kind": null,
+    "evaluator_revision": null,
+    "evaluator_scope": null,
+    "evaluator_scope_revision": null,
+    "evaluator_measurement_revision": null,
+    "evaluation_records_path": null,
+    "evaluation_records_sha256": null
   }
 }

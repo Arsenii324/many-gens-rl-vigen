@@ -6,6 +6,8 @@ Each test runs the contract tool as a user would; it does not inspect source tex
 from __future__ import annotations
 
 import json
+import os
+import runpy
 import subprocess
 import sys
 import tarfile
@@ -19,6 +21,12 @@ PLACES_CONFIGURER = ROOT / "datasphere" / "native" / "configure_places365_val.py
 PREFLIGHT_CONFIG = ROOT / "datasphere" / "native" / "cfg-preflight.yaml"
 PROBE_SCHEDULE = ROOT / "datasphere" / "native" / "probe-schedule.json"
 RESOURCE_SAMPLER = ROOT / "datasphere" / "native" / "measure_resources.py"
+
+
+def _runner_contract() -> int:
+    return int(runpy.run_path(str(TOOL))["RUNNER_CONTRACT"])
+
+
 ROBOSUITE_IMPORT_CLOSURE = ROOT / "datasphere" / "native" / "robosuite-import-closure.json"
 DRQV2_CALIBRATION_CONFIG = ROOT / "datasphere" / "native" / "cfg-drqv2-calibration-a.yaml"
 DRQV2_REPAIRED_CALIBRATION_CONFIG = ROOT / "datasphere" / "native" / "cfg-drqv2-calibration-a-v11.yaml"
@@ -862,6 +870,169 @@ def test_run_manifest_records_the_final_evaluation_marker_for_non_preflight_runs
     assert 'NATIVE_FINAL_EVALUATION_COMPLETED frame=' in runner
 
 
+def test_run_manifest_reads_the_actual_per_cell_endpoint_marker():
+    """IDAAC/PPG may round the requested budget, and one job can contain several cells."""
+    runner = RUNNER.read_text()
+    assert 're.findall(r"NATIVE_FINAL_EVALUATION_COMPLETED frame=([0-9]+)"' in runner
+    assert '"final_evaluation_marker": final_marker(log)' in runner
+    assert 'marker if (log.exists()' not in runner
+
+
+def _run_manifest_builder(tmp_path, *, cells, failed=(), failure_marker=""):
+    """Execute the manifest heredoc from the real runner against a synthetic cell tree."""
+    source = RUNNER.read_text()
+    start = source.index("python3 - <<'PY' > \"$out/run_manifest.json\"")
+    body_start = source.index("\n", start) + 1
+    body_end = source.index("\nPY", body_start)
+    script = source[body_start:body_end]
+    out = tmp_path / "native-out"
+    for identifier, log_text in cells.items():
+        cell = out / "cells" / identifier
+        cell.mkdir(parents=True)
+        (cell / "training.log").write_text(log_text)
+    environment = {
+        **os.environ,
+        "NATIVE_CELLS": ",".join(cells),
+        "FRAMES": "600000",
+        "FAILED_CELLS": " ".join(failed),
+        "FAILURE_MARKER": failure_marker,
+        "PAYLOAD_SHA256": "payload",
+        "ASSET_SHA256": "asset",
+    }
+    script = script.replace('OUT = Path("/tmp/native-out")', f"OUT = Path({str(out)!r})")
+    result = subprocess.run(
+        [sys.executable, "-c", script], cwd=ROOT, env=environment,
+        text=True, capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return json.loads((out / "run_manifest.json").read_text())
+
+
+def _extract_runner_function(name):
+    source = RUNNER.read_text()
+    start = source.index(f"{name}() {{")
+    depth = 0
+    for index in range(start, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start:index + 1]
+    raise AssertionError(f"{name} not found")
+
+
+def _run_normalizer_failure_harness(tmp_path, endpoint, *, prior_failure=""):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "run_manifest.json").write_text(json.dumps({
+        "final_evaluation_marker": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000",
+        "failure_marker": prior_failure or None,
+    }))
+    archive = tmp_path / "result.tgz"
+    script = tmp_path / "normalizer-failure.sh"
+    script.write_text(
+        "set -euo pipefail\n"
+        "cell_status=${PRIOR_STATUS:-0}\n"
+        "export FAILURE_MARKER=${PRIOR_FAILURE:-}\n"
+        "python3() {\n"
+        "  if [[ \"${1:-}\" == datasphere/native/normalize_curves.py ]]; then return 7; fi\n"
+        "  command python3 \"$@\"\n"
+        "}\n"
+        + _extract_runner_function("normalize_records") + "\n"
+        + 'normalize_records "$1"\n'
+        + 'tar -czf "$2" -C "$1" .\n'
+        + 'if [[ "$cell_status" -ne 0 ]]; then exit 1; fi\n'
+    )
+    environment = {
+        **os.environ,
+        "ENDPOINT_EVAL": endpoint,
+        "PRIOR_STATUS": "1" if prior_failure else "0",
+        "PRIOR_FAILURE": prior_failure,
+    }
+    result = subprocess.run(
+        ["bash", str(script), str(out), str(archive)],
+        cwd=ROOT, env=environment, text=True, capture_output=True,
+    )
+    with tarfile.open(archive, "r:gz") as handle:
+        manifest = json.loads(handle.extractfile("./run_manifest.json").read())
+    return result, archive, manifest
+
+
+def test_normalizer_failure_is_archived_and_fatal_for_production(tmp_path):
+    result, archive, manifest = _run_normalizer_failure_harness(tmp_path, "1")
+    assert result.returncode != 0
+    assert archive.is_file()
+    assert manifest["final_evaluation_marker"] is None
+    assert manifest["failure_marker"].startswith("NATIVE_RECORDS_NORMALIZATION_FAILED")
+
+
+def test_normalizer_failure_is_explicit_but_nonfatal_for_exploration(tmp_path):
+    result, archive, manifest = _run_normalizer_failure_harness(tmp_path, "0")
+    assert result.returncode == 0
+    assert archive.is_file()
+    assert "NATIVE_RECORDS_NORMALIZATION_TOLERATED" in result.stderr
+    assert manifest["final_evaluation_marker"] == "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000"
+    assert manifest["failure_marker"] is None
+
+
+def test_normalizer_failure_does_not_replace_an_earlier_cell_failure(tmp_path):
+    prior = "NATIVE_FINAL_EVALUATION_FAILED cells=idaac-s101"
+    result, archive, manifest = _run_normalizer_failure_harness(
+        tmp_path, "1", prior_failure=prior,
+    )
+    assert result.returncode != 0
+    assert archive.is_file()
+    assert manifest["failure_marker"] == prior
+
+
+def test_manifest_distinguishes_requested_frames_from_realized_cell_endpoint(tmp_path):
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"ppg-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600064\n"},
+    )
+
+    assert manifest["frames_requested"] == 600000
+    assert manifest["cells"]["ppg-s101"]["frames_requested"] == 600000
+    assert manifest["cells"]["ppg-s101"]["observed_endpoint"] == 600064
+    assert manifest["cells"]["ppg-s101"]["final_evaluation_marker"] == \
+        "NATIVE_FINAL_EVALUATION_COMPLETED frame=600064"
+
+
+def test_failed_cell_manifest_has_no_completion_marker_and_keeps_failure_state(tmp_path):
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=598016\n"
+                       "NATIVE_ENDPOINT_EVAL_FAILED idaac rc=1\n"},
+        failed=("idaac-s101",),
+        failure_marker="NATIVE_FINAL_EVALUATION_FAILED cells=idaac-s101",
+    )
+    cell = manifest["cells"]["idaac-s101"]
+
+    assert manifest["final_evaluation_marker"] is None
+    assert manifest["failure_marker"] == "NATIVE_FINAL_EVALUATION_FAILED cells=idaac-s101"
+    assert manifest["cells_failed"] == ["idaac-s101"]
+    assert cell["completed"] is False
+    assert cell["final_evaluation_marker"] is None
+    assert cell["observed_endpoint"] is None
+    assert cell["terminal_status"] == "failed"
+    assert "NATIVE_ENDPOINT_EVAL_FAILED" in cell["failure_marker"]
+
+
+def test_runner_sets_completion_only_on_success_and_records_failure_marker(tmp_path):
+    runner = RUNNER.read_text()
+    offline = runner.split('elif [[ -n "${OFFLINE_EVAL_SNAPSHOT:-}" ]]', 1)[1].split("\nelse", 1)[0]
+    training = runner.split("\nelse\n  run_cell_list", 1)[1].split("\nfi\n# [Claude", 1)[0]
+
+    assert 'if run_offline_eval "$out"; then' in offline
+    assert 'FINAL_EVALUATION_MARKER="NATIVE_OFFLINE_EVAL_COMPLETED"' in offline
+    assert 'FINAL_EVALUATION_MARKER=""' in offline
+    assert 'FAILURE_MARKER="NATIVE_OFFLINE_EVAL_FAILED' in offline
+    assert 'if run_cell_list "$cells"' in training
+    assert 'FINAL_EVALUATION_MARKER="NATIVE_FINAL_EVALUATION_COMPLETED"' in training
+    assert 'FAILURE_MARKER="NATIVE_FINAL_EVALUATION_FAILED' in training
+
+
 # [Codex 2026-09-01 21:43 MSK: specify the ALDA endpoint adapter before changing its trainer entry path]
 def test_alda_terminal_finalizer_evaluates_all_regimes_then_retains_checkpoint_and_emits_exact_marker(tmp_path):
     """ALDA's finite run needs a post-train endpoint, independent of episode boundaries."""
@@ -1334,6 +1505,13 @@ for name in ("torch", "gym", "numpy", "utils", "arguments", "logger", "video"):
     sys.modules.setdefault(name, module)
 saved = []
 sys.modules["torch"].save = lambda obj, path: saved.append((obj, path))
+# train.py now writes through runnable/_shim/safe_checkpoint.safe_torch_save rather than calling
+# torch.save directly (disk-safety, added 2026-09-05). Stubbed here rather than put on sys.path,
+# so this harness keeps testing finalize_run's OWN logic -- what gets saved and when -- without
+# also depending on the real atomic-write mechanism, which tests/test_safe_checkpoint.py covers.
+safe_checkpoint_module = types.ModuleType("safe_checkpoint")
+safe_checkpoint_module.safe_torch_save = lambda obj, path, **kw: saved.append((obj, path)) or True
+sys.modules["safe_checkpoint"] = safe_checkpoint_module
 sys.modules["numpy"].mean = lambda values: sum(values) / max(1, len(values))
 env_module = types.ModuleType("env")
 wrappers = types.ModuleType("env.wrappers")
@@ -1438,6 +1616,19 @@ def test_a_family_payload_contains_that_familys_source_and_no_other_clone(tmp_pa
     assert verify.returncode == 0, verify.stderr
 
 
+def test_native_payload_carries_eval_grids_transitive_provenance_helper(tmp_path):
+    """Both evaluator entry points import this helper after the archive is extracted."""
+    archive_path = tmp_path / "idaac.tgz"
+    build = subprocess.run(
+        [sys.executable, str(TOOL), "build-payload", "--source", str(ROOT),
+         "--output", str(archive_path), "--families", "idaac"],
+        text=True, capture_output=True,
+    )
+    assert build.returncode == 0, build.stderr
+    with tarfile.open(archive_path) as archive:
+        assert "scripts/eval_provenance.py" in archive.getnames()
+
+
 def test_an_rlvigen_payload_cannot_smuggle_another_familys_source(tmp_path):
     archive_path = tmp_path / "rlvigen.tgz"
     build = subprocess.run(
@@ -1466,7 +1657,30 @@ def test_an_rlvigen_payload_cannot_smuggle_another_familys_source(tmp_path):
         text=True, capture_output=True,
     )
     assert verify.returncode != 0
-    assert "undeclared payload member" in verify.stderr
+    assert "payload member manifest differs from archive" in verify.stderr
+
+
+def test_payload_verifier_rejects_an_offline_family_it_does_not_carry(tmp_path):
+    """Offline-only jobs select their family from OFFLINE_EVAL_FAMILY, not CELLS.
+
+    A valid rlvigen-only payload previously passed integrity checking, then spent a full remote
+    bootstrap before IDAAC checkpoint unpickling failed because its clone was absent.
+    """
+    archive = tmp_path / "rlvigen.tgz"
+    build = subprocess.run(
+        [sys.executable, str(TOOL), "build-payload", "--source", str(ROOT),
+         "--output", str(archive), "--families", "rlvigen"],
+        text=True, capture_output=True,
+    )
+    assert build.returncode == 0, build.stderr
+
+    verify = subprocess.run(
+        [sys.executable, str(TOOL), "verify-payload", "--archive", str(archive),
+         "--require-families", "idaac"],
+        text=True, capture_output=True,
+    )
+    assert verify.returncode != 0
+    assert "does not carry required family" in verify.stderr
 
 
 # [Claude 2026-09-02 04:55 MSK: found by a local rehearsal, not by reading. dmc_gb's very first
@@ -1599,6 +1813,7 @@ def test_the_runner_demands_the_contract_the_builder_stamps():
     demanded = int(re.search(r"--require-runner-contract (\d+)", runner).group(1))
     stamped = int(re.search(r"RUNNER_CONTRACT = (\d+)", builder).group(1))
     assert demanded == stamped, (demanded, stamped)
+    assert "scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION" in runner
 
 
 # [Claude 2026-09-02 07:25 MSK: found by a local idaac rehearsal that reached its endpoint and then
@@ -1974,3 +2189,139 @@ def test_expect_reports_a_missing_member_differently_from_a_missing_marker(tmp_p
     with pytest.raises(ValueError) as caught:
         _contract.verify_contains(archive, ("scripts/absent.py:anything",))
     assert "not in the payload at all" in str(caught.value)
+
+
+def test_contract_failure_and_bad_invocation_have_different_exit_codes(tmp_path):
+    """[Claude 2026-09-04] A failed contract exits 4; a malformed command line exits argparse's 2.
+
+    They were both 2. A caller that reads only the status -- `... && echo PRESENT || echo MISSING`,
+    which is how this gate is used from a shell -- then reports a *present* marker as missing when
+    the invocation is wrong. That happened today: `--archive` was passed positionally, argparse
+    exited 2, and all four checkpoint edits were reported MISSING from a payload that contained
+    every one of them. The near-consequence was an unnecessary payload rebuild; the general one is
+    that a check which could not run must never be readable as a check that ran and failed.
+    """
+    import subprocess, sys, tarfile
+    archive = tmp_path / "payload.tgz"
+    member = tmp_path / "thing.py"
+    member.write_text("print('no marker here')\n")
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(member, arcname="scripts/thing.py")
+
+    contract = Path(__file__).resolve().parents[1] / "datasphere" / "native" / "contract.py"
+    bad = subprocess.run([sys.executable, str(contract), "verify-payload", str(archive)],
+                         capture_output=True, text=True)
+    assert bad.returncode == 2, "argparse's own error must stay 2"
+
+    real = subprocess.run([sys.executable, str(contract), "verify-payload", "--archive",
+                           str(archive), "--expect", "scripts/thing.py:absent_marker"],
+                          capture_output=True, text=True)
+    assert real.returncode == 4, (
+        f"a genuine contract failure must exit 4, got {real.returncode}: {real.stderr}")
+
+
+def test_submit_refuses_stale_payload_before_datasphere_execute(tmp_path):
+    """Submission must reject a stale CODE archive before invoking the cloud CLI.
+
+    The real job runner already rejects this archive, but that check used to happen only after
+    the container had started.  A fake `datasphere` executable makes this a real submit-path test
+    without creating a remote job: reaching it is the failure.
+    """
+    archive = tmp_path / "stale-payload.tgz"
+    with tarfile.open(archive, "w:gz") as handle:
+        manifest = tmp_path / "payload_manifest.json"
+        manifest.write_text(json.dumps({"runner_contract": _runner_contract() - 1,
+                                        "families": ["idaac"]}))
+        handle.add(manifest, arcname="payload_manifest.json")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    invoked = tmp_path / "datasphere-invoked"
+    fake_cli = fake_bin / "datasphere"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "touch \"$FAKE_DATASPHERE_INVOKED\"\n"
+        "exit 0\n"
+    )
+    fake_cli.chmod(0o755)
+    image = json.loads((ROOT / "datasphere/native/source-lock.json").read_text())["container_image"]
+    config = tmp_path / "stale.yaml"
+    config.write_text(
+        "name: stale-payload-submit\n"
+        "cmd: >-\n"
+        "  CELLS=idaac:1 FRAMES=10000 bash ${JOB} ${CODE} ${RESULT}\n"
+        "inputs:\n"
+        f"  - {archive}: CODE\n"
+        "env:\n"
+        "  docker:\n"
+        f"    image: {image}\n"
+        "cloud-instance-type: gt4.1\n"
+    )
+
+    result = subprocess.run(
+        ["bash", str(ROOT / "datasphere/native/job.sh"), "submit", str(config)],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_DATASPHERE_INVOKED": str(invoked),
+            "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log"),
+        },
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "runner contract" in result.stderr
+    assert not invoked.exists(), "stale payload reached datasphere execute"
+
+
+def test_submit_refuses_payload_for_a_different_resolved_family(tmp_path):
+    """Submission must reject a valid archive that does not carry the requested family."""
+    archive = tmp_path / "wrong-family-payload.tgz"
+    with tarfile.open(archive, "w:gz") as handle:
+        manifest = tmp_path / "payload_manifest.json"
+        manifest.write_text(json.dumps({"runner_contract": _runner_contract(),
+                                        "families": ["ppg"]}))
+        handle.add(manifest, arcname="payload_manifest.json")
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    invoked = tmp_path / "datasphere-invoked"
+    fake_cli = fake_bin / "datasphere"
+    fake_cli.write_text(
+        "#!/bin/sh\n"
+        "touch \"$FAKE_DATASPHERE_INVOKED\"\n"
+        "exit 0\n"
+    )
+    fake_cli.chmod(0o755)
+    image = json.loads((ROOT / "datasphere/native/source-lock.json").read_text())["container_image"]
+    config = tmp_path / "wrong-family.yaml"
+    config.write_text(
+        "name: wrong-family-submit\n"
+        "cmd: >-\n"
+        "  CELLS=idaac:1 FRAMES=10000 bash ${JOB} ${CODE} ${RESULT}\n"
+        "inputs:\n"
+        f"  - {archive}: CODE\n"
+        "env:\n"
+        "  docker:\n"
+        f"    image: {image}\n"
+        "cloud-instance-type: gt4.1\n"
+    )
+
+    result = subprocess.run(
+        ["bash", str(ROOT / "datasphere/native/job.sh"), "submit", str(config)],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "FAKE_DATASPHERE_INVOKED": str(invoked),
+            "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log"),
+        },
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode != 0
+    assert "required family" in result.stderr
+    assert not invoked.exists(), "wrong-family payload reached datasphere execute"

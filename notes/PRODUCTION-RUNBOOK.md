@@ -17,6 +17,12 @@ Everything here is grounded in a failure that actually happened, not a hypotheti
 | `Spec override key not found` | ALDA rejects overrides for keys absent from its spec file; cost two jobs | pinned by `tests/test_alda_spec_overrides_resolve.py` |
 | Finite but useless policy | `ibac_sni` at σ ≈ 4.3 — **perfectly finite**, entropy climbing 9.95 → 20.03, success 0.00 throughout | the finiteness gate cannot catch this; watch `log_std`, not NaN |
 | Records come home empty | `RECORDS_OUT` copied only the training normalizer's output; eval-only jobs have no training cells | check row counts, not just that the file exists |
+| `NATIVE_CURVE_EVAL_NO_STAMPS` or `NATIVE_CURVE_EVAL_PARTIAL` | requested intermediate evaluation had no usable stamps or one or more stamp evaluations failed | production cells fail after retaining evidence; exploratory probes emit `NATIVE_CURVE_EVAL_TOLERATED` and remain explicitly partial |
+| `NATIVE_RECORDS_NORMALIZATION_FAILED` | `normalize_curves.py` failed after the run manifest was written | the production archive is still written, but its manifest clears final-evaluation completion and records the postprocess failure; do not treat the job as successful |
+| `NATIVE_RECORD_DELIVERY_FAILED` or `record_delivery != complete` | the final JSONL bundle was absent, empty, malformed, or execution had already failed | keep the archive for diagnosis, but do not summarize it as a production/evaluation result; `summarize_result.py --diagnostic` is inspection-only |
+| `record_content_mismatch` or `NATIVE_RECORDS_COLLECTION_FAILED` | the delivered sequence is truncated, reordered, duplicated, changed, or a collector write failed | retain the archive, inspect canonical/raw hashes and the source files, and rerun only under the predeclared failure policy |
+| `NATIVE_RECORDS_OUT_SOURCE_ALIAS` | `RECORDS_OUT` resolves to a declared native source before collection | no source is truncated; retain the archive, correct the destination, and rerun under the predeclared failure policy |
+| `delivery_stamp_failed` | final source comparison succeeded, but the records-only completion stamp could not be atomically written or revalidated | retain the archive; the lightweight bundle is not final and the manifest is failed |
 
 ## What to watch, per cell
 
@@ -38,13 +44,24 @@ cover them.
   ports** (`ctrl` at `train_ppo.py:359`, `idaac` at `train.py:374,381`, `ibac_sni` the same way) --
   CORRECTED 2026-09-05: an earlier version of this row wrongly said this monitoring was missing.
   Watch it for all three; ibac_sni's own case is already an open owner decision, independent of A30.
-- vector-level action clip rate — the fraction of actions with *any* coordinate clipped, ~93% at
-  σ=1 for the five RL-ViGen natives. `scripts/eval_provenance.py::action_diagnostics()` computes
-  the equivalent generically (`action_clip_rate_coordinate/vector`) but is **never called anywhere**
-  -- a built, unused instrument, not a missing one. Wiring it in would not fix A30 (the PPO
-  objective still uses the pre-clip action regardless of what gets measured); it would only make
-  the drift visible for `ctrl`/`idaac`/`ibac_sni`, which currently have no empirical (only
-  analytical, via boundary_fraction) signal for it.
+- vector-level action clip rate — the fraction of actions with *any* coordinate clipped. The offline
+  evaluator now records `native.policy_action_diagnostics` on every per-scene row for all seven
+  adapter families. It calls `scripts/eval_provenance.py::action_diagnostics()` on the exact value
+  supplied at the adapter-to-environment boundary; PPG is observed at `venv.act` after its
+  intentional tensor-to-NumPy conversion, so the policy action is not copied through a new device
+  path. The existing per-episode P20 fields remain the independent VGB-wrapper measurement at the
+  declared action-space boundary. These diagnostics do not alter actions or PPO likelihoods.
+
+  The scope is deliberately explicit: `policy_action_diagnostics` compares the adapter output with
+  the declared VGB/Gym action bounds (`action_clip_rate_coordinate`, `action_clip_rate_vector`,
+  `action_raw_executed_l1`, raw min/max). `action_raw_executed_l1` is the **aggregate L1 total**
+  over every action vector observed in that scene-level diagnostic, not a mean or a per-action
+  value. It does **not** observe controller-internal conversion or
+  torque clipping; records say `controller_clipping_observed: false`. If a wrapper exposes no
+  numeric action bounds or no action is observed, the record carries `available: false` and a reason
+  instead of silently treating the normalized [-1, 1] fallback as empirical. Wiring this in still
+  does not fix A30: PPO objectives intentionally use the sampled pre-clip action, while the
+  diagnostic makes the resulting boundary drift visible.
 - PPO approximate KL and clip fraction — for the four on-policy families
 - value explained variance, gradient norm
 - **train-regime** return trend — the only signal that says "learning is happening"
@@ -55,6 +72,15 @@ envelope is usually contention or thrash, and on a shared box **GPU 0 has anothe
 **Provenance, once per cell**: that the row carries checkpoint SHA-256, container digest, and the
 host-profile actually used (see `MIGRATION-T4-TO-V100.md` — a run inheriting probe values is the
 silent failure).
+
+**Submission boundary**: `bash datasphere/native/job.sh submit <config>` is the only supported
+production-scale DataSphere submission route. It parses the forwarded `cmd`, requires exactly one
+explicit `NATIVE_HOST_PROFILE` for `FRAMES >= 600000` or `NATIVE_PRODUCTION=1`, and admits
+`datasphere` for DataSphere tiers. `NATIVE_HOST_PROFILE=v100` is the separate owner-host identity,
+not a label for `g1.1`; placing it in a DataSphere config is rejected before the CLI can upload.
+Historical sub-production probes remain admissible without the explicit binding. The guard cannot
+prevent a user from invoking the raw DataSphere CLI directly, so such a submission is outside the
+reproduction protocol and has no claim to the guarded production path.
 
 ## Abort criteria — predeclare, because deciding in the moment is the bias
 
@@ -93,7 +119,13 @@ loss.
 
 1. `python scripts/production_gates.py` — anything newly FAIL?
 2. Per running cell: `log_std`, clip rate, train-regime trend, frames/sec vs envelope.
-3. Per completed cell: records row count, checkpoint hash present, stamps retained as expected.
+3. Per completed cell: records row count, checkpoint hash present, stamps retained as expected; inspect
+   `run_manifest.json` for `execution_kind`, `finalization_schema: 1`, and `record_delivery: complete`
+   before accepting lightweight records. Production and eval-only jobs must have a nonempty
+   `RECORDS_OUT`; a missing destination is a failed delivery, not an optional convenience. Also
+   verify every delivered row has `_delivery_provenance.record_delivery == "complete"` and that
+   its source count/hash agree across rows; this is the records-only check when `result.tgz` is not
+   fetched.
 4. Anchor check as soon as `sgqn`/`svea` endpoints exist — do they land near the published **391.4**
    and **268.8**? That is the discriminating positive control; `drqv2`'s 3.6 is at the floor and
    tells you almost nothing.

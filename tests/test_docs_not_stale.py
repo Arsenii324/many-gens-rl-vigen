@@ -19,6 +19,7 @@ the numbers, not a proof that the words around them are true.
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import subprocess
@@ -88,6 +89,42 @@ def test_eval_protocol_carries_the_current_operational_defaults():
     assert "Fixed 3 for every reported row" in protocol
     assert "50k stamp grid" in protocol
     assert "Endpoint is the headline; trajectory is descriptive; no selected-best column" in protocol
+
+
+def test_eval_protocol_current_schedule_is_source_backed_and_not_contradicted_by_grid_section():
+    """The authoritative collection schedule must agree with the resolved production env.
+
+    The proposal and retention notes intentionally preserve alternative/historical calculations.
+    This guard is narrower: it isolates the current operational section and the live grid section,
+    so an old episode count cannot look current merely because a later paragraph says "superseded".
+    """
+    protocol = (ROOT / "docs" / "EVAL-PROTOCOL.md").read_text()
+    descriptors = json.loads((ROOT / "datasphere" / "native" / "families.json").read_text())
+    families = ("rlvigen", "dmc_gb", "idaac", "alda", "ppg", "ibac_sni", "ctrl")
+    resolved = []
+    for family in families:
+        settings = descriptors[family]["production"]
+        resolved.append((settings["save_every"], settings["curve_eval_episodes"],
+                         settings["offline_eval_episodes"], settings["offline_eval_regimes"],
+                         tuple(settings["offline_eval_scenes"])))
+    assert len(set(resolved)) == 1, "the protocol cannot state one shared grid for differing sources"
+    save_every, curve_episodes, endpoint_episodes, regimes, scenes = resolved[0]
+
+    current_start = protocol.index("### Current operational defaults")
+    current_end = protocol.index("\n## 0.", current_start)
+    current = protocol[current_start:current_end]
+    grid_start = protocol.index("## 2. The grid")
+    grid_end = protocol.index("\n## 3.", grid_start)
+    grid = protocol[grid_start:grid_end]
+
+    assert "Source: `datasphere/native/families.json` via `family.py::production_env()`" in current
+    assert f"`SAVE_EVERY_FRAMES={save_every}`" in current
+    assert f"`CURVE_EVAL_EPISODES={curve_episodes}`" in current
+    assert f"`ENDPOINT_EVAL_EPISODES={endpoint_episodes}`" in current
+    assert f"`{regimes}`" in current
+    assert f"`{','.join(map(str, scenes))}`" in current
+    assert "**3 per (regime, scene) cell at each intermediate stamp; 20 at the endpoint**" in grid
+    assert "**10 per (regime, scene) cell**" not in grid
 
 
 def per_baseline():

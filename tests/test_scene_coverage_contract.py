@@ -159,7 +159,7 @@ class TestTheCloneRunnersInheritTheGap:
     def test_ibac_sni_is_now_env_configurable_and_still_never_swept(self):
         """C45's last literal, removed 2026-09-03 — and the distinction it forces.
 
-        `general.py` is OUR adapter: upstream `ibac_sni` is a MiniGrid/CoinRun repository with no
+        `ibac_sni_runtime.py` is OUR adapter: upstream `ibac_sni` is a MiniGrid/CoinRun repository with no
         robosuite in it at all, so `make_rlvigen_env` is authored by this project and widening it
         deviates from nobody. It now reads `RLVIGEN_SCENE_ID`, exactly as it already read
         `RLVIGEN_MODE` for the regime.
@@ -170,7 +170,7 @@ class TestTheCloneRunnersInheritTheGap:
         first half would let "reachable" be misread as "closed", which is the exact error C45's own
         2026-08-19 correction was written to prevent.
         """
-        p = ROOT / "runnable/ibac_sni/torch_rl/utils/general.py"
+        p = ROOT / "runnable/ibac_sni/torch_rl/ibac_sni_runtime.py"
         if not p.exists():
             pytest.skip("ibac_sni absent")
         t = p.read_text(errors="replace")

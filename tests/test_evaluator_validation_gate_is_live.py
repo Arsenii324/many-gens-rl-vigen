@@ -9,6 +9,7 @@ This pins three behaviors against a scratch ledger, so a future edit that reintr
 verdict fails immediately rather than being trusted for another day.
 """
 import importlib.util
+import hashlib
 import json
 import pathlib
 import sys
@@ -48,7 +49,10 @@ def test_the_ledger_is_well_formed():
         if family.startswith("_"):
             continue
         assert {"job", "family_code_revision", "family_config_revision",
-                "runtime_imports_checked", "paired", "diagnostics_complete"} <= entry.keys()
+                "runtime_imports_checked", "paired", "diagnostics_complete",
+                "validation_kind", "evaluator_revision", "evaluator_scope",
+                "evaluator_scope_revision", "evaluator_measurement_revision",
+                "evaluation_records_path", "evaluation_records_sha256"} <= entry.keys()
 
 
 def _with_fake_ledger(gates, monkeypatch, fake: dict):
@@ -60,6 +64,89 @@ def _with_fake_ledger(gates, monkeypatch, fake: dict):
         return real_read_text(self, *a, **k)
 
     monkeypatch.setattr(pathlib.Path, "read_text", patched)
+
+
+def _scope(family):
+    from datasphere.native.evaluator_identity import FAMILY_ALLOWED_BASELINES
+
+    sampled = family in {"idaac", "ppg", "ibac_sni", "ctrl"}
+    ctrl = family == "ctrl"
+    return {
+        "family": family,
+        "baseline": FAMILY_ALLOWED_BASELINES[family][0],
+        "task": "Door",
+        "frame": 100000,
+        "eval_scope": "endpoint",
+        "regimes": ["train"],
+        "scenes": [0],
+        "episodes": 5,
+        "episode_seed": 1,
+        "seed": 101,
+        "device": "cuda",
+        "action_repeat": 1,
+        "frame_stack": 1,
+        "image_size": 64,
+        "episode_length": 500,
+        "deterministic_setting": (
+            {"backend": "jax", "mode": "seeded-prng", "enabled": True}
+            if ctrl else
+            {"backend": "torch", "mode": "torch.use_deterministic_algorithms", "enabled": True}
+        ),
+        "eval_policy_mode": "sample" if sampled else "mode",
+    }
+
+
+def _fake_environment(gates, monkeypatch, tmp_path):
+    import scripts.eval_provenance as provenance
+
+    monkeypatch.setattr(gates, "ROOT", tmp_path)
+    functions = {
+        "evaluator_family_code_revision": lambda _root, family: f"code-{family}",
+        "evaluator_family_config_revision": lambda _root, family: f"config-{family}",
+        "evaluator_family_revision": lambda _root, family: f"static-{family}",
+    }
+    for module in (gates, provenance):
+        for name, function in functions.items():
+            monkeypatch.setattr(module, name, function, raising=False)
+
+
+def _entry(tmp_path, family, **overrides):
+    from datasphere.native.evaluator_identity import measurement_revision, scope_revision
+
+    scope = _scope(family)
+    scope.update(overrides.pop("scope", {}))
+    code = f"code-{family}"
+    config = f"config-{family}"
+    static = f"static-{family}"
+    scope_hash = scope_revision(scope)
+    artifact = tmp_path / "results" / "validation" / f"{family}.jsonl"
+    artifact.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "phase": "offline-eval", "family": family, "baseline": scope["baseline"],
+        "evaluator_revision": static, "evaluator_code_revision": code,
+        "evaluator_config_revision": config, "evaluator_scope": scope,
+        "evaluator_scope_revision": scope_hash,
+        "evaluator_measurement_revision": measurement_revision(static, scope_hash),
+    }
+    raw = (json.dumps(row, sort_keys=True) + "\n").encode()
+    artifact.write_bytes(raw)
+    entry = {
+        "job": f"job-{family}", "baseline": scope["baseline"],
+        "code_revision": "historical", "family_code_revision": code,
+        "family_config_revision": config, "runtime_imports_checked": True,
+        "paired": True, "diagnostics_complete": True,
+        "validation_kind": "functional_endpoint", "evaluator_revision": static,
+        "evaluator_scope": scope, "evaluator_scope_revision": scope_hash,
+        "evaluator_measurement_revision": measurement_revision(static, scope_hash),
+        "evaluation_records_path": str(artifact.relative_to(tmp_path)),
+        "evaluation_records_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+    entry.update(overrides)
+    return entry, artifact
+
+
+def _all_fake_entries(gates, tmp_path):
+    return {family: _entry(tmp_path, family)[0] for family in gates.EVALUATOR_FAMILIES}
 
 
 def test_a_stale_revision_entry_does_not_count(monkeypatch):
@@ -79,16 +166,131 @@ def test_a_stale_revision_entry_does_not_count(monkeypatch):
     assert "needs re-run" in reason
 
 
-def test_all_current_and_complete_passes(monkeypatch):
+def test_all_current_and_complete_passes_with_shallow_functional_endpoint(
+        monkeypatch, tmp_path):
     gates = _gates()
-    fake = {f: {"family_code_revision": _current_revisions(f)[0],
-                "family_config_revision": _current_revisions(f)[1],
-                "runtime_imports_checked": True, "job": "x", "paired": True,
-                "diagnostics_complete": True} for f in gates.EVALUATOR_FAMILIES}
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
     _with_fake_ledger(gates, monkeypatch, fake)
     verdict, reason = gates.gate_shared_evaluator_validated()
     assert verdict == gates.PASS
     assert "all 7" in reason
+
+
+def test_scope_attestation_is_required(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    for key in ("validation_kind", "evaluator_scope",
+                "evaluator_scope_revision", "evaluator_measurement_revision",
+                "evaluation_records_path", "evaluation_records_sha256"):
+        fake["idaac"].pop(key)
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+    assert "scope" in reason.lower() or "attestation" in reason.lower()
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda entry: entry["evaluator_scope"].update({"baseline": "drqv2"}),
+    lambda entry: entry["evaluator_scope"].update({"eval_policy_mode": "mode"}),
+    lambda entry: entry["evaluator_scope"].update({"eval_scope": "curve"}),
+    lambda entry: entry.update({"evaluator_scope_revision": "wrong"}),
+    lambda entry: entry.update({"evaluator_measurement_revision": "wrong"}),
+    lambda entry: entry.update({"evaluator_revision": "wrong"}),
+    lambda entry: entry.update({"evaluation_records_path": "../escape.jsonl"}),
+    lambda entry: entry.update({"evaluation_records_sha256": "wrong"}),
+])
+def test_invalid_scope_or_binding_never_counts(monkeypatch, tmp_path, mutation):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    mutation(fake["idaac"])
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, _reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+
+
+def test_malformed_evidence_jsonl_never_counts(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    entry = fake["idaac"]
+    artifact = tmp_path / entry["evaluation_records_path"]
+    artifact.write_text("not json\n")
+    entry["evaluation_records_sha256"] = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, _reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+
+
+def test_evidence_row_identity_must_match_ledger(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    entry = fake["idaac"]
+    artifact = tmp_path / entry["evaluation_records_path"]
+    row = json.loads(artifact.read_text())
+    row["evaluator_scope_revision"] = "wrong"
+    raw = (json.dumps(row, sort_keys=True) + "\n").encode()
+    artifact.write_bytes(raw)
+    entry["evaluation_records_sha256"] = hashlib.sha256(raw).hexdigest()
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, _reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+
+
+def test_symlink_evidence_path_cannot_escape_repository(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    entry = fake["idaac"]
+    artifact = tmp_path / entry["evaluation_records_path"]
+    outside = tmp_path.parent / f"{tmp_path.name}-outside.jsonl"
+    outside.write_bytes(artifact.read_bytes())
+    artifact.unlink()
+    try:
+        artifact.symlink_to(outside)
+    except (OSError, NotImplementedError) as error:
+        pytest.skip(f"filesystem does not support symlinks: {error}")
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+    assert "escapes" in reason.lower()
+
+
+def test_evidence_without_offline_eval_rows_never_counts(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    entry = fake["idaac"]
+    artifact = tmp_path / entry["evaluation_records_path"]
+    row = json.loads(artifact.read_text())
+    row["phase"] = "training"
+    raw = (json.dumps(row, sort_keys=True) + "\n").encode()
+    artifact.write_bytes(raw)
+    entry["evaluation_records_sha256"] = hashlib.sha256(raw).hexdigest()
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+    assert "offline-eval" in reason
+
+
+def test_offline_eval_baseline_mismatch_never_counts(monkeypatch, tmp_path):
+    gates = _gates()
+    _fake_environment(gates, monkeypatch, tmp_path)
+    fake = _all_fake_entries(gates, tmp_path)
+    entry = fake["rlvigen"]
+    artifact = tmp_path / entry["evaluation_records_path"]
+    row = json.loads(artifact.read_text())
+    row["baseline"] = "svea"
+    raw = (json.dumps(row, sort_keys=True) + "\n").encode()
+    artifact.write_bytes(raw)
+    entry["evaluation_records_sha256"] = hashlib.sha256(raw).hexdigest()
+    _with_fake_ledger(gates, monkeypatch, fake)
+    verdict, reason = gates.gate_shared_evaluator_validated()
+    assert verdict == gates.OWNER
+    assert "baseline" in reason
 
 
 def test_real_ledger_reflects_a_real_gap_right_now():

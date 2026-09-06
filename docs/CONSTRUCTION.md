@@ -204,7 +204,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C93](#c93) | greenmark's tree id is unstable while a run writes into results/, so any green stamp taken during a run is void — and tree_id ignores the CODE_PREFIXES split that the rest of the file uses | OURS | OPEN | — |
 | [C94](#c94) | greenmark cannot see the gitignored vendored tree, so an upstream-only edit reports "no pending changes" and skips the suite that holds the only instrument which would catch it; the test pinning this defect checks a string, not the pipeline | OURS | OPEN | — |
 | [C95](#c95) | a container-trained checkpoint may not be evaluated on this laptop: the same 60k snapshot reads train 131.5 in the container on BOTH CUDA and CPU and 13.85 here, so the device is exonerated and the **renderer** (`MUJOCO_GL=egl` vs macOS `glfw`) is the cause; the container figure also reproduces the run's own logged 135.71, validating `eval_grid.py`. Mechanism settled; recomputation of locally-produced numbers outstanding | OURS | OPEN | — |
-| [C96](#c96) | the shared-evaluator ledger's one global code revision was both too broad and too narrow: a training-only patch invalidated every family, while a change to a family evaluator's local runtime could leave its revision unchanged | OURS + FALSE-CERTIFICATION | READY | a revalidation slot |
+| [C96](#c96) | the shared-evaluator ledger's one global code revision was both too broad and too narrow: a training-only patch invalidated every family, while a change to a family evaluator's local runtime could leave its revision unchanged; the static family payload closure/config binding and row-level canonical scope/measurement revisions are now locally implemented and tested, but 0/7 families are remotely validated on the current closure | OURS + FALSE-CERTIFICATION | READY | a revalidation slot |
 
 **24 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 34 RESOLVED · 96 total.**
 
@@ -7620,17 +7620,31 @@ over-broad half; the second catches the blind half. Both are pinned by
 also makes every statically declared runtime member reach the matching evaluation payload (or the
 separately declared RL-ViGen source archive).
 
-**Decision** The ledger now carries a family-specific static runtime closure, a family-specific
-configuration revision, and a dynamic import manifest captured by the evaluation process.
-`scripts/production_gates.py` refuses a shared-evaluator discharge without all three. The dynamic
-manifest is evidence to review, not a false automatic proof: a dynamic import path or a
-pickle-created object can still expose an unlisted local module.
+**Decision** The ledger now carries a family-specific static runtime closure and configuration
+revision, while each emitted row carries the resolved canonical `evaluator_scope`, its
+`evaluator_scope_revision`, and the combined `evaluator_measurement_revision`. These distinctions
+are implemented and locally tested; static payload closure/configuration identity is for payload
+proof, and measurement revision is for analysis and pooling. A pinned RL-ViGen archive can be
+compared with the deterministic post-patch closure even when `apply_patches.py --check` abstains
+because the extracted tree has no nested Git repository. That abstention remains a source-lineage
+limitation, not a failure of evaluator equality when the archive and post-patch closure match.
+
+The evaluation process also captures a dynamic import manifest, and
+`scripts/production_gates.py` requires it to be reviewed. It is observed evidence, not a static
+proof: a dynamic import path or pickle-created object can still expose an unlisted local module.
+
+The live gate additionally requires a human-reviewed records artifact and SHA256 binding. It
+accepts `validation_kind: functional_endpoint` with a deliberately shallow canonical endpoint
+scope; that proves evaluator-path functionality, not final production-report depth. The gate checks
+that applicable offline rows agree with the ledger identity, but mechanics do not establish that
+the job, source archive, or environment was honest.
 
 **Effect** All earlier shared-evaluator discharges are historic measurements under a superseded
 identity, not current evidence. The live gate therefore starts at 0/7 evaluator families rather
 than carrying forward a plausible-but-unlicensed 2/12. This is not a statement that the old
 numbers are false; it is a statement that they no longer establish the current evaluator's
-equivalence.
+equivalence. The new identity path is locally tested, but no family has yet been remotely
+validated against the current closure.
 
 **What remains** Re-run each family against its native evaluator on the current payload, inspect
 the emitted import manifest, and record the paired result. This needs a bounded container slot,

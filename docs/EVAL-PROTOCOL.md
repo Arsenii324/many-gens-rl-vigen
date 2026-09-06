@@ -37,6 +37,22 @@ These are the defaults the project implements and validates now; `OWNER` means f
 still open, not that an arbitrary alternative may be substituted. They supersede earlier adaptive
 seed and 100k-cadence passages below, which remain only as dated reasoning.
 
+**Source: `datasphere/native/families.json` via `family.py::production_env()`.** All seven evaluator
+families currently resolve the shared production collection settings below. This is the operational
+recording schedule, not a replacement for owner ratification of the statistical policy. In
+particular, a family's native training-time `EVAL_EPISODES` (when it has one) is not the offline
+endpoint depth and must not be substituted for it.
+
+- `SAVE_EVERY_FRAMES=50000` and `CURVE_EVAL_EPISODES=3`;
+- `ENDPOINT_EVAL_EPISODES=20`;
+- `CURVE_EVAL_REGIMES` and `ENDPOINT_EVAL_REGIMES` = `train,eval-easy,eval-medium,eval-hard`;
+- `CURVE_EVAL_SCENES` and `ENDPOINT_EVAL_SCENES` = `0,1,2,3,4,5,6,7,8,9`.
+
+The detailed statistical and checkpoint-selection reasoning remains in
+[`proposal-inference-and-checkpoint-selection.md`](../notes/proposal-inference-and-checkpoint-selection.md)
+and [`retention-and-eval-depth.md`](../notes/retention-and-eval-depth.md); those notes are the
+decision rationale, while this section is the authoritative operational interpretation of records.
+
 - **Fixed 3 for every reported row.** No outcome-dependent allocation; report an absent/failed cell
   rather than redistributing its seeds.
 - **50k stamp grid**, three episodes per intermediate scene and twenty at the endpoint; retain all
@@ -206,7 +222,10 @@ Per baseline, per seed, per retained checkpoint:
   > so the exclusion can be reversed by decision rather than rediscovered as a gap.
 - **scenes**: all ten certified, per regime. Per-scene rows retained, never only the aggregate —
   today's grid showed 392.9 on scene 0 against 0.7 on scene 3, which an aggregate erases.
-- **episodes**: 10 per (regime, scene) cell. 4 × 10 × 10 = 400 episodes per checkpoint ≈ 1h ≈ 168 RUB.
+- **episodes**: **3 per (regime, scene) cell at each intermediate stamp; 20 at the endpoint**.
+  The intermediate count is the current production setting; older 5/10/20-episode cost scenarios
+  below are historical sensitivity calculations, not an instruction for a run. Per-scene rows are
+  retained, never only the aggregate.
 - **seeds**: the *evaluation* seed is **fixed and shared** across every baseline and every training
   seed; the *training* seed is the §3b #4 decision. These are different axes and the record names
   both.
@@ -379,8 +398,9 @@ So the weights are evaluated where they were produced and only records travel:
 each, and `CURVE_EVAL_DISCARD_WEIGHTS=1` deletes each intermediate once evaluated — never the
 terminal `snapshot.pt`. It is **opt-in**, so no ordinary probe starts paying for it.
 
-**What it costs, which is the part that needs a decision.** Derived from the same measured
-throughputs the cost model uses, at 6e5 × 3 seeds:
+**Historical sensitivity scenarios (not the current operational schedule).** These are derived from
+the same measured throughputs at 6e5 × 3 seeds and remain useful for understanding the cost shape;
+the current schedule is the source-backed setting above:
 
 | stamp grid | episodes | stamps | job-hours | RUB | vs the ~525 h of training |
 |---|---|---|---|---|---|

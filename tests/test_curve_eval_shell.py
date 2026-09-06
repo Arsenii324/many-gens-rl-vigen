@@ -109,16 +109,52 @@ def test_every_checkpoint_record_survives_the_curve(tmp_path):
     assert records == ['{"frame":2500}', '{"frame":5000}', '{"frame":7500}']
 
 
-def test_missing_checkpoint_directory_is_reported_not_fatal(tmp_path):
-    """A family that produced no stamps must not fail the cell after training succeeded."""
+def test_missing_checkpoint_directory_is_insufficient(tmp_path):
+    """No checkpoint directory is an incomplete requested curve, not a successful curve."""
     cell = tmp_path / "cell"
     cell.mkdir(parents=True)
     script = tmp_path / "h.sh"
     script.write_text("set -euo pipefail\n" + _extract("run_curve_eval") +
                       '\nrun_curve_eval "$1" ctrl ctrl 1 2000\n')
     proc = subprocess.run(["bash", str(script), str(cell)], capture_output=True, text=True)
-    assert proc.returncode == 0
+    assert proc.returncode != 0
     assert "NATIVE_CURVE_EVAL_NO_STAMPS" in proc.stderr
+
+
+def test_zero_usable_stamps_is_insufficient(tmp_path):
+    """A nonempty directory with no parseable checkpoint stamp must also fail closed."""
+    cell = tmp_path / "cell"
+    (cell / "checkpoints").mkdir(parents=True)
+    (cell / "checkpoints" / "checkpoint-final.pt").write_bytes(b"weights")
+    script = tmp_path / "h.sh"
+    script.write_text("set -euo pipefail\n" + _extract("run_curve_eval") +
+                      '\nrun_curve_eval "$1" ctrl ctrl 1 2000\n')
+    proc = subprocess.run(["bash", str(script), str(cell)], capture_output=True, text=True)
+    assert proc.returncode != 0
+    assert "NATIVE_CURVE_EVAL_NO_STAMPS" in proc.stderr
+
+
+@pytest.mark.parametrize("endpoint,expected", [("1", "fatal"), ("0", "tolerated")])
+def test_curve_caller_applies_production_strictness_but_tolerates_exploration(
+        tmp_path, endpoint, expected):
+    cell = tmp_path / "cell"
+    cell.mkdir(parents=True)
+    script = tmp_path / "h.sh"
+    script.write_text(
+        "set -euo pipefail\n"
+        + _extract("run_curve_eval") + "\n"
+        + _extract("run_curve_eval_with_policy") + "\n"
+        + 'ENDPOINT_EVAL="$1" run_curve_eval_with_policy "$2" ctrl ctrl 1 2000\n'
+    )
+    proc = subprocess.run(
+        ["bash", str(script), endpoint, str(cell)], capture_output=True, text=True,
+    )
+    if expected == "fatal":
+        assert proc.returncode != 0
+        assert "NATIVE_CURVE_EVAL_FATAL" in proc.stderr
+    else:
+        assert proc.returncode == 0
+        assert "NATIVE_CURVE_EVAL_TOLERATED" in proc.stderr
 
 
 def test_offline_eval_selects_its_family_for_dependency_bootstrap():

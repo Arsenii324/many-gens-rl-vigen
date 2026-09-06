@@ -1227,14 +1227,14 @@ pathology, already sitting as its own open owner decision (entropy_coeff for iba
 pre-clip action, and no amount of MONITORING boundary_fraction changes that computation. Measuring
 the drift and correcting the objective for it are different things; only the first exists.
 
-**What actually IS missing, found while checking this**: `scripts/eval_provenance.py`'s
-`action_diagnostics()` computes the exact empirical clip-rate fields
+**What actually was missing, found while checking this on 2026-09-05**: `scripts/eval_provenance.py`'s
+`action_diagnostics()` computed the exact empirical clip-rate fields
 (`action_clip_rate_coordinate`, `action_clip_rate_vector`, `action_raw_executed_l1`) generically
-for any family — and has **zero call sites anywhere in `scripts/`**. It was built and never wired
-into a record path. That is the concrete, narrow, fixable gap here — not "no diagnostic exists"
-but "a complete diagnostic exists, unused." Left as found rather than wired in tonight: doing so
-correctly means deciding where in the evaluator it belongs and what it should be computed against
-per family, which is scope beyond a same-session correction.
+for any family, but had **zero call sites anywhere in `scripts/`**. It was built and never wired
+into a record path. **Closed 2026-09-06**: the seven-family offline evaluator now observes the
+adapter-to-environment action boundary and emits `native.policy_action_diagnostics` per scene row.
+This is measurement only; controller-internal torque clipping remains explicitly outside the
+observed scope, and the old objective/fidelity warning is unchanged.
 
 ### A31 OPEN, 2026-09-06 — `results_table.py`'s floor never joined the single-home fix (Q12)
 

@@ -9,7 +9,22 @@ import json
 import os
 import sys
 import tarfile
+import tempfile
 from pathlib import Path
+
+try:
+    from datasphere.native.evaluator_identity import (IDENTITY_SCHEMA, family_bindings,
+                                                       verify_bindings)
+except ModuleNotFoundError:  # direct `python datasphere/native/contract.py` execution
+    import importlib.util
+
+    _identity_path = Path(__file__).with_name("evaluator_identity.py")
+    _identity_spec = importlib.util.spec_from_file_location("_native_evaluator_identity", _identity_path)
+    _identity = importlib.util.module_from_spec(_identity_spec)
+    _identity_spec.loader.exec_module(_identity)
+    IDENTITY_SCHEMA = _identity.IDENTITY_SCHEMA
+    family_bindings = _identity.family_bindings
+    verify_bindings = _identity.verify_bindings
 
 
 # [Claude 2026-09-02 04:35 MSK: the allowlist is now base + per-family. Every job needs the runner,
@@ -18,6 +33,7 @@ from pathlib import Path
 # archive manifest, so the remote verifier applies the same allowlist without being told.]
 BASE_ALLOWED = (
     "datasphere/native/contract.py",
+    "datasphere/native/evaluator_identity.py",
     "datasphere/native/configure_places365_val.py",
     "datasphere/native/families.json",
     "datasphere/native/family.py",
@@ -28,6 +44,14 @@ BASE_ALLOWED = (
     "datasphere/native/run_probe.sh",
     "datasphere/native/source-lock.json",
     "requirements-native.txt",
+    # A hash INPUT for scripts/eval_provenance.py's evaluator revision, never an import: the remote
+    # side reads its bytes and nothing else, so the single file ships without `rlgen/__init__.py`.
+    # It is here because the stamp must come out identical whether it was computed locally or on the
+    # remote -- that identity is the whole point of a revision stamp -- and because omitting it
+    # raised "cannot stamp evaluator revision: missing rlgen/protocol.py" remotely, after the job
+    # had paid for its bootstrap.  Note normalize_curves.py:62 records that `rlgen` is deliberately
+    # NOT a payload package; that still holds.  This is one file shipped as data, not the package.
+    "rlgen/protocol.py",
     "runnable/_shim",
     # Named explicitly although it sits inside runnable/_shim, because the package MUST be called
     # `models` -- ALDA's trainer does `from models.sac import ...` -- and FORBIDDEN_PARTS rejects a
@@ -37,6 +61,7 @@ BASE_ALLOWED = (
     "scripts/check_checkpoint_finite.py",
     "scripts/eval_across_scenes.py",
     "scripts/eval_grid.py",
+    "scripts/eval_provenance.py",
     "scripts/metrics.py",
     "scripts/preserve_intermediate_snapshot.py",
     "scripts/watch_divergence.py",
@@ -53,7 +78,18 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # verify the shipped RL-ViGen archive before extracting it. A payload built before that file
 # existed would leave the runner reading a path that is not there, at the point where it has just
 # stopped cloning -- i.e. with no tree at all and no useful error.
-RUNNER_CONTRACT = 10
+# Bumped to 11 on 2026-09-05: both offline evaluator entry points import eval_provenance.py after
+# extraction.  A payload built before it was allowlisted would otherwise spend remote bootstrap
+# before failing an import, so the runner must reject that archive at the contract boundary.
+# Bumped to 12 the same day: offline rows now require an evaluator revision, so the runner checks
+# that the payload has the stamping path before it is allowed to measure a checkpoint.
+# Bumped to 13 the same day: the runner now passes `--eval-scope` to eval_grid on BOTH evaluator
+# paths, so endpoint rows and trajectory-stamp rows can be told apart in the record. run_probe.sh
+# ships as a separate job input and is therefore always current, while the payload is a pinned
+# archive -- so a payload built before that flag existed would meet a runner that passes it, and
+# argparse would exit 2 after the bootstrap had already been paid for. This is the same drift that
+# cost two jobs over SAVE_EVERY vs SAVE_EVERY_FRAMES; the contract is where it gets caught.
+RUNNER_CONTRACT = 13
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:
@@ -119,25 +155,33 @@ def reject_forbidden_source(source: Path) -> None:
 
 def payload_members(source: Path, allowed_entries: tuple[str, ...]) -> list[Path]:
     members: list[Path] = []
+    seen: set[Path] = set()
+
+    def add(path: Path) -> None:
+        if path not in seen:
+            seen.add(path)
+            members.append(path)
+
     for allowed in allowed_entries:
         path = source / allowed
         if not path.exists():
             fail(f"required payload member is absent: {allowed}")
         if path.is_file():
-            members.append(path)
+            add(path)
         else:
             # `.git` is SKIPPED here rather than left to trip FORBIDDEN_PARTS below. The clones
             # carry it -- it is what `scripts/deviations.py` diffs against, 296 MB of it -- and no
             # job needs a byte of it. Before this, restoring that metadata made every payload build
             # fail with "forbidden payload member: runnable/alda/.git/COMMIT_EDITMSG", which reads
             # like a smuggling attempt rather than "you kept your history".
-            members.extend(sorted(
-                child for child in path.rglob("*")
-                if child.is_file() and not child.is_symlink()
-                and child.name != ".DS_Store"
-                and "__pycache__" not in child.parts
-                and ".git" not in child.parts
-                and child.suffix != ".pyc"))
+                for child in sorted(
+                    child for child in path.rglob("*")
+                    if child.is_file() and not child.is_symlink()
+                    and child.name != ".DS_Store"
+                    and "__pycache__" not in child.parts
+                    and ".git" not in child.parts
+                    and child.suffix != ".pyc"):
+                    add(child)
     return members
 
 
@@ -155,6 +199,14 @@ def write_payload(source: Path, output: Path, command: str, families: tuple[str,
         "nested_repository_commits": source_lock["nested_repository_commits"],
         "members": {str(path.relative_to(source)): sha256(path) for path in members},
     }
+    # A source-only test fixture may intentionally omit the pinned RL-ViGen tree. Such an archive
+    # remains buildable for generic contract tests, but it is explicitly unbound and cannot pass a
+    # validation submission. Real production payloads have every requested family binding here.
+    try:
+        manifest["evaluator_identity_schema"] = IDENTITY_SCHEMA
+        manifest["evaluator_bindings"] = family_bindings(source, families)
+    except (KeyError, RuntimeError) as error:
+        manifest["identity_unavailable"] = str(error)
     with tarfile.open(output, "w:gz") as archive:
         for path in members:
             archive.add(path, arcname=str(path.relative_to(source)), recursive=False)
@@ -207,9 +259,17 @@ def verify_contains(archive_path: Path, expectations: tuple[str, ...]) -> None:
                 print(f"  contains  {path}  <- {marker}")
 
 
-def verify_payload(archive_path: Path, require_runner_contract: int | None = None) -> None:
+def verify_payload(
+    archive_path: Path,
+    require_runner_contract: int | None = None,
+    require_families: tuple[str, ...] = (),
+    require_evaluator_identity: bool = False,
+) -> None:
     with tarfile.open(archive_path, "r:gz") as archive:
-        names = [member.name.rstrip("/") for member in archive.getmembers() if member.isfile()]
+        members = [member for member in archive.getmembers() if member.isfile()]
+        names = [member.name.rstrip("/") for member in members]
+        if len(names) != len(set(names)):
+            fail("payload contains duplicate file members")
         manifest_member = archive.extractfile("payload_manifest.json") if "payload_manifest.json" in archive.getnames() else None
         manifest = json.loads(manifest_member.read()) if manifest_member else {}
         families = tuple(manifest.get("families") or DEFAULT_FAMILIES)
@@ -222,6 +282,39 @@ def verify_payload(archive_path: Path, require_runner_contract: int | None = Non
                 f"payload was built for runner contract {found!r} but this runner needs "
                 f"{require_runner_contract}; rebuild the payload before submitting"
             )
+    missing_families = sorted(set(require_families) - set(families))
+    if missing_families:
+        fail(
+            f"payload does not carry required family {', '.join(missing_families)} "
+            f"(it declares {', '.join(families)}); rebuild with --families including it"
+        )
+    if require_evaluator_identity:
+        if manifest.get("evaluator_identity_schema") != IDENTITY_SCHEMA:
+            fail("payload has no supported evaluator identity schema; rebuild before validation")
+        bindings = manifest.get("evaluator_bindings")
+        if not isinstance(bindings, dict):
+            fail("payload has no evaluator bindings; rebuild before validation")
+        missing_bindings = sorted(set(require_families) - set(bindings))
+        if missing_bindings:
+            fail("payload has no evaluator binding for required family " + ", ".join(missing_bindings))
+    declared_hashes = manifest.get("members")
+    if isinstance(declared_hashes, dict):
+        actual_names = set(names) - {"payload_manifest.json"}
+        expected_names = set(declared_hashes)
+        if actual_names != expected_names:
+            missing = sorted(expected_names - actual_names)
+            extra = sorted(actual_names - expected_names)
+            fail(f"payload member manifest differs from archive (missing={missing}, extra={extra})")
+        with tarfile.open(archive_path, "r:gz") as hash_archive:
+            for member in hash_archive.getmembers():
+                if not member.isfile() or member.name == "payload_manifest.json":
+                    continue
+                body = hash_archive.extractfile(member).read()
+                digest = hashlib.sha256(body).hexdigest()
+                if digest != declared_hashes.get(member.name):
+                    fail(f"payload member hash differs: {member.name}")
+    elif require_evaluator_identity:
+        fail("payload has no member hash manifest")
     allowed = list(BASE_ALLOWED)
     for family in families:
         if family in descriptors:
@@ -241,6 +334,24 @@ def verify_payload(archive_path: Path, require_runner_contract: int | None = Non
             fail(f"forbidden payload member: {name} (contains {offending})")
 
 
+def verify_evaluator_binding(
+    archive_path: Path,
+    source: Path,
+    families: tuple[str, ...],
+    rlvigen_archive: Path | None = None,
+) -> None:
+    """Compare the manifest with the current post-patch source closure.
+
+    This command intentionally imports only evaluator_identity.py, which is standard-library-only;
+    it is used after P1-P20 and before any Robosuite or family import.
+    """
+    verify_payload(archive_path, require_families=families, require_evaluator_identity=True)
+    with tarfile.open(archive_path, "r:gz") as archive:
+        member = archive.extractfile("payload_manifest.json")
+        manifest = json.loads(member.read()) if member else {}
+    verify_bindings(source, manifest, families, rlvigen_archive)
+
+
 def asset_digest(asset: Path) -> tuple[int, str]:
     files = sorted(path for path in asset.rglob("*.jpg") if path.is_file())
     digest = hashlib.sha256()
@@ -258,6 +369,247 @@ def check_asset(asset: Path, expected_count: int, expected_sha256: str) -> None:
         fail(f"Places365 validation image count {count} != expected {expected_count}")
     if digest != expected_sha256:
         fail("Places365 validation asset hash differs from the declared private asset")
+
+
+RECORD_EXECUTION_KINDS = {
+    "preflight",
+    "eval_only_validation",
+    "training_production",
+    "exploratory",
+}
+RECORD_DELIVERY_STATUSES = {
+    "pending",
+    "complete",
+    "failed",
+    "not_applicable",
+    "empty_tolerated",
+}
+
+
+def _record_artifact(path: Path, root: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    body = path.read_bytes()
+    try:
+        name = path.relative_to(root).as_posix()
+    except ValueError:
+        name = path.name
+    return {
+        "path": name,
+        "row_count": sum(bool(line.strip()) for line in body.splitlines()),
+        "sha256": hashlib.sha256(body).hexdigest(),
+    }
+
+
+def _record_source_paths(root: Path) -> list[Path]:
+    """Mirror run_probe.sh's declared concatenation order exactly."""
+    return [
+        root / "records.jsonl",
+        *sorted(root.glob("offline_eval_*.jsonl")),
+        *sorted(root.glob("cells/*/offline_eval_*.jsonl")),
+    ]
+
+
+def _record_inputs(root: Path) -> list[dict]:
+    return [artifact for path in _record_source_paths(root)
+            if (artifact := _record_artifact(path, root))]
+
+
+def _jsonl_objects(path: Path) -> list[dict]:
+    rows: list[dict] = []
+    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
+        if not raw_line.strip():
+            continue
+        try:
+            row = json.loads(raw_line)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"invalid_json path={path.name} line={line_number}") from error
+        if not isinstance(row, dict):
+            raise ValueError(f"invalid_json_row path={path.name} line={line_number} expected=object")
+        rows.append(row)
+    return rows
+
+
+def _canonical_row(row: dict) -> bytes:
+    row = dict(row)
+    # Both fields are runner-added metadata. They are excluded from the source comparison, while
+    # every ordinary measurement field remains exact. `_delivery_provenance` is added only after
+    # comparison succeeds; `_run_provenance` is added earlier to offline rows by the collector.
+    row.pop("_run_provenance", None)
+    row.pop("_delivery_provenance", None)
+    return json.dumps(row, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False).encode() + b"\n"
+
+
+def _canonical_jsonl(path: Path) -> list[bytes]:
+    """Return the ordered semantic rows, ignoring only runner-added delivery metadata."""
+    return [_canonical_row(row) for row in _jsonl_objects(path)]
+
+
+def _canonical_sha256(rows: list[bytes]) -> str:
+    digest = hashlib.sha256()
+    for row in rows:
+        digest.update(row)
+    return digest.hexdigest()
+
+
+def _stamp_canonical_artifact(artifact: dict, rows: list[bytes]) -> None:
+    artifact["canonical_row_count"] = len(rows)
+    artifact["canonical_sha256"] = _canonical_sha256(rows)
+
+
+def _write_delivery_records(path: Path, rows: list[dict], provenance: dict) -> None:
+    """Atomically add final delivery provenance to every delivered JSON object."""
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            for row in rows:
+                stamped = dict(row)
+                stamped["_delivery_provenance"] = provenance
+                json.dump(stamped, handle, sort_keys=True, ensure_ascii=False)
+                handle.write("\n")
+        os.replace(temporary, path)
+    except BaseException:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
+        raise
+
+
+def _write_json_atomically(path: Path, value: dict) -> None:
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False,
+    ) as handle:
+        temporary = Path(handle.name)
+        json.dump(value, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    os.replace(temporary, path)
+
+
+def finalize_records(
+    manifest_path: Path,
+    records_out: Path | None = None,
+    execution_status: int = 0,
+    collection_status: int = 0,
+) -> bool:
+    """Finalize the JSONL delivery contract after all record sources are collected.
+
+    The manifest is deliberately updated even for a failed delivery: the caller archives it and
+    only then propagates the nonzero status.  Returning ``False`` means the artifact is not safe as
+    a successful production/evaluation result (or contains malformed exploratory data).
+    """
+    if not manifest_path.is_file():
+        fail(f"record finalization manifest is absent: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text())
+    if manifest.get("finalization_schema") != 1:
+        fail("run manifest has no supported finalization_schema=1")
+    if manifest.get("record_delivery") not in RECORD_DELIVERY_STATUSES:
+        fail(f"run manifest has unsupported record_delivery: {manifest.get('record_delivery')!r}")
+    kind = manifest.get("execution_kind")
+    if kind not in RECORD_EXECUTION_KINDS:
+        fail(f"run manifest has unsupported execution_kind: {kind!r}")
+
+    root = manifest_path.parent
+    output_artifact = _record_artifact(records_out, root) if records_out else None
+    input_artifacts = _record_inputs(root)
+    artifacts = {"inputs": input_artifacts, "expected": None, "output": output_artifact}
+    manifest["record_artifacts"] = artifacts
+    manifest["record_delivery_error"] = None
+
+    if kind == "preflight":
+        manifest["record_delivery"] = "not_applicable"
+        _write_json_atomically(manifest_path, manifest)
+        return True
+
+    required = kind in {"training_production", "eval_only_validation"}
+    error: str | None = None
+    expected_rows = 0
+    valid_rows = 0
+    if collection_status != 0:
+        error = "collector_write_failed"
+    elif execution_status != 0:
+        error = "execution_failed"
+    else:
+        try:
+            expected_sequence: list[bytes] = []
+            for path, artifact in zip(
+                (path for path in _record_source_paths(root) if path.is_file()), input_artifacts,
+            ):
+                rows = _canonical_jsonl(path)
+                _stamp_canonical_artifact(artifact, rows)
+                expected_sequence.extend(rows)
+            expected_rows = len(expected_sequence)
+            expected_hash = _canonical_sha256(expected_sequence)
+            artifacts["expected"] = {
+                "row_count": expected_rows,
+                "canonical_sha256": expected_hash,
+            }
+            if records_out is None or not records_out.is_file():
+                error = "missing_records_out"
+            else:
+                actual_objects = _jsonl_objects(records_out)
+                actual_sequence = [_canonical_row(row) for row in actual_objects]
+                valid_rows = len(actual_sequence)
+                if output_artifact is not None:
+                    _stamp_canonical_artifact(output_artifact, actual_sequence)
+                actual_hash = _canonical_sha256(actual_sequence)
+                if expected_sequence != actual_sequence:
+                    error = (
+                        "record_content_mismatch "
+                        f"expected_rows={expected_rows} delivered_rows={valid_rows} "
+                        f"expected_sha256={expected_hash} delivered_sha256={actual_hash}"
+                    )
+                elif valid_rows == 0:
+                    error = "zero_rows"
+                else:
+                    provenance = {
+                        "finalization_schema": 1,
+                        "execution_kind": kind,
+                        "record_delivery": "complete",
+                        "source_row_count": expected_rows,
+                        "source_canonical_sha256": expected_hash,
+                    }
+                    try:
+                        _write_delivery_records(records_out, actual_objects, provenance)
+                        stamped_sequence = _canonical_jsonl(records_out)
+                        if stamped_sequence != expected_sequence:
+                            error = "delivery_stamp_changed_content"
+                        else:
+                            output_artifact = _record_artifact(records_out, root)
+                            _stamp_canonical_artifact(output_artifact, stamped_sequence)
+                            artifacts["output"] = output_artifact
+                    except (OSError, ValueError) as failure:
+                        error = f"delivery_stamp_failed {failure}"
+        except ValueError as failure:
+            error = str(failure)
+
+    if error is not None:
+        if (
+            not required and execution_status == 0 and expected_rows == 0
+            and error in {"missing_records_out", "zero_rows"}
+        ):
+            manifest["record_delivery"] = "empty_tolerated"
+            manifest["record_delivery_error"] = error
+            _write_json_atomically(manifest_path, manifest)
+            return True
+        manifest["record_delivery"] = "failed"
+        manifest["record_delivery_error"] = error
+        manifest["final_evaluation_marker"] = None
+        if not manifest.get("failure_marker"):
+            marker = "NATIVE_RECORD_DELIVERY_FAILED reason=" + error
+            manifest["failure_marker"] = marker
+        _write_json_atomically(manifest_path, manifest)
+        return False
+
+    manifest["record_delivery"] = "complete"
+    manifest["record_rows"] = valid_rows
+    _write_json_atomically(manifest_path, manifest)
+    return True
 
 
 # [Codex 2026-09-01 15:20 MSK: fail locally and remotely when the audited Robosuite import graph no longer matches its exact dependency closure]
@@ -305,9 +657,19 @@ def main(argv: list[str] | None = None) -> int:
     verify = commands.add_parser("verify-payload")
     verify.add_argument("--archive", type=Path, required=True)
     verify.add_argument("--require-runner-contract", type=int, default=None)
+    verify.add_argument("--require-families", default="",
+                        help="comma-separated families the upcoming job will execute")
+    verify.add_argument("--require-evaluator-identity", action="store_true",
+                        help="require the versioned per-family identity and member hashes")
     verify.add_argument("--expect", action="append", default=[], metavar="PATH:MARKER",
                         help="assert a payload member contains this text; repeatable. Use it "
                              "after every build that carries an edit you are about to rely on.")
+    binding = commands.add_parser("verify-evaluator-binding")
+    binding.add_argument("--archive", type=Path, required=True)
+    binding.add_argument("--source", type=Path, required=True)
+    binding.add_argument("--families", required=True,
+                         help="comma-separated families whose post-patch closures must match")
+    binding.add_argument("--rlvigen-archive", type=Path, default=None)
     asset = commands.add_parser("check-asset")
     asset.add_argument("--asset", type=Path, required=True)
     asset.add_argument("--expected-count", type=int, required=True)
@@ -316,22 +678,53 @@ def main(argv: list[str] | None = None) -> int:
     closure.add_argument("--source", type=Path, required=True)
     closure.add_argument("--requirements", type=Path, required=True)
     closure.add_argument("--closure", type=Path, required=True)
+    finalize = commands.add_parser("finalize-records")
+    finalize.add_argument("--manifest", type=Path, required=True)
+    finalize.add_argument("--records-out", type=Path, default=None)
+    finalize.add_argument("--execution-status", type=int, default=0)
+    finalize.add_argument("--collection-status", type=int, default=0)
     args = parser.parse_args(argv)
     try:
         if args.command == "build-payload":
             write_payload(args.source.resolve(), args.output.resolve(), args.run_command,
                           tuple(item.strip() for item in args.families.split(",") if item.strip()))
         elif args.command == "verify-payload":
-            verify_payload(args.archive.resolve(), args.require_runner_contract)
+            verify_payload(
+                args.archive.resolve(),
+                args.require_runner_contract,
+                tuple(item.strip() for item in args.require_families.split(",") if item.strip()),
+                args.require_evaluator_identity,
+            )
             if args.expect:
                 verify_contains(args.archive.resolve(), tuple(args.expect))
+        elif args.command == "verify-evaluator-binding":
+            verify_evaluator_binding(
+                args.archive.resolve(),
+                args.source.resolve(),
+                tuple(item.strip() for item in args.families.split(",") if item.strip()),
+                args.rlvigen_archive.resolve() if args.rlvigen_archive else None,
+            )
         elif args.command == "verify-robosuite-closure":
             verify_robosuite_closure(args.source.resolve(), args.requirements.resolve(), args.closure.resolve())
+        elif args.command == "finalize-records":
+            if not finalize_records(
+                args.manifest.resolve(),
+                args.records_out.resolve() if args.records_out else None,
+                args.execution_status,
+                args.collection_status,
+            ):
+                return 4
         else:
             check_asset(args.asset.resolve(), args.expected_count, args.expected_sha256)
     except ValueError as error:
         print(error, file=sys.stderr)
-        return 2
+        # [Claude 2026-09-04: 4, not 2. argparse exits 2 on a malformed invocation, so while this
+        # returned 2 a mistyped command and a FAILED CONTRACT were the same exit code -- and a
+        # caller that only reads the status, as `for ... && echo PRESENT || echo MISSING` does,
+        # reports a present marker as missing. That happened today and nearly triggered a payload
+        # rebuild that was not needed. A check that could not run must never be readable as a
+        # check that ran and failed.]
+        return 4
     return 0
 
 

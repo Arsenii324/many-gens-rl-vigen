@@ -1,24 +1,32 @@
 # Which families are validated on the CURRENT evaluator, and how
 
-**STALE 2026-09-05, external review 14 §9-adjacent finding (P1): this doc's per-hash table below
-claims several families "VALIDATED, current revision" against `a8664a7f98dc3311`. That is no
-longer the current revision — many edits have landed since (this session's disk-safety, IDAAC
-episode-identity, PPG cadence, and provenance-closure fixes among them), and will keep moving
-during active concurrent work, which is exactly why this file is the wrong place to trust for a
-live answer. `python scripts/production_gates.py`'s "shared evaluator validated" row and
-`datasphere/native/validated_evaluator_families.json` are authoritative — they compute the current
-revision live and currently report 0/7 on it. Kept below for the JOB IDs and per-family path
-evidence, which remain useful; do not read the "current"/verdict column as still true.**
+**STALE 2026-09-05, external review 14 §9-adjacent finding (P1): this document's table below is
+historical evidence, not a live validation ledger. It claims several families "VALIDATED, current
+revision" against `a8664a7f98dc3311`, which is no longer the current revision — many edits have
+landed since (this session's disk-safety, IDAAC episode-identity, PPG cadence, and
+provenance-closure fixes among them). `python scripts/production_gates.py`'s "shared evaluator
+validated" row and `datasphere/native/validated_evaluator_families.json` are authoritative: they
+compute the current revision live and currently report 0/7 on it. The old JOB IDs and per-family
+path evidence remain useful, but do not read the historical "current"/verdict column as a present
+claim.**
 
-One table, kept current, because "the evaluator works" was believed for weeks while two families
-could not construct an environment at all.
+The evaluator identity repair is locally implemented and tested: payloads bind static family
+closure/configuration, and rows bind resolved canonical measurement scope and revisions. This
+does not move the remote verdict: 0/7 families are validated against the current closure. The live
+gate now also requires a `functional_endpoint` scope attestation and SHA256-bound retained records;
+this allows shallow endpoint functionality validation without presenting it as final production
+metric depth. Dynamic import manifests remain review evidence rather than complete static proof,
+and the records artifact still requires human review for source/job correctness.
+
+One historical table is retained for job/path evidence, because "the evaluator works" was believed
+for weeks while two families could not construct an environment at all.
 
 **Criterion**: a job on CUDA, under the current contract-13 payload, that returns records carrying
 complete diagnostics, working determinism, episode identifiers and run provenance.
 
 **The revision matters as much as the verdict.** A family validated under a superseded revision has
 not been validated under the one the fleet will run, which is the whole point of stamping it.
-The current tree is **`a8664a7f98dc3311`**.
+The historical table's revision is **`a8664a7f98dc3311`**; it is not the current tree revision.
 
 | family | job | revision | complete records? | verdict |
 |---|---|---|---|---|

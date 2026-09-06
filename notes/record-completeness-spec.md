@@ -53,8 +53,88 @@ and therefore passed while no identifier reached a record at all.
 **Identity and provenance** — so a row can be traced to the exact artefact that produced it:
 
     baseline, family, training_seed, regime, scene_id, episode_index, eval_episode_id
-    checkpoint_frame, checkpoint_sha256, source_commit, container_digest, evaluator_revision
+    checkpoint_frame, checkpoint_sha256, source_commit, container_digest
+    evaluator_revision, evaluator_config_revision
+    evaluator_scope, evaluator_scope_revision, evaluator_measurement_revision
     effective_config (the resolved values actually used, not the template)
+
+`evaluator_revision` is the static family runtime-closure identity and
+`evaluator_config_revision` is the static family configuration/payload identity. The resolved
+`evaluator_scope` is hashed as `evaluator_scope_revision`; analysis and pooling must use
+`evaluator_measurement_revision` (the static evaluator identity combined with that scope
+revision), not the static revision alone.
+
+The validation ledger may bind these fields to `validation_kind: functional_endpoint`,
+`evaluation_records_path`, and `evaluation_records_sha256`. That artifact binding makes the ledger
+claim mechanically comparable with its applicable offline rows; it remains a human-reviewed
+artifact and does not itself prove source or job correctness.
+
+**Delivery status is part of record interpretation.** The native runner writes `run_manifest.json`
+before invoking `normalize_curves.py`, because the normalizer attaches that manifest's provenance to
+rows. If normalization fails in a production endpoint cell, the runner preserves the native
+archive, sets the manifest's `failure_marker` to `NATIVE_RECORDS_NORMALIZATION_FAILED ...`, clears
+its top-level `final_evaluation_marker`, and exits nonzero only after the archive has been written.
+Such an archive is evidence of a postprocess failure, not a successful normalized record delivery.
+Exploratory/non-production normalization failure is tolerated only with an explicit
+`NATIVE_RECORDS_NORMALIZATION_TOLERATED` marker. An earlier cell failure retains ownership of the
+manifest failure marker and is never replaced by the later normalizer failure.
+
+The manifest now carries `finalization_schema: 1` and an `execution_kind` chosen before
+normalization: `preflight`, `eval_only_validation`, `training_production`, or `exploratory`.
+`record_delivery` starts as `pending` and is finalized only after normalization and after the
+optional `RECORDS_OUT` bundle has been assembled. Its only legal final values are:
+
+    not_applicable     preflight, which intentionally emits no records
+    complete           nonempty, valid JSON-object rows were delivered
+    failed             required delivery is absent/empty/malformed, or execution already failed
+    empty_tolerated    exploratory execution produced no rows; never a final result
+
+Production and eval-only validation therefore require a `RECORDS_OUT` destination and at least one
+valid JSONL row. Eval-only validation satisfies this with its raw offline-evaluation rows; it does
+not need a training `records.jsonl`. Exploratory probes retain their historical empty-output
+behavior, but the explicit `empty_tolerated` status prevents a report from treating them as a
+successful final delivery. The manifest's `record_artifacts` records the input files and delivered
+output's row count and SHA-256 (when present). A malformed row is never silently carried through.
+
+Finalization also verifies preservation, not merely nonemptiness: it reads the declared source
+sequence in runner order — `records.jsonl`, root `offline_eval_*.jsonl`, then cell
+`offline_eval_*.jsonl`, each lexicographically within its group — and compares it with the delivered
+JSONL sequence. Each row is canonicalized as a sorted-key compact JSON object; only the
+runner-added `_run_provenance` and `_delivery_provenance` fields are removed because the collector
+intentionally adds them to offline and completed-delivery rows.
+The canonical byte sequence is ordered and hashed, so omission, duplication, reordering, or a
+changed measurement field fails even when the remaining rows are valid. Raw-byte SHA-256 is kept
+separately for the actual input/output files.
+
+For exploratory runs, only a genuinely empty source/output set receives `empty_tolerated`. A
+nonempty but partial or otherwise mismatching bundle is `failed`: tolerating it would preserve the
+old false-success surface while making the status look explicit. Collector truncation/write errors
+are caught before `set -e` can terminate the runner; the manifest records the failure and native
+evidence is archived before the job returns nonzero. Before truncating `RECORDS_OUT`, the collector
+also rejects a destination whose resolved path or existing file identity aliases any declared native
+source (`records.jsonl`, root offline-evaluation files, or cell offline-evaluation files); this
+preserves the source evidence for the finalizer and archive when a destination is misconfigured.
+
+The finalizer updates the manifest before `result.tgz` is written. A required delivery failure
+clears the completion marker and adds `NATIVE_RECORD_DELIVERY_FAILED` unless an earlier cell
+failure already owns `failure_marker`; the runner then returns nonzero only after the archive has
+been verified. `summarize_result.py` refuses production/eval-only artifacts without supported,
+`complete` finalization by default. `--diagnostic` is the explicit escape hatch for inspecting old,
+incomplete, or failed artifacts and must not be used as a production result view.
+
+After — and only after — that full source/output comparison succeeds, the finalizer atomically
+rewrites `RECORDS_OUT`. Every JSON object receives this small top-level `_delivery_provenance`:
+
+    finalization_schema, execution_kind, record_delivery: "complete"
+    source_row_count, source_canonical_sha256
+
+It contains neither the full manifest nor a self-referential output hash. A records-only consumer
+can therefore establish that the bundle reached completed finalization and identify the exact
+canonical source sequence, without downloading `result.tgz`. The comparison ignores exactly the
+two runner-added metadata fields `_run_provenance` and `_delivery_provenance`; ordinary measurement
+fields remain part of the comparison. The output's raw and canonical hashes are computed again
+after this rewrite and stored in the archived manifest. If stamping or its post-write verification
+fails, delivery is `failed` and the archive-first rule still applies.
 
 **Outcome** — the measured quantities, raw:
 
@@ -76,6 +156,25 @@ and therefore passed while no identifier reached a record at all.
                                 coordinate clipped) -- the vector-level figure is the one the
                                 environment experiences and it is ~93% at sigma=1
     ||a_raw - a_executed||      the actual transformation the env applied
+
+`action_raw_executed_l1` is a sum over the observed action vectors in its scope (the scene-level
+policy diagnostic or an individual episode's P20 row), not a mean or a per-action value. It is
+therefore an aggregate L1 total; `actions_observed` supplies the corresponding count if a later
+analysis needs to derive a mean.
+
+The scene-level native record also carries `policy_action_diagnostics`. This is the evaluator-side
+measurement of the action value after each family's adapter conversion and immediately before its
+environment call. It uses the declared numeric action-space bounds and reports the same coordinate
+and vector clip rates, L1 difference, and raw range. The value is observed without replacing the
+action, so trainer/loss semantics and returns are unchanged. PPG is observable at its `venv.act`
+boundary after its existing tensor-to-NumPy conversion; all seven current evaluator families have
+an adapter boundary at which this can be observed. `available: false` is reserved for a future
+adapter that exposes neither a numeric bound nor an action at that boundary.
+
+This is not a measurement of controller-internal clipping: robosuite controllers can clip derived
+torques after the action-space boundary. Records state this with `controller_clipping_observed:
+false`; the existing P20 per-episode fields remain the independent VGB-wrapper measurement of the
+declared action-space boundary.
 
 **Conventions already carried** — keep: `eval_policy_mode`, `frame_stack`, `render_size`,
 `time_limit_handling`.

@@ -18,7 +18,8 @@ So the envelope is built **downstream, from the retained artifacts, after the ru
 The fields every record carries:
 
     schema, cell, baseline, family, seed, phase, frame, regime, scene_set,
-    episodes, episode_return_mean, episode_return_sd, success_rate, conventions, native
+    episodes, episode_return_mean, episode_return_sd, success_rate, conventions, native,
+    evaluator_scope, evaluator_scope_revision, evaluator_measurement_revision
 
 `regime` and `scene_set` are the two axes that make cross-baseline comparison meaningful or
 meaningless, so neither is ever left implicit: `scene_set` is "0-9" only where the measurement
@@ -167,6 +168,11 @@ def record(**fields) -> dict:
         "success_rate": None,
         "checkpoint_sha256": None,
         "evaluator_revision": None,
+        # Static evaluator_revision proves payload/source closure identity. These distinct fields
+        # prove the resolved measurement scope; pooling must use evaluator_measurement_revision.
+        "evaluator_scope": None,
+        "evaluator_scope_revision": None,
+        "evaluator_measurement_revision": None,
         "conventions": None,
         "native": {},
     }
@@ -577,6 +583,8 @@ def normalize(result_root: Path, eval_regime: str = "eval-easy") -> list[dict]:
     run_provenance = {
         "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest()
         if manifest_path.is_file() else None,
+        "finalization_schema": manifest.get("finalization_schema"),
+        "execution_kind": manifest.get("execution_kind"),
         "payload_sha256": manifest.get("payload_sha256"),
         "asset_sha256": manifest.get("asset_sha256"),
         "container_image": manifest.get("container_image"),

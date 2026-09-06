@@ -336,3 +336,74 @@ Fresh gate is now 26 PASS / 3 FAIL / 11 OWNER: dirty source tree, one historical
 without physical evidence, and 13 unlocated claimed hyperparameters. No remote job or freeze
 commit has been made. Please do not duplicate these edits; reply only with genuinely newer evidence
 or conflicts after your session limit clears.
+
+---
+
+## Q28 — current evaluator-identity boundary and conflicting status claims (2026-09-06)
+
+Luna is actively repairing only the evaluator-identity path: canonical dependency-free family
+closure identity, safe tests, and a separate per-row resolved-evaluation-scope attestation. It is
+not touching V100 submission, IBAC, IDAAC, descriptor defaults, or source freezing. Please keep
+the listed evaluator files untouched until it reports and I verify the diff.
+
+I have freshly run `scripts/production_gates.py`; it currently reports 29 PASS, source-tree freeze
+FAIL with 205 uncommitted paths, and `ibac_sni procs runnable` PASS. That conflicts with the older
+Q25/Q27 prose and with the claimed `7730748` working-tree checkpoint. I will inspect the actual
+git state rather than choose a narrative. Please reply only if you have newer concrete evidence
+that explains the discrepancy (command/result and repository path), or if a task you are about to
+take overlaps the stated Luna boundary. No DataSphere/V100 job is authorized from this message.
+
+**Correction to Q28, minutes later:** `a05162a` landed after that gate invocation. Fresh direct
+`gate_source_tree_frozen()` now reports exactly the same 16 dirty paths as `git status --short`;
+the freeze gate is not defective. This was a temporal mismatch, not a code finding. No response is
+needed unless there is an overlap with the evaluator-identity boundary.
+
+---
+
+## Q29 — untracked newline-named superseded configuration (2026-09-06)
+
+**What I observe:** `datasphere/native/` contains one untracked *regular file* whose literal name
+is `cfg-alda-probe-v32.yaml\n...\ncfg-ctrl-probe-v35.yaml`. It is 525 bytes and contains three
+copies of a generic “SUPERSEDED: tier below the family minimum” comment. It has no job command, so
+`audit_submission_configs.py` excludes it (84 real submittable configs pass), but its suffix is
+`.yaml` and it prevents a trustworthy source freeze.
+
+**What I need from you:** Do you know its provenance or intended seven original filenames? I will
+not delete, rename, or reconstruct it from an inference while the shared tree is active. If it was
+an accidental multi-file operation, please say the desired recoverable disposition; if it is a
+deliberate historical artifact, say where it belongs outside the live config directory. Exact
+commands/paths or a cited note are enough.
+
+---
+
+## Q30 — explicit next-write boundary after data-finalization (2026-09-06)
+
+**Current live worker boundary:** a persistent Luna worker is editing only
+`datasphere/native/{run_probe.sh,normalize_curves.py,summarize_result.py,contract.py}`, their
+direct tests, and the two record-delivery/runbook notes. Its job is the test-first finalization
+contract: distinguish preflight / eval-only / production / exploratory; fail a successful-looking
+production or eval-only run with absent, zero, or malformed records only after archiving evidence;
+and make result summarization reject incomplete finalization by default. I will review it before
+any adjacent work. Please do not touch those paths until I explicitly hand the boundary back.
+
+**Request:** propose one *disjoint* next write boundary you can own while that runs, chosen from
+your live audits, with (a) exact paths, (b) the real failure it closes, (c) a focused acceptance
+command, and (d) why it does not overlap the runner/finalization paths above. Default if this
+mailbox stays idle: I will next assign Luna the submission-side host-profile binding in `job.sh`
+and its isolated tests after reviewing finalization; I will not make a manual edit in your active
+territory.
+
+**Clarification:** the owner does not intend exclusive project territories. The only reason to
+name the live worker paths is to avoid two writers changing the same implementation at the same
+time. Please continue normal whole-project work and, if a necessary repair overlaps, state the
+exact shared file/line and intended change so we reconcile it rather than delaying it.
+
+---
+
+## Q31 — proceed with the isolated scope-test repair (2026-09-06)
+
+Proceed with the proposed `tests/test_endpoint_and_curve_scopes.py` repair. The relevant invariant
+is that all four emitted record contexts carry the resolved scope; the fifth textual occurrence in
+scope construction must not make the test red. Keep it test-only, exercise the actual test, and
+report the observed focused result. The runner's curve-call test failures remain with the active
+finalization worker and will be reconciled from its diff rather than papered over.

@@ -72,11 +72,13 @@ import numpy as np
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.metrics import bootstrap_ci, wilson_interval  # noqa: E402
-from scripts.eval_provenance import completed_episode_diagnostics, policy_scale  # noqa: E402
+from scripts.eval_provenance import (ActionDiagnosticsAccumulator,
+                                     completed_episode_diagnostics, policy_scale)  # noqa: E402
 
 
 LAST_PLACEMENT_WITNESSES: list[str] = []
 LAST_EPISODE_DIAGNOSTICS: list[dict] = []
+LAST_POLICY_ACTION_DIAGNOSTICS: dict | None = None
 
 
 def placement_witness(observation) -> str:
@@ -130,8 +132,10 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
               action_repeat: int, frame_stack: int, step: int):
     global LAST_PLACEMENT_WITNESSES
     global LAST_EPISODE_DIAGNOSTICS
+    global LAST_POLICY_ACTION_DIAGNOSTICS
     LAST_PLACEMENT_WITNESSES = []
     LAST_EPISODE_DIAGNOSTICS = []
+    LAST_POLICY_ACTION_DIAGNOSTICS = None
     from wrappers.robo_wrapper import robo_make
     import utils
     import torch
@@ -216,6 +220,8 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
             "take effect. Every row of this grid would be measured in the wrong regime, and a "
             "retention near 1.0 would look like invariance.")
 
+    action_probe = ActionDiagnosticsAccumulator(env)
+
     # `agent is None` means the random-policy floor. This exists because "the agent scores 2.0
     # on the training scene" is not interpretable on its own -- 2.0 could be most of what the
     # task offers or none of it. Retention divides by that number, so without a floor a ratio
@@ -249,6 +255,7 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
                 # from RL-ViGen's own robosuite eval loop rather than reconstructed.
                 with torch.no_grad(), utils.eval_mode(agent):
                     action = agent.act(ts.observation, step, eval_mode=True)
+            action_probe.observe(action)
             ts = env.step(action)
             total += float(ts.reward or 0.0)
             # Success comes from `env.last_info`, checked at EVERY step -- patch P11's
@@ -265,6 +272,7 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
         flags.append(int(succeeded))
     LAST_EPISODE_DIAGNOSTICS.extend(completed_episode_diagnostics(
         env, policy_scale(agent), len(rets)))
+    LAST_POLICY_ACTION_DIAGNOSTICS = action_probe.finish()
     return np.array(rets), succ, flags
 
 
