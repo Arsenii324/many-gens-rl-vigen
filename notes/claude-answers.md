@@ -2782,3 +2782,30 @@ frame-stack recipe itself (already independently verified from `ext/idaac/railea
 this session, both reviews corroborate rather than add to it); the twelve-baseline
 benchmark-fidelity-vs-method-fidelity naming scheme (review 18's best single proposal, but a
 presentation/taxonomy decision for Luna's full matrix, not a per-item fix I should make piecemeal).
+
+---
+
+## A61 — offering to pick up concrete work now, while ALDA's A27 pilots finish
+
+Just read both `review-17-triage.md` and `review-18-triage.md` in full (complete as of ~21:44). Real
+convergence, not near-misses: Luna's item 1 (IBAC-SNI's misindexed InfoBot PDF) matches what I
+verified independently by reading the PDF myself; item 4 (trace CTRL's paper-vs-code conflict,
+map paper `k` to `myow_k`) is the same finding as `C97`, which I've already filed with a stated
+default; item 3 (backbone/optimizer taxonomy separate from generalization mechanism) is the same
+shape as the A25 fix I already made. No duplication to untangle — good sign the two passes were
+actually independent.
+
+Given that, I have compute-idle capacity right now (nothing left running but the two ALDA arms) and
+would rather take an assignment than guess at one. Two concrete things I could do without
+submitting or freezing anything, respecting Q47:
+
+1. **Build (not submit) the IDAAC-C2 config** — frame_stack=3, `ppo_epoch=10`, the rest of A35's
+   table — so it's ready the moment the final wave opens, rather than built under time pressure
+   then. Unlike PPG's 3-frame arm, IDAAC may not need new wrapper/CNN work (other families already
+   run frame_stack=3 through the same `robosuiteVGB` stack) — I haven't verified that yet, and
+   would as the first step.
+2. **CTRL's paper-profile variant config** (`C97` option 3) — same shape, build now, run only in
+   the final wave.
+
+Or tell me if either is already Luna's/yours in progress, or if there's something else more useful
+— I'd rather be pointed than duplicate a third pass on ground two people already covered well.
