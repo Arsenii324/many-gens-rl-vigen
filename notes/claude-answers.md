@@ -2839,3 +2839,91 @@ then `//n_minibatch_ctrl`, the same one that killed attempt #11) — holds clean
 ready for the final frozen wave alongside your IDAAC-C2/PPG-C2 work, per Q54.
 
 Nothing else queued on my end right now besides watching the two ALDA (A27) pilots finish.
+
+---
+
+## A64 — Q55: one main config per algorithm, reconciled against A35-A37/C64/C97
+
+Read as a real scope narrowing, not a rephrasing: no active second-run branches beyond what's
+already executing. Applying that retroactively means one thing concretely — my own
+`cfg-ctrl-paper-profile-v175.yaml` (A63) is **not an active plan any more**; its reasoning stays,
+as the declared-conflict caveat, but it is shelved, not queued for the final wave. Noted at the end.
+
+### 1. One main default per baseline, and its honest label
+
+| baseline | main operational default | label |
+|---|---|---|
+| `drqv2` | RL-ViGen's `DrQV2Agent` as-is, `action_repeat=1` override kept | DrQ-v2 (RL-ViGen) |
+| `drq` | RL-ViGen's `DrQAgent` as-is (genuine SAC — `log_alpha`, confirmed `drq.py:213-323`), `lr=1e-4` | DrQ (RL-ViGen) |
+| `svea` | RL-ViGen's `SVEAAgent` as-is (DDPG-style, confirmed no `log_alpha`) | SVEA (RL-ViGen) — not canonical SVEA's augmentation (uses SODA's `random_overlay`, `svea.py:12,298`) |
+| `sgqn` | **Keep shipped-code values** (`aux_lr=1e-4`, `quantile=.93`, consistency `.9` hard-coded) — this is C64's own stated default (option 1, reproducibility grounds), already what's running, zero action needed | SGQN (RL-ViGen released-code profile) |
+| `curl` | RL-ViGen's `CURLAgent` as-is (DDPG-style, `DrQV2Agent` parent) | CURL (RL-ViGen) — paper/code disagree five ways, already declared |
+| `rad` | DMCGB's RAD implementation, 100→84 crop, as-is | RAD (DMCGB) |
+| `soda` | DMCGB's SODA implementation, as-is | SODA (DMCGB) |
+| `alda` | `utd=1.0` (source value) — **not** the 0.25 stability-fix value, regardless of which arm's pilot result lands better (same fidelity/performance split already applied to A35/A36) | ALDA (official implementation, Door-adapted) |
+| `ppg` | **Target**: the DMC continuous-control reference (`1x2048`, 32 minibatches, `γ=.99`, `lr=3e-4`, `entropy=0`, `frame_stack=3`, `n_pi=32`, `E_π=E_V=1`, `E_aux=6`, `β_clone=1`). **Interim, honestly**: not yet reached — see §2 | PPG (DMC-reference continuous-control port) once §2 lands; until then, declare the running config as PPG-P, a Procgen-parser partial adaptation, not the target |
+| `idaac` | **Target**: the DMC continuous-control recipe (`frame_stack=3`, `ppo_epoch=10`, `1x2048`, 32 minibatches, `lr=3e-4`, `γ=.99`, `entropy=0`, `value_freq=32`, `adv_loss_coef=α_a=.1`, `order_loss_coef=α_i=.1`, linear LR decay over the literal 1M steps stated in the source, not rescaled to the production budget). **Interim, honestly**: not yet reached — see §2 | IDAAC (DMC continuous-control profile) once §2 lands; until then, declare the running config as IDAAC-P |
+| `ibac_sni` | CoinRun/visual lineage (A37, already decided): Impala trunk, `entropy_coef=0`, `β=1e-4`. **One cheap addition to make now, not leave open**: `L2=1e-4` — source-backed, a plain optimizer weight-decay term, no re-architecture, no new pilot needed to validate it | an authored hybrid, CoinRun/visual-lineage committed (`docs/FAITHFULNESS.md`'s own phrase) |
+| `ctrl` | Official code's own flag defaults, unchanged (`num_envs` per host profile, `epoch_ppo=3`, `cluster_len=10`, `temp=0.1`, `myow_k=1`, `lr_ctrl=1e-4`) — **C97 option 2**, already what's running | CTRL (official-code profile) |
+
+### 2. Rows where implementation hasn't reached the stated default, with a before-freeze action
+
+- **IDAAC & PPG frame-stacking (both, same shape)**: the single blocking implementation item is a
+  verified 3-frame observation path (wrapper + CNN input layer) through the shared `robosuiteVGB`
+  stack. Per Q54, this is Codex's claimed task now — not duplicating it here. Once it lands, IDAAC's
+  remaining config change is pure argparse (`ppo_epoch`, `lr`, `γ`, `entropy`, `value_freq`,
+  `adv_loss_coef`, `order_loss_coef`, `num_processes=1`, `num_steps=2048`), already fully specified
+  in A35's table — no further design work, just wiring once the observation path exists. PPG's
+  analogous argparse set is in A36's table. **Neither should be relabeled with the target name
+  until the 3-frame path is verified working**, not merely wired.
+- **ALDA's 500k vs 600k**: genuinely unresolved, not a stale-doc bug — checked directly,
+  `train_alda_robosuite_door.yaml`'s `n_train_steps: 500_000` is ALDA's real, deliberate production
+  launch value (`scripts/audit_executed_hyperparameters.py`'s own `EXCLUDED_CLAIMS` entry confirms
+  this is intentional, not a citation error), while the other eleven target
+  `PRODUCTION_FRAMES=600_000` (`audit_comparability_seam.py:84`). **Concrete action**: raise
+  `n_train_steps` to `600_000` and predeclare reporting both the retained 500k checkpoint (source
+  horizon) and the 600k endpoint (common budget) — costs nothing extra since ALDA already retains
+  50k-interval checkpoints; the decision is which frame the checkpoint IS, not a new run. Not made
+  in this memo (Q55 asked for no config edits here) — next concrete edit if you want it applied.
+- **IBAC-SNI's `L2=1e-4`**: as above, a before-freeze code action, not a reporting note — cheap
+  enough that leaving it as an open ratification would be exactly the "random current value left in
+  place" Q55 warns against. Recommending it be applied, not merely declared.
+
+### 3. Source conflicts that travel with the result, not a second run
+
+- **CTRL vs its own paper table** (`C97`) — declare in the card/`CLAIMS-LEDGER.md`; do not build or
+  queue a paper-profile arm. **This retracts my own A63**: `cfg-ctrl-paper-profile-v175.yaml` is
+  real, verified, and shelved — its reasoning stays as the conflict's documentation, but it is not
+  an active plan for the final wave any more. `C97`'s option 3 downgraded from "the better long-run
+  answer" to "not pursued under the current campaign shape."
+- **SGQN vs RL-ViGen's own Door Table 6** (`C64`) — declare `1e-4/.93` against the table's
+  `8e-5/.90/.70`; same treatment, no second run.
+- **IDAAC's `level_seed`/episode-identity semantics** (review 17's deeper point) — Door has no
+  Procgen-style persistent level identity, so IDAAC's invariance objective is applied to
+  episode-scoped identity by necessity. This is a declared adaptation, not a defect a second run
+  could fix; it travels as a caveat on what the invariance term is actually regularizing here.
+- **CURL/SVEA/SGQN's DrQ-v2 backbone vs canonical SAC-based originals** (A25's fix, this session) —
+  already the label fix in §1; no separate run needed, the RL-ViGen implementation already is the
+  main default.
+- **RAD's 100→84 crop vs a hypothetical native-84 "fair comparison"** — keep 100→84 (native-84
+  would make RAD's own crop degenerate); declare the observation-geometry table as a caveat, not a
+  second arm (both reviews agree on this one explicitly).
+
+### 4. Cannot be made a best default without an owner allocation decision
+
+- **The competence pilots themselves** — A27 (ALDA utd, already executing), and whatever remains of
+  A35/A36's already-running arms: these are sunk compute, not new branches; their results get
+  reported as diagnostic evidence per the already-fixed fidelity/performance split, never promoted
+  to "the" default regardless of outcome. Not a technical default question — a resource one already
+  spent.
+- **IBAC-SNI's remaining architecture gaps** (12-sample VIB vs 1, 256-d latent vs 64-d, shifted
+  `rho-5` posterior scale vs unshifted, the authors' `-uda` flag) — these need actual re-architecture
+  and a validation pass to trust, unlike `L2` above. Declaring them as limitations is the technical
+  default; closing them is real engineering effort that needs an explicit allocation call, not
+  something to default into.
+- **ALDA's 500k→600k budget raise** — technically cheap (§2), but it is still new GPU spend (100k
+  more frames × however many seeds), so the *decision to spend it* is properly yours even though the
+  *design* isn't in question.
+- **CTRL's real de-risk-at-length question** (whether the official-code profile trains sensibly
+  through 6e5 on the actual production host) — this is the `owner-decisions-recommended.md` §5
+  canary pairing question, unchanged by this memo, and remains a resource call.
