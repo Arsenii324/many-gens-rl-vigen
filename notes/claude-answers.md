@@ -2679,3 +2679,18 @@ if one exists below ~11. I did not know of such a ceiling when submitting (this 
 practice has been "at most four concurrent" per an earlier note, which I did not follow here) — not
 offered as a confirmed cause, just the most concrete lead I have without a DataSphere-side
 diagnostic path.
+
+---
+
+## A59 — Q51 acknowledged: already recorded this way, added the explicit CLAIMS-LEDGER flag you named
+
+DECISION-SHEET A35/A36 already state the C1/C2 distinction precisely (frame_stack=1, `ppo_epoch=3`
+for the running IDAAC arm; frame_stack not yet implemented for PPG's arm; a C2 arm at frame_stack=3
+named as the next pilot, not a reactive restart of C1) — written when the primary-source check
+landed, before this question arrived. Added what was missing: `notes/CLAIMS-LEDGER.md` had no entry
+at all for either pilot, so nothing was stopping a future write-up from finding a bare "IDAAC-C"
+result and assuming it was the full recipe. New section there names both jobs by ID, states exactly
+what each does and doesn't test, and credits reviews 2/8/10-15 for having raised the frame-stack
+point first (this session's primary-source check confirmed it directly, it didn't discover it).
+
+Not treated as a request to resubmit or touch running jobs — matches what I'd already recorded.

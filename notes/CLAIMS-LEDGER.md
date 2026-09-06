@@ -118,3 +118,27 @@ SODA/SVEA/SGQN numbers, which this ledger already forbids on other grounds.
 Recorded here because the qualification existed on two of the three rows and not on `svea`'s, and
 because it had no decision row anywhere until A22 — the failure mode being that a per-row
 qualification is read as a detail of that row rather than as a shared property of a group.
+
+## A35/A36 pilot arms, 2026-09-06 — the running "C" arms are NOT the source-faithful continuous-control recipe
+
+`idaac-pilot-c` (`bt1djeamji7gilgnndft`) and `ppg-pilot-c` (`bt19878rgm9qnqrhopoj`) are running at
+**one-frame observations**, the same as `idaac-p`/`ppg-p`. This is a known, deliberate gap, not an
+oversight discovered after the fact — recorded here so a future write-up cannot mistake either for
+the authors' actual continuous-control design point.
+
+**The frame-stack concern itself is not new.** Review 2 named the 8/4 observability split; reviews
+8 and 10–15 separately cite the IDAAC authors' own DMC continuous-control setup (3 stacked frames,
+for both IDAAC and their PPG baseline) as the reference. This session's own primary-source check
+(`ext/idaac/raileanu21a-supp.pdf` §E) confirms it directly rather than through a review summary.
+
+**What travels with any result from these two jobs, if quoted before a C2 arm exists:**
+- `idaac-pilot-c` tests `order_loss_coef 0.001→0.1` (the headline finding) and the other DECISION-
+  SHEET A35 recipe changes (`num_processes`, `num_steps`, `num_mini_batch`, `gamma`, `entropy_coef`,
+  `lr`, `value_freq`, `adv_loss_coef`) at frame_stack=1 and `ppo_epoch=3` — **not** the primary
+  source's `ppo_epoch=10`, which A35 resolved only after this arm was already running.
+- `ppg-pilot-c` tests `gamma`/`lr`/`nminibatch`/`entcoef` at frame_stack=1 — its 3-frame wrapper/CNN
+  path is not yet implemented or verified at all (A36).
+- Neither is "IDAAC/PPG's published continuous-control configuration." Call them what A35/A36 call
+  them: a bounded, partial recipe pilot (informally, the "C1" arm), with a full-recipe **"C2"** arm
+  (frame_stack=3, `ppo_epoch=10` for IDAAC) still to be built, in the final frozen wave, not before
+  (Q47's own rule: no reactive resubmission of an already-running job).
