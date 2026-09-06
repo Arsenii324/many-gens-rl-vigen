@@ -497,6 +497,13 @@ def run_scene_idaac(agent, task, scene_id, mode, episodes, seed):
     args.seed = seed
     args.env_name = f"robosuite:{task}"
     args.condition_seed = seed
+    # [Claude 2026-09-06, DECISION-SHEET A35, found completing IDAAC-C2] Without this, a checkpoint
+    # trained at OBSERVATION_GEOMETRY["idaac"]'s frame_stack (now 3) would be evaluated at
+    # `make_rlvigen_venv`'s own default of 1 -- a hard channel-count crash at the first conv layer,
+    # not a silent mismatch, but broken either way. OBSERVATION_GEOMETRY is the same single source
+    # of truth C98 already uses for this baseline's recorded evaluator_scope; read it here too
+    # rather than hardcoding the value a second place.
+    args.frame_stack = OBSERVATION_GEOMETRY["idaac"][1]
     device = getattr(agent, "device", torch.device("cpu"))
     if not isinstance(device, torch.device):
         device = torch.device(device)
@@ -804,7 +811,12 @@ def run_scene_alda(built, task, scene_id, mode, episodes, seed):
     env_config = spec["trainer"]["config"]["env"]
     inner = _RoboRGB(robo_make_env(task_name=task, seed=seed, scene_id=scene_id, mode=mode),
                      env_config["episode_length"])
-    env = DMCObsWrapper(FrameStack(inner, env_config["frame_stack"]))
+    # int(): ALDA's own YAML-native env_config["frame_stack"] is already an int, but the string
+    # "frame_stack" is now ALSO a families.json descriptor key for a different baseline (idaac,
+    # DECISION-SHEET A35) -- test_descriptor_values_are_converted.py's scan matches on key name
+    # only, with no dict-identity awareness, so it flags this line too. Harmless no-op conversion,
+    # not a real bug here, but it makes this line unambiguously safe either way.
+    env = DMCObsWrapper(FrameStack(inner, int(env_config["frame_stack"])))
     verify_regime(env, mode, scene_id, "alda", strict=True)
     action_probe = _new_action_probe(env)
 

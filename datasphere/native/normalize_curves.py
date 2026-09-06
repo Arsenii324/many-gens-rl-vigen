@@ -88,7 +88,7 @@ CONVENTIONS = {
     "alda":     {"time_limit_handling": "bootstrap", "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "periodic-three-regimes",
                  "eval_policy_mode": "mode"},
-    "idaac":    {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
+    "idaac":    {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "periodic-single-regime",
                  "eval_policy_mode": "sample"},
     "ppg":      {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,

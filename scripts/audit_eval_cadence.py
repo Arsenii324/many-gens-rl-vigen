@@ -64,7 +64,7 @@ UNITS = {
               "regimes": ["train (env)", "--eval_mode (test_env)"],
               "episodes": "--eval_episodes, per regime",
               "controllable": "--eval_freq, --eval_episodes, --eval_mode"},
-    "idaac": {"file": "runnable/idaac/train.py", "line": 366, "unit": "updates",
+    "idaac": {"file": "runnable/idaac/train.py", "line": 379, "unit": "updates",
               "anchor": "_evaluate_without_training_rng(",
               "regimes": ["eval-easy, from RLVIGEN_EVAL_MODE (test.py:29-30) -- but scene 0, so "
                           "the level split its Procgen lineage assumes does not exist here"],

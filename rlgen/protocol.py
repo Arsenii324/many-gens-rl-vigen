@@ -106,7 +106,13 @@ OBSERVATION_GEOMETRY = {
     "soda":          (100, 3),   # asserts x.size(-1) == 100
     "alda":          (64, 3),
     "ppg":           (64, 1),
-    "idaac":         (64, 1),
+    "idaac":         (64, 3),   # [Claude 2026-09-06, DECISION-SHEET A35] Procgen-origin, but the
+                                # authors' own DMC continuous-control recipe stacks 3
+                                # (raileanu21a-supp.pdf SS E) and this project adopted it as
+                                # IDAAC's declared main config (Q55) once the frame-stack
+                                # implementation gap closed (A65/C98). See
+                                # `runnable/idaac/ppo_daac_idaac/envs.py::make_rlvigen_venv` and
+                                # `datasphere/native/families.json`'s `idaac` constants.
     "ibac_sni":      (64, 1),
     "ctrl":          (64, 1),
 }
