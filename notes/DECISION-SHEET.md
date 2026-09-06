@@ -1332,3 +1332,36 @@ entry closes the one genuinely unmerged remainder: §§1.1-1.4.
 
 Reversible at zero cost, same as A24/A25: this constrains reporting/analysis conduct, not a
 running fleet or committed code path.
+
+### A33 OPEN, 2026-09-06 — production scope: Door alone, or Door + Lift?
+
+`production_gates.py::gate_production_scope_frozen` has stood OWNER since it was written with no
+recorded lean — flagged during this session's surfaces-review sweep as exactly the kind of open
+item that should carry a reasoned default rather than sit silent. The owner's own words framed it
+as "Door, and possibly Lift" (`notes/claude-answers.md`), which already reads as Door-primary,
+Lift-optional rather than a coin flip; this entry makes that explicit and states why.
+
+**What Lift would cost, concretely — it is not a free row-add.** Every constant this project has
+certified is Door's: the random-policy floor at **200 paired episodes** (1.842, C55), the ten
+certified evaluation scenes, the 500-step horizon, and the published-anchor reasoning
+(`notes/rlvigen-published-door-anchor.md`). Lift's own floor exists
+(`scripts/rlvigen_reference.py::OUR_RANDOM["lift"]`, mean 6.562) but only at **25 episodes**
+(`RANDOM_EPISODES["lift"]`) — an order of magnitude less rigorous than Door's, not yet re-measured
+to Door's standard. The ten-scene certification, per-scene evaluation grid and anchor-table
+reasoning would all need their own Lift-specific derivation from scratch; none of it transfers.
+
+**Lift also carries an open, unexplained anomaly Door does not.** RL-ViGen's own published Lift
+values for `drqv2`/`curl`/`drq` (0.2–2.0) sit *below* our measured Lift random-policy floor
+(6.56), while SVEA (43.0) and PIEG (96.4) sit far above it —
+`notes/faithfulness-reconciliation.md`'s own words: "remains **unexplained**, but Lift is not the
+scoped task." Door has no equivalent open puzzle: its anchor comparison is reasoned through and
+its floor/published-value relationship is coherent (`notes/rlvigen-published-door-anchor.md`).
+Scoping-in a task whose own baseline behavior isn't yet understood, on top of an already-long
+OWNER backlog (external anchor, production canary, seed/checkpoint ratification), is a real cost
+against focus, not just compute.
+
+**My reading**: Door alone for this production run. State Lift explicitly as a follow-on
+extension once Door's fleet has reported, not a co-equal scope item now — consistent with how the
+owner's own phrasing already weighted it, and with the actual state of Lift's calibration
+evidence. Left OWNER because it is a scope call, not a mechanical fix; formal ratification (or a
+stated override) is what would flip `gate_production_scope_frozen`.
