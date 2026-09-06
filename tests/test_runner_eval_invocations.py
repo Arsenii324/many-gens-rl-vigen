@@ -72,6 +72,10 @@ def test_finiteness_is_checked_before_paid_offline_evaluation():
     """A NaN checkpoint must fail before curve/endpoint grids consume GPU time."""
     retain = RUNNER.index('"$FAMILY_TOOL" retain')
     finite = RUNNER.index('"$FAMILY_TOOL" check-finite')
-    curve = RUNNER.index('run_curve_eval "$cell_out"')
+    # [Claude 2026-09-06] Was `run_curve_eval "$cell_out"` -- the call site moved behind
+    # `run_curve_eval_with_policy` (Codex's fail-closed-at-production-scale wrapper). The wrapper
+    # calls the unchanged `run_curve_eval` as its first action, so the ordering this test protects
+    # (finite-check before any paid evaluation) is unaffected by which name sits at the call site.
+    curve = RUNNER.index('run_curve_eval_with_policy "$cell_out"')
     endpoint = RUNNER.index('run_endpoint_eval "$cell_out"')
     assert retain < finite < curve < endpoint

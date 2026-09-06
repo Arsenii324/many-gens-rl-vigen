@@ -105,7 +105,13 @@ def test_curve_eval_exists_is_gated_and_runs_after_retention():
     assert "run_curve_eval()" in text
     assert 'if [[ "${CURVE_EVAL:-0}" == "1" ]]; then' in text, "must be opt-in"
     retain = text.index('"$FAMILY_TOOL" retain')
-    call = text.index("run_curve_eval \"$cell_out\"")
+    # [Claude 2026-09-06] Was `run_curve_eval "$cell_out"` -- the literal call site moved behind
+    # `run_curve_eval_with_policy` (Codex, fail-closed-at-production-scale wrapper; the wrapped
+    # `run_curve_eval` function itself is unchanged and still asserted above). Confirmed this is
+    # the only change: `run_curve_eval_with_policy` calls `run_curve_eval` as its first action
+    # (see tests/test_curve_eval_shell.py for the wrapper's own behavioral coverage), so "retained
+    # before evaluated" still means retain must precede this call site.
+    call = text.index('run_curve_eval_with_policy "$cell_out"')
     assert retain < call, "stamps must be retained into the cell output before they are evaluated"
 
 
