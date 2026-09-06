@@ -1737,3 +1737,33 @@ minutes on gt4i.1 for the diagnostic — real money, but this is exactly the kin
 would otherwise have silently blocked every evaluator-family validation this project needs before
 it can leave OWNER status on "shared evaluator validated," discovered locally-free investigation
 having been exhausted first.
+
+## #89 — `MIN_DENOM_SUCCESS = 0.25` was a second home for one number, in `results_table.py` beside `regime_retention_report.py`
+
+Found during the surfaces-review sweep the owner asked for ("having an index of these"), the same
+sweep that already found and centralized the `g1.1`→`gt4i.1` admission-tier mapping. Grepping for
+suspicious repeated literals across `scripts/*.py` turned up `MIN_DENOM_SUCCESS = 0.25` defined
+independently in both `scripts/results_table.py:97` and `scripts/regime_retention_report.py:67` —
+the exact "two homes for one number" pattern `rlvigen_reference.py`'s own docstring names for Q12
+(`DOOR_RANDOM_FLOOR`, five places, 2026-09-05) and CORRECTIONS #82/#83 (`STACK`,
+`TIME_LIMIT_HANDLING`) already caught elsewhere. Each file's own test
+(`test_results_table.py::…`, `test_regime_retention_report.py`) asserted its own copy equals 0.25
+independently, so neither test could have caught the two drifting apart.
+
+This one is not hypothetical: DECISION-SHEET.md A23 leaves "is 0.25 the right threshold, does OOD
+need its own" explicitly open, so this constant is a live candidate for a future edit — exactly
+the condition under which one-of-two-copies silently going stale actually happens.
+
+**Fixed**: `regime_retention_report.py:67` carries the fuller derivation (the adversarial-re-check
+story: a policy scoring 1/20 on every scene, never more, passed the old exactly-zero guard and
+pooled into a 0.947 retention that read as robustness), so it is the authoritative home.
+`results_table.py` now does `from scripts.regime_retention_report import MIN_DENOM_SUCCESS`
+instead of redefining the literal.
+
+**Non-vacuity proven**: temporarily changed `regime_retention_report.py`'s value to 0.31 and
+confirmed `results_table.MIN_DENOM_SUCCESS` followed it to 0.31 (proving the import is live, not a
+coincidental match), then restored 0.25 and reran `tests/test_results_table.py
+tests/test_regime_retention_report.py` clean.
+
+`CONTAMINATION_RATIO` (also in `regime_retention_report.py`) was checked at the same time and has
+no duplicate elsewhere — left as is.

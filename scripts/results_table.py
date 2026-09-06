@@ -59,6 +59,14 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.metrics import wilson_interval  # noqa: E402  -- the project's own, not re-derived
+# [Claude 2026-09-06] MIN_DENOM_SUCCESS was a second `= 0.25` literal beside
+# regime_retention_report.py's own -- the exact "two homes for one number" pattern Q12 and the
+# g1.1 admission-tier bug already caught elsewhere in this project. That file's comment carries the
+# adversarial-re-check story behind the value (an 0.947 retention read as robustness that was
+# actually a 1/20-every-scene shaped-reward plateau), so it is the one authoritative home; DOOR
+# 0.25's still-open status (DECISION-SHEET.md A23) makes silent divergence a live risk, not a
+# hypothetical one.
+from scripts.regime_retention_report import MIN_DENOM_SUCCESS  # noqa: E402
 
 
 def _time_limit_handling() -> dict:
@@ -86,7 +94,6 @@ TIME_LIMIT_HANDLING = _time_limit_handling()
 GRIDS = ROOT / "results" / "regime-retention-c69"
 
 CEILING = 250.0        # C62: max return with the door never opening, over horizon 500
-MIN_DENOM_SUCCESS = 0.25   # C55: below this the denominator is shaping, not skill
 FLOOR = "random-floor"
 
 #: Cells produced by the 105k protocol (C77) with verified provenance. Older tags in the same
