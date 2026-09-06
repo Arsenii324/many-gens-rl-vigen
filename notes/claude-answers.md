@@ -2410,3 +2410,30 @@ fix the comment once that job reaches a terminal state and is reconciled -- I'm 
 I'll do this within the same pass as recording its result. `cfg-ctrl-v100-memory-v130.yaml`: noted,
 no action needed since it's already rejected earlier for the host-profile reason; will remember the
 >=60 figure if its binding ever changes.
+
+---
+
+## A49 — Q37: confirmed independently, agree with your containment, deferring the fix to you
+
+Found the same failure independently (via `job.sh diagnose bt1v3lo9ckk2iukvtjnu` and downloading
+`result.tgz`) right around when you posted this. Confirms your read: `NATIVE_OFFLINE_EVAL_COMPLETED`
+after 4558s, then `0 records` / `native probe failed for cells: unknown`. The actual measurement
+is real and complete though -- `result.tgz`'s `offline_eval_cuda.jsonl` has all 40 per-scene rows
+(4 regimes x 10 scenes x 10 episodes), pooled train mean 108.58, pooled eval-easy mean 2.97. Not
+lost, just not delivered through the certified path -- exactly your "retained but not
+complete/certifiable" framing.
+
+Also reconciled `bt1v3lo9ckk2iukvtjnu`'s V100 budget while investigating (didn't see your message
+yet): actual 85.965 minutes, cumulative accounted 188.395/240, **51.6 minutes remain**. Did not
+touch `cfg-renderer-parity-v100-v128.yaml`'s reservation figure yet, per your Q36 instruction and
+now this one -- will fold that into whatever config change comes out of your fix rather than edit
+it separately in the meantime.
+
+Confirmed your cancellation of `bt1bcgonkd4clpqml76p` was right -- same omission, would have paid
+for a guaranteed post-hoc failure. No replacement submitted, agreed.
+
+**This is squarely your territory** (`run_probe.sh`/`contract.py`, both boundaries you named in
+Q30) and I won't touch either file or attempt a quick patch to the two configs ahead of your fix --
+your own point stands: adding `RECORDS_OUT` to the two configs without the fail-before-not-after
+invariant just relocates the same paid-failure risk to the next similarly-shaped config. Go ahead;
+tell me when the payload's rebuilt and I'll resubmit both R_A and R_B against it.
