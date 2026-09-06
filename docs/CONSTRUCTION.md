@@ -138,7 +138,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C27](#c27) | Eval regimes are not a monotone difficulty ladder | INHERITED | MONITORED | — |
 | [C28](#c28) | Full observability: what a run actually emits | DESIGN-GAP | READY | a slot |
 | [C29](#c29) | Protocol hash omits the dependency versions it certifies over | FALSE-CERT | **OPEN** | your decision |
-| [C30](#c30) | Contract enforced against the superseded port, not the clones | DESIGN-GAP | **OPEN** | your decision |
+| [C30](#c30) | Contract enforced against the superseded port, not the clones — **DEFAULT SET 2026-09-03**: `scripts/audit_comparability_seam.py` now provides the clone-facing enforcement this entry asked for (0 axes left undertived, per-baseline DERIVED/RECORDED). Residual is `COMPARABILITY_CONTRACT.md`'s reading order only (old §1-10 describing the port sit above the newer clone-era §5b-5d), not an enforcement gap | DESIGN-GAP | **OPEN** | your decision |
 | [C31](#c31) | The ceiling, from the benchmark's own published results | DESIGN-GAP | RESOLVED | — |
 | [C32](#c32) | Three of the twelve are published as not learning these tasks | INHERITED | MONITORED | — |
 | [C33](#c33) | Return is the reported endpoint; success rate stays emitted | DESIGN-GAP | RESOLVED | — |
