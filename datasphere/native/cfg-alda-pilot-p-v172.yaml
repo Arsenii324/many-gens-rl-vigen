@@ -1,0 +1,49 @@
+# [Claude 2026-09-06] DECISION-SHEET A27 fidelity pilot, control arm (ALDA-P = current production
+# default, utd=1.0, unchanged). Companion to cfg-alda-pilot-c-v173.yaml (ALDA-C, utd=0.25).
+#
+# A27's question: production launches `runnable/alda` at one learner update per newly collected
+# Door transition (no `utd` field existed at all before this pilot). A retired port of this same
+# trainer found utd=1.0 diverged on Lift (3 runs, 2 seeds, critic/loss > 1e8 by ~141k frames) while
+# utd=0.25 cleared 220k cleanly -- a real stability prior, but on Lift, on the retired port, not a
+# Door fidelity proof. This pilot tests it on the actual production path.
+#
+# Frame budget 150000: A27's own sizing (the historical Lift divergence surfaced by ~141k frames,
+# so 150k should be long enough to distinguish "diverges" from "doesn't" on Door too). Checkpoints
+# every 25000 frames for a stability curve, not just an endpoint read.
+#
+# Uses payload-v171-alda-pilot.tgz: added a `utd: float = 1.0` field to AldaConfig and a
+# fractional-accumulator update scheduler (default reproduces the original one-update-per-step
+# line exactly; verified locally: utd=1.0 over 10 simulated steps gives [1,1,1,1,1,1,1,1,1,1]).
+# This arm passes no override, so it exercises exactly that default path.
+name: vigen-alda-pilot-p-v172
+desc: "A27 fidelity pilot: ALDA-P (utd=1.0, current default), one seed, 150000 frames."
+cmd: >-
+  timeout --foreground 28800s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=alda:1
+  FRAMES=150000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=25000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v171-alda-pilot.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

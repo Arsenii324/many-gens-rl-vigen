@@ -1,0 +1,42 @@
+# [Claude 2026-09-06] DECISION-SHEET A27 fidelity pilot, treatment arm (ALDA-C = utd=0.25, one
+# learner update per 4 newly collected Door transitions). Companion to cfg-alda-pilot-p-v172.yaml
+# (ALDA-P, utd=1.0). See that file for the shared question and frame-budget reasoning.
+#
+# `--spec.trainer.config.utd=0.25` uses ALDA_Official's own `--spec.<dotted.path>=<value>`
+# override syntax (runnable/_launch/alda.sh's own documented example, `--spec.trainer.config.
+# n_train_steps=2000` -- `utd` lives at the same class-attribute level as `n_train_steps`).
+# NATIVE_EXTRA_OVERRIDES forwards this through `--spec_overrides` (argparse.REMAINDER in ALDA's
+# own train.py), which is designed to take exactly this kind of override.
+name: vigen-alda-pilot-c-v173
+desc: "A27 fidelity pilot: ALDA-C (utd=0.25), one seed, 150000 frames."
+cmd: >-
+  timeout --foreground 28800s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=alda:1
+  FRAMES=150000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=25000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  NATIVE_EXTRA_OVERRIDES="--spec.trainer.config.utd=0.25"
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v171-alda-pilot.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

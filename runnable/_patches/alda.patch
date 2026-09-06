@@ -125,7 +125,7 @@ index 0000000..4c4e022
 +      episode_length: 500
 +      scene_id: 0
 diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
-index 20801e2..d323b64 100644
+index 20801e2..3a6af96 100644
 --- a/trainers/alda_trainer.py
 +++ b/trainers/alda_trainer.py
 @@ -1,8 +1,10 @@
@@ -139,7 +139,19 @@ index 20801e2..d323b64 100644
  import wandb
  import einops
  
-@@ -123,6 +125,35 @@ class ALDA(TrainerBase):
+@@ -49,6 +51,11 @@ class ALDA(TrainerBase):
+     discount: float = 0.99
+     init_steps: int = 1000
+     batch_size: int = 128
++    # [Claude 2026-09-06, DECISION-SHEET A27] Production launches this trainer with no `utd`
++    # field at all -- the loop below hardcoded one update per newly collected transition after
++    # warmup. Exposing it as a knob (default 1.0 reproduces that exactly) is what makes A27's
++    # 1.0-vs-0.25 pilot expressible; it does not change the operational default on its own.
++    utd: float = 1.0
+     buffer_capacity: int = 1_000_000
+     save_buffer: bool = False
+ 
+@@ -123,6 +130,35 @@ class ALDA(TrainerBase):
  
      def initialize_env_dmc(self, spec: Dict[str, Any]):
          env_config = spec['trainer']['config']['env']
@@ -175,7 +187,7 @@ index 20801e2..d323b64 100644
          self.env = dmc2gym.make(
              domain_name=env_config['domain_name'],
              task_name=env_config['task_name'],
-@@ -184,7 +215,7 @@ class ALDA(TrainerBase):
+@@ -184,7 +220,7 @@ class ALDA(TrainerBase):
          video_dir.mkdir(exist_ok=True)
          self.video_recorder = VideoRecorder(str(video_dir), height=448, width=448)
  
@@ -184,7 +196,7 @@ index 20801e2..d323b64 100644
          self.spec = spec
  
          self.initialize_env_dmc(spec)
-@@ -195,8 +226,9 @@ class ALDA(TrainerBase):
+@@ -195,8 +231,9 @@ class ALDA(TrainerBase):
          self.buffer = utils.ReplayBuffer(
              obs_shape=self.obs_shape,
              action_shape=self.env.action_space.shape,
@@ -196,7 +208,7 @@ index 20801e2..d323b64 100644
          )
  
          shared_trunk = QuantizedEncoder(
-@@ -500,10 +532,17 @@ class ALDA(TrainerBase):
+@@ -500,10 +537,17 @@ class ALDA(TrainerBase):
              done = False
              episode_reward = 0
              env_step = 0
@@ -215,7 +227,7 @@ index 20801e2..d323b64 100644
  
                  # pre_z = self.critic_encoder.shared_trunk(self.preprocess_obs(obs['rgb'][-3:][None]))
                  # embed = self.latent_model(pre_z)['z_hat']
-@@ -522,6 +561,8 @@ class ALDA(TrainerBase):
+@@ -522,6 +566,8 @@ class ALDA(TrainerBase):
  
              self.video_recorder.save(f'{step}{_test_env}.mp4')
              logger.info(f'eval/episode_reward{_test_env}: {episode_reward}')
@@ -224,7 +236,7 @@ index 20801e2..d323b64 100644
              if distracting_env:
                  self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
              elif color_env:
-@@ -595,6 +636,38 @@ class ALDA(TrainerBase):
+@@ -595,6 +641,38 @@ class ALDA(TrainerBase):
  
                  if self.use_wandb:
                      wandb.log(self.logging_info)
@@ -263,7 +275,27 @@ index 20801e2..d323b64 100644
  
                  self.logging_info.clear()
  
-@@ -621,11 +694,55 @@ class ALDA(TrainerBase):
+@@ -607,7 +685,18 @@ class ALDA(TrainerBase):
+ 
+             # run training update
+             if step >= self.init_steps:
+-                num_updates = self.init_steps if step == self.init_steps else 1
++                if step == self.init_steps:
++                    # Warmup catch-up: unchanged by `utd`, which governs the steady-state rate.
++                    num_updates = self.init_steps
++                else:
++                    # [Claude 2026-09-06, DECISION-SHEET A27] Fractional-accumulator scheduler:
++                    # adds `utd` per env step, runs floor(accumulator) updates, keeps the
++                    # remainder. At utd=1.0 this is exactly `1` every step (0+1=1, remainder 0),
++                    # byte-identical to the line it replaces. At utd=0.25 it is one update every
++                    # 4th step. Generalizes to any positive utd, not just these two values.
++                    self._update_debt = getattr(self, "_update_debt", 0.0) + self.utd
++                    num_updates = int(self._update_debt)
++                    self._update_debt -= num_updates
+                 for _ in range(num_updates):
+                     self.update(self.buffer, step)
+ 
+@@ -621,11 +710,55 @@ class ALDA(TrainerBase):
              episode_step += 1
              self.env_steps += 1
  
@@ -321,7 +353,7 @@ index 20801e2..d323b64 100644
              {
                  'env_steps': self.env_steps,
                  'actor_encoder': self.actor_encoder.state_dict(),
-@@ -643,12 +760,15 @@ class ALDA(TrainerBase):
+@@ -643,12 +776,15 @@ class ALDA(TrainerBase):
                  'log_alpha': self.log_alpha,
                  'log_alpha_optimizer': self.log_alpha_optimizer.state_dict(),
              },
@@ -338,7 +370,7 @@ index 20801e2..d323b64 100644
  
      def load_checkpoint(self, path: str):
          path = Path(path)
-@@ -675,3 +795,19 @@ class ALDA(TrainerBase):
+@@ -675,3 +811,19 @@ class ALDA(TrainerBase):
  
          # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
          # self.buffer.load(buffer_fp)
