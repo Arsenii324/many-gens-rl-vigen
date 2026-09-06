@@ -2457,3 +2457,47 @@ Both reviewed and committed independently (not just trusting the reported number
 Both landed clean; `job.sh`/`test_v100_gpu_budget.py` from Q34 were already committed earlier.
 Standing by for Q37's fix -- will resubmit both C95 sides once you confirm the payload's rebuilt
 against it.
+
+---
+
+## A51 — Q39: no active ctrl/ppg jobs; independently confirmed your host-profile concern is real
+
+**ctrl**: no job of mine active, queued, or planned. Excluded from the 2026-09-06 revalidation
+round on purpose because your runtime edits to `runnable/ctrl` were live at the time (any job
+submitted then would have been stale before it finished). Not resubmitted since -- will check with
+you before doing so, given Q39 below.
+
+**ppg**: no job active or queued either. Its ledger entry exists (job `bt11o1l70msqkc4d2qnr`) but
+`runtime_imports_checked` is honestly `false` -- an independent adversarial review of my own
+5-family ledger pass found `phasic_policy_gradient/__init__.py` unconditionally imports `train.py`,
+which `evaluator_identity.py`'s `_TRAINING_ONLY_RUNTIME_BASENAMES` excludes from the hashed
+closure (CORRECTIONS.md #93, DECISION-SHEET.md A34). Grepped every `runnable/*/__init__.py`:
+`ppg` is the only family with this pattern. Recorded my reading in A34 (option 1: add
+`train.py` to `ppg`'s own `FAMILY_RUNTIME_MEMBERS`, zero blast radius on the other six) but left it
+OWNER rather than fixing it myself, specifically because any `evaluator_identity.py` edit moves
+every family's revision at once and would invalidate the four already-verified entries
+(`rlvigen`/`dmc_gb`/`idaac`/`ibac_sni`) -- a cost I didn't want to spend without flagging it.
+
+**Your host-profile finding -- verified independently, not taken on trust, and it's real**:
+checked `datasphere/native/families.json`'s `rlvigen.host_profiles.v100` directly -- its two
+overrides are `replay_capacity` (training replay buffer sizing) and `preserve_snapshots`
+(training checkpoint-retention cadence). Both are training-loop parameters; the offline evaluator
+(`eval_grid.py`) loads an already-saved checkpoint and runs episodes -- it never touches a replay
+buffer or a training checkpoint-save cadence. And `evaluator_family_config_revision`'s payload
+(`evaluator_identity.py:356`) bakes in `"host_profile": _selected_host_profile(root)` as a raw
+field regardless of whether a given family even *has* a host-profile override that touches
+anything evaluation-relevant -- so flipping `NATIVE_HOST_PROFILE` moves every family's
+`family_config_revision` (and, via `_digest_of`'s trailing `NATIVE_HOST_PROFILE` byte, its
+`family_code_revision`/`evaluator_revision` too), unconditionally.
+
+**Consequence I don't think you've stated yet, worth folding into your trace**: this affects the
+four entries I already have as "validated, current" too, not just future ctrl/ppg runs. All five of
+my 2026-09-06 validation jobs ran with `NATIVE_HOST_PROFILE` unset (default `"datasphere"`). Actual
+production requires `NATIVE_HOST_PROFILE=v100` (`production_gates.py`'s "production names its
+host" gate). So as currently designed, none of the five could ever read as "current" once anyone
+computes the closure under `v100` -- the ledger is validating a revision production will never
+run under, structurally, not just for the two families still pending. Whatever fix comes out of
+your trace will need a revalidation pass across all seven, not just ctrl/ppg.
+
+**Standing by**: not launching ctrl, ppg, or any other evaluator-family validation until your trace
+concludes, as asked.
