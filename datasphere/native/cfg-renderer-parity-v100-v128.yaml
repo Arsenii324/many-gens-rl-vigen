@@ -1,0 +1,46 @@
+# [Claude 2026-09-06] C95 renderer-parity probe, step (b): the SAME checkpoint, evaluator and
+# container image as cfg-offline-eval-s2-full-v50.yaml (drqv2-s2 @ 100k frames, four regimes x
+# ten scenes x ten episodes), on g1.1 (V100) instead of gt4.1 (T4). Platform is the only changed
+# factor. R_A (the T4 measurement) is already on record: mean 89.47 (train), 3.07 (eval-easy) at
+# five episodes/scene (v49); the complete ten-episode four-regime grid this mirrors is v50's own
+# job. Compare this job's numbers against that recorded T4 baseline once both are in hand.
+#
+# Payload rebuilt fresh (payload-v127.tgz, contract.py build-payload --families rlvigen) rather
+# than reusing v50's stale one -- the source tree has moved substantially since 2026-09-03 and a
+# stale evaluator would confound "which evaluator revision" with "which platform", the exact
+# confound this probe exists to rule out. Checkpoint and RL-ViGen archive inputs are unchanged
+# (same files, same content) -- those are what "the same checkpoint" and "the same environment"
+# mean here.
+name: vigen-native-renderer-parity-v100-v128
+desc: C95 step (b) -- reproduce v50's T4 measurement on g1.1 (V100), platform-only variable.
+# Reservation sized at 50 minutes: v49 (five episodes/scene, same 4 regimes x 10 scenes) took
+# 21 minutes on gt4.1; this config doubles episodes to ten, so ~40 min plus bootstrap/install
+# overhead on a platform of at least comparable speed. The remote `timeout --foreground` below is
+# set to match rather than left at a much larger value, so a runaway job cannot silently exceed
+# the local V100 budget accounting. NOTE FOR FUTURE EDITS: job.sh's submit path greps this whole
+# file's raw text for the reservation-minutes environment assignment (see the cmd block below) and
+# takes the first match, so no comment anywhere in this file may repeat that variable name
+# immediately followed by an equals sign, or it will shadow the real one.
+cmd: >-
+  timeout --foreground 3000s env
+  NATIVE_V100_RESERVATION_MINUTES=50
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy,eval-medium,eval-hard
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=10
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v127.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: g1.1
