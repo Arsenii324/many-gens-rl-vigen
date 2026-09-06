@@ -60,20 +60,21 @@ to do the real analysis.
   it succeeds, download results and compare against the T4 baseline
   (`cfg-offline-eval-s2-full-v50.yaml`'s own recorded numbers: train mean 89.47, eval-easy mean
   3.07 at 5 episodes/scene — this job runs the complete 10-episode grid, so compare like for like).
-- **CTRL memory measurement and the ibac_sni competence pilot are BOTH BLOCKED on DataSphere,
-  by design, not by a bug.** Both need `NATIVE_HOST_PROFILE=v100` (CTRL's num_envs=64, ibac_sni's
-  procs=16) — and `job.sh` explicitly refuses that: "NATIVE_HOST_PROFILE=v100 names the separate
-  production host, but cloud tier g1.1 is DataSphere; g1.1 is diagnostic only." `ibac_sni`'s own
-  family comment says the same thing independently: "the production V100 renderer, throughput and
-  competence remain separate gates." DataSphere's g1.1 (8 vCPU, 48-96 GiB) is genuinely different
-  hardware from the project's actual production host (16-core, 113 GiB) — this isn't a
-  technicality to route around; the resource envelope really differs and a g1.1 measurement at
-  v100-profile settings would not validly represent the production host either way it came out.
-  `cfg-ctrl-v100-memory-v130.yaml` exists but should NOT be submitted as-is; it would be refused
-  at submission time (confirmed: `job.sh submit` refuses it with the exact message above), not
-  silently mismeasure anything. **Both items need the owner's actual separate production-host
-  access, not more DataSphere quota.** The renderer-parity probe (below) is the one V100 diagnostic
-  that doesn't need the v100 host-profile override and is genuinely completable on DataSphere.
+- **CTRL memory measurement and the ibac_sni competence pilot are specifically blocked on
+  DataSphere, by design — but this is narrower than it first sounds, corrected after the owner
+  pushed back on an overstatement.** Both need `NATIVE_HOST_PROFILE=v100` (CTRL's num_envs=64,
+  ibac_sni's procs=16), which `job.sh` refuses on g1.1 ("g1.1 is diagnostic only") because that's
+  specifically a RAM-capacity question (48-96 GiB vs the production host's 113 GiB) that a smaller
+  box cannot validly answer either way it comes out. `cfg-ctrl-v100-memory-v130.yaml` exists but
+  would be refused at submission (confirmed) — don't resubmit it as-is.
+
+  **This does NOT mean DataSphere V100 work is broadly blocked or not worth doing.** Everything
+  that isn't a RAM-capacity-at-v100-settings question DOES transfer to the real production host:
+  the renderer-parity work below (rendering/driver stack, not RAM), the AppleDouble bug found and
+  fixed this session (would have hit the production host identically), and the whole submission/
+  contract/patch-application pipeline exercised end-to-end against a real Linux CUDA container.
+  Only the specific "does this fit in RAM at v100 settings" class of question needs the actual
+  separate host; everything else about running real jobs on a real GPU container is genuine prep.
 
 ## What's genuinely owner-only right now (from `production_gates.py`, re-run it for the live list)
 
