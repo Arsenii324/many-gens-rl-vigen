@@ -1,5 +1,11 @@
 # START HERE — the index to the surfaces
 
+**Read [`CURRENT-STATE-AND-RESPONSIBILITY.md`](CURRENT-STATE-AND-RESPONSIBILITY.md) first,
+especially right after a context loss or compaction.** This file indexes what each surface is
+*for*, as a stable reference; that one says what's *true right now* — what's in flight, what V100
+jobs are running, what's queued, what's genuinely owner-only today — and is kept current rather
+than appended-to. Added 2026-09-06 at the owner's explicit request for exactly this distinction.
+
 An index, not a join: it links and says *what each surface is for*. Content stays in the surfaces so
 this file cannot drift out of date with them. The one thing inlined is the category set itself,
 because knowing **which categories exist** is the thing that was actually missing.
