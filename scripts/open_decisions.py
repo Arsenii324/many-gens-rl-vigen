@@ -150,26 +150,45 @@ def decision_sheet(root: pathlib.Path) -> list[tuple[str, str]]:
     undecided. This closes it by reading the sheet rather than duplicating it: rows live there, this
     only surfaces them.
     """
+    return [(tag, note) for tag, note, _status in decision_sheet_with_status(root)]
+
+
+def decision_sheet_with_status(root: pathlib.Path) -> list[tuple[str, str, str]]:
+    """Same rows as `decision_sheet`, plus each entry's own status word from its `### A<n> STATUS,`
+    heading (e.g. `OPEN`, `DECIDED`, `ANALYSIS INCOMPLETE`).
+
+    Added 2026-09-06 after the owner drew a distinction this file's own docstring already makes for
+    a different axis (waiting on a person vs. waiting on work), applied one level deeper: among
+    entries genuinely waiting on the owner, some already carry a finished "our best" analysis and
+    wait only on formal ratification, while others (A35-A37) never had that analysis done at all --
+    "run a comparison" is not a substitute for the actual pilot spec. Both read identically as a
+    plain `### A<n> OPEN,` row would; nothing distinguished them until an entry declared its own
+    status as `ANALYSIS INCOMPLETE` instead. This surfaces that distinction rather than requiring a
+    reader to open the sheet and check each entry's depth by hand.
+    """
     sheet = root / "notes" / "DECISION-SHEET.md"
     if not sheet.is_file():
         return []
-    rows: list[tuple[str, str]] = []
+    rows: list[tuple[str, str, str]] = []
     seen: set[str] = set()
     for line in sheet.read_text(encoding="utf-8", errors="replace").splitlines():
         m = re.match(r"\|\s*\*\*(A\d+)\*\*\s*\|\s*([^|]+?)\s*\|", line)
         if m and m.group(1) not in seen:
             seen.add(m.group(1))
-            rows.append((m.group(1), " ".join(m.group(2).split())))
-    # later "### A9 ..." revision headings supersede or add items
-    for m in re.finditer(r"^#+\s*(A\d+)[^\n]*?—\s*([^\n]+)$",
-                         sheet.read_text(encoding="utf-8", errors="replace"), re.M):
-        tag = m.group(1)
-        note = " ".join(m.group(2).split())
-        if tag in seen:
-            rows = [(t, q + f"   [revised: {note[:60]}]") if t == tag else (t, q) for t, q in rows]
-        else:
+            rows.append((m.group(1), " ".join(m.group(2).split()), ""))
+    # later "### A9 STATUS, ... — ..." revision headings supersede or add items
+    text = sheet.read_text(encoding="utf-8", errors="replace")
+    for m in re.finditer(r"^#+\s*(A\d+)\s*([A-Z][A-Z ]*[A-Z])?,?[^\n]*?—\s*([^\n]+)$", text, re.M):
+        tag, status, note = m.group(1), (m.group(2) or "").strip(), " ".join(m.group(3).split())
+        existing = next(((t, q, s) for t, q, s in rows if t == tag), None)
+        if existing is None:
             seen.add(tag)
-            rows.append((tag, note))
+            rows.append((tag, note, status))
+        else:
+            _, old_note, old_status = existing
+            rows = [(t, q, s) if t != tag else
+                    (t, old_note + f"   [revised: {note[:60]}]", status or old_status)
+                    for t, q, s in rows]
     return sorted(rows, key=lambda r: int(r[0][1:]))
 
 
@@ -209,11 +228,20 @@ def main(argv=None) -> int:
     print("  preference, a trade-off or an authority I do not have is the owner's. Only the second")
     print("  kind belongs on this list, and an item that turns out to need work should be moved")
     print("  off it rather than left to look like a decision nobody is taking.")
-    sheet = decision_sheet(ROOT)
+    sheet = decision_sheet_with_status(ROOT)
     if sheet:
-        print(f"\n  DECISION SHEET -- notes/DECISION-SHEET.md, answerable by exception   ({len(sheet)})")
+        incomplete = [(t, q) for t, q, s in sheet if s == "ANALYSIS INCOMPLETE"]
+        rest = [(t, q) for t, q, s in sheet if s != "ANALYSIS INCOMPLETE"]
+        if incomplete:
+            print(f"\n  ANALYSIS INCOMPLETE -- the \"our best\" layer was never actually done, "
+                  f"not just unratified   ({len(incomplete)})")
+            print("  Not waiting on the owner's sign-off; waiting on someone (me) to produce the")
+            print("  actual spec/pilot/reasoning. Highest-priority reading of this whole list.")
+            for tag, question in incomplete:
+                print(f"    {tag:<6} {question[:150]}")
+        print(f"\n  DECISION SHEET -- notes/DECISION-SHEET.md, answerable by exception   ({len(rest)})")
         print("  Each carries a recommended default that will be acted on absent an answer.")
-        for tag, question in sheet:
+        for tag, question in rest:
             print(f"    {tag:<6} {question[:150]}")
     else:
         print("\n  DECISION SHEET: notes/DECISION-SHEET.md not found")

@@ -1412,3 +1412,170 @@ rather than a falsely-earned 5/7.
 closes the actual gap found. Worth doing in the same pass as `ppg`'s next validation re-run (it
 needs one anyway, since this entry is currently unvalidated), not as a standalone edit that forces
 an otherwise-unneeded re-verification of the four families that already passed.
+
+### A35 ANALYSIS INCOMPLETE, 2026-09-06 — IDAAC's design point: the exact pilot spec, not just "run a comparison"
+
+Promoted from `notes/review-11-12-gemini-triage.md`'s T17 (`"DESIGN-POINT DECISION, after T1"`,
+deliberately deferred until IDAAC's episode-identity bug was fixed) and sharpened by external
+review 15 §4, which names the single most consequential number in this project's whole
+fidelity surface: current Door IDAAC's `order_loss_coef=0.001` against the authors' own published
+continuous-control `alpha_i=0.1` — a **100x** difference in the weight of IDAAC's defining
+invariance objective. T1 (the episode-identity bug) is now fixed (external review 15 §3
+independently confirms it), so T17's precondition is satisfied and this pilot is unblocked.
+
+**Marked ANALYSIS INCOMPLETE, not just OPEN**, per the standing distinction: this is not a decision
+awaiting the owner's ratification of an already-finished "our best" answer — the "our best" answer
+(the exact pilot design) had never actually been produced before this entry. "Run a comparison" is
+not that answer; the parameter table below is.
+
+**Current Door IDAAC ("IDAAC-P"), read directly from source, not from the review's summary:**
+`runnable/idaac/ppo_daac_idaac/arguments.py` argparse defaults (all left at their upstream/Procgen
+values — nothing here overrides them) plus `families.json`'s three constants:
+
+| parameter | value | source |
+|---|---|---|
+| `num_processes` | 4 (16 under `NATIVE_HOST_PROFILE=v100`) | `families.json` constant, A14-class owner decision (2026-09-02: 64 upstream envs don't fit a T4) |
+| `num_steps` | 256 | `families.json` constant |
+| `num_mini_batch` | 8 | `families.json` constant |
+| `gamma` | .999 | argparse default |
+| `entropy_coef` | .01 | argparse default |
+| `lr` | 5e-4 | argparse default |
+| `ppo_epoch` | 1 | argparse default |
+| `value_epoch` | 9 | argparse default |
+| `value_freq` | 1 | argparse default |
+| `adv_loss_coef` | .25 | argparse default |
+| `order_loss_coef` | .001 | argparse default |
+| frame stack | 1 | `rlgen/protocol.py::OBSERVATION_GEOMETRY["idaac"] = (64, 1)` — a protocol-level constant, not an argparse flag |
+| LR schedule | none — flat | no decay mechanism exists anywhere in this port; confirmed by reading `train.py` and the full argparse, not inferred |
+
+**Proposed IDAAC-C (minimally Door-adapted continuous-control design)**, changing only what the
+published continuous-control recipe (review 15 §4, citing the paper's Appendix E) actually
+specifies, holding everything else at IDAAC-P's value so the comparison isolates the recipe rather
+than introducing untested combinations:
+
+| parameter | IDAAC-P (current) | IDAAC-C (proposed) | reasoning |
+|---|---|---|---|
+| `num_processes` | 4 | **1** | The published value. Unlike the Procgen case (64 envs genuinely don't fit), 1 robosuite/MuJoCo instance has no forcing constraint against it — this is a real fidelity restoration, not a forced compromise, and it changes rollout *structure* (one long trajectory vs. several short ones), which review 15 itself calls out as the more consequential axis for PPG and by the same logic applies here |
+| `num_steps` | 256 | **2048** | Published value; at `num_processes=1` this gives 2048 samples/rollout, matching the paper's own rollout size exactly rather than approximating it |
+| `num_mini_batch` | 8 | **32** | Published value (64 samples/minibatch at 2048 rollout) |
+| `gamma` | .999 | **.99** | Published value |
+| `entropy_coef` | .01 | **0** | Published value |
+| `lr` | 5e-4 | **3e-4** | Published value |
+| `value_freq` | 1 | **32** | Published value is described only as "approximately `N_pi`-style," and `N_pi=32` is the cadence review 15 §2 already confirms this project matched for PPG — using the same number here rather than inventing a different one |
+| `adv_loss_coef` | .25 | **.1** | Published value (`alpha_a`) |
+| `order_loss_coef` | .001 | **.1** | Published value (`alpha_i`) — the headline 100x finding |
+| frame stack | 1 | **3** (flag, pending) | Published value. **Not a flag change** — `OBSERVATION_GEOMETRY` is a protocol-level constant read by the shared wrapper, so this needs an actual code path (a per-baseline or per-pilot override), not just a new argparse value. Real implementation cost; do not silently drop it because it's harder than the others — declare it as the one item needing a code change before the pilot can include it |
+| `ppo_epoch` | 1 | **not resolved — see below** | Review 15 says only "substantially more PPO optimization," no exact number. I am not inventing one. Check the primary source (proceedings.mlr.press/v139/raileanu21a, Appendix E) before locking this value; a defensible placeholder if the primary source isn't checked in time is 3-4 (ordinary multi-epoch PPO convention), stated as a placeholder, not a finding |
+| LR schedule | flat | **declared, not implemented** | Linear decay has no code path in this port at all (checked `train.py` and the full argparse — genuinely absent, not just undocumented). Implementing it is a real code change. My reading: do not block the pilot on this specifically — it's one of the review's own "less obvious" differences, not the headline one (`order_loss_coef` is) — but state its absence explicitly in whatever writeup uses this pilot's result, rather than silently omitting it |
+| everything else (`clip_param`, `gae_lambda`, `max_grad_norm`, `eps`, `alpha`) | upstream default | **unchanged** | Review 15 does not name a continuous-control value for these; declare-don't-invent applies here as it does everywhere else in this project |
+
+**Pilot sizing, not full production**: review 15 calls this a "bounded pilot," explicitly distinct
+from a full 600k x 3-seed commitment. My reading: one seed each of IDAAC-P and IDAAC-C at a budget
+long enough to distinguish "learns" from "doesn't" on Door — the project's own existing bracket
+convention (C60-style, checkpoints at 50k multiples) applied to a ~200k-300k frame ceiling, not
+600k. Extend only if the two arms are still close at that point and the question remains open.
+
+**Decision rule, stated before either arm is run, per review 15's own explicit ask** ("decide the
+primary using a stated fidelity principle before seeing the production outcome"): if IDAAC-C learns
+Door at least as well as IDAAC-P (competence, not exact parity — same success-rate gate as
+elsewhere, `MIN_DENOM_SUCCESS`), make IDAAC-C primary for the full seed fleet — it is the authors'
+own stated design for exactly this problem class (continuous visual control), which is the more
+defensible choice when a reviewer asks why these hyperparameters were chosen. If IDAAC-C fails
+outright on Door (does not reach competence within the pilot budget), keep IDAAC-P primary and
+report IDAAC-C's pilot result as a documented negative finding, not a discarded attempt. If both
+are affordable for the full fleet, run both and report both — the "only one affordable" case is
+what the rule above is actually for.
+
+**Left OWNER**: whether to spend the compute on this pilot at all, and the exact frame ceiling —
+those are resource-allocation calls. Everything above the line is not a decision waiting on
+anyone; it is the actual pilot specification, ready to become a config the moment someone (me or
+the owner) decides to spend the cycles.
+
+### A36 ANALYSIS INCOMPLETE, 2026-09-06 — PPG's design point: the remaining recipe gap, specified
+
+T16's cadence half is closed (A26: `n_pi` now matches the continuous-control reference exactly).
+Its other half — `notes/review-11-12-gemini-triage.md`'s own words, "the broader
+hyperparameter-recipe comparison (lr, entropy coef, epochs)... remains a genuine open design
+point, not touched" — had never had a concrete spec either. Sharpened by external review 15 §2.
+
+**Current Door PPG ("PPG-P"), read from `runnable/ppg/phasic_policy_gradient/train.py`'s
+`train_fn` defaults and `ppo.py`'s `compute_losses` defaults — nothing in this project's launch
+path overrides any of these except `num_envs`/`nstep`:**
+
+| parameter | value | source |
+|---|---|---|
+| `num_envs` | 8 | `families.json` constant (A26: matches the continuous-control 2048-sample rollout at `nstep=256`) |
+| `nstep` | 256 | `families.json` constant |
+| `gamma` | .999 | `train_fn` default |
+| `lr` / `aux_lr` | 5e-4 | `train_fn` default |
+| `nminibatch` | 8 | `train_fn` default |
+| `n_epoch_pi` / `n_epoch_vf` | 1 / 1 | `train_fn` default |
+| `n_pi` | 32 | `train_fn` default — already matches (A26) |
+| `entcoef` (entropy) | .01 | `ppo.py::compute_losses` default (a separate function from `train_fn`, not visible in the top-level signature) |
+| frame stack | 1 | `rlgen/protocol.py::OBSERVATION_GEOMETRY["ppg"] = (64, 1)`, same protocol-level constant as IDAAC's |
+
+**A relevant fact this project already established independently, not from review 15**: C61
+(`docs/CONSTRUCTION.md#c61`) measured that `ibac_sni` — a sibling Procgen-lineage port — applies a
+categorical-Atari-tuned entropy coefficient to a continuous Gaussian action distribution and gets
+entropy *inflation*, not the intended regularization, because the coefficient was never re-derived
+for a 7-D Gaussian's unbounded entropy. `ppo.py`'s own comment at the entropy computation site
+cross-references this exact concern for PPG. This is independent evidence — not just published
+precedent — that a Procgen-categorical-derived entropy coefficient is suspect on this port
+specifically, which strengthens rather than merely parallels review 15's ask.
+
+**Proposed PPG-C (minimally Door-adapted continuous-control design)**:
+
+| parameter | PPG-P (current) | PPG-C (proposed) | reasoning |
+|---|---|---|---|
+| `gamma` | .999 | **.99** | Published continuous-control value (review 15 §2) |
+| `lr` / `aux_lr` | 5e-4 | **3e-4** | Published value |
+| `nminibatch` | 8 | **32** | Published value |
+| `entcoef` | .01 | **0** | Published value, independently corroborated by C61's measured categorical-to-Gaussian entropy-coefficient failure on the sibling `ibac_sni` port |
+| frame stack | 1 | **3** (code change, not a flag — same caveat as A35) | Published value |
+| `num_envs` / `nstep` | 8 / 256 | **unchanged** | A26 already established this matches the continuous-control rollout cadence; do not re-litigate a closed axis inside a different pilot |
+| `n_epoch_pi`, `n_epoch_vf`, `n_aux_epochs`, `beta_clone`, `clip_param`, `kl_penalty` | upstream default | **unchanged** | Review 15 does not name continuous-control values for these; declare-don't-invent |
+
+**Pilot sizing and decision rule**: identical shape to A35's — one seed each, bounded budget
+(~200k-300k frames), same "if PPG-C reaches competence at least as well as PPG-P, it becomes
+primary; if it fails outright, PPG-P stays primary and PPG-C's result is reported, not discarded"
+rule, for the same reason (PPG-C is the authors' own design for this problem class). Given both
+pilots share the same episode budget and Door setup, running A35 and A36 as one combined job batch
+(one extra seed's worth of compute each, not two separate campaigns) is the efficient shape if the
+owner authorizes spending on either.
+
+**Left OWNER**: same as A35 — whether and when to spend the compute. The spec above is not
+waiting on anyone.
+
+### A37 ANALYSIS INCOMPLETE, 2026-09-06 — IBAC-SNI's lineage: picking one, not just naming the hybrid
+
+`docs/FAITHFULNESS.md` already states plainly that current IBAC-SNI is "an authored hybrid
+continuous-action IBAC-SNI adaptation" — honest, not hidden. External review 15 §7 sharpens the
+consequence: the current port combines a CoinRun-style IMPALA visual trunk with the PyTorch/
+GridWorld-side bottleneck implementation, which is neither source faithfully. If it performs at
+the floor, a reviewer's fair reading is "this hybrid is weak," not "the original mechanism is
+weak" — and this project cannot currently rebut that, because no coherent single-lineage version
+exists to compare against.
+
+**My reading, stated now rather than left as "choose a coherent lineage" (itself just a
+restatement of the problem)**: commit to the CoinRun/visual lineage as the reference, not the
+PyTorch/GridWorld one. Reasons: (1) Door is a genuinely visual task, so the visual-line bottleneck
+design (built for pixel observations) is the architecturally relevant precedent, not the
+GridWorld-derived one; (2) this project has already ported `--beta 1e-4` (A17) *from* the CoinRun
+line specifically, so partially committing to that lineage is already the de facto direction, not
+a fresh fork; (3) `docs/FAITHFULNESS.md`'s own trunk lineage note (`--model_type impala`) already
+follows CoinRun.
+
+**What this does not resolve**: A17's own stated gap — `--nr-samples 12` has no equivalent in
+`torch_rl` (this port draws a single VIB sample against CoinRun's multi-sample bottleneck), and
+the latent dimension is this branch's 64-d against CoinRun's 256-d. Picking the lineage doesn't
+manufacture the missing sampling/dimensionality parity; it commits to a stated target so any
+future gap is measured against ONE reference rather than an ambiguous blend of two. Whether to
+spend implementation effort closing the sampling/dimensionality gap itself is a separate, larger
+question than this entry answers — recorded here as the honest boundary of what "picking a
+lineage" actually settles.
+
+**Left OWNER**: whether IBAC-SNI's competence pilot (already OWNER on `production_gates.py`, and
+separately blocked on the actual production host per A1's revision) should be run against the
+CoinRun-lineage target parameters specifically, once that pilot is otherwise unblocked. The lineage
+choice itself is not a resource question, so it did not need to wait — only the pilot execution
+does.

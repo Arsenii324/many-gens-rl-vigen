@@ -57,3 +57,59 @@ def test_it_states_that_it_is_not_a_completeness_claim(capsys):
     assert "NOT A COMPLETENESS CLAIM" in out
     assert "waiting on a person" in out.lower() and "waiting on work" in out.lower(), (
         "the distinction the tool exists to draw is no longer stated in its output")
+
+
+def test_analysis_incomplete_status_is_parsed_from_the_heading(tmp_path):
+    """A35-A37 introduced a status this parser didn't previously look for: `ANALYSIS INCOMPLETE`,
+    distinct from `OPEN`/`DECIDED`/etc. -- entries where the "our best" layer was never actually
+    produced, not just left unratified. Synthetic fixture, not the live file: the live file's
+    exact entries can change; the parsing behavior this protects should not depend on that."""
+    sheet = tmp_path / "notes"
+    sheet.mkdir()
+    (sheet / "DECISION-SHEET.md").write_text(
+        "| **A1** | table question | recommendation |\n"
+        "\n"
+        "### A2 OPEN, 2026-01-01 — an ordinary open question\n"
+        "\n"
+        "### A3 ANALYSIS INCOMPLETE, 2026-01-01 — a question with no real answer drafted yet\n"
+    )
+    rows = od.decision_sheet_with_status(tmp_path)
+    statuses = {tag: status for tag, _note, status in rows}
+    assert statuses["A2"] == "OPEN"
+    assert statuses["A3"] == "ANALYSIS INCOMPLETE"
+    assert statuses.get("A1", "") == "", "a plain table-only row must not inherit a status from nowhere"
+
+
+def test_analysis_incomplete_entries_are_not_silently_dropped_from_the_full_sheet(tmp_path):
+    """The split view must be additive, not a filter that loses entries from the plain list."""
+    sheet = tmp_path / "notes"
+    sheet.mkdir()
+    (sheet / "DECISION-SHEET.md").write_text(
+        "### A1 ANALYSIS INCOMPLETE, 2026-01-01 — needs real work\n"
+        "\n"
+        "### A2 OPEN, 2026-01-01 — needs ratification only\n"
+    )
+    plain = {tag for tag, _note in od.decision_sheet(tmp_path)}
+    assert plain == {"A1", "A2"}, "decision_sheet() must still return every entry regardless of status"
+
+
+def test_main_surfaces_analysis_incomplete_as_its_own_group(capsys, monkeypatch):
+    """The whole point: a reader running this script should see the "never actually analyzed"
+    items as a distinct, named group -- not buried identically among ratification-pending ones.
+
+    Patches only `decision_sheet_with_status` (the one function this change touches), not `ROOT`
+    -- `main()` also calls register/branch-point/requirements/fidelity readers that depend on the
+    real project files, and a synthetic root would make those raise for reasons unrelated to what
+    this test checks.
+    """
+    fixture = [
+        ("A1", "the untouched design point", "ANALYSIS INCOMPLETE"),
+        ("A2", "the ratified-pending one", "OPEN"),
+    ]
+    monkeypatch.setattr(od, "decision_sheet_with_status", lambda root: fixture)
+    od.main([])
+    out = capsys.readouterr().out
+    assert "ANALYSIS INCOMPLETE" in out
+    incomplete_pos = out.index("the untouched design point")
+    rest_pos = out.index("the ratified-pending one")
+    assert incomplete_pos < rest_pos, "the incomplete-analysis group should print before the rest"
