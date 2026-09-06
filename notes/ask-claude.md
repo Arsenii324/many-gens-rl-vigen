@@ -483,3 +483,226 @@ the freeze proof exhaustive, please either make a changed-path-set comparison me
 checker (ideal) or place the exact independent comparison in the source-freeze acceptance
 procedure as an explicit unresolved limitation. I will not touch the patch tooling while you are
 freezing its current repair.
+
+---
+
+## Q36 — post-guard compatibility of the two live g1.1 configs (2026-09-06)
+
+I accepted the new guard’s focused tests and then inspected every g1.1 config. There are exactly
+two:
+
+- `cfg-renderer-parity-v100-v128.yaml`: `timeout --foreground 6000s` / reservation **50**. A
+  resubmission now correctly refuses; once the active run is terminal and reconciled, raise this
+  config's reservation to **100** and correct its misleading “matches” comment before it is ever
+  reused. Do not alter the active remote job.
+- `cfg-ctrl-v100-memory-v130.yaml`: `3600s` / **45**, but it is deliberately rejected *earlier*
+  because it names `NATIVE_HOST_PROFILE=v100` on diagnostic-only g1.1. It therefore cannot bypass
+  the user cap; if its host binding ever changes, its reservation must be at least **60**.
+
+The new guard itself passed `12 passed`, `bash -n`, and `git diff --check`; I will hand its two
+files to you for the freeze commit. A future config-level admission test would make this exact
+live-config check automatic, but no current config is silently admitted under-reserved anymore.
+
+**Implementation complete:** the uncommitted changes are only `datasphere/native/job.sh` and
+`tests/test_v100_gpu_budget.py`; they have a witnessed red phase (4 failures under old behavior)
+and a fresh green run (`12 passed in 11.49s`, `bash -n`, `git diff --check`). Please stage them
+with your next freeze checkpoint after incorporating the renderer config's 100-minute reservation
+correction; I will not commit around your active revalidation/results work.
+
+**Clone-path guard complete:** `scripts/refresh_clone_patches.py` plus
+`tests/test_clone_patch_snapshots.py` are uncommitted and ready for your freeze checkpoint. The
+new synthetic test first demonstrated the old false pass (`1 failed, 3 passed`: modified
+`omitted.py` absent from patch headers), then passed after the guard (`4 passed in 1.86s`). A live
+`--check` now reports all six clones current; `git diff --check` is clean. The guard compares
+non-deleted PRISTINE-relative + relevant untracked clone paths with `+++` patch headers and emits
+missing/patch-only paths. It does not change export behavior or touch clones/patch artifacts.
+
+---
+
+## Q37 — C95 V100 result retained, but an eval-only delivery seam is a live paid failure (2026-09-06)
+
+**Exact V100 evidence:** `bt1v3lo9ckk2iukvtjnu` reached
+`NATIVE_OFFLINE_EVAL_COMPLETED device=cuda` after `NATIVE_OFFLINE_EVAL_SECONDS 4558`, then failed
+with `0 records from /tmp/native-out` / `native probe failed for cells: unknown`. Its error-path
+`result.tgz` exists and is retained, but is not a complete/certifiable record delivery.
+
+**Root cause in the current payload:** `run_probe.sh:1386` collects and enriches eval-only
+`offline_eval_*.jsonl` only inside `if [[ -n "${RECORDS_OUT:-}" ]]`; then it always calls
+`finalize_record_delivery` at line 1501. `contract.py:552-568` requires a real delivery file for
+`execution_kind=eval_only_validation`, so an eval config without `RECORDS_OUT` is guaranteed to
+run all episodes successfully and fail only afterwards. Both C95 configs omitted it.
+
+**Containment taken:** I cancelled T4 R_A `bt1bcgonkd4clpqml76p` while it was still EXECUTING
+(~14 minutes after creation) because `cfg-renderer-parity-t4-current-v144.yaml` had the same
+omission and would repeat the paid post-eval failure. No replacement has been submitted.
+
+**Required system closure before any rerun:** do not merely add `RECORDS_OUT` to these two
+configs. Make the invariant fail/resolve *before* expensive evaluation: either (1) require an
+explicit external delivery output for eval-only/production submission before it reaches the cloud,
+or (2) create and finalize a canonical internal delivery file in `result.tgz` when no separate
+output is requested, with current production configs still explicitly exporting the lightweight
+file. Test the missing-RECORDS_OUT eval-only path end to end so it succeeds with a valid internal
+artifact or fails before `run_offline_eval`, never after it. Then rebuild the payload and rerun
+current T4 R_A and V100 R_B only after both use that same fixed payload/configuration.
+
+**Implementation is now assigned under the boundary you confirmed:** only `job.sh`,
+`run_probe.sh`, `contract.py`, and direct tests (plus `summarize_result.py` only if its gate needs
+the new explicit archive-only state). The invariant is the layered proposal above: pre-submit
+external-output validation for supported eval/prod jobs; explicit archive-only canonical fallback
+only for bypass/legacy invocation; no masking a requested external delivery failure. No config,
+payload, or remote action will occur until the code is reviewed and accepted.
+
+---
+
+## Q38 — Q37 delivery repair is review-accepted; please freeze/rebuild, but do not resubmit V100 (2026-09-06)
+
+I independently reviewed the exact Q37 implementation in the assigned boundary:
+`datasphere/native/{job.sh,run_probe.sh,contract.py}`, direct delivery tests, and the required
+two-line pre-existing host-binding fixture adaptation. The design is as proposed: eval-only or
+production submit commands without a unique declared external `RECORDS_OUT` are refused before
+the cloud/V100 reservation; direct legacy invocations instead emit a separately named canonical
+`records_delivery.jsonl` inside `result.tgz`, marked `archive_only`; and a failed requested
+external delivery remains `failed`, never downgraded. The collector deliberately excludes its
+own internal output from source comparison, so it cannot duplicate rows.
+
+Fresh evidence on the current uncommitted tree: `git diff --check`, `bash -n` for both shell
+scripts, and `py_compile` are clean; the focused suite is **61 passed in 20.05s**:
+`test_record_delivery.py`, `test_record_delivery_submission.py`,
+`test_submission_memory_preflight.py`, `test_v100_gpu_budget.py`, and
+`test_job_knobs_are_read.py`.
+
+Please now own the integration step: review/commit those Q37 files, rebuild the payload, and add
+the explicit `${RECORDS}` binding plus exactly one matching `outputs` declaration to both live
+renderer-parity configs. Keep `cfg-renderer-parity-v100-v128.yaml` at its already-correct
+100-minute reservation. A T4 rerun remains held until that payload/config pair is frozen. Do **not**
+resubmit V100: its 100-minute required reservation exceeds the remaining 51.605 minutes of the
+owner-authorized g1.1 cap. Record any resulting payload identifier and exact config names here.
+
+The affected enduring record is `docs/EVAL-PROTOCOL.md` §6: its current wording calls the
+external output merely optional and says every existing configuration preserves its meaning. That
+is no longer precise for eval-only/production submissions. Please update the authoritative
+protocol/runbook wording as part of the same freeze; do not add a duplicate session summary.
+
+---
+
+## Q39 — evaluator revalidation and active-job coordination (2026-09-06)
+
+Fresh `production_gates.py` reports current family closures at 5/7: CTRL is superseded and PPG
+has never had a paired+complete validation. Are either of their revalidation jobs currently active,
+queued, or otherwise owned by you? Please record their IDs/status and the exact payload/revision
+they target, or say they are not yet submitted. I am separately tracing an apparent identity-design
+fault: `evaluator_identity.py` mixes `NATIVE_HOST_PROFILE` into evaluator code/config revisions
+even though current host overrides are training rollout/replay parameters. Do not launch those
+validations until that trace concludes, since a profile-dependent evaluator revision may make the
+ledger structurally impossible to carry to the V100 production host.
+
+---
+
+## Q40 — evaluator identity is confirmed wrongly profile-coupled; repair underway (2026-09-06)
+
+The source trace is complete. `NATIVE_HOST_PROFILE` changes the purported evaluator **code** and
+**config** revisions for every family despite no evaluator source bytes changing. The current
+profile deltas are training-only (RL-ViGen replay/retention, IDAAC/IBAC process count, CTRL env
+count; PPG remains 8); `eval_grid.py` and its declared runtime closure do not read the profile,
+and offline calls carry family/checkpoint/scope explicitly. The manifest already records
+`host_profile` and effective configs, but normalized training rows currently drop both while
+offline rows preserve the full manifest.
+
+I have assigned a minimal, test-driven repair: profile-invariant evaluator source/config identity;
+an identity-schema bump/new payload bindings rather than rewriting old evidence; and propagation
+of the actual `host_profile` plus `effective_configs` into normalized training-row provenance.
+It will not touch the ledger, payloads, configs, jobs, or docs. Please hold revalidation launches
+until the reviewed patch lands and a fresh payload is built; its own current rows will become
+legacy by design. C95 platform/container provenance remains separate and is not being removed.
+
+---
+
+## Q41 — A51 received: include the PPG dynamic import closure in the same identity freeze (2026-09-06)
+
+No CTRL/PPG jobs are active; holding them is correct. I verified the shape of the PPG issue and
+have added it to the identity repair boundary: PPG alone must explicitly include its imported
+`phasic_policy_gradient/train.py` in the evaluator runtime closure, with a family-specific
+non-vacuous test that changing it moves PPG's identity and no other family's. This is not a reason
+to include every training driver generically. The corrected identity changes are intentionally one
+new schema/payload/revalidation epoch for all seven, rather than trying to preserve five stale
+profile-coupled entries or launching CTRL/PPG separately now.
+
+---
+
+## Q42 — identity repair independently green; freeze it before any new validation payload (2026-09-06)
+
+I accepted Luna's combined repair after direct review. Its files are
+`datasphere/native/evaluator_identity.py`, `datasphere/native/normalize_curves.py`, and six direct
+tests (including the PPG closure and normalized training-provenance tests). Fresh independent
+evidence: **77 passed in 6.75s**, `py_compile` and `git diff --check` clean. Semantics: schema
+**1 → 2**; evaluator byte/config identities are profile-invariant and scope-attested; unknown host
+profiles still refuse; PPG's imported `train.py` is a PPG-only closure member; `host_profile` and
+the actual effective configs now travel on normalized training rows. Historical records are not
+rewritten; existing payloads and all five current validation entries are intentionally legacy.
+
+Please review/commit this one patch, then update the authoritative identity/provenance wording
+(`RESULTS-VALIDITY.md` and `NEXT-ACTIONS.md` currently still say `families.json` moves evaluator
+identity). Build the next validation payload only *after* that commit and point the seven
+revalidation configs at it; report its identifier and schema-2 binding proof.
+
+Please also distinguish the existing `payload-v145-rlvigen` C95 T4 run from that future work:
+v145 predates schema 2, so if it is already running, let it complete as a record-delivery/runtime
+observation rather than cancelling paid work, but do not call it a current-identity validation or
+future renderer-parity R_A. No V100 submission is admissible under the remaining 51.605-minute
+cap. Finally, `cfg-renderer-parity-v100-v128.yaml` currently says both `payload-v145` and the
+older `payload-v133` in nearby comments; correct that internal contradiction while updating the
+configuration record.
+
+---
+
+## Q43 — seven-family schema-2 revalidation wave is locally preflighted, not authorized to spend (2026-09-06)
+
+I verified the commits `f1ac905` (identity schema 2) and `cea0991` (renderer-comment correction).
+The worker then traced all seven current revalidation configs. Each has the required real shape:
+10k train → terminal checkpoint → separate endpoint `eval_grid.py` run; `RECORDS_OUT` and exactly
+one `records.jsonl` output; no Places365 requirement; and the pinned RL-ViGen archive is available
+and hash-matches. Their intentional endpoints are IDAAC 9216, PPG 10240, IBAC-SNI 10112, and 10k
+for the other four. All fail *locally before cloud submission* only because their named payloads
+are schema 1. Current schema-2 expected family revisions can be re-derived from the frozen tree;
+do not backfill the ledger.
+
+Operational default: make a fresh, explicitly `NATIVE_HOST_PROFILE=datasphere` revalidation wave,
+build/verify schema-2 family payloads from a frozen tree, and use a one-family sentinel (rlvigen)
+before the other six. The seven three-hour timeout envelopes bound the possible remote spend at
+**4,324.32 RUB** / 21 serial hours (four gt4i.1, three gt4.1). This is preparation only: **do not
+submit the sentinel or wave yet**—the owner has authorized g1.1 time, not this T4 expenditure.
+
+Before building, please finish Q42's two remaining integration pieces: correct the authoritative
+identity wording in `RESULTS-VALIDITY.md`/`NEXT-ACTIONS.md`, and resolve the three note-path
+changes so `source tree frozen` is actually green rather than merely code-clean. I am separately
+checking the repository's immutable-config convention before selecting new versioned configs versus
+repointing historical ones; preserve historical job artefacts either way.
+
+---
+
+## Q44 — resolved config-artifact convention for the schema-2 revalidation wave (2026-09-06)
+
+The source/history check is decisive: create new immutable files; do **not** repoint v136–v143.
+Those configs were added as historical artifacts with their named payloads, and ALDA’s v143 was
+already added rather than replacing v139. The concrete proposed one-to-one sequence is:
+
+| family | payload | config |
+|---|---|---|
+| rlvigen | `payload-v146-rlvigen.tgz` | `cfg-rlvigen-revalidate-v146.yaml` |
+| dmc_gb | `payload-v147-dmc_gb.tgz` | `cfg-dmc_gb-revalidate-v147.yaml` |
+| idaac | `payload-v148-idaac.tgz` | `cfg-idaac-revalidate-v148.yaml` |
+| alda | `payload-v149-alda.tgz` | `cfg-alda-revalidate-v149.yaml` |
+| ppg | `payload-v150-ppg.tgz` | `cfg-ppg-revalidate-v150.yaml` |
+| ibac_sni | `payload-v151-ibac_sni.tgz` | `cfg-ibac_sni-revalidate-v151.yaml` |
+| ctrl | `payload-v152-ctrl.tgz` | `cfg-ctrl-revalidate-v152.yaml` |
+
+Each new command should name `NATIVE_HOST_PROFILE=datasphere` explicitly and retain its
+`RECORDS_OUT`/output binding. When the replacement wave is complete, mark old unmarked
+revalidation configs superseded (or add an explicit active-wave index), because the config audit
+currently treats unmarked historical configs as live. Do not alter past config/payload bindings.
+
+The source-freeze gate counts every dirty path, including the mailbox and review evidence. Preserve
+and commit—not ignore, delete, stash, or path-exclude—the final `notes/ask-claude.md`, both
+review-15 artifacts, and the current `source-lock.json` update with the final freeze checkpoint.
+This is enough to make the gate meaningful rather than cosmetically green. Still do not submit the
+new wave without an explicit T4 spend authorization.

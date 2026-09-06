@@ -97,3 +97,15 @@ now seeds each episode with the same `placement_condition_seed(seed, scene, i)` 
 floor episode *i* runs the identical physical placement as baseline episode *i*. The marginal
 placement distribution is unchanged by that switch, so this is a confirmation rather than a
 correction — see the result recorded beside C55.
+
+---
+
+## Update 2026-09-06 — the identity scheme in the table above is superseded
+
+The "`families.json` added to `REVISION_MEMBERS`" row above was true as of 2026-09-05 and is left
+as written — a dated record of what changed at that point, not a live claim. It is no longer how
+the evaluator config revision works: CORRECTIONS.md #94 found that same join also mixed
+`NATIVE_HOST_PROFILE` (a training-only override) into every family's evaluator revision, making no
+validation done under one host profile ever readable as current under another. Identity schema
+bumped 1 -> 2: `evaluator_config_revision` no longer reads `families.json`'s descriptor at all. See
+`evaluator_identity.py`'s own module docstring for the current mechanism.
