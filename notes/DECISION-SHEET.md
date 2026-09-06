@@ -1366,7 +1366,19 @@ owner's own phrasing already weighted it, and with the actual state of Lift's ca
 evidence. Left OWNER because it is a scope call, not a mechanical fix; formal ratification (or a
 stated override) is what would flip `gate_production_scope_frozen`.
 
-### A34 OPEN, 2026-09-06 — `ppg`'s `train.py` is training-only by name but not by load path
+### A34 DECIDED (option 1 applied), 2026-09-06 — `ppg`'s `train.py` is training-only by name but not by load path
+
+**Closed, not just answered.** Commit `f1ac905` ("Close #94: evaluator identity schema 2") applied
+option 1 below as part of the same schema-2 bump: `FAMILY_RUNTIME_MEMBERS["ppg"]` now includes
+`runnable/ppg/phasic_policy_gradient/train.py`, verified by mutation test
+(`tests/test_family_evaluator_revision.py`, `_mutate_bytes` on that exact path) and by a live check
+that editing `ppg`'s `train.py` moves only `ppg`'s `code_revision`, no other family's. The commit
+message says so explicitly ("Also closes CORRECTIONS #93/DECISION-SHEET A34"), but this entry's own
+header was never updated to match — found on a second, closer read of this sheet rather than taken
+on the header's word. **Consequence for the ledger**: any `ppg` validation run against the current
+tree can now honestly earn `runtime_imports_checked: true`; the false-premise problem #93 found no
+longer applies. The analysis below is kept for the record of how the fix was chosen, not as a live
+open question.
 
 Found by an independent adversarial review of the fresh evaluator-validation ledger (CORRECTIONS
 #93). `evaluator_identity.py`'s `_TRAINING_ONLY_RUNTIME_BASENAMES` excludes `train.py`,

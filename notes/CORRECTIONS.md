@@ -2047,3 +2047,63 @@ same way a fresh reviewer would. Findings:
 **Verdict**: this is finished, cross-referenced, deliberately-reasoned, tested work, not an
 in-progress or uncertain state. The original caveat is retracted in full, not just in framing.
 `notes/CURRENT-STATE-AND-RESPONSIBILITY.md`'s partial retraction is superseded by this entry.
+
+## #97 — the 7-family schema-2 wave (v146-v152) landed 6/7 clean; `ctrl` reports an evaluator_revision that no local computation, past or present, produces
+
+All seven jobs (`bt1s71ot06...` through `bt1mg9ens1...`) SUCCEEDED operationally: every family shows
+`NATIVE_FINAL_EVALUATION_COMPLETED`, `non_finite: 0` on the terminal checkpoint, and physical pairing
+(`scripts/audit_pairing_evidence.py`: 7 eligible comparisons, 0 unpaired, 0 lacking evidence — run in
+two batches of 5+2 as jobs finished). Six families' reported `evaluator_revision` matches
+`evaluator_family_revision(ROOT, family)` recomputed fresh, exactly — `rlvigen`, `dmc_gb`, `idaac`,
+`alda`, `ppg`, `ibac_sni` are genuinely current and are now in `validated_evaluator_families.json`.
+
+**`ctrl` does not, and the mismatch survived an unusually thorough attempt to explain it away as
+something mundane.** All four of `ctrl`'s real `offline-eval` rows (train × 2 duplicate rows,
+eval-easy × 2, the by-design rich/aggregate pair per regime) report `evaluator_revision`
+`763de034c4ec...`, consistently — not a one-off fluke. Locally, `evaluator_family_revision(ROOT,
+"ctrl")` computes `b7f687452b2d...`, and this is not a stale-tree artifact: it is bit-identical to
+what `payload-v152-ctrl.tgz`'s own `payload_manifest.json` baked in at build time (`revision`,
+`code_revision`, and `config_revision` fields all match a fresh recomputation exactly). Checked
+exhaustively, not assumed:
+
+- All 36 of `ctrl`'s hashed runtime-member files (its own 5 `.py` files, `door.xml`, every file
+  under `runnable/_shim`, and the shared `RL-ViGen-upstream/envs/robosuiteVGB` members) — compared
+  byte-for-byte between the manifest's baked hashes and a fresh local recomputation: **0 differ**.
+- `door.xml` and the five `ctrl/*.py` files — diffed directly against the extracted payload
+  archive's own copies: **byte-identical**.
+- `evaluator_family_config_revision` is a pure hash of `{identity_schema, semantics, family,
+  scope_fields}` — all four are static constants or the literal string `"ctrl"`; it cannot legally
+  differ between environments given byte-identical `evaluator_identity.py` (confirmed identical via
+  direct diff against the shipped payload).
+- Manually recombined the manifest's own `code_revision` + `config_revision` by hand
+  (`sha256(code + "\0" + config)`) and got `b7f687452b2d...` again — ruling out a bug in my
+  verification script rather than in the mechanism.
+
+So the value baked into the payload, the value recomputed from the current tree, and the value
+recomputed from the extracted archive's own files all agree with each other and disagree with what
+the remote job reported — for `ctrl` only, not for any of the six other families sharing the exact
+same shared `RL-ViGen-upstream` closure members and the exact same `evaluator_identity.py`.
+
+**Not resolved.** The mechanism this project already used to catch an analogous class of bug (#88,
+macOS-vs-Linux tar extraction differences) required a diagnostic resubmission with temporary print
+instrumentation comparing local and remote member sets directly — that is real, deliberate spend,
+not something to do speculatively while investigating a single family's anomaly. Left as a genuine
+open question rather than guessed at further. Candidates not ruled out: a DataSphere-side upload/
+cache staleness for this specific payload filename (re-uploading under a fresh version number would
+distinguish this from a real extraction-environment difference), or something specific to `ctrl`
+being the only family whose closure names a *bare* directory (`runnable/_shim`, vs. every other
+family's directly-named subdirectories or files) in a way that behaves differently at scan time on
+the remote filesystem.
+
+**Ledger left honest, not patched**: `validated_evaluator_families.json`'s `ctrl` entry now carries
+the job's own reported `evaluator_revision` (`763de034c4ec...`) verbatim — this does not match
+`evaluator_family_revision(ROOT, "ctrl")`, so `production_gates.py`'s own fail-closed check correctly
+reads `ctrl` as "on a superseded revision, needs re-run" without any manual intervention. That framing
+undersells the actual finding slightly (this isn't ordinary staleness — the local answer never
+matched any point in time), which is why this entry exists: a bare re-run might reproduce the exact
+same mismatch if the cause is systemic rather than a moved tree, and whoever re-runs it should know
+that before spending a second job on the assumption that resubmitting alone fixes it.
+
+**Not blocking**: the other six entries are real and current; `gate_shared_evaluator_validated` now
+correctly reads 6/7, a genuine improvement from 0/7, not a number to distrust because of `ctrl`'s
+anomaly.

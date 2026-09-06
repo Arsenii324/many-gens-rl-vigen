@@ -1,3 +1,7 @@
+# SUPERSEDED 2026-09-06: this job (bt1mg9ens1di936htjc7) succeeded operationally but reported an
+# evaluator_revision matching no local computation (CORRECTIONS.md #97). Replacement:
+# cfg-ctrl-revalidate-v153.yaml, a fresh payload filename testing whether the mismatch was a
+# DataSphere-side upload/cache staleness. Kept as the record of the job that ran.
 # [Claude 2026-09-06] Schema-2 evaluator-identity revalidation wave (Codex mailbox Q42-Q45).
 # CORRECTIONS.md #94 found the schema-1 identity scheme baked NATIVE_HOST_PROFILE into every
 # family's evaluator revision even though the profile overrides are training-only, making no

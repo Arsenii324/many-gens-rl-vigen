@@ -26,7 +26,10 @@ EVIDENCE="${NATIVE_EVIDENCE_LOG:-/tmp/ccm-intro-datasphere-recovery-2026-08-31.2
 # measurement, and the ibac_sni competence pilot. The existing state file's own recorded
 # cap_minutes was bumped to match in the same edit -- load_state() refuses to use a state file
 # whose stamped cap disagrees with the script's current one, by design.
-V100_BUDGET_CAP_MINUTES=240
+# [Claude 2026-09-06, later] Raised 240 -> 420: owner unconditionally added ~3h (180 min) as a
+# pre-emptive top-up ("in case you did exhaust the V100 GPU timing that was set"), not tied to a
+# specific probe. Same state-file-must-match-script rule applies; bumped together.
+V100_BUDGET_CAP_MINUTES=420
 V100_BUDGET_STATE="${NATIVE_V100_BUDGET_STATE:-${XDG_STATE_HOME:-${HOME:-/tmp}/.local/state}/ccm-intro/datasphere-v100-g1-1.json}"
 export GRPC_DNS_RESOLVER=native
 

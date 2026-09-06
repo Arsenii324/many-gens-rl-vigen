@@ -1,148 +1,13 @@
 {
   "_comment": "One entry per evaluator family, written after human review of a retained endpoint artifact: complete diagnostics, distinct placement seeds, physical pairing with 0 unpaired, and a functional_endpoint scope attestation. family_code_revision, family_config_revision, and evaluator_revision must match the selected family closure; evaluator_scope and its scope/measurement revisions must match every applicable offline-eval row; evaluation_records_path and evaluation_records_sha256 bind the ledger to the artifact. These mechanics bind claims but do not prove source/job honesty or exhaust dynamic imports. The retained legacy common code_revision is historical only and cannot certify the new closure.",
-  "rlvigen": {
-    "baseline": "drqv2",
-    "code_revision": null,
-    "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt16kl6q356klkg1v3vv__records.jsonl",
-    "evaluation_records_sha256": "8af749660588f9be190e4cd68b5276711a4c80798b9028c5aa1e233e3134f150",
-    "evaluator_measurement_revision": "7144b8ee2fa26e7f24845a089ac959fb3f202d5951c2e92f2391eb803b9ebb96",
-    "evaluator_revision": "d00a2b1e46848a48ad78663e472b8ffdcf44afa7a10556e7554838989f155158",
-    "evaluator_scope": {
-      "action_repeat": 1,
-      "baseline": "drqv2",
-      "deterministic_setting": {
-        "backend": "torch",
-        "enabled": true,
-        "mode": "torch.use_deterministic_algorithms"
-      },
-      "device": "cuda",
-      "episode_length": 500,
-      "episode_seed": 20260903,
-      "episodes": 5,
-      "eval_policy_mode": "mode",
-      "eval_scope": "endpoint",
-      "family": "rlvigen",
-      "frame": 10000,
-      "frame_stack": 3,
-      "image_size": 100,
-      "regimes": [
-        "train",
-        "eval-easy"
-      ],
-      "scenes": [
-        0
-      ],
-      "seed": 1,
-      "task": "Door"
-    },
-    "evaluator_scope_revision": "28f44299e4f12b7bd8628d979f4a939d1a86c2d1e6f065cefbb02c13ee177fb1",
-    "family_code_revision": "420726e24ca721970d6345de43188f195ae22f07253c78ab1cc62db82117be07",
-    "family_config_revision": "d975656999040a67c81b42ee1c2cee47437f826535fa2d604db14a179b0be68f",
-    "job": "bt16kl6q356klkg1v3vv",
-    "paired": true,
-    "runtime_imports_checked": true,
-    "validation_kind": "functional_endpoint"
-  },
-  "dmc_gb": {
-    "baseline": "rad",
-    "code_revision": null,
-    "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1hmjrbg4711e4nl32d__records.jsonl",
-    "evaluation_records_sha256": "2ebd2641bb5183055340c5458175a9d182ed0b149cc831d58a46d81e53aead6f",
-    "evaluator_measurement_revision": "dc9f725a6414a5106bf830cb0722ae4295b027627ac67fb43c2f6798e1368e83",
-    "evaluator_revision": "f1508942a8d42d23b1ab2ec15d1843da19a29828a0b988bc22dc1285f7cd1302",
-    "evaluator_scope": {
-      "action_repeat": 1,
-      "baseline": "rad",
-      "deterministic_setting": {
-        "backend": "torch",
-        "enabled": true,
-        "mode": "torch.use_deterministic_algorithms"
-      },
-      "device": "cuda",
-      "episode_length": 500,
-      "episode_seed": 20260903,
-      "episodes": 5,
-      "eval_policy_mode": "mode",
-      "eval_scope": "endpoint",
-      "family": "dmc_gb",
-      "frame": 10000,
-      "frame_stack": 3,
-      "image_size": 100,
-      "regimes": [
-        "train",
-        "eval-easy"
-      ],
-      "scenes": [
-        0
-      ],
-      "seed": 1,
-      "task": "Door"
-    },
-    "evaluator_scope_revision": "62866cd0eda6186382a76250ff9a2ab338b60c953244b061877ec0f91cb5d734",
-    "family_code_revision": "2c6f538af579598980bcf49d2b75ca9c81edfae6c745798a658344281a99c2b7",
-    "family_config_revision": "4405374d310c683b1be7cdaf9370b291f6fb3f24d5574bfcb07fb060481e21bd",
-    "job": "bt1hmjrbg4711e4nl32d",
-    "paired": true,
-    "runtime_imports_checked": true,
-    "validation_kind": "functional_endpoint"
-  },
-  "idaac": {
-    "baseline": "idaac",
-    "code_revision": null,
-    "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl",
-    "evaluation_records_sha256": "cc5e9f47627fb864ca375898740a0892c6b6713c1425ba0094f21e1297e8da1d",
-    "evaluator_measurement_revision": "eede2408a61cdcacc9d6a6b3bc74f166c0505a4f73ba221cf1009cac0435b868",
-    "evaluator_revision": "204992902a6e0d6fbada21b1522b950ddedfb3e36feff421f3bef49e800f21ae",
-    "evaluator_scope": {
-      "action_repeat": 1,
-      "baseline": "idaac",
-      "deterministic_setting": {
-        "backend": "torch",
-        "enabled": true,
-        "mode": "torch.use_deterministic_algorithms"
-      },
-      "device": "cuda",
-      "episode_length": 500,
-      "episode_seed": 20260903,
-      "episodes": 5,
-      "eval_policy_mode": "sample",
-      "eval_scope": "endpoint",
-      "family": "idaac",
-      "frame": 9216,
-      "frame_stack": 3,
-      "image_size": 100,
-      "regimes": [
-        "train",
-        "eval-easy"
-      ],
-      "scenes": [
-        0
-      ],
-      "seed": 1,
-      "task": "Door"
-    },
-    "evaluator_scope_revision": "8f02b3bc9ff03dcbbf7ee3d140169f55df36dc999c091b78369708ddff59e929",
-    "family_code_revision": "b2a12205552de7aaa56fb25041678a57c529b671438ae89237a6340ba57bba97",
-    "family_config_revision": "d6732e2641c3f2a3eea81045d48b25444c961e97deb1a56839abed97bcc20b64",
-    "job": "bt1lpo9v9o2d34bvrmo7",
-    "paired": true,
-    "runtime_imports_checked": true,
-    "validation_kind": "functional_endpoint"
-  },
   "alda": {
-    "job": "bt18gmov8nbfkkd117s6",
     "baseline": "alda",
     "code_revision": null,
-    "family_code_revision": "919e8888f87b20a9920c02a02473a91165705fd175b54c6f319b96522cd0e4b5",
-    "family_config_revision": "dbc511fb4a4cb7f43164b35c0503d50328456d30547697ef5b8b44dc9a5ea872",
-    "runtime_imports_checked": true,
-    "paired": true,
     "diagnostics_complete": true,
-    "validation_kind": "functional_endpoint",
-    "evaluator_revision": "2306f138e6f4aa2345cbc6426d085cd982674c648a566416f70547fb760e47db",
+    "evaluation_records_path": "results/records/bt1s807o5pbap8ir3knl__records.jsonl",
+    "evaluation_records_sha256": "123eb5f19750fed07d9a57688fff305d40ceceafb8fad8b1c1d9000fd28777dc",
+    "evaluator_measurement_revision": "a62d45eb325cd0545a2af992a872a95b57426e4dcdb59507b73943dbb80bccb6",
+    "evaluator_revision": "13a3225bba794cd0f9ca6aaac4a65f627723b9704fed95c4c12097aaa5417036",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "alda",
@@ -172,42 +37,28 @@
       "task": "Door"
     },
     "evaluator_scope_revision": "1b10811132543beac9d92880774dc43dbe36cca4f197c5017006264755e61c0d",
-    "evaluator_measurement_revision": "23b210356a1d83ae39ac93fe732d249b51b4bd7da41be12145b134491369777f",
-    "evaluation_records_path": "results/records/bt18gmov8nbfkkd117s6__records.jsonl",
-    "evaluation_records_sha256": "a1596fbc6e7d299f53de2384da85b242b7f3239092d97b1dd292b55a9206a82e"
+    "family_code_revision": "b5106534740c11da2dd997be4fed0fb41ca7a6fe595baedc7d63e75a59da869d",
+    "family_config_revision": "c4eda83b1f9ba0a1d2da67d5908feefb32898a6679a5c3078f6f7cbfde83edd7",
+    "job": "bt1s807o5pbap8ir3knl",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   },
   "ctrl": {
-    "job": "bt1t3njt0m37dujrio2u",
     "baseline": "ctrl",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
-    "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
-  },
-  "ppg": {
-    "baseline": "ppg",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt11o1l70msqkc4d2qnr__records.jsonl",
-    "evaluation_records_sha256": "47167aebc3ab174c3e9258623808c2d35f22660dbfe0378bd2e2bc564b8b6c65",
-    "evaluator_measurement_revision": "79ddb322305bd888071097dacaad7e0aa6e802a2e84f34e2cb903ab0d4368cd2",
-    "evaluator_revision": "1aaed80f2adb840e8fbca4b0d75987aa387d3a74d8aba10483fe17d6a406c877",
+    "evaluation_records_path": "results/records/bt1mg9ens1di936htjc7__records.jsonl",
+    "evaluation_records_sha256": "89b6b9bf0c378bc35e31d7baed31c326f331a41213256d48b7a3eddb586ea74e",
+    "evaluator_measurement_revision": "514da6f0d88c940d50c52411b0da0accbcfd075c3b2e6fe1bfb52cf11dd0bed9",
+    "evaluator_revision": "763de034c4ec3f6da7d9b36dc17a803dfe928e5e6c546f89b931db7db20919da",
     "evaluator_scope": {
       "action_repeat": 1,
-      "baseline": "ppg",
+      "baseline": "ctrl",
       "deterministic_setting": {
-        "backend": "torch",
+        "backend": "jax",
         "enabled": true,
-        "mode": "torch.use_deterministic_algorithms"
+        "mode": "seeded-prng"
       },
       "device": "cuda",
       "episode_length": 500,
@@ -215,8 +66,8 @@
       "episodes": 5,
       "eval_policy_mode": "sample",
       "eval_scope": "endpoint",
-      "family": "ppg",
-      "frame": 10240,
+      "family": "ctrl",
+      "frame": 10000,
       "frame_stack": 3,
       "image_size": 100,
       "regimes": [
@@ -229,22 +80,66 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "5d1cf4116f97e1d3285ca7e20ccaf17e06a8649444ebb862b76e0293a74b38e0",
-    "family_code_revision": "56f215941a9a6dfd0c76b5d52633ffec40256bd5686dd416bff4dc3bac940087",
-    "family_config_revision": "cad1299ae7f31372bce1f8642cd26f701d8c8e3eca2067382255988531fdd903",
-    "job": "bt11o1l70msqkc4d2qnr",
+    "evaluator_scope_revision": "16e5e051f6c5824e19c5adf4dfc551801fbb36eaadba968bf7ad371dffd52d3d",
+    "family_code_revision": "23fcf491621af2f355009c3a6928bc72345d1379e6bc224a25ca586e21ddfa1a",
+    "family_config_revision": "eb76930446ca3b69607c477ac190fb5d35a3ea30d07ed73efae933896d69ba7f",
+    "job": "bt1mg9ens1di936htjc7",
     "paired": true,
-    "runtime_imports_checked": false,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
+  },
+  "dmc_gb": {
+    "baseline": "rad",
+    "code_revision": null,
+    "diagnostics_complete": true,
+    "evaluation_records_path": "results/records/bt13r293fit1pbt7ah4p__records.jsonl",
+    "evaluation_records_sha256": "40cf3569f1b7d0121000ce1fab934afc7ce3b0dd6b36e9a631db693e006e69ed",
+    "evaluator_measurement_revision": "7d793b354ed2c06dd7332bbdc3fd35d2b2cb623f1715e52a228488aec7597304",
+    "evaluator_revision": "1a6bba90e0424e91384f9d7f3083f4378e073e7eeb38072cf402c113d67f5ddb",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "rad",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "mode",
+      "eval_scope": "endpoint",
+      "family": "dmc_gb",
+      "frame": 10000,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "62866cd0eda6186382a76250ff9a2ab338b60c953244b061877ec0f91cb5d734",
+    "family_code_revision": "949f2ab1dbb84337742d5f6633cbd8224319b0a93ceef51a110796242107f88e",
+    "family_config_revision": "c041fb7a5ba3c33b95d79514a8e43387c35687a3b42a1b426800f63e3dc315a0",
+    "job": "bt13r293fit1pbt7ah4p",
+    "paired": true,
+    "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
   },
   "ibac_sni": {
     "baseline": "ibac_sni",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt15dm9j6vm5r9m4cdri__records.jsonl",
-    "evaluation_records_sha256": "b042a757fe2e4646511a3e115f228e56bf011b21a6d15ac19ff478cbeb0a7ecd",
-    "evaluator_measurement_revision": "93acfc3b1c92bac25812702df01917bae49fb028e149a6ee17a3c886e1c4e509",
-    "evaluator_revision": "dc201a558bb6fffc4848c1249918fc195eeca43c4b96012a7f074f1c2cb5359d",
+    "evaluation_records_path": "results/records/bt169vanpqh4u7no7n8c__records.jsonl",
+    "evaluation_records_sha256": "52aeb1688ccee9730742dcdf8100bfca28feb6bf3d7a9d09e9788739049b21d7",
+    "evaluator_measurement_revision": "f50ac1c5101a14e1019075950e46b0527bdd06e428fa523952cadc4c06513a2f",
+    "evaluator_revision": "37bd76ed23e7a8e9c733a9c1d8dbfb4b3baab1ddc44c44b006d35a257bd40cce",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "ibac_sni",
@@ -274,9 +169,141 @@
       "task": "Door"
     },
     "evaluator_scope_revision": "1add01a0487beb369b2fe016300c2edeee4e3069f939c683250a484d33d138e3",
-    "family_code_revision": "e2870f92fbbe2db59a85fbe7a772084270761b48f7ffd732c4abcc3d55abd3f5",
-    "family_config_revision": "c785e59418c5a0cde5eedfc3243835ac17f7db0997eff1ed5601c0619a4c336d",
-    "job": "bt15dm9j6vm5r9m4cdri",
+    "family_code_revision": "25add6c2e640d143e60912f6ebd4821802961b555385b8fc4b487d507e98dd0d",
+    "family_config_revision": "333737f5d3b76539887bc0a42d6accc714e51fb4fadfa5dea00c7b0115df39ef",
+    "job": "bt169vanpqh4u7no7n8c",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
+  },
+  "idaac": {
+    "baseline": "idaac",
+    "code_revision": null,
+    "diagnostics_complete": true,
+    "evaluation_records_path": "results/records/bt1tjsrd6oglrsq2g92m__records.jsonl",
+    "evaluation_records_sha256": "451ccafd888c2c4f182c8633d2deb7c277e8a7c7a69c488df89927b383bd4acf",
+    "evaluator_measurement_revision": "1b8d9a1bf8c99aefa9165d3007b6045f1eedd09e01475cc6c4b189a9f8c82cf6",
+    "evaluator_revision": "c1da1ce07f0fb089034e9087856f3e137d91d441264b2c0caeea62597826e948",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "idaac",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "sample",
+      "eval_scope": "endpoint",
+      "family": "idaac",
+      "frame": 9216,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "8f02b3bc9ff03dcbbf7ee3d140169f55df36dc999c091b78369708ddff59e929",
+    "family_code_revision": "9a5eeb04b2314049eca6a2c33b36b80ba1b9934d84dec0e493250626ea853034",
+    "family_config_revision": "fe1a5195a450a73a651fe2ba94715dccbf54af22e0a2aeead14df80361ec117a",
+    "job": "bt1tjsrd6oglrsq2g92m",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
+  },
+  "ppg": {
+    "baseline": "ppg",
+    "code_revision": null,
+    "diagnostics_complete": true,
+    "evaluation_records_path": "results/records/bt1v89sh2c00bc1iop0j__records.jsonl",
+    "evaluation_records_sha256": "96cead4dcad2c262e3b481af16fe8916c8aaa61b3c800d9dec3ecdaba9714056",
+    "evaluator_measurement_revision": "d0a52fd224caf7926c76fd8c0572f6ba6dfa95f1a0949dac9f8b82c7152c739c",
+    "evaluator_revision": "99b8332fcb5c063f319d5328c0724c95a9ccb9e56e5f9621b8a1f084ce0f6723",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "ppg",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "sample",
+      "eval_scope": "endpoint",
+      "family": "ppg",
+      "frame": 10240,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "5d1cf4116f97e1d3285ca7e20ccaf17e06a8649444ebb862b76e0293a74b38e0",
+    "family_code_revision": "69e2817fd1a55f8fd36faa776b00f7c2a0005d6b317f400600f797ef5f3db0b0",
+    "family_config_revision": "5624ecce5f0fef9df08debc954a81ee7fbbebdec86b0758dce0c9afe4b6b48a1",
+    "job": "bt1v89sh2c00bc1iop0j",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
+  },
+  "rlvigen": {
+    "baseline": "drqv2",
+    "code_revision": null,
+    "diagnostics_complete": true,
+    "evaluation_records_path": "results/records/bt1s71ot06mfqmei9qi5__records.jsonl",
+    "evaluation_records_sha256": "4d29f8bc3800a2d066f869c4319ceb56e15c70e7c33d94ec8fb7c2cfea39fbb2",
+    "evaluator_measurement_revision": "75d5013525b3b94b4d866d0200954c00c0d8836d5e158a2b3239e5661611513a",
+    "evaluator_revision": "06dd8fef052036c531f8dcadca77d885954ff541f9d868bc3d09799ddb36324a",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "drqv2",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "mode",
+      "eval_scope": "endpoint",
+      "family": "rlvigen",
+      "frame": 10000,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "28f44299e4f12b7bd8628d979f4a939d1a86c2d1e6f065cefbb02c13ee177fb1",
+    "family_code_revision": "22a173074c86d04704141b89d1b66837fac04d64600d89d9634194abcfdbdd4d",
+    "family_config_revision": "f9ccb57e88d061fed3b17853844b42548dbe983191f46d7fdf913e56811a5d5e",
+    "job": "bt1s71ot06mfqmei9qi5",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"

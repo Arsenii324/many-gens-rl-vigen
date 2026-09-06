@@ -139,20 +139,20 @@ def test_g11_unbounded_timeout_is_refused_before_cloud(tmp_path, timeout_command
 
 def test_g11_submit_refuses_a_reservation_over_the_cumulative_cap(tmp_path):
     # [Claude 2026-09-06] cap_minutes and the reservation amounts must both track
-    # V100_BUDGET_CAP_MINUTES (job.sh:29, raised 120->240 by explicit owner instruction). A state
-    # file whose cap_minutes disagrees with the script's own constant is refused outright
-    # (load_state's own consistency guard, job.sh:235) -- so this fixture using the OLD cap value
-    # started failing not because the cumulative-cap check broke, but one level earlier, before
-    # that check is ever reached. Sized so the scenario still genuinely exceeds the cap: 200 + 50
-    # = 250 > 240.
+    # V100_BUDGET_CAP_MINUTES (job.sh:29). A state file whose cap_minutes disagrees with the
+    # script's own constant is refused outright (load_state's own consistency guard, job.sh:235)
+    # -- so this fixture using the OLD cap value started failing not because the cumulative-cap
+    # check broke, but one level earlier, before that check is ever reached.
+    # [Claude 2026-09-06, later] Rescaled 240->420 (owner's unconditional +180min top-up). Sized
+    # so the scenario still genuinely exceeds the cap: 400 + 50 = 450 > 420.
     state = tmp_path / "v100-budget.json"
     state.write_text(json.dumps({
         "schema": 1,
-        "cap_minutes": 240,
+        "cap_minutes": 420,
         "reservations": [{
             "reservation_id": "already-used",
             "tier": "g1.1",
-            "reserved_minutes": 200,
+            "reserved_minutes": 400,
             "actual_minutes": None,
             "job_id": "bt1oldabcdefghijklq",
             "status": "submitted",
@@ -162,25 +162,24 @@ def test_g11_submit_refuses_a_reservation_over_the_cumulative_cap(tmp_path):
     result = _submit(tmp_path, _config(tmp_path, reservation=50), state)
 
     assert result.returncode != 0
-    assert "240" in result.stderr
+    assert "420" in result.stderr
     assert "exceed" in result.stderr.lower()
     assert not (tmp_path / "datasphere-invoked").exists()
     assert json.loads(state.read_text())["reservations"][0]["reservation_id"] == "already-used"
 
 
 def test_g11_ambiguous_cloud_failure_retains_reservation_and_blocks_followup(tmp_path):
-    # [Claude 2026-09-06] Sized against V100_BUDGET_CAP_MINUTES=240 (raised from 120 by explicit
-    # owner instruction, job.sh:29) so the followup genuinely still exceeds the cap: 200 + 50 =
-    # 250 > 240. At the old 100/30 sizing the followup no longer exceeds 240 and the scenario this
-    # test exists to check (a retained reservation from an ambiguous failure correctly blocks a
-    # followup that would breach the cap) stopped being exercised at all.
+    # [Claude 2026-09-06] Sized against V100_BUDGET_CAP_MINUTES so the followup genuinely still
+    # exceeds the cap, keeping the scenario this test exists to check (a retained reservation from
+    # an ambiguous failure correctly blocks a followup that would breach the cap) exercised.
+    # [Claude 2026-09-06, later] Rescaled 240->420: 400 + 50 = 450 > 420.
     state = tmp_path / "v100-budget.json"
-    first = _submit(tmp_path, _config(tmp_path, reservation=200), state, cloud_exit=17)
+    first = _submit(tmp_path, _config(tmp_path, reservation=400), state, cloud_exit=17)
 
     assert first.returncode != 0
     retained = json.loads(state.read_text())["reservations"]
     assert len(retained) == 1
-    assert retained[0]["reserved_minutes"] == 200
+    assert retained[0]["reserved_minutes"] == 400
     assert retained[0]["job_id"] is None
     assert retained[0]["status"] == "reserved"
     assert (tmp_path / "datasphere-invoked").exists()
@@ -228,15 +227,16 @@ def test_v100_budget_reconcile_updates_actual_elapsed_and_status_is_local(tmp_pa
     assert report["updated"] == 1
     assert report["actual_minutes_known"] == 30.0
     assert report["accounted_minutes"] == 30.0
-    # V100_BUDGET_CAP_MINUTES=240 (job.sh:29) - 30 accounted = 210.
-    assert report["remaining_minutes"] == 210.0
+    # V100_BUDGET_CAP_MINUTES=420 (job.sh:29, rescaled from 240 with the owner's +180min top-up)
+    # - 30 accounted = 390.
+    assert report["remaining_minutes"] == 390.0
 
     status = subprocess.run(
         ["bash", str(JOB), "v100-budget", "status"],
         cwd=ROOT, env=environment, text=True, capture_output=True,
     )
     assert status.returncode == 0, status.stderr
-    assert json.loads(status.stdout)["remaining_minutes"] == 210.0
+    assert json.loads(status.stdout)["remaining_minutes"] == 390.0
 
 
 def test_g11_invalid_reservation_is_rejected_before_cloud_execute(tmp_path):

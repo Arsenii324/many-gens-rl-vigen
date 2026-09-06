@@ -1,0 +1,47 @@
+# [Claude 2026-09-06] Re-run of cfg-ctrl-revalidate-v152.yaml (job bt1mg9ens1di936htjc7), which
+# succeeded operationally (clean training, 0 non-finite, physically paired) but reported an
+# evaluator_revision that matched no local computation -- not the current tree, not the exact
+# submitted archive, not a hand-recombination of the payload's own baked code/config revisions.
+# Full investigation: CORRECTIONS.md #97. Every local check ruled out a real file-content
+# difference; the leading remaining hypothesis is a DataSphere-side upload/cache staleness keyed
+# to the payload filename, not a bug in the identity mechanism itself. This config tests that
+# hypothesis the direct way -- a fresh payload filename (payload-v153-ctrl.tgz, byte-identical
+# source tree to v152, rebuilt fresh) rather than a diagnostic detour. If it validates cleanly,
+# the mechanism is confirmed trustworthy and the v152 anomaly was a one-off; if it reproduces the
+# same mismatch, that is a real, current, reproducible bug worth deeper attention.
+#
+# Same shape as v152: ctrl:1 for 10000 frames (this family's own executed-endpoint rounding),
+# then a 2-regime x 1-scene x 5-episode endpoint grid on CUDA. NATIVE_HOST_PROFILE=datasphere
+# explicit, matching schema 2's identity requirement.
+name: vigen-ctrl-revalidate-v153
+desc: Re-validate the ctrl endpoint evaluator on CUDA, fresh payload filename after v152's unexplained identity mismatch (CORRECTIONS #97).
+cmd: >-
+  timeout --foreground 10800s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ctrl:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v153-ctrl.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
