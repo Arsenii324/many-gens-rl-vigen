@@ -110,12 +110,23 @@ def audit() -> int:
         except Exception:
             pass
         try:
-            family_tool.check_tier(spec, tier.group(1))
+            # [Claude 2026-09-06] job.sh's real submit path admits a job at
+            # family_tool.admission_tier_for(tier) rather than the literal declared tier (g1.1 has
+            # no RAM/vCPU model in this module, so it is admitted as gt4i.1, a conservative floor).
+            # This audit called check_tier/check_memory with the raw tier instead and flagged every
+            # g1.1 config as "unknown job tier: g1.1" -- a false positive discovered when two g1.1
+            # configs submitted and ran successfully for real (bt18a8fjl3qrp5jv50g6,
+            # bt1vsfov1mmg9shjp898) while this gate reported FAIL. Exactly the failure class this
+            # gate's own docstring warns about, now happening to the gate itself for a tier that
+            # did not exist when it was written. Fixed at the one shared definition rather than by
+            # mirroring it a second time here.
+            admission_tier = family_tool.admission_tier_for(tier.group(1))
+            family_tool.check_tier(spec, admission_tier)
             # Unmeasured is reported separately below. Treating "no measurement" as a BLOCKING
             # failure here would flag six of seven families and make the instrument unreadable,
             # which is how instruments stop being run. Treating it as a PASS is what killed ctrl.
             # It is neither: it is a named, countable gap.
-            family_tool.check_memory(spec, tier.group(1), allow_unmeasured=True)
+            family_tool.check_memory(spec, admission_tier, allow_unmeasured=True)
         except (ValueError, SystemExit) as exc:
             # family.fail() raises ValueError. Catching only SystemExit sent these to the generic
             # branch below, which labelled a clean, correct REJECTION as "could not be evaluated"

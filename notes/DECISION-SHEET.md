@@ -1292,3 +1292,43 @@ explicitly "LEGACY EXPLORATORY," and `regime_retention_report.py` is drqv2-only,
 obvious reason to use a different, less-measured (20 vs 200 episodes, per the shell driver's own
 flag) floor than the table meant to supersede them. But this changes a competence-gate input in
 comparison-bearing tables, so it is yours to decide, not mine to silently pick.
+
+### A32 DECIDED, 2026-09-06 — the statistical-inference framework §1.1-1.4 propose
+
+`notes/proposal-inference-and-checkpoint-selection.md` was drafted 2026-09-04, corrected by a
+third external review on 2026-09-05 (the review caught four real errors in the first draft, all
+fixed in the current text), and then left unmerged into `EVAL-PROTOCOL.md` "to avoid colliding
+with concurrent work; merge it there when ownership is settled." That deferred the *merge*, not
+just the *formal ratification* — meaning the operational document a reader would actually check
+never reflected this project's own best analysis. Per the standing rule (A24/A25): a genuinely
+best-judgment call gets implemented and persisted, not left sitting in a side file because formal
+sign-off is pending. Adopting §§1.1-1.4 as the operational default, unchanged from the proposal
+(already reviewed and corrected once; found no weakness in it worth re-deriving):
+
+- **§1.1 Unit of analysis**: the training seed is the only outer replicate (n=3). Ten scenes and
+  four regimes are analysis cells computed from one trained policy, never treated as independent
+  replicates. Scene-level heterogeneity is still reported, descriptively.
+- **§1.2 Scenes are a fixed grid, not a sample**: the ten certified scenes are prescribed by the
+  protocol, not drawn from a population nothing in this project defines. Bootstrap resamples whole
+  training-seed vectors (all ten scenes travel with a resampled seed); scenes themselves are never
+  independently resampled.
+- **§1.3 Reporting convention at n=3**: every headline value shows all three seed-level points
+  individually, their mean, and their SD/range — never an interval alone, and never a p-value.
+- **§1.4 What is and is not paired**: common evaluation placements (C69) pair regime/scene/episode
+  measurement noise within one trained policy. They do **not** establish cross-method
+  training-seed pairing — "seed 1" for two different algorithms shares an integer, not a
+  common-random-number block, since the algorithms consume RNG differently. Compare distributions
+  of three independently trained policies per method; use shared placements only to denoise each
+  of those three numbers, never to claim a paired cross-method test.
+
+§1.6 (placement-hash pairing) is not adopted here because it is already implemented and verified —
+`production_gates.py`'s "placement provenance" gate (PASS) confirms every record carries an
+episode id and a realized-placement witness. §1.7 (pre-registration, missing-run policy) is
+already decided as A24/A25. §2 (primary-outcome ordering) already matches
+`EVAL-PROTOCOL.md`'s own metrics-reported row. §3 (checkpoint selection) already matches this
+project's operational default in `EVAL-PROTOCOL.md` §4, though its winner's-curse/equal-
+opportunity reasoning is worth reading in full if a selected-best column is ever proposed. This
+entry closes the one genuinely unmerged remainder: §§1.1-1.4.
+
+Reversible at zero cost, same as A24/A25: this constrains reporting/analysis conduct, not a
+running fleet or committed code path.

@@ -206,6 +206,26 @@ def production(family: str, path: Path | None = None, profile: str | None = None
     return resolved_descriptor(family, path, profile).get("production", {})
 
 
+def admission_tier_for(tier: str) -> str:
+    """The tier to run this module's own admission checks against, for a `cloud-instance-type`
+    this module has no RAM/vCPU model for.
+
+    [Claude 2026-09-06] The ONE home for the g1.1 -> gt4i.1 substitution -- job.sh's real submit
+    path and scripts/audit_submission_configs.py's own simulation of it each used to carry this
+    mapping independently, and the audit's copy was missing, so it reported "unknown job tier:
+    g1.1" and FAILED two configs that had already submitted and run successfully for real
+    (bt18a8fjl3qrp5jv50g6, bt1vsfov1mmg9shjp898). Exactly the "same fact computed twice" class
+    this project keeps finding elsewhere (Q12's DOOR_RANDOM_FLOOR, CORRECTIONS #88's AppleDouble
+    hash) -- fixed here by giving both callers one function to call instead of one to mirror.
+
+    g1.1 is one V100 with 8 vCPU and 48-96 GiB RAM. This module's own tier table only has the
+    8-vCPU/32-GiB gt4i.1 shape, used as a conservative admission floor. This does NOT select
+    NATIVE_HOST_PROFILE=v100, which names the separate, larger owner host -- it only lets a G1.1
+    DataSphere job clear the same family-fit checks a gt4i.1 job would.
+    """
+    return "gt4i.1" if tier == "g1.1" else tier
+
+
 def check_tier(cells: str, tier: str, path: Path | None = None) -> None:
     """Reject a job tier below a family's budget-independent minimum."""
     rank = {"gt4.1": 1, "gt4i.1": 2}
@@ -930,6 +950,9 @@ def main(argv: list[str] | None = None) -> int:
     schedulable = commands.add_parser("check-co-schedulable")
     schedulable.add_argument("--cells", required=True)
 
+    admission = commands.add_parser("admission-tier")
+    admission.add_argument("--tier", required=True)
+
     tier = commands.add_parser("check-tier")
     tier.add_argument("--cells", required=True)
     tier.add_argument("--tier", required=True)
@@ -984,6 +1007,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if excludes_base_requirements(args.cells) else 1
         if args.command == "check-co-schedulable":
             check_co_schedulable(args.cells)
+            return 0
+        if args.command == "admission-tier":
+            print(admission_tier_for(args.tier))
             return 0
         if args.command == "check-tier":
             check_tier(args.cells, args.tier)

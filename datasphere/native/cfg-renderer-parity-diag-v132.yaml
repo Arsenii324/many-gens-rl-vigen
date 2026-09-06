@@ -9,7 +9,7 @@
 name: vigen-native-renderer-parity-diag-v132
 desc: Diagnose the evaluator-identity runtime-member hash mismatch with verbose output, on the cheapest working tier.
 cmd: >-
-  timeout --foreground 1200s env
+  timeout --foreground 6000s env
   RLVIGEN_ARCHIVE=${RLVIGEN}
   OFFLINE_EVAL_SNAPSHOT=${SNAP}
   OFFLINE_EVAL_DEVICES=cuda

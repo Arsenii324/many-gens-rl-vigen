@@ -342,6 +342,51 @@ not change the fixed seed allocation for any reported baseline.
 
 ---
 
+## 4c. Statistical inference — unit of analysis, resampling, and reporting at n=3 (A32)
+
+**Operational default 2026-09-06, awaiting ratification.** Merged from
+`notes/proposal-inference-and-checkpoint-selection.md` (drafted 2026-09-04, corrected by external
+review 2026-09-05) — kept in a side file too long relative to when its analysis was actually
+settled; this section is the fix. Full derivation and the review's corrections live in that file.
+
+**The training seed is the only outer replicate.** One seed produces one learned policy, which is
+then measured on ten scenes in four regimes. Aggregating inward-out:
+
+    Y[m,r,g,s]  = mean over episodes e of R[m,r,g,s,e]        # an analysis CELL, not a replicate
+    Ȳ[m,r,g]    = mean over the ten scenes s of Y[m,r,g,s]     # one number per trained policy
+    replicates  = { Ȳ[m,1,g], Ȳ[m,2,g], Ȳ[m,3,g] }             # n = 3, and that is the whole n
+
+Scene-level results are still reported — visual-generalisation heterogeneity across scenes is one
+of the more interesting things this design can show — but they are descriptive, never independent
+observations. Ten scene cells do not turn three trained agents into thirty replicates.
+
+**The ten scenes are a fixed grid, not a sample.** They are certified and prescribed by the
+protocol, not drawn from any population this project defines. Consequently, a bootstrap resamples
+whole training-seed vectors — when seed 2 is resampled, all ten of its scene results travel with
+it — and never resamples scenes independently. An implementation must not be left to silently pick
+the estimand by how its resampling loop happens to be written.
+
+**Reporting convention at n=3**: for every headline value, show all three seed-level points
+individually, their mean, and their SD or range. An interval must never visually obscure that
+there are exactly three learned policies behind it. Report effect sizes and intervals, not
+p-values — a bootstrap over three points cannot manufacture independent trained agents no matter
+how the interval is computed.
+
+**Common placements pair measurement noise, not cross-method training seeds.** [C69](CONSTRUCTION.md#c69)'s
+fixed evaluation placements reduce noise *within* one trained policy's own measurement (same
+regime/scene/episode placement seen by every baseline). They do **not** establish that "seed 1" for
+`ibac_sni` and "seed 1" for `drqv2` are a common-random-number block — the algorithms consume RNG
+differently, with different libraries and rollout structures, and matching the integer proves
+nothing about correlated training outcomes. Compare **distributions of three independently trained
+policies per method**; use the shared placements only to make each of those three numbers less
+noisy, never to license a paired cross-method statistical test.
+
+Pre-registration of the primary comparison set and the missing-run policy are already decided
+(A25, A24); placement-hash pairing provenance is already implemented and gate-verified
+("placement provenance" in `production_gates.py`).
+
+---
+
 ## 5. On-policy vs off-policy on frames seen
 
 The owner's instruction: report it, let the audience see. Agreed, and the record already supports
