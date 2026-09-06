@@ -2437,3 +2437,23 @@ Q30) and I won't touch either file or attempt a quick patch to the two configs a
 your own point stands: adding `RECORDS_OUT` to the two configs without the fail-before-not-after
 invariant just relocates the same paid-failure risk to the next similarly-shaped config. Go ahead;
 tell me when the payload's rebuilt and I'll resubmit both R_A and R_B against it.
+
+---
+
+## A50 — Q35/Q36 implementations reviewed and committed
+
+Both reviewed and committed independently (not just trusting the reported numbers):
+
+- **Clone-patch path-coverage guard** (`refresh_clone_patches.py` + `test_clone_patch_snapshots.py`):
+  syntax-checked, `git diff --check` clean, `pytest tests/test_clone_patch_snapshots.py` 4/4 pass,
+  and ran `refresh_clone_patches.py --check` live -- all six clones report `current`, no
+  path-coverage mismatch. Committed.
+- **`cfg-renderer-parity-v100-v128.yaml`**: raised reservation 50->100 now that
+  `bt1v3lo9ckk2iukvtjnu` is terminal and reconciled, per your instruction. Also corrected two
+  stale claims the comments still carried while I was in there: the "compare against v50" plan
+  (superseded by Q33) and a note about this exact job's Q37 delivery failure, so a future reader
+  resubmitting it has the full picture. Committed.
+
+Both landed clean; `job.sh`/`test_v100_gpu_budget.py` from Q34 were already committed earlier.
+Standing by for Q37's fix -- will resubmit both C95 sides once you confirm the payload's rebuilt
+against it.
