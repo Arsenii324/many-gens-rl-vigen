@@ -76,6 +76,7 @@ from datasphere.native.evaluator_identity import (  # noqa: E402
     measurement_revision,
     scope_revision,
 )
+from rlgen.protocol import OBSERVATION_GEOMETRY  # noqa: E402
 
 from scripts import eval_across_scenes as _eval_across_scenes  # noqa: E402
 from scripts.eval_across_scenes import _setup, find_snapshot, run_scene  # noqa: E402
@@ -1224,12 +1225,35 @@ def main() -> int:
     want_deterministic = os.environ.get("RLGEN_DETERMINISTIC_EVAL", "1") != "0"
     requested_deterministic_setting = effective_deterministic_setting(
         a.family, True if a.family == "ctrl" else want_deterministic)
+    # [Claude 2026-09-06, found tracing IDAAC-C2] `--image-size`/`--frame-stack` default to 100/3
+    # (dmc_gb's own geometry) and `run_probe.sh` NEVER passes either flag for a real production
+    # cell -- confirmed by grep, no cfg or script sets them. So every family but rad/soda got its
+    # OWN evaluator_scope stamped with dmc_gb's geometry regardless of what it actually runs at:
+    # verified directly against retained records, idaac and ppg both carry
+    # `evaluator_scope={"frame_stack": 3, "image_size": 100, ...}` while both actually run 64x64,
+    # one frame (`OBSERVATION_GEOMETRY["idaac"] == OBSERVATION_GEOMETRY["ppg"] == (64, 1)`). The
+    # measurements themselves are unaffected -- each family's real construction path is driven by
+    # its own launcher's `RLVIGEN_IMAGE_SIZE` / hardcoded wrapper, never by these two CLI flags,
+    # `dmc_gb` excepted (`run_scene_dmc_gb` does take `a.image_size` as a real parameter) -- but
+    # the RECORDED metadata was false for eleven of twelve baselines' frame_stack or image_size or
+    # both. `OBSERVATION_GEOMETRY` is this project's own declared single source of truth for
+    # exactly this ("the field that must be consulted per baseline", `rlgen/protocol.py`'s own
+    # docstring) -- use it here instead of the CLI passthrough. `a.image_size`/`a.frame_stack`
+    # keep their existing real-construction roles for dmc_gb/rlvigen/alda unchanged; only what
+    # gets RECORDED changes. Still validated here, before family setup, same as every other
+    # scope field: they remain real construction inputs for those three families, so garbage
+    # CLI input for them should fail fast regardless of whether THIS baseline happens to read it.
+    if a.frame_stack <= 0 or a.image_size <= 0:
+        raise ValueError(
+            "evaluator scope --frame-stack/--image-size must be positive "
+            f"(got frame_stack={a.frame_stack}, image_size={a.image_size})")
+    declared_image_size, declared_frame_stack = OBSERVATION_GEOMETRY[a.baseline]
     resolved_scope = canonical_evaluation_scope({
         "family": a.family, "baseline": a.baseline, "task": a.task, "frame": frame,
         "eval_scope": a.eval_scope, "regimes": a.regimes, "scenes": a.scenes,
         "episodes": a.episodes, "episode_seed": a.episode_seed, "seed": a.seed,
-        "device": a.device, "action_repeat": a.action_repeat, "frame_stack": a.frame_stack,
-        "image_size": a.image_size, "episode_length": a.episode_length,
+        "device": a.device, "action_repeat": a.action_repeat, "frame_stack": declared_frame_stack,
+        "image_size": declared_image_size, "episode_length": a.episode_length,
         "deterministic_setting": requested_deterministic_setting,
         "eval_policy_mode": family_eval_policy_mode(a.family),
     })
