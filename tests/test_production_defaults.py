@@ -365,6 +365,34 @@ def test_result_manifest_pins_image_and_native_requirements():
     assert len(lock["requirements_native_sha256"]) == 64
 
 
+def test_source_lock_root_commit_is_from_this_repository():
+    """External review 15 §1: `nested_repository_commits.root` named
+    `f041f5e170368d298e9b5b60127faa10ba5364e5` -- the LEGACY tree's HEAD, not this recovery
+    workspace's. Not merely behind; unreachable here at all, so a source-lineage reader could
+    trace a payload to a commit that isn't this project's history.
+
+    `write_payload` (contract.py) copies this field into every payload manifest verbatim, never
+    recomputing it, so nothing catches this drifting except a test. The field cannot always equal
+    the literal current HEAD -- committing a fix to this file immediately supersedes whatever HEAD
+    it records -- so the checkable invariant is narrower but still catches the actual bug found:
+    the recorded root must be a real, reachable commit of THIS repository's own history, not an
+    arbitrary hex string or another tree's commit.
+    """
+    lock = json.loads((ROOT / "datasphere" / "native" / "source-lock.json").read_text())
+    root = lock["nested_repository_commits"]["root"]
+    result = subprocess.run(["git", "cat-file", "-e", root], cwd=ROOT, capture_output=True)
+    assert result.returncode == 0, (
+        f"source-lock.json's nested_repository_commits.root ({root}) is not a commit object "
+        f"reachable in this repository -- {result.stderr.decode(errors='replace').strip()}"
+    )
+    merge_base = subprocess.run(["git", "merge-base", "--is-ancestor", root, "HEAD"],
+                                cwd=ROOT, capture_output=True)
+    assert merge_base.returncode == 0, (
+        f"source-lock.json's root ({root}) exists but is not an ancestor of HEAD -- "
+        "it names a commit from a different branch/history, not this tree's own lineage"
+    )
+
+
 def test_the_archive_matches_its_lock_when_it_is_present():
     """Skipped where the archive is not checked out -- it is 631 MB and lives outside the tree."""
     import hashlib

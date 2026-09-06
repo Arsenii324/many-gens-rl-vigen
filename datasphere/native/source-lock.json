@@ -56,7 +56,7 @@
   "container_image": "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000",
   "requirements_native_sha256": "43983f2374fa7b6c8598f6586111fa5478a950b1c5caf978a1aa9bcfae04ee8b",
   "nested_repository_commits": {
-    "root": "f041f5e170368d298e9b5b60127faa10ba5364e5",
+    "root": "cea0991be313da900062a43831eee3d5d20544cb",
     "runnable/alda": "f9609c242697b80a0623147468d402641766c883",
     "runnable/ctrl": "bc7f1fcef28460395687bafa636b606c9f6b9265",
     "runnable/dmc_gb": "1aa93d8fa36a7b05930466d2cc9b9931a900252d",
