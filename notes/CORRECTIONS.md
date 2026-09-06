@@ -1940,3 +1940,37 @@ training-only side effects on import elsewhere), or (b) audit each of the four e
 across all seven families for the same package-`__init__.py`-forces-import pattern and only carve
 out entries proven safe. This is a genuine "our best judgment, still open" architectural question,
 not a mechanical fix — recorded as DECISION-SHEET.md A34 rather than silently defaulted either way.
+
+## #94 — found by Codex (mailbox Q39), independently verified: `NATIVE_HOST_PROFILE` is baked into every family's evaluator revision, even when the profile override is training-only
+
+Codex flagged, while tracing why a ctrl/ppg revalidation might not be worth launching yet, that
+`evaluator_identity.py` mixes `NATIVE_HOST_PROFILE` into the evaluator code/config revision digest
+even though the current host-profile overrides are training rollout/replay parameters, not
+evaluator behavior. Verified directly rather than taken on trust:
+
+- `families.json`'s `rlvigen.host_profiles.v100` overrides exactly two fields: `replay_capacity`
+  (training replay buffer sizing) and `preserve_snapshots` (training checkpoint-retention
+  cadence). Both are training-loop parameters. The offline evaluator (`scripts/eval_grid.py`)
+  loads an already-saved checkpoint and runs episodes — it never touches a replay buffer or a
+  training checkpoint-save cadence.
+- `evaluator_family_config_revision`'s hashed payload (`evaluator_identity.py:356`) includes
+  `"host_profile": _selected_host_profile(root)` as a raw field **unconditionally**, regardless of
+  whether the family in question even has a host-profile override that touches anything
+  evaluation-relevant. `_digest_of` (used for `family_code_revision`/`evaluator_revision` too)
+  separately appends the same host-profile string as a trailing hashed byte sequence.
+
+**Consequence, stated explicitly because it wasn't yet**: every one of the 5 evaluator-family
+ledger entries validated this session (#90, #93 — `rlvigen`, `dmc_gb`, `idaac`, `ibac_sni`, plus
+`alda`) ran with `NATIVE_HOST_PROFILE` unset (default `"datasphere"`). Actual production requires
+`NATIVE_HOST_PROFILE=v100` (`production_gates.py`'s "production names its host" gate). As currently
+designed, computing any family's closure under `v100` will never match what was validated under
+`datasphere` — not because the code differs in any way relevant to evaluation, but because the
+profile *name* is hashed in directly. `gate_shared_evaluator_validated` is therefore structurally
+unable to read "current" for a production run, for any family, regardless of how many revalidation
+passes are run under the default profile.
+
+**Not fixed here** — Codex is tracing the exact design fault and owns `evaluator_identity.py`;
+this entry exists so the scope is on record: whatever the fix turns out to be, it invalidates and
+requires revalidating all seven families' entries, not just the two (`ctrl`, `ppg`) still pending.
+Not launching any further evaluator-family validation until that trace concludes, per Codex's
+explicit request.
