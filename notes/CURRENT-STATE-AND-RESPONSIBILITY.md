@@ -60,17 +60,20 @@ to do the real analysis.
   it succeeds, download results and compare against the T4 baseline
   (`cfg-offline-eval-s2-full-v50.yaml`'s own recorded numbers: train mean 89.47, eval-easy mean
   3.07 at 5 episodes/scene — this job runs the complete 10-episode grid, so compare like for like).
-- **CTRL memory-measurement config is built and ready but NOT YET SUBMITTED**:
-  `datasphere/native/cfg-ctrl-v100-memory-v130.yaml`, payload `payload-v134-ctrl.tgz` (already
-  built, includes the AppleDouble fix). Known, accepted risk: CTRL has no measured
-  `fixed_peak_gib` for the v100 profile (num_envs=64), so `family.py check-memory` passes it
-  through as "unmeasured" rather than actually confirming it fits g1.1's 48-96 GiB RAM — an OOM is
-  a possible, informative outcome of this job, not a bug if it happens.
-- **ibac_sni competence pilot: NOT YET BUILT.** Needs `NATIVE_HOST_PROFILE=v100` (restores
-  `procs=16`), `--beta 1e-4` (already the launcher default per A1's correction), and enough frames
-  to show a learning trend — explicitly NOT copied from another config's frame count; size it to
-  "long enough to show learning, not merely absence of explosion" (the OWNER item's own words).
-  25k frames already showed zero success events and is known to be too short.
+- **CTRL memory measurement and the ibac_sni competence pilot are BOTH BLOCKED on DataSphere,
+  by design, not by a bug.** Both need `NATIVE_HOST_PROFILE=v100` (CTRL's num_envs=64, ibac_sni's
+  procs=16) — and `job.sh` explicitly refuses that: "NATIVE_HOST_PROFILE=v100 names the separate
+  production host, but cloud tier g1.1 is DataSphere; g1.1 is diagnostic only." `ibac_sni`'s own
+  family comment says the same thing independently: "the production V100 renderer, throughput and
+  competence remain separate gates." DataSphere's g1.1 (8 vCPU, 48-96 GiB) is genuinely different
+  hardware from the project's actual production host (16-core, 113 GiB) — this isn't a
+  technicality to route around; the resource envelope really differs and a g1.1 measurement at
+  v100-profile settings would not validly represent the production host either way it came out.
+  `cfg-ctrl-v100-memory-v130.yaml` exists but should NOT be submitted as-is; it would be refused
+  at submission time (confirmed: `job.sh submit` refuses it with the exact message above), not
+  silently mismeasure anything. **Both items need the owner's actual separate production-host
+  access, not more DataSphere quota.** The renderer-parity probe (below) is the one V100 diagnostic
+  that doesn't need the v100 host-profile override and is genuinely completable on DataSphere.
 
 ## What's genuinely owner-only right now (from `production_gates.py`, re-run it for the live list)
 
