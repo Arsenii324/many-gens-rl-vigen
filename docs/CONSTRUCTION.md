@@ -205,9 +205,10 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C94](#c94) | greenmark cannot see the gitignored vendored tree, so an upstream-only edit reports "no pending changes" and skips the suite that holds the only instrument which would catch it; the test pinning this defect checks a string, not the pipeline | OURS | OPEN | — |
 | [C95](#c95) | a container-trained checkpoint may not be evaluated on this laptop: the same 60k snapshot reads train 131.5 in the container on BOTH CUDA and CPU and 13.85 here, so the device is exonerated and the **renderer** (`MUJOCO_GL=egl` vs macOS `glfw`) is the cause; the container figure also reproduces the run's own logged 135.71, validating `eval_grid.py`. Mechanism settled; recomputation of locally-produced numbers outstanding | OURS | OPEN | — |
 | [C96](#c96) | the shared-evaluator ledger's one global code revision was both too broad and too narrow: a training-only patch invalidated every family, while a change to a family evaluator's local runtime could leave its revision unchanged; the static family payload closure/config binding and row-level canonical scope/measurement revisions are now locally implemented and tested, but 0/7 families are remotely validated on the current closure | OURS + FALSE-CERTIFICATION | READY | a revalidation slot |
-| [C97](#c97) | `ctrl`'s production parameters (num_envs, ppo_epoch, cluster_len, myow_k, temperature) match the official repository's own flag defaults, not the paper's LaTeX appendix table, and nothing declares this a paper↔code conflict rather than an unexamined default | UNDECLARED | OPEN | your decision |
+| [C97](#c97) | `ctrl`'s production parameters (num_envs, ppo_epoch, cluster_len, myow_k, temperature) match the official repository's own flag defaults, not the paper's LaTeX appendix table; the conflict is declared and the released-code profile is the one-run operational default pending owner ratification | SOURCE CONFLICT | OPEN | your decision |
+| [C98](#c98) | `eval_grid.py`'s `evaluator_scope.frame_stack`/`image_size` came from `--frame-stack`/`--image-size` CLI defaults (3/100, dmc_gb's own geometry) that `run_probe.sh` never overrides, so every family but `rad`/`soda` recorded a false observation geometry regardless of what it actually ran at | FALSE-CERTIFICATION | RESOLVED | — |
 
-**25 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 34 RESOLVED · 97 total.**
+**25 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 35 RESOLVED · 98 total.**
 
 **15 items need a judgement that is yours** — [C1](#c1), [C2](#c2), [C4](#c4), [C16](#c16), [C29](#c29), [C30](#c30), [C43](#c43), [C45](#c45), [C48](#c48), [C54](#c54), [C57](#c57), [C58](#c58), [C60](#c60), [C84](#c84), [C97](#c97). The `READY` items need only a slot,
 and C21 is waiting on compute access. *(This line read "7 items — C1, C2, C3, C4, C16, C29, C30"
@@ -7652,7 +7653,7 @@ the emitted import manifest, and record the paired result. This needs a bounded 
 not an owner choice; the endpoint protocol remains blocked on those discharges.
 
 ### C97 — `ctrl`'s production parameters match the official code's own defaults, not the paper's table {#c97}
-**Class** UNDECLARED · **Status** OPEN
+**Class** SOURCE CONFLICT · OPERATIONAL DEFAULT SET · **Status** OPEN
 
 Surfaced by two independent external reviews (`notes/ai-review-17-external.md`,
 `notes/ai-review-18-external.md`), verified here against the live tree rather than taken on either
@@ -7691,26 +7692,81 @@ One implementation trap named by review 17 and confirmed in the flags above: the
 clusters" `k=3` corresponds to this code's `myow_k`, not its separate `k` (Sinkhorn sub-iterations,
 default 1). Do not turn both to 3.
 
-**Options**
-1. **Switch to the paper's table.** Reproduces the specific reported experiment; a live-code
-   change requiring a new pilot to verify it trains, and — per this session's Q47 sequencing
-   rule — not something to do reactively mid-freeze.
-2. **Keep the official code's defaults, declare the conflict.** Zero code/config change. This is
-   what the tree already does today, and `families.json`'s own 2026-09-03 note shows this project
-   already chose "move toward the released configuration" once before (`num_envs` 4→16) rather than
-   toward the paper. Consistent with that precedent.
-3. **Run both as declared variants** (`ctrl-code` / `ctrl-paper`), same shape as A35/A36's P/C
-   arms, deferred to the same final-frozen-wave discipline.
+**Options** *(operational default selected pending formal owner ratification; not all options are active in the current campaign)*
+1. **Switch to the paper's table.** This would target the specific reported experiment, but would
+   require a new pilot to verify that the changed profile trains. It is not a reactive mid-freeze
+   change and is not scheduled in the current one-run campaign.
+2. **Keep the official code's defaults and declare the conflict.** This is the selected operational
+   default. It leaves the released-code values in force, consistent with `families.json`'s prior
+   decision to move toward the released configuration (`num_envs` 4→16) rather than silently
+   replace it with paper-table values.
+3. **Run both as declared variants** (`ctrl-code` / `ctrl-paper`). This was the rationale for the
+   now-retired `cfg-ctrl-paper-profile-v175.yaml`; it is not scheduled under the current minimum
+   of one predeclared main run per algorithm.
 
-*My reading: (2) now — declare the conflict in `CLAIMS-LEDGER.md`, keep production as-is, because
-switching a live parameter set this late duplicates exactly the reactive-mid-freeze mistake this
-session already made once (the evaluator-identity re-validation loop) and because the tree's own
-prior CTRL decision already establishes "prefer official code" as this project's working default
-for this baseline specifically. (3) is the better long-run answer if compute allows it, in the same
-final wave as IDAAC-C2/PPG's frame-stack arms, not before. (1) alone, silently, is what both reviews
-agree not to do.*
+**Operational default (not formal owner ratification)** The official released-code profile remains
+CTRL's operational production default. The paper-vs-code disagreement is retained as a declared
+historical source conflict, but the paper profile is not an active plan for this one-run campaign.
 
-**Pinned by** unpinned — worth a test either way, same shape as C64's.
+**Formal owner action** C97 remains **OPEN** until the owner ratifies or changes this operational
+default. Setting and using the best default does not itself close the formal decision.
+
+**Effect** The unsubmitted `cfg-ctrl-paper-profile-v175.yaml` is retired. No paper-profile job is
+scheduled, and no production code or released-code parameters change. The paper values and the
+reasoning for the alternative remain recorded above for future work.
+
+### C98 — `evaluator_scope` recorded dmc_gb's geometry for every family, not each family's own {#c98}
+**Class** FALSE-CERTIFICATION · **Status** RESOLVED
+
+Surfaced tracing IDAAC-C2's implementation (Codex Q54), not by either external review.
+`scripts/eval_grid.py`'s `--frame-stack`/`--image-size` CLI flags default to `3`/`100` — `dmc_gb`'s
+own geometry, per the flags' own help text ("dmc_gb only; its own render size") — and
+`datasphere/native/run_probe.sh`, the only real production caller, **never overrides either flag**
+for any cell (`endpoint`, `curve`, or offline-snapshot invocation; confirmed by grep across the
+whole file). So every evaluated family's `evaluator_scope.frame_stack`/`image_size` was stamped
+with dmc_gb's numbers, not its own.
+
+**Verified against real retained data, not asserted from reading the code alone.** Two production
+pilot records (`bt1opt8j8ehdhpdsfnv0`, `bt1439jqhahgfbm2l9kb` — idaac and ppg's A35/A36 arms) both
+carry `evaluator_scope: {"frame_stack": 3, "image_size": 100, ...}`. `rlgen/protocol.py`'s own
+`OBSERVATION_GEOMETRY["idaac"] == OBSERVATION_GEOMETRY["ppg"] == (64, 1)` — both families actually
+run 64×64, one frame. Extending the same check: `ibac_sni`/`ctrl` are also `(64, 1)`, the RL-ViGen
+five and `alda` are `(84, 3)`/`(64, 3)` (frame_stack coincidentally correct at the default `3`,
+`image_size` still wrong at `100`), and `rad`/`soda` are the only baselines the default happens to
+match exactly (`(100, 3)`) — coincidence, not design.
+
+**Why nothing caught it.** [`test_observation_geometry.py`](#) checks `OBSERVATION_GEOMETRY`
+against the launcher scripts and exported patches — it never touches `eval_grid.py`'s CLI or a
+produced record.
+`tests/test_evaluator_scope_identity.py` unit-tests `canonical_evaluation_scope()` in isolation
+against synthetic dicts it constructs itself — it never exercises the real argv path from
+`run_probe.sh`. `tests/test_runner_eval_invocations.py`, which does pin real CLI invocations, never
+mentions `frame_stack`/`image_size` at all. Same shape as `door.xml` (CORRECTIONS #97): every piece
+individually correct in isolation, nothing checking the join.
+
+**Blast radius: the recorded metadata, not the measurement.** Each family's actual observation
+construction is driven by its own launcher (`RLVIGEN_IMAGE_SIZE`) or hardcoded wrapper geometry,
+never by these two `eval_grid.py` CLI flags — `dmc_gb` excepted, where `--image-size` is a genuine
+construction parameter for `run_scene_dmc_gb`. So the training and evaluation numbers already on
+disk are not corrupted by this; the `evaluator_scope` field describing what conditions produced
+them was false for every baseline except `rad`/`soda`.
+
+**Decision** Source `frame_stack`/`image_size` for `evaluator_scope` from
+`OBSERVATION_GEOMETRY[baseline]` — this project's own declared single source of truth for exactly
+this question — instead of the CLI passthrough (`d6a0975`). `--frame-stack`/`--image-size` keep
+their existing real-construction roles for `dmc_gb`/`rlvigen`/`alda` unchanged; only what gets
+recorded into `evaluator_scope` changes. Added an explicit early positivity check so garbage CLI
+input for either flag still fails before family setup, preserving
+`test_evaluator_scope_identity.py`'s existing "invalid CLI value fails fast" guarantee, which my
+first pass at this fix broke and the test itself caught.
+
+**Effect** `evaluator_scope.frame_stack`/`image_size` now reflect each baseline's real geometry.
+Full suite clean (0 failures) after the fix. Since `eval_grid.py` is a shared `CODE_MEMBER`, this
+moves every family's `evaluator_scope_revision` again — per Q47, not triggering a reactive
+re-validation; this is one more fix folded into what the eventual single final wave validates.
+**Not yet done, separate from this entry**: this also makes IDAAC-C2/PPG-C2's frame-stack pilots
+correctly recordable once `OBSERVATION_GEOMETRY` is updated for those baselines — that update
+itself is part of A65's still-open implementation trace, not this fix.
 
 ## Working agreement
 
