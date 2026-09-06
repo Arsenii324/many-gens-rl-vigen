@@ -168,7 +168,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C57](#c57) | Training diverged to NaN and the run continued for 70k frames | DESIGN-GAP | **OPEN** | your decision |
 | [C58](#c58) | Six of twelve leave no record of what they trained on | DESIGN-GAP | **OPEN** | your decision |
 | [C59](#c59) | The comparison's collector could not read the comparison's runs | DESIGN-GAP | RESOLVED | — |
-| [C60](#c60) | Checkpoint cadences exceed surviving budgets; two baselines never save | INHERITED | **OPEN** | your decision |
+| [C60](#c60) | Checkpoint cadences exceed surviving budgets; two baselines never save — **both options this entry named are now implemented, not just proposed**: option 1 (per-baseline cadence flags) shipped via `scripts/run_cell.sh`; option 2 (`ctrl`'s checkpoint import restored, `idaac` given a periodic save) is live in `families.json` (`ctrl`'s `--checkpoint_interval={save_every}`, `idaac`'s `--save_interval_frames`), tested (`tests/ -k "idaac and save"`, `-k "ctrl and checkpoint"`), and confirmed this session via `runnable/ctrl/train_ppo.py`'s own diff. Residual is formal ratification that fixing this (rather than accepting the asymmetry, option 3) was the right call | INHERITED | **OPEN** | your decision |
 | [C61](#c61) | `ibac_sni` categorical-era entropy inflates its Gaussian | INHERITED | MONITORED | — |
 | [C62](#c62) | Door's shaping ceiling is 250; it re-reads every return we hold | INHERITED | RESOLVED | — |
 | [C63](#c63) | C54's −0.887 distance↔return correlation is a signature of an under-trained policy | OURS | RESOLVED | `918c2d84` |
