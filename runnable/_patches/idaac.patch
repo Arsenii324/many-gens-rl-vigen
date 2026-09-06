@@ -35,7 +35,7 @@ index f45b892..a3b064b 100644
          order_loss_epoch /= num_policy_updates
          clf_loss_epoch /= num_policy_updates
 diff --git a/ppo_daac_idaac/arguments.py b/ppo_daac_idaac/arguments.py
-index 49436e8..89d42e7 100644
+index 49436e8..00e1708 100644
 --- a/ppo_daac_idaac/arguments.py
 +++ b/ppo_daac_idaac/arguments.py
 @@ -3,6 +3,15 @@ import torch
@@ -54,6 +54,42 @@ index 49436e8..89d42e7 100644
  # PPO arguments. 
  parser.add_argument(
      '--lr', 
+@@ -169,3 +178,35 @@ parser.add_argument(
+     type=int,
+     default=0,
+     help='start level id for sampling Procgen levels')
++
++# [Claude 2026-09-06, DECISION-SHEET A35/C97-adjacent] RL-ViGen ("robosuite:") path only. Default
++# 1 keeps this shared argparse module's defaults at their PRISTINE, upstream-preserving values --
++# same reason `--distribution_mode`/`--num_levels`/`--start_level` above stay Procgen-shaped: this
++# file also serves the original `env_name='coinrun'` Procgen benchmark, and this project tracks a
++# PRISTINE-percentage figure against exactly these defaults (`docs/RUNNABLE-ORIGINALS.md`). The
++# published IDAAC DMC continuous-control recipe's 3-frame stack is declared instead in
++# `datasphere/native/families.json`'s `idaac` constants -- this project's own established home for
++# RL-ViGen/Door-specific production values (`num_processes`/`num_steps`/`num_mini_batch` already
++# live there for the same reason). Not read on the Procgen path at all: `make_rlvigen_venv` is the
++# only consumer.
++parser.add_argument(
++    '--frame_stack',
++    type=int,
++    default=1,
++    help='RL-ViGen robosuite path only: number of frames to stack (channel-concat), 1 = off')
++
++# [Claude 2026-09-06, DECISION-SHEET A35] The published recipe's "linear rate decay over 1 million
++# environment steps" (same source as frame_stack above). Default off for the same PRISTINE-
++# preservation reason; `families.json` enables it explicitly for production. Scheduled on env
++# steps, not update index; see ppo_daac_idaac/utils.py::update_linear_schedule's own docstring for
++# why an update-indexed schedule would be wrong under this recipe's changed rollout geometry.
++parser.add_argument(
++    '--use_linear_lr_decay',
++    action='store_true',
++    default=False,
++    help='linearly decay lr to 0 over --lr_decay_env_steps environment steps')
++parser.add_argument(
++    '--lr_decay_env_steps',
++    type=int,
++    default=1_000_000,
++    help='horizon of --use_linear_lr_decay, in environment steps (paper value, not rescaled)')
 diff --git a/ppo_daac_idaac/distributions.py b/ppo_daac_idaac/distributions.py
 index e243ac4..8799f71 100644
 --- a/ppo_daac_idaac/distributions.py
@@ -120,10 +156,10 @@ index e243ac4..8799f71 100644
 +        action_logstd = self.logstd(zeros)
 +        return FixedNormal(action_mean, action_logstd.exp())
 diff --git a/ppo_daac_idaac/envs.py b/ppo_daac_idaac/envs.py
-index b1e0d77..89bfc61 100644
+index b1e0d77..3760e93 100644
 --- a/ppo_daac_idaac/envs.py
 +++ b/ppo_daac_idaac/envs.py
-@@ -6,6 +6,60 @@ from gym.spaces.box import Box
+@@ -6,23 +6,85 @@ from gym.spaces.box import Box
  from baselines.common.vec_env import VecEnvWrapper
  
  
@@ -182,9 +218,44 @@ index b1e0d77..89bfc61 100644
 +
 +
  class VecPyTorchProcgen(VecEnvWrapper):
-     def __init__(self, venv, device):
+-    def __init__(self, venv, device):
++    def __init__(self, venv, device, channels=3):
          """
-@@ -41,4 +95,85 @@ class VecPyTorchProcgen(VecEnvWrapper):
+         Environment wrapper that returns tensors (for obs and reward)
++
++        `channels` defaults to 3 (Procgen's own single RGB frame, and every existing call site
++        except the RL-ViGen adapter's). [Claude 2026-09-06, DECISION-SHEET A35] The RL-ViGen path
++        passes `3 * frame_stack` so a stacked observation declares its real channel count instead
++        of the previously-hardcoded 3 -- which, once frame_stack>1, silently mis-triggered the
++        transpose heuristic below (an already-correct channel-first (N,9,H,W) tensor would have
++        been transposed as though it were channel-last, corrupting rather than crashing).
+         """
+         super(VecPyTorchProcgen, self).__init__(venv)
+         self.device = device
++        self._channels = channels
+ 
+         self.observation_space = Box(
+             self.observation_space.low[0, 0, 0],
+-            self.observation_space.high[0, 0, 0], 
+-            [3, 64, 64],
++            self.observation_space.high[0, 0, 0],
++            [channels, 64, 64],
+             dtype=self.observation_space.dtype)
+ 
+     def reset(self):
+         obs = self.venv.reset()
+-        if obs.shape[1] != 3:
++        if obs.shape[1] != self._channels:
+             obs = obs.transpose(0, 3, 1, 2)
+         obs = torch.from_numpy(obs).float().to(self.device) / 255.
+         return obs
+@@ -36,9 +98,104 @@ class VecPyTorchProcgen(VecEnvWrapper):
+ 
+     def step_wait(self):
+         obs, reward, done, info = self.venv.step_wait()
+-        if obs.shape[1] != 3:
++        if obs.shape[1] != self._channels:
+             obs = obs.transpose(0, 3, 1, 2)
          obs = torch.from_numpy(obs).float().to(self.device) / 255.
          reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
          return obs, reward, done, info
@@ -192,7 +263,7 @@ index b1e0d77..89bfc61 100644
 \ No newline at end of file
 +        
 +
-+def make_rlvigen_venv(args, device, mode, num_envs, scene_id=0):
++def make_rlvigen_venv(args, device, mode, num_envs, scene_id=0, frame_stack=None):
 +    """RL-ViGen robosuite behind the SAME VecEnv stack ProcgenEnv gets.
 +
 +    baselines' own DummyVecEnv replaces ProcgenEnv; VecMonitor / VecNormalize(ob=False) /
@@ -207,14 +278,24 @@ index b1e0d77..89bfc61 100644
 +    rather than a literal so the OFFLINE grid can sweep scenes without touching idaac's own code
 +    -- this function is ours (63 of the 64 lines in this file are, over PRISTINE), so widening it
 +    is not a deviation from the authors, and the default keeps every existing call byte-identical.
++
++    `frame_stack` defaults to `getattr(args, "frame_stack", 1)` when omitted, so every existing
++    caller (including `tests/test_family_env_smoke.py`'s bare `SimpleNamespace`, which has no such
++    attribute) is byte-identical to before this parameter existed. [Claude 2026-09-06, DECISION-
++    SHEET A35] 1 reproduces the original single-frame Procgen-lineage observation exactly; >1
++    channel-concatenates that many frames, reaching the published IDAAC DMC continuous-control
++    recipe's 3-frame stack.
 +    """
 +    import os, sys
 +    from baselines.common.vec_env import DummyVecEnv, VecMonitor, VecNormalize
++    if frame_stack is None:
++        frame_stack = getattr(args, "frame_stack", 1)
 +    _rlv = os.environ["RLVIGEN_ROOT"]
 +    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
 +        if _p not in sys.path:
 +            sys.path.insert(0, _p)
 +    from robosuitevgb.utils import make_env as _robo_make_env
++    from robosuitevgb.secant.wrappers.frame_stack import FrameStack as _RoboFrameStack
 +
 +    class _RGBOnly(gym.ObservationWrapper):
 +        """{'rgb': (3,H,W) uint8} under a float64 Box RL-ViGen never fills -> a real uint8 Box.
@@ -250,7 +331,11 @@ index b1e0d77..89bfc61 100644
 +    def _one(i):
 +        base = _robo_make_env(task_name=task, seed=args.seed + i, scene_id=scene_id, mode=mode)
 +        bases.append(base)
-+        return EpisodeLevelSeed(_RGBOnly(base), args.seed + i,
++        env = _RGBOnly(base)
++        if frame_stack > 1:
++            # concat along dim 0: (3,H,W) -> (3*frame_stack,H,W), still channel-first.
++            env = _RoboFrameStack(env, k=frame_stack, mode="concat", stack_dim=0)
++        return EpisodeLevelSeed(env, args.seed + i,
 +                                getattr(args, "condition_seed", None), scene_id, num_envs)
 +
 +    venv = DummyVecEnv([(lambda i=i: _one(i)) for i in range(num_envs)])
@@ -269,7 +354,7 @@ index b1e0d77..89bfc61 100644
 +        raise RuntimeError("RL-ViGen vector members disagree about the requested regime")
 +    venv = VecMonitor(venv=venv, filename=None, keep_buf=100)
 +    venv = VecNormalize(venv=venv, ob=False)
-+    wrapped = VecPyTorchProcgen(venv, device)
++    wrapped = VecPyTorchProcgen(venv, device, channels=3 * frame_stack)
 +    wrapped._vigen_regime = dict(applied_regime)
 +    return wrapped
 diff --git a/ppo_daac_idaac/model.py b/ppo_daac_idaac/model.py
@@ -388,6 +473,35 @@ index 1586c5e..2993eaf 100644
      def after_update(self):
          self.obs[0].copy_(self.obs[-1])
          self.masks[0].copy_(self.masks[-1])
+diff --git a/ppo_daac_idaac/utils.py b/ppo_daac_idaac/utils.py
+index 38c6f4c..0773464 100644
+--- a/ppo_daac_idaac/utils.py
++++ b/ppo_daac_idaac/utils.py
+@@ -1,6 +1,24 @@
+ import glob
+ import os
+ 
++def update_linear_schedule(optimizer, current_env_steps, decay_env_steps, initial_lr):
++    """Linearly decay `optimizer`'s LR from `initial_lr` at step 0 to 0 at `decay_env_steps`,
++    clamped so it never goes negative once training runs past the decay horizon.
++
++    [Claude 2026-09-06, DECISION-SHEET A35] The published IDAAC DMC continuous-control recipe
++    states "linear rate decay over 1 million environment steps" (raileanu21a-supp.pdf SS E) --
++    this project's own Door budgets (245760 pilot, 600k production) are both under that horizon,
++    so retaining the literal 1,000,000 rather than rescaling it to the budget means the decay
++    never fully reaches zero within any run here; that is a deliberate reading (A35), not a bug.
++    Scheduled on ENV STEPS, not update index, unlike the classic ikostrikov
++    `update_linear_schedule(optimizer, epoch, total, lr)` this lineage otherwise carries -- that
++    one is update-indexed, which silently changes meaning if the rollout geometry changes, and
++    this project's C2 recipe does exactly that (num_processes 64->1, num_steps 256->2048).
++    """
++    lr = initial_lr * max(0.0, 1.0 - current_env_steps / decay_env_steps)
++    for param_group in optimizer.param_groups:
++        param_group['lr'] = lr
++
+ def init(module, weight_init, bias_init, gain=1):
+     weight_init(module.weight.data, gain=gain)
+     bias_init(module.bias.data)
 diff --git a/test.py b/test.py
 index d8953bb..c856faa 100644
 --- a/test.py
@@ -476,7 +590,7 @@ index d8953bb..c856faa 100644
 +    return eval_episode_rewards, eval_episode_successes
  
 diff --git a/train.py b/train.py
-index d7318e7..7404107 100644
+index d7318e7..79bd40e 100644
 --- a/train.py
 +++ b/train.py
 @@ -1,11 +1,19 @@
@@ -637,7 +751,27 @@ index d7318e7..7404107 100644
  
      episode_rewards = deque(maxlen=10)
      num_updates = int(
-@@ -159,8 +241,11 @@ def train(args):
+@@ -148,6 +230,19 @@ def train(args):
+     for j in range(num_updates):
+         actor_critic.train()
+ 
++        # [Claude 2026-09-06, DECISION-SHEET A35] Linear LR decay over environment steps, not
++        # update index -- see ppo_daac_idaac/utils.py::update_linear_schedule's own docstring.
++        # `getattr` across the three possible optimizer attribute names covers 'ppo' (`optimizer`)
++        # and 'idaac'/'daac' (`policy_optimizer`/`value_optimizer`/`clf_optimizer`) without an
++        # algo-specific branch.
++        if args.use_linear_lr_decay:
++            current_env_steps = j * args.num_processes * args.num_steps
++            for _opt_attr in ("optimizer", "policy_optimizer", "value_optimizer", "clf_optimizer"):
++                _opt = getattr(agent, _opt_attr, None)
++                if _opt is not None:
++                    utils.update_linear_schedule(
++                        _opt, current_env_steps, args.lr_decay_env_steps, args.lr)
++
+         for step in range(args.num_steps):
+             # Sample actions
+             with torch.no_grad():
+@@ -159,8 +254,11 @@ def train(args):
              obs, reward, done, infos = envs.step(action)
  
              if args.algo == 'idaac':
@@ -651,7 +785,7 @@ index d7318e7..7404107 100644
                      rollouts.levels[0].copy_(levels)
  
              for info in infos:
-@@ -191,24 +276,77 @@ def train(args):
+@@ -191,24 +289,77 @@ def train(args):
          if args.algo == 'idaac':
              rollouts.before_update()
              order_acc, order_loss, clf_loss, adv_loss, value_loss, \
@@ -737,7 +871,7 @@ index d7318e7..7404107 100644
  
          # Save Logs
          total_num_steps = (j + 1) * args.num_processes * args.num_steps
-@@ -225,12 +363,54 @@ def train(args):
+@@ -225,12 +376,54 @@ def train(args):
              logger.logkv("train/median_episode_reward", np.median(episode_rewards))
  
              # Log eval stats (on the full distribution of levels) 
