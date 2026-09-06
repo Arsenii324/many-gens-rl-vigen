@@ -12,10 +12,14 @@
 # (NATIVE_OFFLINE_EVAL_SECONDS 4558) then ERRORed on record delivery -- Codex mailbox Q37: an
 # eval-only job without RECORDS_OUT runs the whole (paid) evaluation and only fails afterward on
 # finalization. The real numbers survive inside that job's result.tgz (offline_eval_cuda.jsonl),
-# just not through a certified delivery path. Do not resubmit this config, or
-# cfg-renderer-parity-t4-current-v144.yaml, until Codex's fail-before-not-after fix lands and the
-# payload is rebuilt against it (see Q37's resolution in notes/ask-claude.md /
-# notes/claude-answers.md for current status).
+# just not through a certified delivery path. FIXED (Q37/Q38, commit history): job.sh now refuses
+# an eval-only/production submission that lacks a RECORDS_OUT binding with a matching `outputs`
+# entry, before any cloud spend. This config now declares one. Payload rebuilt to
+# payload-v145-rlvigen.tgz against the fixed tree.
+#
+# DO NOT RESUBMIT THIS CONFIG YET: it needs a 100-minute V100 reservation, and only 51.605 minutes
+# of the owner-authorized 240-minute g1.1 cap remain as of 2026-09-06 (`bash datasphere/native/job.sh
+# v100-budget status`). Wait for either more budget or a genuinely smaller-scope V100 probe.
 #
 # Payload rebuilt fresh (payload-v133.tgz, contract.py build-payload --families rlvigen) rather
 # than reusing v50's stale one -- the source tree has moved substantially since 2026-09-03 and a
@@ -38,6 +42,7 @@ cmd: >-
   NATIVE_V100_RESERVATION_MINUTES=100
   RLVIGEN_ARCHIVE=${RLVIGEN}
   OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  RECORDS_OUT=${RECORDS}
   OFFLINE_EVAL_DEVICES=cuda
   OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
   OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
@@ -47,11 +52,12 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v133.tgz: CODE
+  - datasphere/native/payload-v145-rlvigen.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
   - datasphere/native/s2-snapshot-100000.pt: SNAP
 outputs:
   - result.tgz: RESULT
+  - records.jsonl: RECORDS
 env:
   docker:
     image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
