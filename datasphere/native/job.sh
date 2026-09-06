@@ -417,13 +417,11 @@ submit)
   verify_container_image "$cfg"
   cells="$(grep -oE '\bCELLS=[^[:space:]]+' "$cfg" | head -1 | cut -d= -f2- || true)"
   tier="$(awk '/^cloud-instance-type:/{print $2; exit}' "$cfg")"
-  admission_tier="$tier"
-  if [[ "$tier" == "g1.1" ]]; then
-    # g1.1 is one V100 with 8 vCPU and 48--96 GiB RAM. family.py's admission table only has the
-    # 8-vCPU/32-GiB gt4i.1 shape, so use that as a conservative family RAM/tier floor here; this
-    # does not select NATIVE_HOST_PROFILE=v100, which names the separate owner host.
-    admission_tier="gt4i.1"
-  fi
+  # [Claude 2026-09-06] Was an inline g1.1->gt4i.1 mapping duplicated here and in
+  # scripts/audit_submission_configs.py's own simulation of this path -- the audit's copy was
+  # missing and flagged two configs that had already submitted and run for real. One home now:
+  # datasphere/native/family.py::admission_tier_for.
+  admission_tier="$(python3 datasphere/native/family.py admission-tier --tier "$tier")"
   validate_submission_host_binding "$cfg" "$tier"
   # Memory admission must see the argv the YAML will actually execute.  In particular, IBAC's
   # `--procs=16` creates sixteen independent EGL/MuJoCo worker processes; checking only the

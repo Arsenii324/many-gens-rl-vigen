@@ -1,5 +1,13 @@
 # Codex parallel pre-production plan — DRAFT FOR REVIEW
 
+> **STATUS NOTE, added 2026-09-06 by Claude, not by the plan's author.** Codex has since done
+> substantial work overlapping several of the work packages below (evaluator-identity binding,
+> the finalization/record-delivery contract) and then stopped at a usage-limit quota; its work was
+> reviewed and checkpointed into git (commit `45d2f61`). This document was NOT updated to reflect
+> what actually happened, so treat it as a historical statement of intent at the time it was
+> written, not a current status of the work packages listed. See
+> `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` for what's actually true now.
+
 > **Status:** proposed work while Claude continues in the same tree. Nothing in this document
 > authorizes a production run, source-freeze commit, merge or push. The plan is dependency-ordered;
 > “done” means executable evidence, not prose or a green static token search.
