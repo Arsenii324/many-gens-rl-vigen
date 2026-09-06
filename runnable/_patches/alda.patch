@@ -79,10 +79,10 @@ index e1e658d..ee35580 100644
  
 diff --git a/specs/train_alda_robosuite_door.yaml b/specs/train_alda_robosuite_door.yaml
 new file mode 100644
-index 0000000..e666a97
+index 0000000..d96fd27
 --- /dev/null
 +++ b/specs/train_alda_robosuite_door.yaml
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,58 @@
 +# RL-ViGen robosuite Door. A new spec is this repo's OWN configuration mechanism -- it ships one
 +# spec per task -- so this adds a file rather than modifying one. `domain_name: robosuite` selects
 +# the branch added to alda_trainer.initialize_env_dmc.
@@ -96,7 +96,17 @@ index 0000000..e666a97
 +    num_latents: 12
 +    values_per_latent: 12
 +    beta: 100
-+    n_train_steps: 500_000
++    # [Claude 2026-09-06, Q55/A64] Raised from ALDA's own source value (500_000) to this project's
++    # common production budget (`PRODUCTION_FRAMES`, audit_comparability_seam.py:84), which every
++    # other eleven baselines target. This was a genuine, unresolved 500k-vs-600k ambiguity (review
++    # 18; confirmed real, not a stale doc, via scripts/audit_executed_hyperparameters.py's own
++    # EXCLUDED_CLAIMS entry, which independently pins 500_000 as ALDA's prior deliberate value) --
++    # not a typo fix. Costs nothing extra: checkpoints are retained every 50_000 steps
++    # (`checkpoint_n_steps` below), so the run that used to stop at the 10th stamp now continues to
++    # the 12th, and BOTH are predeclared as reportable: the 500k stamp as ALDA's source-horizon
++    # result, the 600k endpoint as the common-budget result across all twelve. Neither is picked
++    # after seeing which looks better.
++    n_train_steps: 600_000
 +    # [Claude 2026-09-06, DECISION-SHEET A27] Declared at AldaConfig's own default (1.0) for the
 +    # exact reason documented below for checkpoint_n_steps/eval_n_steps: `parse_spec_overrides`
 +    # only accepts keys ALREADY PRESENT in the spec. Job bt1u05ella9ee52leo45 (ALDA-C, A27's

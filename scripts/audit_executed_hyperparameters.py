@@ -87,7 +87,8 @@ EXCLUDED: list[tuple[str, str, str]] = []
 EXCLUDED_CLAIMS = {
     ("alda", "num_steps", "2048"):
         "Retired `rlgen/` port setting. Production ALDA uses the runnable spec's "
-        "`n_train_steps: 500000`; the old `num_steps` claim is not its launch value.",
+        "`n_train_steps: 600000` (raised from its prior 500000 2026-09-06, Q55/A64, to match this "
+        "project's common production budget); the old `num_steps` claim is not its launch value.",
     ("ctrl", "ctrl_clusters", "32"):
         "Retired `rlgen/` port setting. Production CTRL is the released clone's "
         "`num_clusters=200`; repeated historical table rows are not live claims.",
