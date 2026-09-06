@@ -396,13 +396,25 @@ by this session's edits). I did not need to act on this — I only confirmed, wh
 **Claim**: instrument raw-sampled vs. executed/clipped action, fraction clipped, mean distance —
 across every Gaussian-policy continuous-action adaptation (PPG, IBAC-SNI, CTRL).
 
-**NOT VERIFIED WHETHER THIS ALREADY EXISTS, AND NOT IMPLEMENTED BY ME.** I did not check whether
-this instrumentation is already present anywhere in the evaluator (`scripts/eval_grid.py` has an
-`action_probe`/`_new_action_probe` mechanism I used unmodified while fixing `run_scene_idaac` for
-an unrelated reason — I noticed its name in passing but did not read what it actually records
-closely enough to say whether it satisfies this specific recommendation). This is a concrete,
-checkable gap in this response: I do not actually know the current state of this claim, only that
-I did not investigate or implement it. Flagged again in `04-blind-spots-and-unverified-claims.md`.
+**UPDATE — VERIFIED: this instrumentation already substantially exists.** Read
+`scripts/eval_provenance.py::ActionDiagnosticsAccumulator` directly. It tracks, per evaluated
+scene: `action_clip_rate_coordinate` (fraction of action *components* clipped — matches the
+review's "fraction of action components clipped"), `action_clip_rate_vector` (fraction of
+*actions* with at least one clipped component — matches "fraction of transitions with ≥1 clipped
+component"), and `action_raw_executed_l1` (an accumulated L1 distance between raw and executed
+action, retained as a raw sum alongside `actions_observed`/`coordinates_observed` rather than
+pre-divided — consistent with this project's general "report richly, aggregate post-hoc"
+convention, not a missing mean). It also honestly declares its own scope limit
+(`controller_clipping_observed: False`, `execution_boundary: "declared_action_space_before_
+controller"`) — it measures clipping at the declared action-space boundary, not any further
+downstream clipping robosuite's own controller might apply to derived torques, exactly the
+distinction review 17's own text draws. Confirmed wired into all six of `eval_grid.py`'s
+per-family scene-runner functions (`grep -n "_new_action_probe" scripts/eval_grid.py` — six call
+sites), not just idaac. **What it does not do**: retain the raw per-step action *values*
+themselves (only the aggregate statistics above), so "raw sampled action" and "executed/clipped
+action" as literal retained traces — as opposed to derived clip-rate/distance statistics — are not
+available post-hoc the way, say, per-episode returns are elsewhere in this project. That is a real,
+if narrower, gap than I originally reported this section as being.
 
 ---
 

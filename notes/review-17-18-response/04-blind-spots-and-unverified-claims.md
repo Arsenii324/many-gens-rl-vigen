@@ -153,11 +153,12 @@ review made each claim:
   for a 600k run") — accepted from the review and this project's pre-existing `CLAIMS-LEDGER.md`,
   arithmetic not independently redone.
 - The CTRL authors' claimed original JAX/Flax/Optax versions (≈0.2.17/0.3.4/0.0.9).
-- Whether the continuous-action clip-fraction/raw-vs-executed instrumentation both reviews
-  recommend already exists. `scripts/eval_grid.py` has an `action_probe`/`_new_action_probe`
-  object I used, unmodified, while fixing something unrelated (`run_scene_idaac`'s frame_stack
-  argument) — I saw its name, not its contents, and do not know whether it already satisfies this
-  recommendation or falls short of it.
+- ~~Whether the continuous-action clip-fraction/raw-vs-executed instrumentation both reviews
+  recommend already exists~~ — **checked after this document's first draft: it does, substantially**
+  (`scripts/eval_provenance.py::ActionDiagnosticsAccumulator`, wired into all six of
+  `eval_grid.py`'s per-family evaluators). See review 17's item-by-item file for the detail. The
+  one real remaining gap: raw per-step action values are not retained as literal traces, only the
+  derived clip-rate/L1-distance aggregates.
 - Whether `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md` (Codex/Luna's document) still contains the
   overbroad `EXACT SOURCE MATCH` verdicts for SVEA/CURL that review 18 names — I verified the
   underlying *code* fact those verdicts are wrong about, but never opened that specific document

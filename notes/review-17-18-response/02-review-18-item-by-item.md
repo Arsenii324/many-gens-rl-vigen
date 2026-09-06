@@ -177,10 +177,14 @@ Codex's open task.
 tanh-squashed ones; the clip-fraction/raw-vs-executed measurement approach is correct; generalizes
 the seam beyond CTRL to IDAAC and IBAC-SNI too.
 
-**Matches this project's pre-existing decision, unchanged by me.** Same gap as noted in review
-17's file: I did not verify whether the specific instrumentation (`action_probe` in
-`scripts/eval_grid.py`) actually implements the clip-fraction/mean-distance measurements this
-review (and review 17) describe, or something narrower. Genuinely unknown to me as I write this.
+**Matches this project's pre-existing decision, unchanged by me.** Update, resolving the gap
+originally named here: I read `scripts/eval_provenance.py::ActionDiagnosticsAccumulator` directly
+— see review 17's file's "Continuous-action clipping instrumentation" entry for the full detail.
+It substantially implements this recommendation (per-coordinate and per-transition clip rates, an
+L1 raw-vs-executed distance, wired into all six of `eval_grid.py`'s per-family evaluators, not
+just CTRL) and honestly declares what it does not cover (the robosuite controller's own downstream
+clipping, past the declared action-space boundary). It does not retain raw per-step action values
+as literal traces, only these aggregate statistics — a narrower, real gap than "genuinely unknown."
 
 ## Replay capacity language
 
