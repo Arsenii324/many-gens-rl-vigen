@@ -1,8 +1,9 @@
-# SUPERSEDED 2026-09-06: this job (bt1s807o5pbap8ir3knl) succeeded on the identity mechanism's own
-# terms, but CORRECTIONS #97 found evaluator_identity.py hashed ctrl's runtime-
-# regenerated door.xml as if it were source, which -- since evaluator_identity.py is a
-# shared CODE_MEMBER -- silently moved every family's code_revision, this job's entry
-# included. Replacement: the v170 wave.
+# [Claude 2026-09-06] Re-run of the v146-v152 wave after CORRECTIONS #97's real fix:
+# door.xml was hashed as ctrl's source but is a robosuite-regenerated runtime artifact,
+# removed from FAMILY_RUNTIME_MEMBERS["ctrl"]. Since evaluator_identity.py is itself a
+# shared CODE_MEMBER, that edit moved every family's code_revision, invalidating all seven
+# v146-v152 entries (including the six that were otherwise genuinely correct) -- not just
+# ctrl's. This wave revalidates all seven against the corrected, now-verified mechanism.
 # [Claude 2026-09-06] Schema-2 evaluator-identity revalidation wave (Codex mailbox Q42-Q45).
 # CORRECTIONS.md #94 found the schema-1 identity scheme baked NATIVE_HOST_PROFILE into every
 # family's evaluator revision even though the profile overrides are training-only, making no
@@ -13,21 +14,21 @@
 # matches what a local schema-2 recomputation expects, rather than relying on the (now harmless,
 # but better stated) default.
 #
-# Frame budget set to this family's own executed-endpoint rounding (10000, per Codex's own
+# Frame budget set to this family's own executed-endpoint rounding (10240, per Codex's own
 # audit against family.py's endpoint rule), not a uniform 10000 -- SAVE_EVERY_FRAMES matches so
 # the retained checkpoint lands exactly at the executed endpoint.
 #
-# LOCAL ARTIFACT ONLY as of this commit: payload-v149-alda.tgz built and passed both
-# `contract.py verify-payload --require-evaluator-identity` and `verify-evaluator-binding`
-# locally. NOT submitted -- the full seven-family wave has a stated 4,324.32 RUB / 21h worst-case
-# envelope needing separate owner spend authority (Q45); do not submit without it.
-name: vigen-alda-revalidate-v149
-desc: Schema-2 evaluator identity re-validation for alda, NATIVE_HOST_PROFILE=datasphere explicit.
+# payload-v170-ppg.tgz built and passed both `contract.py verify-payload
+# --require-evaluator-identity` and `verify-evaluator-binding` locally before submission.
+# Real cost for this wave is ~520 RUB / ~30 min in parallel, not the 4,324.32 RUB / 21h
+# worst-case ceiling quoted for the original wave (DECISION-SHEET A38 / claude-answers.md A54).
+name: vigen-ppg-revalidate-v170
+desc: Schema-2 evaluator identity re-validation for ppg, NATIVE_HOST_PROFILE=datasphere explicit.
 cmd: >-
   timeout --foreground 10800s env
   NATIVE_HOST_PROFILE=datasphere
-  CELLS=alda:1
-  FRAMES=10000
+  CELLS=ppg:1
+  FRAMES=10240
   TASK=Door
   SEED=1
   RLVIGEN_ARCHIVE=${RLVIGEN}
@@ -35,7 +36,7 @@ cmd: >-
   CUDA_ROOT=/usr/local/cuda
   EVAL_EVERY_FRAMES=2147483647
   EVAL_EPISODES=1
-  SAVE_EVERY_FRAMES=10000
+  SAVE_EVERY_FRAMES=10240
   ENDPOINT_EVAL=1
   ENDPOINT_EVAL_REGIMES=train,eval-easy
   ENDPOINT_EVAL_SCENES=0
@@ -44,7 +45,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v149-alda.tgz: CODE
+  - datasphere/native/payload-v170-ppg.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT
@@ -52,4 +53,4 @@ outputs:
 env:
   docker:
     image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
-cloud-instance-type: gt4i.1
+cloud-instance-type: gt4.1

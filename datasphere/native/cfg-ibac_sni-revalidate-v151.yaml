@@ -1,3 +1,8 @@
+# SUPERSEDED 2026-09-06: this job (bt169vanpqh4u7no7n8c) succeeded on the identity mechanism's own
+# terms, but CORRECTIONS #97 found evaluator_identity.py hashed ctrl's runtime-
+# regenerated door.xml as if it were source, which -- since evaluator_identity.py is a
+# shared CODE_MEMBER -- silently moved every family's code_revision, this job's entry
+# included. Replacement: the v170 wave.
 # [Claude 2026-09-06] Schema-2 evaluator-identity revalidation wave (Codex mailbox Q42-Q45).
 # CORRECTIONS.md #94 found the schema-1 identity scheme baked NATIVE_HOST_PROFILE into every
 # family's evaluator revision even though the profile overrides are training-only, making no

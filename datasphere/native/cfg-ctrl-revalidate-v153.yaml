@@ -1,3 +1,8 @@
+# SUPERSEDED 2026-09-06: this job (bt13haqsc8a4geh3lnou) succeeded on the identity mechanism's own
+# terms, but CORRECTIONS #97 found evaluator_identity.py hashed ctrl's runtime-
+# regenerated door.xml as if it were source, which -- since evaluator_identity.py is a
+# shared CODE_MEMBER -- silently moved every family's code_revision, this job's entry
+# included. Replacement: the v170 wave.
 # [Claude 2026-09-06] Re-run of cfg-ctrl-revalidate-v152.yaml (job bt1mg9ens1di936htjc7), which
 # succeeded operationally (clean training, 0 non-finite, physically paired) but reported an
 # evaluator_revision that matched no local computation -- not the current tree, not the exact

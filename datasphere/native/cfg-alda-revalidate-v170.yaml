@@ -1,8 +1,9 @@
-# SUPERSEDED 2026-09-06: this job (bt1s807o5pbap8ir3knl) succeeded on the identity mechanism's own
-# terms, but CORRECTIONS #97 found evaluator_identity.py hashed ctrl's runtime-
-# regenerated door.xml as if it were source, which -- since evaluator_identity.py is a
-# shared CODE_MEMBER -- silently moved every family's code_revision, this job's entry
-# included. Replacement: the v170 wave.
+# [Claude 2026-09-06] Re-run of the v146-v152 wave after CORRECTIONS #97's real fix:
+# door.xml was hashed as ctrl's source but is a robosuite-regenerated runtime artifact,
+# removed from FAMILY_RUNTIME_MEMBERS["ctrl"]. Since evaluator_identity.py is itself a
+# shared CODE_MEMBER, that edit moved every family's code_revision, invalidating all seven
+# v146-v152 entries (including the six that were otherwise genuinely correct) -- not just
+# ctrl's. This wave revalidates all seven against the corrected, now-verified mechanism.
 # [Claude 2026-09-06] Schema-2 evaluator-identity revalidation wave (Codex mailbox Q42-Q45).
 # CORRECTIONS.md #94 found the schema-1 identity scheme baked NATIVE_HOST_PROFILE into every
 # family's evaluator revision even though the profile overrides are training-only, making no
@@ -17,11 +18,11 @@
 # audit against family.py's endpoint rule), not a uniform 10000 -- SAVE_EVERY_FRAMES matches so
 # the retained checkpoint lands exactly at the executed endpoint.
 #
-# LOCAL ARTIFACT ONLY as of this commit: payload-v149-alda.tgz built and passed both
-# `contract.py verify-payload --require-evaluator-identity` and `verify-evaluator-binding`
-# locally. NOT submitted -- the full seven-family wave has a stated 4,324.32 RUB / 21h worst-case
-# envelope needing separate owner spend authority (Q45); do not submit without it.
-name: vigen-alda-revalidate-v149
+# payload-v170-alda.tgz built and passed both `contract.py verify-payload
+# --require-evaluator-identity` and `verify-evaluator-binding` locally before submission.
+# Real cost for this wave is ~520 RUB / ~30 min in parallel, not the 4,324.32 RUB / 21h
+# worst-case ceiling quoted for the original wave (DECISION-SHEET A38 / claude-answers.md A54).
+name: vigen-alda-revalidate-v170
 desc: Schema-2 evaluator identity re-validation for alda, NATIVE_HOST_PROFILE=datasphere explicit.
 cmd: >-
   timeout --foreground 10800s env
@@ -44,7 +45,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v149-alda.tgz: CODE
+  - datasphere/native/payload-v170-alda.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT
