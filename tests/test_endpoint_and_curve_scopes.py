@@ -61,13 +61,33 @@ def test_both_grids_label_their_rows():
 
 
 def test_every_record_context_carries_the_scope():
-    """A context that omits it emits rows indistinguishable from the other scope's."""
-    contexts = GRID.count('context = {"cell"')
-    labelled = GRID.count('"eval_scope": a.eval_scope')
-    assert contexts == labelled, (
-        f"{contexts} record contexts but only {labelled} carry eval_scope; the unlabelled ones "
-        "emit rows that cannot be told apart from the other scope's"
-    )
+    """A context that omits it emits rows indistinguishable from the other scope's.
+
+    [Claude 2026-09-06] Was a blind count-equality (`GRID.count(...) == GRID.count(...)`), which
+    broke the moment a second, unrelated `"eval_scope": a.eval_scope` occurrence appeared anywhere
+    in the file -- and one did: `canonical_evaluation_scope({...})`'s own input dict (added for the
+    evaluator-identity scope-resolution work) legitimately contains that exact substring without
+    being a record context at all. The undercount was in the TEST's detection, not the code: all
+    four actual `context = {"cell"...}` sites already carry the label on the very next line. Fixed
+    to check each site individually, at a bounded distance, so an unrelated occurrence elsewhere in
+    the file can no longer confound the count either direction.
+    """
+    marker = 'context = {"cell"'
+    positions = []
+    start = 0
+    while True:
+        i = GRID.find(marker, start)
+        if i == -1:
+            break
+        positions.append(i)
+        start = i + len(marker)
+    assert positions, "no record contexts found at all -- the marker itself may have moved"
+    for i in positions:
+        window = GRID[i:i + 400]
+        assert '"eval_scope": a.eval_scope' in window, (
+            f"record context at offset {i} does not carry eval_scope within 400 chars; it would "
+            "emit rows that cannot be told apart from the other scope's"
+        )
 
 
 def test_the_endpoint_does_not_inherit_the_curves_depth_or_grid():
