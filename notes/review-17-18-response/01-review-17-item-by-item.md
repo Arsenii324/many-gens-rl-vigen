@@ -324,13 +324,32 @@ against a running job's actual configuration this session.
 100→84 vs native-84 comparability gap is real but should not be "fixed" by forcing native 84,
 since that would make RAD's own random crop degenerate.
 
-**TAKEN ON TRUST, ENTIRELY.** I did not read `runnable/dmc_gb`'s RAD code, the launcher, or any
-config this session to confirm the 100→84 render/crop claim, the "based on the official
-implementation" provenance claim, or that "older internal descriptions" are genuinely superseded
-rather than still partially accurate. This project's `CLAIMS-LEDGER.md` independently states RAD
-uses `random_shift, not the paper's crop/translate; n-step 3 vs 1` — which is not obviously the
-same claim as the review's "renders 100, crops to 84" framing, and I did not reconcile the two.
-This is one of the more significant gaps in this response — RAD is one of the four baselines this
+**UPDATE — VERIFIED, and traced the full runtime call path, not just a config flag.**
+`runnable/dmc_gb/src/arguments.py:91-93`: `args.algorithm in {'rad','curl','pad','soda'}` sets
+`image_size=100, image_crop_size=84`. `runnable/dmc_gb/src/algorithms/rad.py`'s `RAD` class body
+is **empty** — pure `SAC` inheritance, no overrides — so the crop is not applied inside the
+algorithm at all; it happens in the replay buffer's generic `sample()`
+(`runnable/dmc_gb/src/utils.py:187-190`): `obs = augmentations.random_crop(obs)` on every
+sampling call, fresh each time, using `torch.LongTensor(n).random_(0, crop_max)` (genuinely
+random, not a fixed or center crop). `augmentations.py::random_crop`'s own guard —
+`if crop_max <= 0: return x` unchanged — is the exact code-level fact behind review 17's warning
+that forcing RAD to native 84 would make its own crop degenerate into a no-op: at
+`image_size==image_crop_size==84`, `crop_max` is exactly 0. This is a more complete verification
+than either review attempted — neither traced that RAD's own class is empty and the crop lives in
+the shared replay buffer, not the algorithm file a reader would naturally check first.
+
+**The `CLAIMS-LEDGER.md` "random_shift" phrasing is now reconciled, not left as an open
+discrepancy**: `augmentations.py` defines both `random_shift` (line 105, pad-then-crop, used by
+`drq`/`svea`'s own samplers) and `random_crop` (line 112, RAD's actual mechanism) as genuinely
+separate functions. `CLAIMS-LEDGER.md`'s RAD row citing "random_shift" appears to be describing
+the wrong function name for RAD specifically — RAD's own path (the generic `sample()`) calls
+`random_crop`, not `random_shift`. This is a small, independent finding in this project's own
+documentation, found only by tracing the actual call graph rather than trusting either the
+review's or the ledger's description on its own.
+
+I did not read the launcher or any job config this session, and did not separately verify the
+"based on the official implementation" provenance claim or the n-step-3-vs-1 claim — this is one
+of the more significant remaining gaps in this response — RAD is one of the four baselines this
 session did the least independent checking on, precisely because both reviews rate it "already in
 reasonably strong shape" and I allocated my attention to the baselines flagged as urgent instead.
 

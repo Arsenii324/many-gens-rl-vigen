@@ -136,8 +136,27 @@ not, for either C98 or the IDAAC-C2 recipe.
 Collected here from the item-by-item files for scanability; see those files for exactly which
 review made each claim:
 
-- RAD's and SODA's entire treatment — DMCGB provenance claims, the 100→84 render/crop mechanism,
-  RAD's n-step value, SODA's paper-vs-code auxiliary-LR ambiguity. Zero code reads this session.
+- ~~RAD's 100→84 render/crop mechanism~~ — **checked after this document's first draft: verified,
+  with a real CLAIMS-LEDGER bug found and fixed as a result.** `runnable/dmc_gb/src/
+  arguments.py:91-93` sets `image_size=100, image_crop_size=84` for
+  `args.algorithm in {'rad','curl','pad','soda'}`. `runnable/dmc_gb/src/algorithms/rad.py`'s `RAD`
+  class is completely empty (`class RAD(SAC): def __init__(self, obs_shape, action_shape, args):
+  super().__init__(obs_shape, action_shape, args)`) — pure `SAC` inheritance, no crop code of its
+  own. The actual crop lives in the shared replay buffer's generic `sample()`
+  (`runnable/dmc_gb/src/utils.py:187-190`, calling `augmentations.random_crop`), so RAD, CURL,
+  PAD, and SODA all get it "for free" from the same code path, not from anything RAD-specific.
+  `augmentations.py::random_crop` (line 112) uses genuine `torch.LongTensor(n).random_(0,
+  crop_max)` randomness, with `if crop_max <= 0: return x` — a real degenerate-to-no-op guard at
+  native 84, exactly the failure mode review 17 warned forcing RAD to native resolution would
+  hit. Found in the process: `notes/CLAIMS-LEDGER.md`'s `rad` row said the augmentation was
+  `random_shift` — wrong; `random_shift` is a separate function (line 105) used by `drq`/`svea`'s
+  own samplers, not by RAD's path. Fixed the row with a dated correction note; left "not the
+  paper's crop/translate" unchanged since that specific comparison was not independently
+  re-verified. Full trace in `01-review-17-item-by-item.md`'s RAD section.
+- RAD's DMCGB-provenance claim ("based on the official implementation") and its n-step value, and
+  SODA's own paper-vs-code auxiliary-LR ambiguity and its train-mode guard — **still zero
+  independent checks this session.** Only RAD's crop mechanism (above) was traced; SODA itself has
+  had no code read at all beyond confirming it shares RAD's crop-size branch in `arguments.py`.
   This is not because I judged them unimportant; both reviews rate these baselines as already
   strong, and I allocated attention to the baselines flagged as urgent instead. That allocation
   might be wrong — "already strong per two static reviews" is not the same as "verified."
