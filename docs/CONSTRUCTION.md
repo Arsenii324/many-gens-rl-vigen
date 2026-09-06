@@ -7698,6 +7698,22 @@ arXiv TeX source directly) gives a different table for the same experiment: `num
 `temperature=0.3`, `lr_rl=5e-4`, `lr_repr=5e-4` (vs. the code's `lr_ctrl=1e-4`, a 5x difference).
 `num_clusters=200` and `n_steps=256` agree in both.
 
+**Independently verified 2026-09-06, directly against the primary source, not taken from either
+review's summary**: `ext/papers-sorted/CTRL-Cross-Trajectory-Representation-Learning/latex-source/
+appendix.tex`, `\label{tab:appendix_experiment_params}`, read in full. Every number both reviews
+cite is exactly correct: γ=.999, λ=.95, `n_timesteps`=256, `n_epochs`=1 (RL and representation
+learning), `n_samples`=8192, entropy=.01, clip=.2, num_envs=32, frame_stack=1, `E`(clusters)=200,
+`k`(nearest neighbours)=3, `T`(clustering timesteps)=2, `β`(temperature)=.3. **One real nuance
+neither review's phrasing preserves**: the paper's table has a single row, "Learning rate —
+Learning rate for RL and representation learning — 5e-4," not two independently-specified
+parameters (`lr_rl`, `lr_repr`) that happen to coincide at 5e-4. Grepped the same LaTeX source
+(`appendix.tex`, `results.tex`, `algorithm.tex`) for any second, representation-specific rate —
+none exists. This does not change the actionable recommendation (both this project's `lr` and
+`lr_ctrl` would need to be 5e-4 to match the paper), but the paper's own design does not treat PPO
+and representation learning as tunable at different rates the way this project's code (and both
+reviews' restated table) does — worth stating precisely rather than importing the reviews'
+two-parameter framing uncorrected.
+
 **This is a genuine paper-vs-official-code conflict, not an unexamined default that merely needs
 updating.** Review 17's stance: use the paper's table, because reproducing the reported CTRL
 experiment is the goal. Review 18's stance, reached from the identical evidence: do *not* switch
