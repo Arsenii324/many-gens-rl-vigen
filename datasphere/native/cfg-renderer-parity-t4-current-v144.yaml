@@ -1,0 +1,40 @@
+# [Claude 2026-09-06] C95 corrected R_A: the current-evaluator T4 measurement the renderer-parity
+# probe actually needs. Codex caught this (mailbox Q33, verified independently before acting):
+# cfg-renderer-parity-v100-v128.yaml (job bt1v3lo9ckk2iukvtjnu) uses payload-v133.tgz, while the
+# T4 number it was going to be compared against (cfg-offline-eval-s2-full-v50.yaml's own
+# drqv2 train 480.6 / eval-easy 1.44) used payload-v50.tgz -- a DIFFERENT sha256, and
+# notes/RESULTS-VALIDITY.md:34-39 already recorded exactly this hazard for the migration case
+# ("that comparison would put a post-fix... number against a pre-fix baseline -- so a mismatch
+# would not isolate the renderer"). Comparing the V100 job against v50's number would confound
+# "evaluator revision changed" with "platform changed", the exact confound the probe exists to
+# rule out.
+#
+# This config is byte-identical to cfg-renderer-parity-v100-v128.yaml except tier (gt4.1, not
+# g1.1 -- no V100 reservation needed, doesn't touch the V100 budget) and no
+# NATIVE_V100_RESERVATION_MINUTES. Same payload-v133.tgz, same checkpoint, same RL-ViGen archive,
+# same grid. Once this and the already-running V100 job both report, R_A (here) vs R_B (V100) is a
+# genuine platform-only comparison.
+name: vigen-native-renderer-parity-t4-current-v144
+desc: C95 corrected R_A -- current-evaluator T4 measurement, same payload as the V100 probe, to compare against it properly.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy,eval-medium,eval-hard
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=10
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v133.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1
