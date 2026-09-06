@@ -585,6 +585,11 @@ def normalize(result_root: Path, eval_regime: str = "eval-easy") -> list[dict]:
         if manifest_path.is_file() else None,
         "finalization_schema": manifest.get("finalization_schema"),
         "execution_kind": manifest.get("execution_kind"),
+        # Training host and the rendered argv/environment are provenance, not evaluator identity.
+        # Keep them on normalized training rows as well as on offline rows, so the lightweight
+        # records bundle can distinguish checkpoints produced by different host profiles.
+        "host_profile": manifest.get("host_profile"),
+        "effective_configs": manifest.get("effective_configs"),
         "payload_sha256": manifest.get("payload_sha256"),
         "asset_sha256": manifest.get("asset_sha256"),
         "container_image": manifest.get("container_image"),

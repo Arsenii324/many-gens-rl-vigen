@@ -71,13 +71,26 @@ def test_ibac_training_driver_is_not_an_offline_evaluator_dependency(monkeypatch
     assert provenance.evaluator_family_code_revision(ROOT, "ibac_sni") == before
 
 
+def test_ppg_imported_training_module_is_in_the_evaluator_closure(monkeypatch):
+    """PPG's package init imports train.py, so that module is evaluator-reachable."""
+    before = {family: provenance.evaluator_family_code_revision(ROOT, family)
+              for family in provenance.EVALUATOR_FAMILIES}
+    _mutate_bytes(monkeypatch, ROOT / "runnable/ppg/phasic_policy_gradient/train.py")
+    after = {family: provenance.evaluator_family_code_revision(ROOT, family)
+             for family in provenance.EVALUATOR_FAMILIES}
+
+    assert after["ppg"] != before["ppg"]
+    assert all(after[family] == before[family]
+               for family in provenance.EVALUATOR_FAMILIES if family != "ppg")
+
+
 def test_unknown_family_is_rejected():
     with pytest.raises(ValueError, match="unknown evaluator family"):
         provenance.evaluator_family_code_revision(ROOT, "not-a-family")
 
 
-def test_one_family_descriptor_edit_moves_only_its_config_identity(tmp_path):
-    """A CTRL host/model edit must not make an already-validated PPG evaluator stale."""
+def test_training_descriptor_edit_does_not_change_evaluator_identity(tmp_path):
+    """families.json is training/provenance input, not fixed-checkpoint evaluator identity."""
     descriptor = ROOT / "datasphere/native/families.json"
     target = tmp_path / "datasphere/native/families.json"
     target.parent.mkdir(parents=True)
@@ -91,6 +104,4 @@ def test_one_family_descriptor_edit_moves_only_its_config_identity(tmp_path):
     after = {family: provenance.evaluator_family_config_revision(tmp_path, family)
              for family in provenance.EVALUATOR_FAMILIES}
 
-    assert after["ctrl"] != before["ctrl"]
-    assert all(after[family] == before[family]
-               for family in provenance.EVALUATOR_FAMILIES if family != "ctrl")
+    assert after == before

@@ -17,8 +17,9 @@ from pathlib import Path
 # [Split 2026-09-05.] The revision used to be ONE hash over code and configuration together. That
 # was right about under-sensitivity -- a descriptor edit really can change what is measured -- and
 # wrong about consequences: every `families.json` edit invalidated every family already validated.
-# Two stamps instead: configuration changes move `evaluator_config_revision` and the combined
-# `evaluator_revision`, but leave `evaluator_code_revision` alone.
+# Two stamps instead: evaluator source changes move `evaluator_code_revision`, while the resolved
+# measurement scope moves `evaluator_scope_revision` and `evaluator_measurement_revision`. The
+# retained config-revision API is a schema/semantics token, not a hash of training configuration.
 #
 # `CODE_MEMBERS` remains the identity of the COMMON evaluator harness. It is deliberately not a
 # claim that these files are all the code which computes a row: each family has an additional
@@ -38,8 +39,10 @@ CONFIG_MEMBERS = ("datasphere/native/families.json",)
 REVISION_MEMBERS = CODE_MEMBERS + CONFIG_MEMBERS
 
 # Deliberately NOT hashed: `run_probe.sh` is uploaded separately, so hashing the payload's copy
-# would stamp an identity the run did not have. Checkpoint bytes and the container digest are
-# separate provenance facts carried per record. This member set is the code/configuration term.
+# would stamp an identity the run did not have. Checkpoint bytes, host profile and effective
+# training configuration are separate provenance facts carried per record. `CONFIG_MEMBERS` and
+# `REVISION_MEMBERS` remain exported for payload/provenance coverage compatibility; they are not
+# the source of family evaluator configuration identity.
 #
 # The seven paths actually selected by eval_grid.  These are source roots rather than an import
 # graph: pickle globals, ALDA's factory and worker deserialisation add dynamic edges.  The
@@ -88,6 +91,9 @@ FAMILY_RUNTIME_MEMBERS = {
     ),
     "ppg": (
         "runnable/ppg/phasic_policy_gradient",
+        # `phasic_policy_gradient/__init__.py` imports train.py unconditionally. The generic
+        # training-driver exclusion below therefore has a family-specific evaluator exception.
+        "runnable/ppg/phasic_policy_gradient/train.py",
         "RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb",
         "RL-ViGen-upstream/envs/robosuiteVGB/cfg/robo_config.yaml",
     ),
@@ -113,7 +119,14 @@ FAMILY_RUNTIME_MEMBERS = {
 }
 
 _TRAINING_ONLY_RUNTIME_BASENAMES = {"train.py", "train_ppo.py", "evaluate.py", "evaluate_ppo.py"}
-IDENTITY_SCHEMA = 1
+IDENTITY_SCHEMA = 2
+
+# `families.json` remains a payload/training descriptor and is intentionally not an evaluator
+# configuration hash input. The actual measurement configuration is the canonical scope stamped
+# on every eval row; static evaluator-specific YAML/XML/config modules are already in each family's
+# runtime closure. This token makes the retained config-revision API explicit without pretending
+# that every training descriptor edit changes fixed-checkpoint evaluation.
+EVALUATOR_CONFIG_SEMANTICS = "scope-attested-static-runtime-config-v1"
 
 # A payload binds the static evaluator closure.  A row additionally binds the resolved measurement
 # scope: endpoint versus curve, the exact regimes/scenes/sample sizes, device, and the policy rule.
@@ -313,6 +326,10 @@ def sha256_file(path: Path) -> str:
 
 
 def _digest_of(members, root: Path) -> str:
+    # Validate the selector at the identity boundary, but never mix training-host choice into the
+    # evaluator byte digest. An unknown profile remains an input error without making known
+    # datasphere/v100 profiles different evaluator implementations.
+    _selected_host_profile(root)
     digest = hashlib.sha256()
     for relative in members:
         path = root / relative
@@ -320,14 +337,13 @@ def _digest_of(members, root: Path) -> str:
             raise RuntimeError(f"cannot stamp evaluator revision: missing {relative}")
         digest.update(relative.encode("utf-8") + b"\0")
         digest.update(path.read_bytes())
-    digest.update(b"NATIVE_HOST_PROFILE\0" + _selected_host_profile(root).encode("utf-8"))
     return digest.hexdigest()
 
 
 def evaluator_revision(root: Path, family: str | None = None) -> str:
     if family is not None:
         return evaluator_family_revision(root, family)
-    return _digest_of(REVISION_MEMBERS, root)
+    return _combine_revisions(evaluator_code_revision(root), evaluator_config_revision(root))
 
 
 def evaluator_code_revision(root: Path, family: str | None = None) -> str:
@@ -339,7 +355,15 @@ def evaluator_code_revision(root: Path, family: str | None = None) -> str:
 def evaluator_config_revision(root: Path, family: str | None = None) -> str:
     if family is not None:
         return evaluator_family_config_revision(root, family)
-    return _digest_of(CONFIG_MEMBERS, root)
+    _selected_host_profile(root)
+    payload = {
+        "identity_schema": IDENTITY_SCHEMA,
+        "semantics": EVALUATOR_CONFIG_SEMANTICS,
+        "families": list(EVALUATOR_FAMILIES),
+        "scope_fields": list(SCOPE_FIELDS),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def evaluator_family_code_revision(root: Path, family: str) -> str:
@@ -348,19 +372,24 @@ def evaluator_family_code_revision(root: Path, family: str) -> str:
 
 def evaluator_family_config_revision(root: Path, family: str) -> str:
     _validate_family(family)
-    try:
-        descriptors = json.loads((root / "datasphere/native/families.json").read_text())
-    except (OSError, ValueError) as error:
-        raise RuntimeError(f"cannot read evaluator descriptor: {error}") from error
-    payload = {"family": family, "descriptor": descriptors[family],
-               "host_profile": _selected_host_profile(root)}
+    _selected_host_profile(root)
+    payload = {
+        "identity_schema": IDENTITY_SCHEMA,
+        "semantics": EVALUATOR_CONFIG_SEMANTICS,
+        "family": family,
+        "scope_fields": list(SCOPE_FIELDS),
+    }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def evaluator_family_revision(root: Path, family: str) -> str:
-    payload = evaluator_family_code_revision(root, family) + "\0" + \
-        evaluator_family_config_revision(root, family)
+    return _combine_revisions(evaluator_family_code_revision(root, family),
+                              evaluator_family_config_revision(root, family))
+
+
+def _combine_revisions(code_revision: str, config_revision: str) -> str:
+    payload = str(code_revision) + "\0" + str(config_revision)
     return hashlib.sha256(payload.encode("ascii")).hexdigest()
 
 

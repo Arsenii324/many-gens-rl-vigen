@@ -27,15 +27,15 @@ def _prov():
     return module
 
 
-def test_the_two_member_sets_partition_the_whole():
+def test_runtime_members_are_distinct_from_legacy_descriptor_provenance():
     prov = _prov()
-    assert set(prov.CODE_MEMBERS) | set(prov.CONFIG_MEMBERS) == set(prov.REVISION_MEMBERS)
+    assert set(prov.CODE_MEMBERS).issubset(set(prov.REVISION_MEMBERS))
     assert not (set(prov.CODE_MEMBERS) & set(prov.CONFIG_MEMBERS)), "a member is in both sets"
-    assert prov.CONFIG_MEMBERS, "configuration must have at least one member or the split is a no-op"
+    assert prov.CONFIG_MEMBERS, "the descriptor remains available for training provenance"
 
 
-def test_a_config_edit_moves_config_and_combined_but_not_code():
-    """Executed against the real file, then restored -- the property, not the intention."""
+def test_a_training_descriptor_edit_moves_neither_evaluator_identity_revision():
+    """Executed against the real file, then restored -- descriptor edits are not eval identity."""
     prov = _prov()
     families = ROOT / "datasphere" / "native" / "families.json"
     if not families.is_file():                                     # pragma: no cover
@@ -51,12 +51,7 @@ def test_a_config_edit_moves_config_and_combined_but_not_code():
                  prov.evaluator_revision(ROOT))
     finally:
         families.write_text(original)
-    assert after[0] == before[0], (
-        "a families.json edit changed the CODE revision, so descriptor edits still void code "
-        "validations and the split has bought nothing"
-    )
-    assert after[1] != before[1], "a families.json edit must move the CONFIG revision"
-    assert after[2] != before[2], "the combined revision must still notice a configuration change"
+    assert after == before
 
 
 def test_records_carry_all_three():

@@ -302,3 +302,20 @@ def test_real_ledger_reflects_a_real_gap_right_now():
         pytest.skip("all seven are validated on the current hash -- the gap this test checks for "
                     "is closed, which is good news, not a test failure")
     assert verdict == gates.OWNER
+
+
+def test_gate_identity_inputs_are_profile_invariant(monkeypatch):
+    """The gate's three live identity calls must not turn training profile into eval identity."""
+    gates = _gates()
+    values = []
+    for profile in ("datasphere", "v100"):
+        monkeypatch.setenv("NATIVE_HOST_PROFILE", profile)
+        values.append({
+            family: (
+                gates.evaluator_family_code_revision(gates.ROOT, family),
+                gates.evaluator_family_config_revision(gates.ROOT, family),
+                gates.evaluator_family_revision(gates.ROOT, family),
+            )
+            for family in gates.EVALUATOR_FAMILIES
+        })
+    assert values[0] == values[1]

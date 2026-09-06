@@ -73,7 +73,7 @@ def _temporary_identity_root(tmp_path, family="idaac"):
 
 def test_payload_manifest_carries_exact_family_identity(idaac_payload):
     manifest = _manifest(idaac_payload)
-    assert manifest["evaluator_identity_schema"] == 1
+    assert manifest["evaluator_identity_schema"] == 2
     binding = manifest["evaluator_bindings"]["idaac"]
     assert set(binding) >= {
         "code_revision", "config_revision", "revision", "runtime_members",
@@ -137,16 +137,14 @@ def test_current_contract_does_not_rescue_stale_evaluator_binding(idaac_payload,
     assert "revision" in result.stderr.lower()
 
 
-def test_descriptor_change_is_refused_by_config_revision(idaac_payload, tmp_path):
+def test_evaluator_runtime_config_change_is_refused(idaac_payload, tmp_path):
     from datasphere.native import evaluator_identity
 
     manifest = _manifest(idaac_payload)
     source = _temporary_identity_root(tmp_path)
-    target = source / "datasphere/native/families.json"
-    data = json.loads(target.read_text())
-    data["idaac"]["_identity_test"] = "changed"
-    target.write_text(json.dumps(data, indent=2) + "\n")
-    with pytest.raises(ValueError, match="config_revision"):
+    target = source / "RL-ViGen-upstream/envs/robosuiteVGB/cfg/robo_config.yaml"
+    target.write_text(target.read_text() + "\n# evaluator runtime config mutation\n")
+    with pytest.raises(ValueError, match="runtime member|code_revision|revision"):
         evaluator_identity.verify_bindings(source, manifest, ("idaac",))
 
 

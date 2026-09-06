@@ -449,6 +449,34 @@ def test_normalized_rows_carry_execution_kind_from_the_pre_normalization_manifes
     assert rows[0]["native"]["run_provenance"]["execution_kind"] == "training_production"
 
 
+def test_normalized_training_rows_carry_host_profile_and_effective_configs(tmp_path):
+    from datasphere.native.normalize_curves import normalize
+
+    manifest = _manifest("training_production")
+    manifest.update({
+        "host_profile": "v100",
+        "effective_configs": {
+            "rlvigen-s1": {
+                "argv": ["runnable/_launch/rlvigen.sh", "drqv2", "Door"],
+                "runner_environment": {"NATIVE_HOST_PROFILE": "v100"},
+            }
+        },
+    })
+    (tmp_path / "run_manifest.json").write_text(json.dumps(manifest) + "\n")
+    cell = tmp_path / "cells" / "rlvigen-s1"
+    cell.mkdir(parents=True)
+    (cell / "retained.json").write_text(json.dumps({"family": "rlvigen"}))
+    (cell / "eval.csv").write_text(
+        "frame,episode_reward,success_rate\n100,2.5,0.5\n"
+    )
+
+    rows = normalize(tmp_path)
+    provenance = rows[0]["native"]["run_provenance"]
+
+    assert provenance["host_profile"] == "v100"
+    assert provenance["effective_configs"] == manifest["effective_configs"]
+
+
 def test_summary_refuses_failed_production_delivery_by_default_but_allows_diagnostic_view(tmp_path):
     manifest = _manifest("training_production")
     manifest["record_delivery"] = "failed"

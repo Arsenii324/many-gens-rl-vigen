@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from scripts.eval_provenance import (ActionDiagnosticsAccumulator, action_diagnostics,
-                                     completed_episode_diagnostics, evaluator_revision,
-                                     placement_hash)
+                                     completed_episode_diagnostics, evaluator_code_revision,
+                                     evaluator_config_revision, evaluator_revision, placement_hash)
 
 
 class _Space:
@@ -53,15 +53,17 @@ def test_evaluator_revision_hashes_every_measurement_affecting_source():
     assert revision == evaluator_revision(root)
 
 
-def test_evaluator_revision_distinguishes_runtime_host_profiles(monkeypatch):
-    """Profile-selected rollout/replay geometry must never share an evaluator identity."""
+def test_evaluator_identity_ignores_training_host_profile(monkeypatch):
+    """Training geometry is provenance, not the identity of fixed-checkpoint evaluation."""
     root = Path(__file__).resolve().parents[1]
     monkeypatch.setenv("NATIVE_HOST_PROFILE", "datasphere")
-    datasphere = evaluator_revision(root)
+    datasphere = (evaluator_code_revision(root), evaluator_config_revision(root),
+                  evaluator_revision(root))
     monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
-    v100 = evaluator_revision(root)
-    assert len(v100) == 64
-    assert datasphere != v100
+    v100 = (evaluator_code_revision(root), evaluator_config_revision(root),
+            evaluator_revision(root))
+    assert all(len(value) == 64 for value in v100)
+    assert datasphere == v100
 
 
 def test_evaluator_revision_rejects_an_unknown_runtime_host_profile(monkeypatch):
