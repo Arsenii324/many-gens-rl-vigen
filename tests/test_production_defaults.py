@@ -223,7 +223,11 @@ def test_v100_profile_is_explicit_and_changes_only_its_declared_runtime_knobs(mo
 
     monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
     assert FAMILY.host_profile() == "v100"
-    assert FAMILY.full_fields("idaac", {"frames": "600000"})["num_processes"] == "16"
+    # [Claude 2026-09-06] idaac's v100-only num_processes override (4->16) is REMOVED, not just
+    # changed: DECISION-SHEET A35's IDAAC-C2 fixes num_processes at 1 everywhere (a fidelity
+    # requirement, not a per-host throughput knob any more), so this is the one family this test
+    # deliberately does NOT expect to change between profiles.
+    assert FAMILY.full_fields("idaac", {"frames": "600000"})["num_processes"] == "1"
     assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "8"
     assert FAMILY.expected_endpoint("ppg", 600_000) == 600_064
     assert FAMILY.full_fields("ibac_sni", {"frames": "600000"})["procs"] == "16"
@@ -260,8 +264,14 @@ def test_descriptor_can_be_resolved_for_an_explicit_profile_without_ambient_stat
     monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
     datasphere = FAMILY.production("rlvigen", profile="datasphere")
     assert datasphere["replay_capacity"] == 300_000
+    # [Claude 2026-09-06] Both now 598_016, not 598_016/599_040: idaac's v100-only num_processes
+    # override (4->16) is removed as part of DECISION-SHEET A35's IDAAC-C2 transition --
+    # num_processes is now a fidelity-fixed constant (1), not a per-host throughput knob, so both
+    # profiles resolve the same quantum (1*2048=2048) and the same endpoint. Kept as two assertions
+    # rather than folded into one: this test's point is that the explicit `profile=` kwarg is what
+    # is read, not that the two profiles must differ.
     assert FAMILY.expected_endpoint("idaac", 600_000, profile="v100") == 598_016
-    assert FAMILY.expected_endpoint("idaac", 600_000, profile="datasphere") == 599_040
+    assert FAMILY.expected_endpoint("idaac", 600_000, profile="datasphere") == 598_016
 
 
 def test_unknown_host_profile_is_rejected_before_a_command_is_resolved(monkeypatch):

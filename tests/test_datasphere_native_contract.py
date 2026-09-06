@@ -1838,8 +1838,13 @@ def test_every_declared_artifact_name_is_rendered_not_taken_literally(tmp_path):
 
 
 def test_idaac_floors_its_budget_to_a_whole_rollout():
-    """IDAAC computes num_env_steps // num_steps // num_processes updates; the marker says so."""
-    for requested, executed in ((10000, 9216), (500000, 499712), (1024, 1024)):
+    """IDAAC computes num_env_steps // num_steps // num_processes updates; the marker says so.
+
+    [Claude 2026-09-06] Values recomputed for DECISION-SHEET A35's IDAAC-C2 rollout (num_processes
+    1 x num_steps 2048 = 2048 quantum, was 4x256=1024): 10000//2048*2048=8192; 500000 stays
+    499712 (488*1024 == 244*2048, coincidence); 1024 is now BELOW one rollout, floors to 0.
+    """
+    for requested, executed in ((10000, 8192), (500000, 499712), (1024, 0)):
         result = _family("expected-endpoint", "--baseline", "idaac", "--frames", str(requested))
         assert result.returncode == 0, result.stderr
         assert int(result.stdout.strip()) == executed, (requested, result.stdout)

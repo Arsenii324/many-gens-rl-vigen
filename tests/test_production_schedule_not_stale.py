@@ -86,7 +86,10 @@ def test_v100_schedule_is_resolved_from_its_profile_and_makes_throughput_unknown
         assert row["save_every_frames"] == 50_000
     assert rows["drqv2"]["replay_capacity"] == 620_000
     assert rows["drqv2"]["evicts_before_endpoint"] is False
-    assert rows["idaac"]["runtime_constants"]["num_processes"] == "16"
+    # [Claude 2026-09-06] idaac's v100-only num_processes override (4->16) is REMOVED, not
+    # changed: DECISION-SHEET A35's IDAAC-C2 fixes num_processes at 1 everywhere (fidelity, not a
+    # per-host throughput knob). executed_endpoint (1x2048 quantum) is unaffected by this line.
+    assert rows["idaac"]["runtime_constants"]["num_processes"] == "1"
     assert rows["idaac"]["executed_endpoint"] == 598_016
     assert rows["ppg"]["runtime_constants"]["num_envs"] == "8"
     assert rows["ppg"]["executed_endpoint"] == 600_064

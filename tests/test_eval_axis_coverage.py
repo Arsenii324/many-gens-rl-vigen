@@ -84,7 +84,10 @@ def test_idaacs_scene_id_is_a_parameter_of_OUR_adapter_defaulting_to_zero():
     What has NOT changed, and this test pins it: nothing inside idaac passes a non-zero scene.
     """
     envs = (ROOT / "runnable" / "idaac" / "ppo_daac_idaac" / "envs.py").read_text()
-    assert "def make_rlvigen_venv(args, device, mode, num_envs, scene_id=0):" in envs
+    # frame_stack=None added 2026-09-06 (DECISION-SHEET A35, IDAAC-C2); unrelated to scene_id and
+    # keeps every existing call byte-identical (defaults to getattr(args, "frame_stack", 1)).
+    assert ("def make_rlvigen_venv(args, device, mode, num_envs, scene_id=0, "
+            "frame_stack=None):") in envs
     assert "scene_id=scene_id" in envs, "the parameter must reach robo_make"
     callers = [line for line in envs.splitlines() if "make_rlvigen_venv(" in line
                and "def " not in line]

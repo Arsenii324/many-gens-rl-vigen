@@ -44,8 +44,15 @@ LAUNCHER_OF = {
     "curl": "rlvigen.sh", "drq": "rlvigen.sh",
 }
 
-#: The four whose upstream is Procgen, which serves a single RGB frame.
-PROCGEN_ORIGINS = {"ppg", "idaac", "ibac_sni", "ctrl"}
+#: Whose upstream is Procgen, which serves a single RGB frame -- and which of those STILL declares
+#: single-frame. All four originate in Procgen; `idaac` is deliberately not in this set any more.
+#: [Claude 2026-09-06, DECISION-SHEET A35] The authors' own DMC continuous-control recipe stacks 3
+#: frames (`ext/idaac/raileanu21a-supp.pdf` SS E) and this project adopted it as idaac's declared
+#: main config (Q55) once the frame-stack implementation gap closed (A65/C98) -- exactly the
+#: "someone later adds a FrameStack ... must argue for it" case this file's own docstring names.
+#: The argument is A35/`families.json`'s idaac `constants_note`; idaac now belongs with
+#: `test_stacking_baselines_really_stack` below, not this set.
+PROCGEN_ORIGINS = {"ppg", "ibac_sni", "ctrl"}
 
 
 def test_every_baseline_has_a_declared_geometry():
@@ -98,9 +105,9 @@ def test_procgen_origin_baselines_are_declared_single_frame(name):
             f"{name}.patch introduces a FrameStack while OBSERVATION_GEOMETRY declares 1 frame")
 
 
-@pytest.mark.parametrize("name", ["rad", "soda", "alda"])
+@pytest.mark.parametrize("name", ["rad", "soda", "alda", "idaac"])
 def test_stacking_baselines_really_stack(name):
-    """The positive half. These three reach a FrameStack, and the patch is where to see it."""
+    """The positive half. These four reach a FrameStack, and the patch is where to see it."""
     assert OBSERVATION_GEOMETRY[name][1] == 3
     patch = PATCHES / f"{'dmc_gb' if name in ('rad', 'soda') else name}.patch"
     if not patch.exists():
@@ -109,11 +116,16 @@ def test_stacking_baselines_really_stack(name):
         f"{patch.name} shows no FrameStack, but {name} is declared as 3-frame stacked")
 
 
-def test_the_split_is_still_eight_four():
-    """A bare count, so a silent drift in either direction shows up as a number, not a story."""
+def test_the_split_is_still_nine_three():
+    """A bare count, so a silent drift in either direction shows up as a number, not a story.
+
+    [Claude 2026-09-06] Was 8/4 until idaac moved from single-frame to 3-stack (DECISION-SHEET
+    A35, Q55) -- named here as the one deliberate exception, not a silent drift, exactly per this
+    test's own stated purpose.
+    """
     stacked = sorted(n for n, (_s, f) in OBSERVATION_GEOMETRY.items() if f == 3)
     single = sorted(n for n, (_s, f) in OBSERVATION_GEOMETRY.items() if f == 1)
-    assert len(stacked) == 8 and len(single) == 4, (
+    assert len(stacked) == 9 and len(single) == 3, (
         f"the frame-stack split moved: {len(stacked)} stacked {stacked}, "
         f"{len(single)} single {single}. That is a comparability change, not a refactor -- "
         "update docs/PART2-METRIC-INVENTORY.md Finding 5 in the same commit.")

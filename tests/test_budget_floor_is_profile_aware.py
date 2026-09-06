@@ -29,7 +29,12 @@ def _check_budget(cells: str, frames: int, profile: str) -> subprocess.Completed
 
 
 @pytest.mark.parametrize("family,base_floor,v100_floor", [
-    ("idaac", 1024, 4096),      # 4x256 base vs 16x256 v100
+    # [Claude 2026-09-06] idaac removed: DECISION-SHEET A35's IDAAC-C2 transition removed its
+    # v100-only `num_processes` override (16->1, now fidelity-fixed everywhere, not a per-host
+    # throughput knob), so idaac no longer has a profile-dependent floor to test here at all --
+    # both profiles now resolve the same 1x2048=2048 quantum. See
+    # `test_the_base_datasphere_profile_floor_is_unchanged` for its single, profile-independent
+    # floor.
     ("ibac_sni", 128, 2048),    # 1x128 base vs 16x128 v100
 ])
 def test_the_stale_static_floor_used_to_pass_a_zero_rollout_v100_canary(family, base_floor, v100_floor):
@@ -45,18 +50,32 @@ def test_the_stale_static_floor_used_to_pass_a_zero_rollout_v100_canary(family, 
         "the rejection message should name the correct v100-resolved floor")
 
 
-@pytest.mark.parametrize("family,v100_floor", [("idaac", 4096), ("ibac_sni", 2048)])
+@pytest.mark.parametrize("family,v100_floor", [("ibac_sni", 2048)])
 def test_the_v100_resolved_floor_itself_is_accepted(family, v100_floor):
     result = _check_budget(family, v100_floor, "v100")
     assert result.returncode == 0, result.stderr
 
 
-@pytest.mark.parametrize("family,base_floor", [("idaac", 1024), ("ibac_sni", 128)])
+@pytest.mark.parametrize("family,base_floor", [("idaac", 2048), ("ibac_sni", 128)])
 def test_the_base_datasphere_profile_floor_is_unchanged(family, base_floor):
-    """The fix must not raise the floor for the profile it was always correct for."""
+    """The fix must not raise the floor for the profile it was always correct for.
+
+    [Claude 2026-09-06] idaac's floor moved 1024->2048 (DECISION-SHEET A35's IDAAC-C2: 1x2048, was
+    4x256) -- a real change to the floor value, not a regression: it is still exactly one rollout
+    on the base profile.
+    """
     result = _check_budget(family, base_floor, "datasphere")
     assert result.returncode == 0, (
         f"the datasphere-profile floor for {family} regressed: {result.stderr}")
+
+
+def test_idaacs_floor_is_now_profile_independent():
+    """idaac no longer has a v100-specific floor at all (its `num_processes` override was removed,
+    DECISION-SHEET A35): both profiles must resolve the identical 1x2048=2048 quantum."""
+    result = _check_budget("idaac", 2048, "v100")
+    assert result.returncode == 0, result.stderr
+    result = _check_budget("idaac", 2047, "v100")
+    assert result.returncode != 0, "2047 is below one rollout on either profile now"
 
 
 def test_a_family_with_no_rollout_quantum_dependency_is_unaffected():

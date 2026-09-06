@@ -50,7 +50,7 @@ before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `soda` | `runnable/dmc_gb` | **yes** — 1k steps, `aux_loss` live, train + eval-easy | shared, below |
 | `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +257/−9 |
 | `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +289/−9 |
-| `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 8 files, +492/−45 |
+| `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 9 files, +582/−50 |
 | `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 10 files, +630/−183 |
 | `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 5 files, +477/−84 |
 
@@ -169,7 +169,7 @@ PPO log-probabilities sum event coordinates, so the implementation sums the KL e
 before averaging samples. This preserves `beta_clone`'s scale at the adapted design point; the
 literal categorical reduction would make it about 7× weaker.
 
-### `idaac` — 8 files, +492 / −45
+### `idaac` — 9 files, +582 / −50
 
 `distributions.py` +57: `FixedNormal`, `AddBias` and `DiagGaussian` **copied verbatim** from
 `ikostrikov/pytorch-a2c-ppo-acktr-gail@41332b7`, which is the file's own upstream — `init`,

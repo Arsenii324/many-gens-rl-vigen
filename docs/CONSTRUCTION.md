@@ -7735,7 +7735,7 @@ five and `alda` are `(84, 3)`/`(64, 3)` (frame_stack coincidentally correct at t
 `image_size` still wrong at `100`), and `rad`/`soda` are the only baselines the default happens to
 match exactly (`(100, 3)`) — coincidence, not design.
 
-**Why nothing caught it.** [`test_observation_geometry.py`](#) checks `OBSERVATION_GEOMETRY`
+**Why nothing caught it.** `tests/test_observation_geometry.py` checks `OBSERVATION_GEOMETRY`
 against the launcher scripts and exported patches — it never touches `eval_grid.py`'s CLI or a
 produced record.
 `tests/test_evaluator_scope_identity.py` unit-tests `canonical_evaluation_scope()` in isolation
