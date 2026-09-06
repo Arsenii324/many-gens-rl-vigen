@@ -10,7 +10,7 @@
 # a different executed count than the other for an unrelated reason. Bracket checkpoints every
 # 40960 frames (a multiple of both quanta) for a learning-curve read, not just an endpoint number.
 #
-# Reuses payload-v148-idaac.tgz: no code change needed for this arm (every A35 parameter for idaac
+# Reuses payload-v160-idaac-pilot.tgz: no code change needed for this arm (every A35 parameter for idaac
 # is an existing argparse flag; frame stack is held at 1 for both arms per the correction in A35
 # itself -- C2 found stacking structurally incoherent with IDAAC's adversarial temporal-order
 # objective, not merely a fidelity trade).
@@ -37,7 +37,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v148-idaac.tgz: CODE
+  - datasphere/native/payload-v160-idaac-pilot.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT

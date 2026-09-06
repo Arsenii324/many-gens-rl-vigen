@@ -8,7 +8,7 @@
 # nstep=256=2048, unchanged from A26's already-fixed cadence -- not re-litigated here). Same
 # number as the IDAAC pilots for a shared, comparable budget across this session's fidelity work.
 #
-# Uses payload-v154-ppg-pilot.tgz: this arm needs no override, but the payload must still carry
+# Uses payload-v161-ppg-pilot.tgz: this arm needs no override, but the payload must still carry
 # the new --gamma/--lr/--aux_lr/--nminibatch/--entcoef CLI flags added to
 # runnable/ppg/phasic_policy_gradient/train.py for the C arm to be expressible at all -- rebuilding
 # per-arm payloads from different trees would risk a code-revision confound between the two arms,
@@ -36,7 +36,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v154-ppg-pilot.tgz: CODE
+  - datasphere/native/payload-v161-ppg-pilot.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT

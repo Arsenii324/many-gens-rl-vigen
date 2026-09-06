@@ -3,9 +3,11 @@
 # local computation. Ruling out payload/upload staleness leaves the remote computation itself as
 # the remaining variable. scripts/eval_grid.py carries a TEMPORARY, opt-in diagnostic block
 # (NATIVE_DIAGNOSE_EVALUATOR_IDENTITY=1) that prints the full per-file member-hash breakdown and
-# exits immediately, before running any real episode. FRAMES kept small (512, well below any
-# checkpoint-cadence boundary) purely to keep training brief -- the diagnostic exits before eval
-# regardless, so this bounds the job to container-start + brief training + immediate exit.
+# exits immediately, before running any real episode. FRAMES=4112: family.py refuses ctrl below
+# its own 4112-frame floor (a curve-measurement guard, unrelated to this diagnostic -- the first
+# submission at 512 frames was refused at that gate before ever reaching the diagnostic code).
+# 4112 is the minimum that clears it, keeping training brief; the diagnostic exits before any real
+# episode regardless, so this still bounds the job to container-start + brief training + exit.
 name: vigen-ctrl-diag-v159
 desc: "CORRECTIONS #97 diagnostic: print ctrl's remote-computed evaluator identity member hashes, then exit."
 cmd: >-
@@ -13,7 +15,7 @@ cmd: >-
   NATIVE_HOST_PROFILE=datasphere
   NATIVE_DIAGNOSE_EVALUATOR_IDENTITY=1
   CELLS=ctrl:1
-  FRAMES=512
+  FRAMES=4112
   TASK=Door
   SEED=1
   RLVIGEN_ARCHIVE=${RLVIGEN}
@@ -21,7 +23,7 @@ cmd: >-
   CUDA_ROOT=/usr/local/cuda
   EVAL_EVERY_FRAMES=2147483647
   EVAL_EPISODES=1
-  SAVE_EVERY_FRAMES=512
+  SAVE_EVERY_FRAMES=4112
   ENDPOINT_EVAL=1
   ENDPOINT_EVAL_REGIMES=train
   ENDPOINT_EVAL_SCENES=0
