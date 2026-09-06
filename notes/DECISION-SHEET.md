@@ -1577,6 +1577,21 @@ success rate in both regimes, despite idaac-c1's raw return running 6-9x higher.
 the decision-rule reading, and why this is not read as "C failed": `notes/CLAIMS-LEDGER.md`, "A35/
 A36 pilot arms." Not treated as settling C1-vs-C2 or extending this pilot — see that entry.
 
+**IMPLEMENTED, 2026-09-06 (Q55): this is now the actual production default, not just a specified
+target.** The frame-stack implementation gap this entry's own C2 arm was waiting on is closed
+(A65, C98) — a real `FrameStack` wrapper in `make_rlvigen_venv`, `VecPyTorchProcgen`'s
+observation-space declaration and transpose heuristic made channel-count-aware, a real
+`update_linear_schedule` for the paper's linear LR decay. Per Q55's one-predeclared-main-run
+constraint, the full table above (frame_stack 3, `ppo_epoch` 10, `lr` 3e-4, `gamma` .99,
+`entropy_coef` 0, `value_freq` 32, `adv_loss_coef`/`order_loss_coef` .1, `num_processes` 1,
+`num_steps` 2048, `num_mini_batch` 32, LR decay over the literal 1M steps) is now
+`families.json`'s idaac production config, replacing the Procgen-parser P defaults entirely — the
+IDAAC-C1 vs C2 distinction this entry maintained throughout no longer applies going forward: there
+is one idaac config now, and it is C2. **Not yet validated by a full-length training run** — see
+the PILOT RESULT above, which tested part of this recipe at a short budget and is evidence toward
+this direction, not proof of it. Verified locally: env construction, forward pass through the real
+network, multi-step rollout, multi-env parallel construction, and the LR-schedule's exact math.
+
 ### A36 OPEN, 2026-09-06 (analysis completed same entry) — PPG's design point: the remaining recipe gap, specified
 
 T16's cadence half is closed (A26: `n_pi` now matches the continuous-control reference exactly).
