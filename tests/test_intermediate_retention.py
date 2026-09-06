@@ -116,9 +116,16 @@ def test_curve_eval_exists_is_gated_and_runs_after_retention():
 
 
 def test_curve_records_are_collected_from_the_cell_directories():
-    """The records are written per cell; a collector that globs only the job root loses all of them."""
+    """The records are written per cell; a collector that globs only the job root loses all of them.
+
+    [Claude 2026-09-06] The glob itself survived Codex's Q37/Q38 record-delivery fix unchanged;
+    only the variable holding the job root was renamed `$out` -> `$root` as part of introducing
+    the internal canonical delivery file. Confirmed by reading both call sites in run_probe.sh
+    (datasphere/native/evaluator collect_record_delivery's Python glob and the enrichment loop
+    a few lines below it) before updating the assertion, not just pattern-matching the failure.
+    """
     text = _runner()
-    assert '"$out"/cells/*/offline_eval_*.jsonl' in text
+    assert '"$root"/cells/*/offline_eval_*.jsonl' in text
 
 
 def test_ppg_stamps_are_converted_from_save_index_to_frames():
