@@ -163,17 +163,26 @@ CoinRun's 1e-4; the authors' `-uda` flag absent (should be checked, not assumed 
 DrQ-style random shift); the `entropy_coef=0` decision is a defensible adaptation, not a fidelity
 repair, provided the underlying `.01`-causes-runaway finding reproduces.
 
-**NOT INDEPENDENTLY VERIFIED, NOT ACTED ON beyond one factual correction (below).** I did not read
-IBAC-SNI's own CoinRun source (`ext/IBAC-SNI`) to confirm the 256-d latent, 12-sample, or
-`rho - 5` claims myself this session. I have no reason to doubt them — they are specific and
-plausible, and the project's own prior audit work (A17, A37, referenced in DECISION-SHEET)
-independently arrived at the CoinRun-lineage commitment the review agrees with — but "specific and
-plausible, and someone else's prior audit agrees" is not the same as reading the code, and I want
-that stated plainly rather than implied. Per Q54/A62 I am also not touching IBAC-SNI's own
-implementation code this session (Codex's territory), so none of the concrete fixes (L2, sample
-count, posterior scale, `-uda`) have been attempted by me.
+**UPDATE — the architecture-gap numbers are now VERIFIED, directly against the source, and one of
+the review's own open questions is resolved.** `ext/IBAC-SNI/coinrun/coinrun/policies.py:58-59`:
+`mu, rho = params[:, :256], params[:, 256:]` then `NormalWithSoftplusScale(mu, rho - 5.0)` —
+confirms both the 256-d latent and the shifted-softplus (`ρ-5`) posterior scale exactly. The
+authors' own `README.md:109` gives the literal reproduction command review 17 quotes
+(`--l2 0.0001 -uda 1 --beta 0.0001 --nr-samples 12 --sni`), confirming `nr-samples=12` and
+`L2=1e-4` are genuinely the authors' documented settings (the code's own default for
+`nr-samples` is 1; 12 is reached only via this explicit override, so both facts are true and not
+in tension). **Resolving the one thing review 17 itself asked to be checked before assuming
+anything**: `-uda`/`use_data_augmentation` (`config.py:131`) is defined but **never read anywhere
+else in the entire `ext/IBAC-SNI` tree** (`grep -rl "use_data_augmentation" ext/IBAC-SNI/` returns
+only the one definition site) — it is a dead flag in the authors' own released code. It does not
+mean DrQ-style random shift; it means nothing at all, in this version of the source. This is a
+genuinely new finding, not in either review, and directly actionable for whoever implements
+IBAC-SNI's remaining gaps: there is no augmentation behavior to port from `-uda`, so mapping it
+onto Door is a non-question, not an open one. Reported to Codex (mailbox, this session), since
+IBAC-SNI's implementation is their task per Q54, not mine. Per Q54/A62 I am still not touching
+IBAC-SNI's own implementation code myself — this is a source-reading result, not a code change.
 
-**The one thing I did do**: independently read `ext/baseline_resources/11_ibac_sni/paper_
+**The other thing I did do**: independently read `ext/baseline_resources/11_ibac_sni/paper_
 1901.10902.pdf` directly with `pdftotext` and confirmed it is a *different paper entirely*
 ("InfoBot: Transfer and Exploration via the Information Bottleneck," Goyal et al., ICLR 2019), not
 IBAC-SNI — a provenance bug neither review's own text flags for this specific file (review 18
@@ -182,8 +191,17 @@ labeling error; I found the underlying file itself is the wrong document, a more
 the same finding). See `02-review-18-item-by-item.md` and `03-changes-made.md` — this was Luna's
 to fix in the source index (`ext/` is read-only to me), and it has since been fixed.
 
-**Confidence**: TAKEN ON TRUST for every architecture-gap claim in the review's own table.
-VERIFIED for the wrong-PDF finding, by direct read.
+**The target side is now also verified, not just the source side.** `runnable/ibac_sni/torch_rl/
+bottleneck.py:34`: `std = F.softplus(stats[:,self.output_size:])` — no `-5.0` shift, confirming the
+"unshifted posterior scale" half of the gap directly. `runnable/ibac_sni/torch_rl/model.py:207`:
+`Bottleneck(self.embedding_size, 64)` — confirms the 64-d latent (not the unrelated `exp_setup.py`
+example dict's `latent_size: 32`, which is a generic torch_rl config not wired into this project's
+production model construction). Both sides of the CoinRun-vs-Door gap review 17 names are now
+independently confirmed, not inferred from one side alone.
+
+**Confidence**: VERIFIED, both sides (CoinRun source and this project's own port), for the latent
+dimension, the posterior-scale shift, the 12-sample reproduction command, L2=1e-4, and the `-uda`
+dead-flag finding. VERIFIED for the wrong-PDF finding, by direct read.
 
 ---
 

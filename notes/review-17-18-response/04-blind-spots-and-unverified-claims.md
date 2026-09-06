@@ -141,10 +141,14 @@ review made each claim:
   This is not because I judged them unimportant; both reviews rate these baselines as already
   strong, and I allocated attention to the baselines flagged as urgent instead. That allocation
   might be wrong — "already strong per two static reviews" is not the same as "verified."
-- IBAC-SNI's specific architecture-gap numbers (VIB latent 256 vs 64, 12 samples vs 1, shifted vs
-  unshifted posterior scale, L2 1e-4, the `-uda` flag's actual behavior). I read the wrong-PDF
-  finding's *text* directly but never opened `ext/IBAC-SNI`'s actual CoinRun source code to check
-  any of these specific numeric claims.
+- ~~IBAC-SNI's specific architecture-gap numbers~~ — **checked after this document's first draft:
+  all verified, both sides.** `ext/IBAC-SNI/coinrun/coinrun/policies.py:58-59` confirms the 256-d
+  latent and `ρ-5` shift; `runnable/ibac_sni/torch_rl/bottleneck.py:34`/`model.py:207` confirm this
+  project's own port is unshifted and 64-d; `README.md:109` confirms the 12-sample reproduction
+  command and L2=1e-4. A genuinely new finding beyond either review: `-uda`/`use_data_augmentation`
+  is defined once (`config.py:131`) and **read nowhere else in the entire source tree** — a dead
+  flag, not DrQ-style shift or anything else. Reported to Codex. See review 17's item-by-item file
+  for the full detail.
 - ALDA's five headline hyperparameters (`batch_size=128`, `num_latents=12`, `values_per_latent=12`,
   `beta=100`, `frame_stack=3`) matching the official repo's `specs/` — accepted because they are
   already, unchanged, present in this project's own spec file, not because I opened ALDA's
