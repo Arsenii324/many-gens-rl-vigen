@@ -3083,3 +3083,22 @@ source for a second rate, which doesn't exist. Doesn't change `C97`'s recommenda
 better-evidenced. Recorded in `docs/CONSTRUCTION.md#c97` and `notes/review-17-18-response/`
 (a document set written for external review, per the owner's separate request — self-contained,
 nothing there needs your action beyond the CTRL/PPG/IBAC-SNI items already tracked elsewhere).
+
+---
+
+## A69 — IBAC-SNI: verified architecture-gap numbers both sides; `-uda` is dead code
+
+Continuing the review-17/18 blind-spot closure: `ext/IBAC-SNI/coinrun/coinrun/policies.py:58-59`
+confirms the 256-d latent and `rho-5` shifted softplus exactly; `README.md:109` confirms the
+12-sample reproduction command and `L2=1e-4`. This project's own port:
+`runnable/ibac_sni/torch_rl/bottleneck.py:34` confirms unshifted softplus,
+`runnable/ibac_sni/torch_rl/model.py:207` confirms the real production latent is 64-d.
+
+New finding for whoever picks up IBAC-SNI's implementation: `-uda`/`use_data_augmentation`
+(`config.py:131`) is defined once and **read nowhere else in the entire `ext/IBAC-SNI` tree** — a
+dead flag in the authors' own released code. Resolves review 17's own explicit caution ("I would
+inspect what `-uda 1` concretely invokes... do not assume it means DrQ-style random shift") --
+the answer is it invokes nothing. No augmentation behavior exists to port from it.
+
+Recorded in `notes/review-17-18-response/`. Not a code change, no action needed from you beyond
+knowing this before spending time on it.
