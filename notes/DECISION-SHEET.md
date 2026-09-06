@@ -1595,7 +1595,7 @@ sum to ~518.75 RUB (measured for six, one family estimated from its own separate
 training time), and they ran in parallel — real wall-clock was the slowest single job, ~31 minutes,
 not 21 serial hours. Full derivation: `notes/claude-answers.md` A54. This matters for the
 sequencing question because "wasted spend if the pilots change the recipe first" was implicitly
-weighted against a ~4,300 RUB numbre; against the real ~520 RUB, a possible future re-validation is
+weighted against a ~4,300 RUB number; against the real ~520 RUB, a possible future re-validation is
 not a meaningful sunk cost either way.
 
 **The sequencing question itself**: evaluator-identity validation tests **harness correctness** —
