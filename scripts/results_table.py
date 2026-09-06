@@ -190,6 +190,15 @@ def row(name: str, seed: int, budget: str, tag: str, floor_mean: float):
 
     held = [mtr[k] for k in sorted(mtr) if k != 0]
     scene_ret = st.mean(held) / mtr[0] if mtr[0] else float("nan")
+    # [Claude 2026-09-06] A18 (DECISION-SHEET.md), adopted but never emitted anywhere until now --
+    # EVAL-PROTOCOL.md:23 lists "retention AND floor-adjusted retention" as both reported, per
+    # regime AND scene; this project had the first half of each pair and never wrote the second.
+    # Floor-adjusted = (num - floor) / (den - floor): invariant to the shared additive offset a
+    # ratio of raw returns is not, since Door's reward is shaped with a non-zero floor (C17/C18).
+    # Refused (None), not a number, when the floor-adjusted denominator would not be positive --
+    # printing a ratio over a non-positive denominator would look like a number and isn't one.
+    scene_ret_floor_adj = ((st.mean(held) - floor_mean) / (mtr[0] - floor_mean)
+                           if mtr[0] > floor_mean else None)
 
     # Usable scenes: denominator above the floor AND solving at least MIN_DENOM_SUCCESS. Keep this
     # count as a diagnostic, but do not select on it: selecting different scenes per baseline is
@@ -202,14 +211,19 @@ def row(name: str, seed: int, budget: str, tag: str, floor_mean: float):
         den = [x for k in common for x in tr["scenes"][str(k)]["returns"]]
         regime = st.mean(num) / st.mean(den)
         ci = boot_ci(num, den)
+        # `usable` already requires every pooled scene's TRAIN mean to clear floor_mean, so the
+        # pooled `den` mean clears it too (a weighted average of means each above a bound is above
+        # that bound) -- this is regime's counterpart to scene_ret_floor_adj's own explicit guard.
+        regime_floor_adj = ((st.mean(num) - floor_mean) / (st.mean(den) - floor_mean)
+                            if st.mean(den) > floor_mean else None)
     else:
-        regime, ci = None, None
+        regime, ci, regime_floor_adj = None, None, None
 
     tot_tr = sum(str_.values()); tot_ev = sum(sev.values())
     n_ep = eps * len(mtr)
     return dict(name=name, seed=seed, budget=budget, scene0=mtr[0], held=st.mean(held),
-                scene_ret=scene_ret, scene_ci=boot_scene_ret(tr),
-                regime=regime, ci=ci, usable=len(usable), n_scenes=len(mtr),
+                scene_ret=scene_ret, scene_ret_floor_adj=scene_ret_floor_adj, scene_ci=boot_scene_ret(tr),
+                regime=regime, regime_floor_adj=regime_floor_adj, ci=ci, usable=len(usable), n_scenes=len(mtr),
                 sr_tr=tot_tr / n_ep, sr_ev=tot_ev / n_ep,
                 sr_tr_ci=wilson_interval(tot_tr, n_ep), sr_ev_ci=wilson_interval(tot_ev, n_ep),
                 n_ep=n_ep, n_tr=tot_tr, n_ev=tot_ev, res_floor=res_floor,
@@ -280,6 +294,21 @@ def main(argv: list[str] | None = None) -> int:
     print("  is used for the success rate because it is a proportion; `iqm` is deliberately not")
     print("  used anywhere (see scripts/metrics.py: its home is aggregation across runs).")
 
+    print("\n  FLOOR-ADJUSTED RETENTION (A18, DECISION-SHEET.md) -- adopted, never emitted until now.")
+    print("  Plain retention divides two raw returns; Door's reward is shaped with a non-zero")
+    print("  floor, so that ratio is not invariant to the shared offset (C17/C18). Floor-adjusted")
+    print(f"  subtracts the measured random-policy floor ({floor_mean:.3f}) from both terms first:")
+    print("  (num - floor) / (den - floor). REFUSED where the floor-adjusted denominator would")
+    print("  not be positive -- printing a ratio over a non-positive denominator would look like a")
+    print("  number and would not be one. This does not replace plain retention above; both are")
+    print("  reported, per EVAL-PROTOCOL.md's own metrics-reported row.")
+    print(f"  {'cell':<14} {'scene ret*':>11} {'regime ret*':>12}")
+    for r in rows:
+        sc = f"{r['scene_ret_floor_adj']:.3f}" if r["scene_ret_floor_adj"] is not None else "REFUSED"
+        rg = f"{r['regime_floor_adj']:.3f}" if r["regime_floor_adj"] is not None else "REFUSED"
+        print(f"  {r['name']+'@'+r['budget']:<14} {sc:>11} {rg:>12}")
+    print("  * floor-adjusted, per above. Not directly comparable to the un-starred columns.")
+
     print("\n  COLUMNS, and why each is here rather than in a footnote:")
     print("    scene0     mean return on the TRAINED scene, train regime.")
     print("    held-out   mean over scenes 1-9, train regime. Its ratio to scene0 is scene ret.")
@@ -333,15 +362,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.markdown:
         print("\n\n---\n\n| baseline | seed | budget | scene 0 | held-out | scene ret. | "
-              "regime ret. | 95% CI | usable | SR train→eval | res. floor |")
-        print("|---|---|---|---|---|---|---|---|---|---|---|")
+              "regime ret. | 95% CI | usable | SR train→eval | res. floor | scene ret.* | "
+              "regime ret.* |")
+        print("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for r in rows:
             reg = f"**{r['regime']:.3f}**" if r["regime"] is not None else "**REFUSED**"
             ci = f"[{r['ci'][0]:.3f}, {r['ci'][1]:.3f}]" if r["ci"] else "—"
+            sc_fa = f"{r['scene_ret_floor_adj']:.3f}" if r["scene_ret_floor_adj"] is not None else "REFUSED"
+            rg_fa = f"{r['regime_floor_adj']:.3f}" if r["regime_floor_adj"] is not None else "REFUSED"
             print(f"| `{r['name']}` | {r['seed']} | {r['budget']} | {r['scene0']:.2f} | "
                   f"{r['held']:.2f} | {r['scene_ret']:.1%} | {reg} | {ci} | "
                   f"{r['usable']}/{r['n_scenes']} | {r['sr_tr']:.1%} → {r['sr_ev']:.1%} | "
-                  f"{r['res_floor']:.1%} |")
+                  f"{r['res_floor']:.1%} | {sc_fa} | {rg_fa} |")
+        print("\n\n\* floor-adjusted (A18): (num - floor) / (den - floor). Not directly "
+              "comparable to the un-starred columns.")
 
     bad = [r for r in rows if r["regime"] is not None and r["usable"] < 2]
     if bad:

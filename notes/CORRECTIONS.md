@@ -1598,3 +1598,44 @@ restored from a backup, re-ran the full 7-test file clean.
 Proposed this exact fix to Codex via the mailbox first (paths, failure, acceptance command, why no
 overlap with its active `run_probe.sh`/`normalize_curves.py`/`summarize_result.py`/`contract.py`
 boundary) before executing, per its explicit request for a disjoint next write boundary.
+
+## #86 — A18 (floor-adjusted retention) was adopted, documented, and never implemented; now is
+
+Found while doing a broader sweep for real ownership gaps rather than another one-off patch (the
+owner directly challenged whether earlier "done and verified" claims were actually checked, and
+separately whether scoped fixes add up to actual ownership). Checked whether `EVAL-PROTOCOL.md:23`'s
+promise of "retention AND floor-adjusted retention" as reported metrics was actually kept.
+
+It wasn't. `DECISION-SHEET.md`'s A18 (external review credit: Gemini's A4, the one useful
+contribution from that report per this project's own triage) specifies the exact formula —
+`retention = (R_OOD - R_floor) / (R_train - R_floor)` — and its own text said "Implemented in the
+protocol notes, not yet in an emitter (no retention table is generated yet)." That caveat is
+itself now stale: `results_table.py` generates a retention table (`regime`, `scene_ret`) and has
+since before this session started, but nobody had gone back to add the floor-adjusted variant A18
+called for. Confirmed via direct code read: `regime = st.mean(num) / st.mean(den)` and
+`scene_ret = st.mean(held) / mtr[0]` are both plain ratios, no floor subtraction anywhere in the
+file. `preprod_table.py` checked too and needed no change — it reports one regime's raw return per
+row and has never formed a train-vs-eval ratio at all, so A18 doesn't apply to it.
+
+**Fixed**: added `scene_ret_floor_adj` and `regime_floor_adj` to `row()`'s output in
+`results_table.py`, computed per A18's formula, gated to REFUSE (print `None`/`"REFUSED"`, never a
+misleading number) wherever the floor-adjusted denominator would not be positive — `scene_ret`'s
+guard is explicit (`mtr[0] > floor_mean`); `regime`'s reuses the fact that `usable`/`common`
+already requires every pooled scene's train mean to clear `floor_mean`, so the pooled mean does
+too. Printed in a new "FLOOR-ADJUSTED RETENTION" section (plain-text and `--markdown` output both),
+explicitly stated as reported *beside*, not replacing, plain retention, matching
+`EVAL-PROTOCOL.md`'s own metrics row rather than picking one.
+
+**Tests added**, verifying the formula itself rather than just that the code runs:
+`test_floor_adjusted_retention_matches_the_a18_formula_by_hand` builds a synthetic grid with
+scene0, held-out scenes, and eval-easy all deliberately different values, hand-computes the
+expected floor-adjusted numbers, and checks `row()`'s actual output against them (a bug that
+swapped num/den or forgot the floor on one side would still pass against a uniform-value fixture —
+this one wouldn't). `test_floor_adjusted_scene_retention_refuses_at_or_below_the_floor` confirms
+the refusal guard fires for both quantities when every scene sits at the floor. Non-vacuity proven
+by injecting a "forgot to subtract the floor" bug into the implementation and confirming the first
+test fails with the exact expected-vs-obtained mismatch, then restoring.
+
+Updated `DECISION-SHEET.md`'s A18 entry to reflect this (original stale text kept visible per this
+file's convention, correction appended above it) and noted precisely what remains a data-currency
+question (is the floor grid on disk current) rather than a code gap.

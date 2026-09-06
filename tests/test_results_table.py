@@ -131,12 +131,12 @@ def test_a_table_that_mixes_time_limit_handling_groups_warns_and_fails_strict(mo
 
     fake_rows = {
         "fakeA": dict(name="fakeA", seed=1, budget="50k", scene0=10.0, held=8.0,
-                      scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                      scene_ret=0.8, scene_ret_floor_adj=0.75, scene_ci=(0.7, 0.9), regime=0.5, regime_floor_adj=0.45, ci=(0.4, 0.6),
                       usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
                       sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
                       res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="terminal"),
         "fakeB": dict(name="fakeB", seed=1, budget="50k", scene0=10.0, held=8.0,
-                      scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                      scene_ret=0.8, scene_ret_floor_adj=0.75, scene_ci=(0.7, 0.9), regime=0.5, regime_floor_adj=0.45, ci=(0.4, 0.6),
                       usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
                       sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
                       res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="bootstrap"),
@@ -164,7 +164,7 @@ def test_a_table_with_one_time_limit_handling_group_does_not_warn(monkeypatch, c
         return None
 
     fake_row = dict(name="fakeA", seed=1, budget="50k", scene0=10.0, held=8.0,
-                     scene_ret=0.8, scene_ci=(0.7, 0.9), regime=0.5, ci=(0.4, 0.6),
+                     scene_ret=0.8, scene_ret_floor_adj=0.75, scene_ci=(0.7, 0.9), regime=0.5, regime_floor_adj=0.45, ci=(0.4, 0.6),
                      usable=10, n_scenes=10, sr_tr=0.5, sr_ev=0.3,
                      sr_tr_ci=(0.4, 0.6), sr_ev_ci=(0.2, 0.4), n_ep=20, n_tr=10, n_ev=6,
                      res_floor=0.05, md5="deadbeef", eps=2, over_ceiling=0, tl="terminal")
@@ -177,3 +177,65 @@ def test_a_table_with_one_time_limit_handling_group_does_not_warn(monkeypatch, c
     out = capsys.readouterr().out
     assert "WARNING (C1)" not in out
     assert code == 0
+
+
+def _floor_adj_grid(scene0_mean, held_mean, eval_mean, n_success_frac=1.0, episodes=2):
+    """A minimal synthetic train/eval-easy pair for exercising row()'s formulas directly,
+    independent of main()'s printing -- constructed so scene0 and the held-out scenes differ,
+    which a uniform-value fixture would not exercise (a bug that flips num/den or forgets to
+    subtract the floor from one side only would still pass against equal scenes)."""
+    n_success = round(n_success_frac * episodes)
+
+    def scenes(mean):
+        return {str(k): {"returns": [mean] * episodes, "n_success": n_success}
+                for k in range(10)}
+
+    tr_scenes = scenes(held_mean)
+    tr_scenes["0"] = {"returns": [scene0_mean] * episodes, "n_success": n_success}
+    ev_scenes = scenes(eval_mean)
+    tr = {"scenes": tr_scenes, "episodes": episodes, "control": {"returns": [scene0_mean]},
+          "snapshot_md5": "deadbeef"}
+    ev = {"scenes": ev_scenes, "episodes": episodes}
+    return tr, ev
+
+
+def test_floor_adjusted_retention_matches_the_a18_formula_by_hand(monkeypatch):
+    """A18: (num - floor) / (den - floor). Computed by hand here and checked against row()'s
+    own output, with scene0 deliberately different from the held-out scenes and from eval-easy
+    so a formula that pools the wrong axis or forgets the floor on one side is caught."""
+    tr, ev = _floor_adj_grid(scene0_mean=10.0, held_mean=7.0, eval_mean=4.0)
+    monkeypatch.setattr(rt, "load", lambda tag, mode: tr if mode == "train" else ev)
+
+    r = rt.row("fake", 1, "50k", "fake-tag", floor_mean=1.5)
+    assert r is not None
+
+    assert r["scene_ret"] == pytest.approx(7.0 / 10.0)
+    assert r["scene_ret_floor_adj"] == pytest.approx((7.0 - 1.5) / (10.0 - 1.5))
+
+    # den pools scene0's 2 episodes at 10.0 with the other nine scenes' 18 episodes at 7.0.
+    den_mean = (2 * 10.0 + 18 * 7.0) / 20
+    assert r["regime"] == pytest.approx(4.0 / den_mean)
+    assert r["regime_floor_adj"] == pytest.approx((4.0 - 1.5) / (den_mean - 1.5))
+
+
+def test_floor_adjusted_scene_retention_refuses_at_or_below_the_floor(monkeypatch):
+    """scene0 at exactly the floor makes the floor-adjusted denominator zero -- must refuse
+    (None), not divide by zero or silently print a number that looks meaningful."""
+    tr, ev = _floor_adj_grid(scene0_mean=1.5, held_mean=1.5, eval_mean=1.5)
+    monkeypatch.setattr(rt, "load", lambda tag, mode: tr if mode == "train" else ev)
+
+    r = rt.row("fake", 1, "50k", "fake-tag", floor_mean=1.5)
+    assert r is not None
+    assert r["scene_ret_floor_adj"] is None
+    assert r["regime_floor_adj"] is None, (
+        "every scene is at the floor, so none are 'usable' and regime itself is REFUSED too -- "
+        "regime_floor_adj must not fabricate a value regime itself doesn't have")
+
+
+@needs_results
+def test_floor_adjusted_section_prints_and_is_marked_not_comparable_to_plain(capsys):
+    rt.main(["--legacy-exploratory"])
+    out = capsys.readouterr().out
+    assert "FLOOR-ADJUSTED RETENTION" in out
+    assert "A18" in out
+    assert "Not directly comparable" in out or "not directly comparable" in out.lower()

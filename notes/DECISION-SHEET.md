@@ -429,6 +429,21 @@ honest description stays **"an authored hybrid continuous-action IBAC-SNI adapta
 
 ### A18 (new) — subtract the random floor before forming any retention ratio
 
+**CORRECTED 2026-09-06 — implemented in an emitter now, was stale.** `scripts/results_table.py`
+computes `scene_ret_floor_adj`/`regime_floor_adj` per this exact formula, printed in a dedicated
+"FLOOR-ADJUSTED RETENTION" section beside (not replacing) plain retention, matching
+`EVAL-PROTOCOL.md:23`'s own metrics-reported row ("retention AND floor-adjusted retention").
+Refuses (prints REFUSED, not a number) wherever the floor-adjusted denominator would not be
+positive. `preprod_table.py` needed no equivalent change: it reports one regime's raw return per
+row and never formed a train-vs-eval ratio to begin with, floor-adjusted or otherwise. Tests in
+`tests/test_results_table.py` verify the formula by hand against a synthetic grid (not just that
+it runs), and the refusal guard; both proven non-vacuous. See `notes/CORRECTIONS.md` #86.
+
+The "still to do" note below (re-measure the floor under the current evaluator) is a data-currency
+question, not a code one now: `results_table.py`'s `floor_mean` is whatever floor grid is actually
+loaded for a given run, not a hardcoded literal, so the formula is automatically as current as
+whatever floor measurement is on disk when the table runs.
+
 **Implemented in the protocol notes, not yet in an emitter** (no retention table is generated yet).
 `CORRECTIONS.md` #5 established that a ratio is not invariant to reward offsets and that Door's
 reward is shaped with a non-zero floor; it demoted the metric but never gave the repair. The repair
