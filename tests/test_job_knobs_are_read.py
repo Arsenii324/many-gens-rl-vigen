@@ -32,6 +32,17 @@ PLATFORM = {
     "NATIVE_V100_RESERVATION_MINUTES",
 }
 
+# [Claude 2026-09-06] (cfg, knob) pairs whose reader was deliberately REMOVED after a one-time
+# use, not left behind by accident. `cfg-ctrl-diag-v159.yaml` set `NATIVE_DIAGNOSE_EVALUATOR_
+# IDENTITY` to drive a temporary block in `scripts/eval_grid.py` that root-caused CORRECTIONS.md
+# #97 (the `door.xml` evaluator-identity bug); the block was reverted immediately afterward so the
+# diagnostic code itself would not join `evaluator_identity.py`'s CODE_MEMBERS closure and move
+# every family's hash. The cfg is kept as the historical record of the job that found the bug, not
+# as something meant to be resubmitted -- resubmitting it today would silently do nothing. Scoped
+# to the exact pair, not the knob name globally, so a future cfg reintroducing this knob by
+# copy-paste is still caught.
+RETIRED_KNOBS = {("cfg-ctrl-diag-v159.yaml", "NATIVE_DIAGNOSE_EVALUATOR_IDENTITY")}
+
 
 def _knobs(cfg: Path) -> set[str]:
     """KEY=VALUE assignments inside the cmd block, which is where a cfg passes knobs."""
@@ -71,6 +82,8 @@ def test_no_cfg_knob_is_dead():
     dead: dict[str, set[str]] = {}
     for cfg in sorted(NATIVE.glob("cfg-*.yaml")):
         for key in _knobs(cfg) - PLATFORM:
+            if (cfg.name, key) in RETIRED_KNOBS:
+                continue
             if not re.search(rf"\b{re.escape(key)}\b", surface):
                 dead.setdefault(cfg.name, set()).add(key)
     assert not dead, ("cfg sets knobs no in-job code reads:\n"
