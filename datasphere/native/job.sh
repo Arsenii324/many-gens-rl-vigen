@@ -20,7 +20,13 @@ set -euo pipefail
 
 PROJECT="${DATASPHERE_PROJECT:-bt12q57tmrs03pnt8drc}"
 EVIDENCE="${NATIVE_EVIDENCE_LOG:-/tmp/ccm-intro-datasphere-recovery-2026-08-31.2KXKs5/datasphere-job-actions.log}"
-V100_BUDGET_CAP_MINUTES=120
+# [Claude 2026-09-06] Raised 120 -> 240 minutes: owner explicitly extended the V100 allowance
+# ("if you're not sure in e.g. the time limits, extend 2h to 4h") once this session's probes
+# needed more than the original 2h across the renderer-parity re-run, the CTRL memory
+# measurement, and the ibac_sni competence pilot. The existing state file's own recorded
+# cap_minutes was bumped to match in the same edit -- load_state() refuses to use a state file
+# whose stamped cap disagrees with the script's current one, by design.
+V100_BUDGET_CAP_MINUTES=240
 V100_BUDGET_STATE="${NATIVE_V100_BUDGET_STATE:-${XDG_STATE_HOME:-${HOME:-/tmp}/.local/state}/ccm-intro/datasphere-v100-g1-1.json}"
 export GRPC_DNS_RESOLVER=native
 
