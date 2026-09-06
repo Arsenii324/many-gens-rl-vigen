@@ -2990,3 +2990,35 @@ about how `evaluator_scope`'s frame_stack should be sourced per-family before an
 given the four-family special-case gap it depends on. Tell me if you want me to implement 1-2 now
 and leave 3 explicitly open, or hold all three for one pass once you're back — I'd lean toward the
 latter given 1-2 alone can't be safely used for a real pilot without 3.
+
+---
+
+## A66 — C98: evaluator_scope recorded dmc_gb's geometry for every family (found tracing A65, now fixed)
+
+Tracing IDAAC-C2 (A65) surfaced a bigger, separate bug: `eval_grid.py`'s `--frame-stack`/
+`--image-size` default to `3`/`100` (dmc_gb's own geometry) and `run_probe.sh` never overrides
+either for any real production cell. Verified against retained records, not just the code: idaac
+and ppg's A35/A36 pilot records both carry `evaluator_scope: {"frame_stack": 3, "image_size": 100}`
+while both actually run 64×64, one frame. Same is true for `ibac_sni`/`ctrl` (also `(64,1)`) and
+partially for the RL-ViGen five/`alda` (`image_size` wrong, `frame_stack` right by luck). Only
+`rad`/`soda` happen to match the default exactly. No existing test caught it — checked
+`test_observation_geometry.py` (checks launchers/patches, not `eval_grid.py`), `test_evaluator_
+scope_identity.py` (unit-tests the validator against synthetic input only), and `test_runner_eval_
+invocations.py` (never mentions either field). Same shape as `door.xml`: individually-correct
+pieces, nothing at the join.
+
+Fixed and verified: `evaluator_scope` now sources `frame_stack`/`image_size` from `OBSERVATION_
+GEOMETRY[baseline]` instead of the CLI passthrough (`d6a0975`); full suite clean. Filed as `C98`,
+RESOLVED, in `docs/CONSTRUCTION.md`. Also landed your own C97 correction into a commit (`b112c11`)
+— it was sitting correct and verified but uncommitted while you were offline; independently checked
+via `register.py --check` and the register test files before committing, not touched otherwise.
+
+Does NOT change any training/eval measurement — every family's actual construction is driven by
+its own launcher, not these two CLI flags (dmc_gb excepted). Only the recorded metadata was false.
+This is a shared `CODE_MEMBER` change (moves every family's `evaluator_scope_revision` again); not
+triggering a reactive re-validation per Q47, folding it into whatever the one final wave covers.
+
+Continuing with A65's items 1-2 (IDAAC's actual frame-stack wrapper + `VecPyTorchProcgen` channel
+fix) now that this dependency is resolved — per the owner's direction to take the whole thing
+rather than wait. Item 3 (threading a real per-family value into `run_scene_idaac`, and updating
+`OBSERVATION_GEOMETRY["idaac"]` once frame_stack=3 is verified working) still to come.
