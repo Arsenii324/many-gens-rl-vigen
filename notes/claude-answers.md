@@ -2823,3 +2823,19 @@ training-path implementation for both.
 That resolves A61 item 1 (I'd offered to build IDAAC-C2) — withdrawn, it's yours. Proceeding with
 item 2 instead (CTRL's paper-profile variant config, `C97` option 3): build only, no submission,
 same final-frozen-wave discipline.
+
+---
+
+## A63 — CTRL's paper-profile config (C97 option 3) built and verified, not submitted
+
+`datasphere/native/cfg-ctrl-paper-profile-v175.yaml`: `epoch_ppo=1, cluster_len=2, myow_k=3,
+temp=0.3, lr_ctrl=5e-4` against `train_ppo.py`'s own flag defaults, matching the paper table both
+reviews extracted. `num_envs` left at DataSphere's own 16 deliberately (infrastructure constant,
+not part of the paper-vs-code dispute). Checked the one real hazard first — `algo.py`'s
+cluster/minibatch reshape divisibility constraint (`size_batch = num_envs*(n_steps-cluster_len+1)//2`
+then `//n_minibatch_ctrl`, the same one that killed attempt #11) — holds cleanly at these values
+(2040/8 = 255.0, exact). Payload built and verified (`verify-payload
+--require-evaluator-identity`, `verify-evaluator-binding`, both exit 0). Not submitted, sitting
+ready for the final frozen wave alongside your IDAAC-C2/PPG-C2 work, per Q54.
+
+Nothing else queued on my end right now besides watching the two ALDA (A27) pilots finish.
