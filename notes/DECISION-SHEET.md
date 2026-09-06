@@ -1365,3 +1365,50 @@ extension once Door's fleet has reported, not a co-equal scope item now — cons
 owner's own phrasing already weighted it, and with the actual state of Lift's calibration
 evidence. Left OWNER because it is a scope call, not a mechanical fix; formal ratification (or a
 stated override) is what would flip `gate_production_scope_frozen`.
+
+### A34 OPEN, 2026-09-06 — `ppg`'s `train.py` is training-only by name but not by load path
+
+Found by an independent adversarial review of the fresh evaluator-validation ledger (CORRECTIONS
+#93). `evaluator_identity.py`'s `_TRAINING_ONLY_RUNTIME_BASENAMES` excludes `train.py`,
+`evaluate_ppo.py`, `train_ppo.py`, `evaluate.py` from every family's hashed code-revision closure,
+on the stated rationale that they're training drivers whose edits shouldn't relabel an evaluation
+of already-saved checkpoint bytes. For `ppg` specifically that rationale is false:
+`runnable/ppg/phasic_policy_gradient/__init__.py` is exactly `from .train import train_fn`, so
+importing the package AT ALL — evaluation included — unconditionally executes `train.py`'s module
+body. The file is genuinely loaded by the live evaluator process without being part of what
+`family_code_revision["ppg"]` hashes.
+
+**Scope, checked directly rather than assumed**: grepped every `__init__.py` under `runnable/` for
+an import of any of the four excluded basenames. Only `ppg`'s does this — `evaluate_ppo.py`,
+`train_ppo.py`, `evaluate.py` are not imported by any package `__init__.py` anywhere, and `train.py`
+only by `ppg`'s own. This is a `ppg`-specific gap, not a systemic one across the seven families.
+
+**Currently harmless**: `train.py`'s module-level code is only imports plus `def train_fn`/`def
+main`/an `if __name__ == '__main__':` guard — no side-effecting statement runs at import time, so
+this has not corrupted any measured number to date. It is a structural gap, not an active defect:
+a future edit to `train.py` would change what the live evaluator runs without moving `ppg`'s code
+revision.
+
+**Options**:
+1. Remove `train.py` specifically from `ppg`'s exclusion (make the basename list per-family, or
+   add `runnable/ppg/phasic_policy_gradient/train.py` to `FAMILY_RUNTIME_MEMBERS["ppg"]`
+   explicitly). Closes the gap for `ppg`; does not touch the other six families' closures at all.
+2. Leave it, documented as an accepted, currently-inert risk, and re-check after any future
+   `train.py` edit rather than pre-emptively closing it.
+3. Generalize: make the exclusion self-verifying (skip excluding a basename only when nothing in
+   the family's own package unconditionally imports it), closing the same class of gap for any
+   future family/file combination, not just this one instance.
+
+**Why this is left OWNER rather than just fixed**: any change to `evaluator_identity.py`'s
+`CODE_MEMBERS`/`FAMILY_RUNTIME_MEMBERS`/exclusion logic moves EVERY family's `family_code_revision`
+simultaneously (it's a shared file), which would immediately invalidate the four families just
+independently verified as current (`rlvigen`, `dmc_gb`, `idaac`, `ibac_sni` — CORRECTIONS #90/#93)
+and require re-running their validation jobs again. That is a real cost to spend deliberately, not
+a side effect to absorb while fixing something else. `ppg`'s ledger entry is left honest in the
+meantime: `runtime_imports_checked: false`, `gate_shared_evaluator_validated` correctly reads 4/7
+rather than a falsely-earned 5/7.
+
+**My reading**: option 1 — narrowest fix, zero blast radius on the other six families' revisions,
+closes the actual gap found. Worth doing in the same pass as `ppg`'s next validation re-run (it
+needs one anyway, since this entry is currently unvalidated), not as a standalone edit that forces
+an otherwise-unneeded re-verification of the four families that already passed.

@@ -1893,3 +1893,50 @@ All three are genuine "the fix was right, the test just didn't travel with it" g
 bugs — but each would have kept failing the full suite silently (or been discovered later, at a
 worse time) had `pytest tests/ -q` not been run in full. `pytest tests/ -q` clean after all three
 fixes (see full-suite run logged the same session).
+
+## #93 — a fresh-agent adversarial review of the #90 ledger entries caught a real, precise gap: `ppg`'s `runtime_imports_checked: true` was earned on a false premise
+
+Before treating the 5 new `validated_evaluator_families.json` entries as final, dispatched an
+independent agent with no stake in the outcome to verify them from first principles rather than
+trust the summary — exactly per the standing "don't self-grade your own validation pipeline"
+concern. It confirmed 4 of 5 (`rlvigen`, `dmc_gb`, `idaac`, `ibac_sni`) clean on every mechanical
+axis, and found one real defect in the fifth.
+
+**The claim it disproved**: I had checked `runtime_imports_checked` by diffing each family's
+`native.runtime_import_manifest.module_files` against `CODE_MEMBERS ∪ FAMILY_RUNTIME_MEMBERS[fam]
+∪ RL-ViGen-upstream/ (archive-pinned) ∪ runnable/_shim/ (documented zero-repo-lines shim)`, and
+called that exhaustive. It wasn't: `runnable/ppg/phasic_policy_gradient/train.py` appears in `ppg`'s
+own manifest and falls outside every one of those four categories.
+
+**Root cause, verified directly**: `runnable/ppg/phasic_policy_gradient/__init__.py` is exactly
+`from .train import train_fn` — so importing the package AT ALL, for evaluation or training,
+unconditionally executes `train.py`'s module body. `train.py` is in `evaluator_identity.py`'s
+`_TRAINING_ONLY_RUNTIME_BASENAMES` (`{"train.py", "evaluate_ppo.py", "train_ppo.py",
+"evaluate.py"}`) and is therefore excluded from `evaluator_family_code_revision`'s hashed closure —
+confirmed: `evaluator_runtime_members(ROOT, "ppg")` does not contain it. The exclusion's own stated
+rationale ("keep training drivers out, so checkpoint-writing changes do not relabel an evaluation
+of already-saved bytes") is **false for `ppg` specifically**: the file is loaded into the live
+evaluator process regardless of what's being run, so it is not safely excludable on that basis.
+
+**Currently harmless, structurally real**: `train.py`'s module-level code is only imports plus
+`def train_fn`/`def main`/an `if __name__ == '__main__':` guard — verified directly, no
+side-effecting statement runs at import time. So this has not corrupted any measured number. But a
+future edit to `train.py` (including something hoisted to module scope inside an existing function)
+would change what the live evaluator process actually runs without moving
+`family_code_revision["ppg"]`, which is exactly the failure mode this whole revision scheme exists
+to prevent.
+
+**Fixed the ledger honestly rather than patching the justification**: `ppg`'s
+`runtime_imports_checked` set to `false` (was `true`), dropping `gate_shared_evaluator_validated`
+from 5/7 to 4/7 — `ppg` now correctly reads "recorded but not paired+complete" rather than a
+falsely-earned PASS. The mechanical fields (revisions, scope, pairing, diagnostics) all remain
+correct and unchanged; only the one boolean whose justification didn't hold was touched.
+
+**Left open, not fixed**: whether to (a) remove `train.py`/`evaluate_ppo.py`/`train_ppo.py`/
+`evaluate.py` from `_TRAINING_ONLY_RUNTIME_BASENAMES` for families where the package `__init__.py`
+imports them unconditionally (closing the gap but possibly reopening the very
+checkpoint-relabeling problem the exclusion exists to prevent, if any of those FILES have real
+training-only side effects on import elsewhere), or (b) audit each of the four excluded basenames
+across all seven families for the same package-`__init__.py`-forces-import pattern and only carve
+out entries proven safe. This is a genuine "our best judgment, still open" architectural question,
+not a mechanical fix — recorded as DECISION-SHEET.md A34 rather than silently defaulted either way.

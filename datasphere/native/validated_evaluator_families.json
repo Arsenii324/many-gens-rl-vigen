@@ -207,7 +207,7 @@
     "family_config_revision": "cad1299ae7f31372bce1f8642cd26f701d8c8e3eca2067382255988531fdd903",
     "job": "bt11o1l70msqkc4d2qnr",
     "paired": true,
-    "runtime_imports_checked": true,
+    "runtime_imports_checked": false,
     "validation_kind": "functional_endpoint"
   },
   "ibac_sni": {
