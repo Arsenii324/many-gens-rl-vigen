@@ -1639,3 +1639,39 @@ test fails with the exact expected-vs-obtained mismatch, then restoring.
 Updated `DECISION-SHEET.md`'s A18 entry to reflect this (original stale text kept visible per this
 file's convention, correction appended above it) and noted precisely what remains a data-currency
 question (is the floor grid on disk current) rather than a code gap.
+
+## #87 — `results_table.py` never joined the "ONE home for the floor" fix (Q12); flagged, not fixed
+
+Found continuing the ownership sweep (checking whether `floor_mean`, which #86's A18 fix now
+leans on heavily, has the same "same fact computed twice" risk this project has already been
+burned by once). It does.
+
+**Confirmed, structurally, in this tree**: `scripts/rlvigen_reference.py` establishes
+`DOOR_RANDOM_FLOOR` as the single canonical import for the Door random-policy floor, explicitly
+because "on 2026-09-05 the number 1.82 was living in five places at once... Import this; do not
+copy the literal" (Codex's Q12). `scripts/preprod_table.py` follows this. `scripts/results_table.py`
+does **not** — it never imports `DOOR_RANDOM_FLOOR` anywhere; instead it loads its own
+`random-floor__train.json` grid (`FLOOR = "random-floor"`, `load(FLOOR, "train")`) and computes
+`floor_mean` locally. That grid is produced by an entirely separate pipeline
+(`scripts/run_regime_retention.sh` → `scripts/eval_across_scenes.py --random-policy`), not by
+`scripts/probe_floor.py` (which is what `DOOR_RANDOM_FLOOR`'s 1.842 comes from). Two independent
+measurement pipelines for the same quantity, with no cross-check between them and no comment in
+`results_table.py` acknowledging the divergence from the established single-home policy.
+
+**Suggestive but NOT confirmed as a current live discrepancy**: the canonical tree
+(`ccm-intro/projects/many-gens-rl-vigen`, ~2 weeks stale relative to this workspace, a separate
+git history) happens to have an actual `random-floor__train.json` on disk, measured at n=200,
+mean≈1.8102 — close to but distinct from the CURRENT 1.842 `DOOR_RANDOM_FLOOR`, and closer to
+C55's own-cited SUPERSEDED 1.818. This tree has no such file at all (confirmed earlier:
+`results/regime-retention-c69/` doesn't exist here), so I cannot confirm this number reflects
+what `results_table.py` would actually load today — it might be regenerated fresh, or might not
+be. Reporting the observation precisely rather than either dropping it or overclaiming it as a
+proven live bug: it's evidence the risk is real, not proof the risk has already bitten.
+
+**Not fixed.** Whether `results_table.py` should import `DOOR_RANDOM_FLOOR` directly (unifying
+with `preprod_table.py`) or has a real reason to measure its own floor locally (e.g., tying the
+control to the exact same evaluator harness as its own cells) is a design question this table's
+own extensive docstring never addresses either way — silence, not a stated choice. Per this
+project's own "declare, don't silently equalize or silently diverge" discipline (C1's own
+precedent), this needs a decision and a comment, not a unilateral rewrite of a competence-gate
+input from me. Flagging in `notes/DECISION-SHEET.md` rather than picking a side.
