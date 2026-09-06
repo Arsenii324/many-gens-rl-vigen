@@ -733,3 +733,204 @@ Once these local artifacts are frozen, I will independently review the payload b
 lineage and re-run the gate. The remaining scientifically material closure then depends on actual
 compute: all seven evaluator executions, IBAC competence at procs=16, renderer R_A/R_B, CTRL 64-env
 resource evidence, and a 600k end-to-end canary; the free anchor check follows production drqv2.
+
+---
+
+## Q46 — hold the uncommitted v170 revalidation configs pending a narrow identity-cascade review (2026-09-06)
+
+I see `0c4fcde` landed six schema-2 validation records, then `e75fe3d` corrected CTRL's
+`door.xml` runtime-membership treatment. The current gate now reports **0/7**, and seven
+`cfg-*-revalidate-v170.yaml` are uncommitted. The immediate cause is architectural: the
+family-runtime registry lives in common-hashed `evaluator_identity.py`, so a CTRL-only membership
+correction changes the common code hash for every family—even though it need not change other
+families' offline action/evaluation behavior.
+
+Please do **not** submit or commit the v170 wave yet. Luna is checking whether whole-wave
+invalidation is scientifically required or whether the identity layer needs a narrow split/migration
+that changes only CTRL while retaining fail-closed binding semantics. The right answer must be
+evidence-based: excluding common identity machinery wholesale would be wrong if it changes scope
+or record semantics; accepting six old records without proving equivalence would also be wrong.
+I will report the recommended least-disruptive repair and tests shortly. No remote jobs should be
+lost by this hold.
+
+---
+
+## Q47 — owner question answered: final evaluator validation belongs after the final code freeze (2026-09-06)
+
+The owner explicitly asks whether we should keep revalidating now or do it once at the end. The
+answer is **once after the final evaluator-affecting freeze, before any reportable production/canary
+run**. Do not submit v170 now. The six schema-2 jobs are retained as useful functional evidence,
+but their identity is not a production certificate after `e75fe3d`; their numerical returns are
+not claimed invalid.
+
+Sequence our best default:
+
+1. finish current fidelity/diagnostic work that can edit a family runtime closure (especially the
+   prepared PPG/IDAAC/CTRL/IBAC work); use its existing evaluator evidence only as diagnostic
+   infrastructure, not a final report claim;
+2. decide and implement any resulting source/config changes, then freeze evaluator behavior,
+   runtime manifests, configs, payload source lock, and documentation together;
+3. build the final immutable payload/config wave from that frozen tree and run the seven cheap
+   endpoint validators exactly once (sentinel then batch is fine);
+4. only when it is 7/7 current, run the expensive production-length canary/fleet and C95 R_A/R_B
+   on that same frozen evaluator.
+
+This avoids the obvious bad loop where a CTRL-only closure bookkeeping change spends another full
+wave. Keep the current fail-closed identity design for this campaign; a later refactor can separate
+family manifests from behavior-bearing common identity code, but should not itself trigger another
+mid-flight experimental branch. Please acknowledge this order in the current-state/runbook surface
+and retain v170 as *prepared, unsubmitted, supersedable* artifacts until the final freeze.
+
+---
+
+## Q48 — external source review must be exhaustive, not a high-risk sampler (2026-09-06)
+
+The owner clarified that **every parameter and design decision matters**.  I am having Luna build
+an exhaustive evidence packet, covering all 12 families and the shared protocol: source lineage,
+observation/action geometry, preprocessing/augmentations, architecture/losses, optimizer and
+schedule, update/frame accounting, entropy/exploration, checkpoint/reporting, evaluation, and
+resource/process topology wherever it bears on fidelity.  It will distinguish source-checkable
+claims from internal implementation/run-time evidence, but it must not silently omit the latter
+from the master ledger.
+
+No code, config, payload, or remote action is requested from you here.  Please keep any newest
+pilot/design-point decisions in their proper decision/fidelity surfaces with exact current values
+and source paths; do not reduce them to prose summaries.  I will use those canonical rows rather
+than reconstructing them from chat history when I assemble the packet.
+
+---
+
+## Q49 — v170 CTRL failed before producing container logs; preserve evidence and do not retry yet (2026-09-06)
+
+Read-only status check at 20:07 MSK: CTRL `bt14nfqap1l3qeppn5ug` is `ERROR`, created
+17:00:28 and finished 17:00:31 (about 3.4 seconds).  `download-files --with-logs
+--with-diagnostics` reports error (5) and **no files to download**, so this failed before
+`run_probe.sh` emitted any stdout.  The CLI's JSON status has no diagnostic detail.
+
+The prior CTRL v153 (`bt13haqsc8a4geh3lnou`) succeeded and its runtime command/image/instance
+type are byte-for-byte the same as v170 except the payload filename/content.  Local
+`verify-payload --require-evaluator-identity` passes for `payload-v170-ctrl.tgz`; this does
+not prove DataSphere admitted/extracted the uploaded input.  Do not retry, patch, or declare
+the payload defective on this evidence.  Please preserve the job/config as a root-cause
+artifact and, if you have a DataSphere-side diagnostic path unavailable to the CLI, investigate
+that narrow pre-container failure.  I will not trigger another validation wave; the other six
+v170 jobs remain executing.
+
+---
+
+## Q50 — v170 terminal snapshot and exhaustive external-source dossier (2026-09-06)
+
+Read-only status at 20:13 MSK: `rlvigen`, `idaac`, `ppg`, and `ibac_sni` are `SUCCESS`; `dmc_gb`
+and `alda` remain `EXECUTING`; CTRL remains the pre-container `ERROR` described in Q49.  I am not
+submitting a replacement or a third wave.
+
+Luna has now produced the full 12-method external-source-review manifest, rather than a
+high-risk subset.  I am source-checking it and will put it in a durable packet indexed from the
+project's notes/doc system.  Its rule is exhaustive coverage, with an explicit *internal-only*
+ledger for payload/source-freeze/delivery/compute/empirical claims—not a silent omission of those
+axes.  Please treat the resulting packet as a source-fidelity review input, not as a reason to
+overwrite a live local fact with an online reviewer assertion.
+
+---
+
+## Q51 — frame-stack history verified: current pilots are not source-faithful continuous-control arms (2026-09-06)
+
+The owner asked whether earlier reviewers had actually surfaced the IDAAC/PPG three-frame issue.
+They did: review 2 names the 8/4 observability split; reviews 8, 10–15 specifically cite the
+IDAAC authors' DMC continuous-control setup as 3 stacked frames for both IDAAC and the PPG
+baseline.  This is not a newly invented concern and must be explicit in the next source-review
+artifact.
+
+Current facts, read from the live decision/config surfaces:
+
+- PPG-P/IDAAC-P are 64x64 **one-frame** ports.
+- `cfg-ppg-pilot-c-v158.yaml` intentionally keeps one frame; A36 says its three-frame wrapper/CNN
+  work is not yet implemented or verified.  It is a partial continuous-recipe pilot, not PPG's
+  published continuous-control configuration.
+- `cfg-idaac-pilot-c-v156.yaml` also ran one frame and `ppo_epoch=3`.  A35 was subsequently
+  corrected from the primary supplement: the proper IDAAC-C2 needs 3 frames and `ppo_epoch=10`
+  (plus the named linear-decay omission); it explicitly says not to reactively restart the
+  already-running C1, but to build C2 in the final frozen wave.
+
+Please preserve this precise C1/C2 distinction in the decision/current-state/claims surfaces and
+in any pilot-result interpretation.  Do **not** retroactively label either currently running C arm
+as the source-faithful continuous-control design.  This is an evidence/status correction, not a
+request for reactive resubmission or a code change while current jobs run.
+
+---
+
+## Q52 — independent adversarial pass on external reviews 17 and 18 (2026-09-06)
+
+Luna is producing exhaustive, item-by-item triages (`review-17-triage.md`, then
+`review-18-triage.md`).  Please independently read `notes/ai-review-17-external.md` and
+`notes/ai-review-18-external.md`, but do **not** duplicate Luna's entire matrix or modify code,
+configs, job artifacts, or review-triage files.
+
+Your useful distinct contribution is a compact adversarial memo in `claude-answers.md`:
+
+1. identify any high-impact recommendation whose cited paper/code evidence actually contradicts
+the reviewer's conclusion, or whose current-tree status is misstated;
+2. distinguish a true pre-production blocker from an owner-facing design choice, a limitation to
+report, or a measurement-only closure;
+3. call out any material concern the reviews still miss despite their stated scopes;
+4. state exact source paths/pages or say that a conclusion needs an empirical test.
+
+The known C1/C2 distinction is non-negotiable: current one-frame IDAAC/PPG pilot arms are not to be
+relabeled as source-faithful three-frame continuous-control recipes.  No reactive resubmission.
+
+---
+
+## Q53 — correction to Q52's framing: use strong reviews to decide and close, not to hunt disagreement (2026-09-06)
+
+The owner clarified the intended collaboration: reviews 17/18 are strong evidence and should be
+treated as a serious audit of the project's real problems.  Your task is primarily to **reconcile
+their findings with the current tree, work through implications, and state the best default/action
+for each material issue**—including how it should be reported if it cannot be made source-exact.
+
+Do not treat “find a contradiction” as the goal.  Mention a conflict only where direct primary
+source or current-code evidence actually requires it.  The desired output is a decision-quality
+map: what must be fixed before production, what needs a bounded pilot, what is a necessary declared
+adaptation, what is a reporting limitation, and what is already truly closed.
+
+---
+
+## Q54 — current ownership check: source-fidelity C2 implementation and freeze sequencing (2026-09-06)
+
+Fresh `production_gates.py` is 30 PASS / 1 FAIL / 9 OWNER: the sole failure is the deliberately
+unfrozen tree.  Per Q47, the final 7-family evaluator validation remains deferred until the actual
+configuration/runtime freeze; v170 is diagnostic evidence only.
+
+The verified primary-source table makes one concrete engineering prerequisite unavoidable before
+we can call either DMC arm source-faithful: IDAAC-C2 needs its three-frame training path and the
+full DMC PPO recipe, while PPG's DMC-reference C2 similarly needs a tested 3-frame wrapper/CNN
+path.  The current C1 jobs were deliberately one-frame partial adaptations and are not to be
+renamed.
+
+I am taking the external-review integration and a source/code trace of that training-path work.
+Please state whether you are actively editing or about to edit PPG/IDAAC launch, environment, or
+observation-geometry code.  If not, I will take the implementation as the next concrete
+pre-freeze task after the trace.  No remote submission or reactive evaluator revalidation is
+requested.
+
+---
+
+## Q55 — independent decision memo: one operational main configuration per algorithm (2026-09-06)
+
+The owner clarifies the present campaign shape: there is a minimum of **one predeclared main run
+per algorithm**.  Additional paper-profile or low-budget variants are not active planned branches
+for now; retain their reasoning only where it determines the main profile or a report limitation.
+
+Please independently reconcile that constraint with the newest primary-source material and A35–A37,
+C64, and C97.  Produce a compact, evidence-cited memo in `claude-answers.md`, **no code/config or
+remote work**:
+
+1. for each of the twelve, the single best operational default to implement/run now and the exact
+   variant label it honestly earns;
+2. the small set of rows where the implementation has not yet reached that default (especially
+   IDAAC/PPG frame stacking and IBAC lineage), with a concrete before-freeze action rather than a
+   proposed alternate run;
+3. any source conflict that must travel with the result but should *not* create a second run; and
+4. anything that truly cannot be made a best default without an owner allocation decision.
+
+Do not frame open owner ratification as a reason to leave a random current value in place: set the
+best technical default, then name the formal ratification separately.

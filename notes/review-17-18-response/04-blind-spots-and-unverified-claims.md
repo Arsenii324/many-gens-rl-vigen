@@ -173,20 +173,39 @@ review made each claim:
   {finger_spin,walker_walk,ball_in_cup_catch,cartpole_balance}.yaml` are byte-identical on all
   five values, confirming they're genuinely uniform authors' defaults, not task-tuned — stronger
   evidence than either review states. See review 17's item-by-item file.
-- DrQ-v2's exact replay-capacity numbers (≈620k V100, 300k DataSphere, "effectively non-evicting
-  for a 600k run") — accepted from the review and this project's pre-existing `CLAIMS-LEDGER.md`,
-  arithmetic not independently redone.
-- The CTRL authors' claimed original JAX/Flax/Optax versions (≈0.2.17/0.3.4/0.0.9).
+- ~~DrQ-v2's exact replay-capacity numbers~~ — **checked after this document's first draft:
+  arithmetic independently redone, both numbers confirmed exactly.** `datasphere/native/
+  families.json:28-30` (V100 override): 600,000 training frames at `action_repeat=1` give 600,000
+  transitions; Door has no early termination, so at most 600,000/500 = 1,200 episode resets each
+  add one extra reset-observation entry, giving 601,200 transitions retained — 620,000 capacity
+  leaves exactly 18,800 headroom, non-evicting. `families.json:101` (ordinary DataSphere profile):
+  300,000, independently confirmed as the profile's actual value, not the V100 override generalized
+  incorrectly to it (the exact distinction `review-17-triage.md:123` and `review-18-triage.md:70`
+  already warn against conflating). This item had extensive prior corroboration already
+  (`notes/DECISION-SHEET.md` A14, `notes/MIGRATION-T4-TO-V100.md`); what was missing was my own
+  independent recompute, which is now done and matches.
+- ~~The CTRL authors' claimed original JAX/Flax/Optax versions~~ — **checked after this document's
+  first draft: verified exactly against the primary source.** `ext/ctrl_public/requirements.txt`:
+  `jax[cuda110]==0.2.17`, `flax==0.3.4`, `optax==0.0.9` — the authors' own pinned versions, byte-
+  exact match to the claimed `≈0.2.17/0.3.4/0.0.9`.
 - ~~Whether the continuous-action clip-fraction/raw-vs-executed instrumentation both reviews
   recommend already exists~~ — **checked after this document's first draft: it does, substantially**
   (`scripts/eval_provenance.py::ActionDiagnosticsAccumulator`, wired into all six of
   `eval_grid.py`'s per-family evaluators). See review 17's item-by-item file for the detail. The
   one real remaining gap: raw per-step action values are not retained as literal traces, only the
   derived clip-rate/L1-distance aggregates.
-- Whether `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md` (Codex/Luna's document) still contains the
-  overbroad `EXACT SOURCE MATCH` verdicts for SVEA/CURL that review 18 names — I verified the
-  underlying *code* fact those verdicts are wrong about, but never opened that specific document
-  to check whether it has since been corrected.
+- ~~Whether `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md` still contains the overbroad
+  `EXACT SOURCE MATCH` verdicts for SVEA/CURL~~ — **checked after this document's first draft: it
+  did, and I fixed both.** CURL's "Core method" row said "EXACT SOURCE MATCH for the mechanism";
+  verified directly (`RL-ViGen-upstream/algos/curl.py:54`, `class CURLAgent(DrQV2Agent):`) that the
+  actual backbone is DrQ-v2, not SAC — a mechanism-level swap, not a hyperparameter variant. Added
+  a dated correction rather than rewriting the row. SVEA had no augmentation row at all (a coverage
+  gap, not a wrong verdict) — added one: `RL-ViGen-upstream/algos/svea.py:12,299` calls
+  `random_overlay` (`RL-ViGen-upstream/utils.py:227-241`, a Places365 alpha-blend, confirmed no
+  `random_conv`/`random_convolution` exists anywhere in the tree), SODA's/SGQN's augmentation
+  family, not SVEA's own random-convolution augmentation. Both match `CLAIMS-LEDGER.md`'s
+  pre-existing rows for `curl`/`svea`, which had recorded these facts already — this document just
+  hadn't been reconciled against them. Commit pending alongside this file.
 
 ## Things I did not do that both reviews explicitly asked for, named plainly rather than left implicit
 

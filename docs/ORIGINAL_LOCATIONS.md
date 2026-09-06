@@ -162,7 +162,7 @@ paper's own stated commit/release note, which was not done this pass.
   (`xuance/torch/learners/policy_gradient/ppg_learner.py`). Both are third-party community
   frameworks, fidelity NO — nobody, including the original authors, has released a continuous PPG.
 
-### `ibac_sni` — Igl et al., NeurIPS 2019, arXiv:1901.10902
+### `ibac_sni` — Igl et al., NeurIPS 2019, arXiv:1910.12911
 - **Original, fidelity YES**: `projects/many-gens-rl-vigen/ext/IBAC-SNI` — origin
   `microsoft/IBAC-SNI.git`, verified. `HEAD 6b3a58b`, 2020-06-28 — ~6 months after NeurIPS 2019
   (~Dec 2019). Moderate drift risk. Not diffed against a paper-stated commit.
@@ -173,6 +173,10 @@ paper's own stated commit/release note, which was not done this pass.
   consequence is direct: the framework-boundary argument that would license treating a third
   party's PyTorch re-derivation as the best available base for this baseline **does not apply
   here**, because a first-party PyTorch bottleneck exists on this disk.
+- **Paper record**: `ext/papers-sorted/IBAC-SNI/IBAC-SNI_paper_neurips2019.pdf` is the canonical
+  local paper. `ext/baseline_resources/11_ibac_sni/paper_1901.10902.pdf` is the unrelated
+  *InfoBot* paper, retained as read-only download evidence but explicitly excluded as an IBAC-SNI
+  source.
 - Third-party port, fidelity NO, still discrete (Procgen, not continuous):
   `~/Downloads/IBAC_SNI_torch` — DZ's independent PyTorch port. No continuous version of IBAC-SNI
   exists anywhere, confirmed by the same `agy` search as IDAAC/CTRL above.

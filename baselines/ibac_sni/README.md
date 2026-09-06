@@ -4,7 +4,7 @@
 |---|---|
 | status | `implemented` |
 | backbone | `impala` |
-| paper | Igl et al. 2019, arXiv:1901.10902 |
+| paper | Igl et al. 2019, arXiv:1910.12911 |
 
 A real, distinct training rule. Trainable.
 

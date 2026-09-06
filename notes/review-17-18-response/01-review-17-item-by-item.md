@@ -260,6 +260,14 @@ RL-ViGen's own supplementary PDF to confirm it states this design choice explici
 quite the same claim as "the paper says so." The renaming to `CURL-RLViGen` in result labels,
 job configs, or `families.json` — **not done**, same as the general naming recommendation above.
 
+**UPDATE 2026-09-07**: the specific document-level gap review 18 names — `PRIMARY-SOURCE-
+FIDELITY-RECONCILIATION.md`'s CURL "Core method" row still saying `EXACT SOURCE MATCH for the
+mechanism` — was checked and was indeed still there, uncorrected. Fixed it directly (that
+document's owner, Codex/Luna, has been unreachable; per the owner's explicit instruction to take
+full ownership when Codex is down, I corrected it myself rather than leaving it flagged-but-open a
+third time). See that file's CURL section for the dated correction. Renaming (`CURL-RLViGen`)
+remains not done — a separate, cosmetic item from the verdict-accuracy fix.
+
 ---
 
 ## 7. SVEA
@@ -276,6 +284,13 @@ review. This is also independently corroborated by this project's own pre-existi
 `CLAIMS-LEDGER.md` row for svea (`Uses SODA's random_overlay, not SVEA's random convolution`),
 which names a *different* fidelity gap in the same augmentation but was already on record before
 this review cycle. Rename to `SVEA-RLViGen` — **not done**.
+
+**UPDATE 2026-09-07**: `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`'s SVEA section had no
+augmentation row at all — the omission that let its "EXACT SOURCE MATCH for the SVEA update
+mechanism" verdict read as covering augmentation too, when it should only cover the joint-loss
+structure. Added a dedicated Augmentation row there citing `RL-ViGen-upstream/algos/svea.py:12,299`
+and `RL-ViGen-upstream/utils.py:227-241`, and narrowed the Core method row's own wording to say
+explicitly what it does and doesn't cover. Same ownership note as the CURL update above.
 
 ---
 

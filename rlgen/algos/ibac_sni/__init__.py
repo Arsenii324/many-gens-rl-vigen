@@ -1,4 +1,4 @@
-"""IBAC-SNI (Igl et al., NeurIPS 2019, arXiv:1901.10902), rebuilt base-first 2026-08-16.
+"""IBAC-SNI (Igl et al., NeurIPS 2019, arXiv:1910.12911), rebuilt base-first 2026-08-16.
 
 ## The formula for this baseline
 

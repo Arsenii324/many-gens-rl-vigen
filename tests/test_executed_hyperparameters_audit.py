@@ -8,6 +8,7 @@ life while the table recorded 1e-4.
 """
 import importlib.util
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -97,6 +98,29 @@ def test_every_rlvigen_baseline_resolves_to_the_shared_launcher():
         assert audit.launcher_flags(baseline).get("action_repeat") == "1", (
             f"{baseline} does not resolve to rlvigen.sh; its executed values would be invisible"
         )
+
+
+def test_sgqn_released_profile_is_traceable_from_hydra_config_to_loss():
+    """The selected SGQN profile is the released code, not the retired adapter or Table 6.
+
+    C64 was a documentation defect with a dangerous shape: all three value sets existed in the
+    repository, so a plausible-looking claim could identify the wrong executable path.  Pin the
+    composed Hydra config and the only non-configurable discrepancy (the loss literal) together.
+    A paper profile, if ever explicitly requested, must create a different named configuration;
+    it cannot make this test silently describe a new main run.
+    """
+    audit = _audit()
+    assert audit.rlvigen_config_value("sgqn", "aux_lr") == ("1e-4", "sgqn_config.yaml aux_lr")
+    assert audit.rlvigen_config_value("sgqn", "aux_beta") == ("0.99", "sgqn_config.yaml aux_beta")
+    assert audit.rlvigen_config_value("sgqn", "sgqn_quantile") == ("0.93", "sgqn_config.yaml sgqn_quantile")
+
+    launcher = (ROOT / "runnable" / "_launch" / "rlvigen.sh").read_text()
+    assert 'CFG="${AGENT}_config"' in launcher and '--config-name "$CFG"' in launcher
+
+    source = (ROOT / "RL-ViGen-upstream" / "algos" / "sgqn.py").read_text()
+    assert re.search(r"critic_loss\s*\+=\s*0\.9\s*\*", source), (
+        "SGQN's released-code consistency coefficient moved or became configurable; re-derive "
+        "the profile label and source/paper qualification instead of carrying .9 by memory")
 
 
 def test_nonproduction_claims_are_explicitly_classified_not_silently_dropped():

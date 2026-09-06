@@ -438,14 +438,14 @@ register(BaselineSpec(
 
 register(BaselineSpec(
     name="ibac_sni", method="IBAC-SNI", backbone="impala", status="implemented",
-    paper="Igl et al. 2019, arXiv:1901.10902", build=_ibac_sni_hermetic_build, on_policy=True,
+    paper="Igl et al. 2019, arXiv:1910.12911", build=_ibac_sni_hermetic_build, on_policy=True,
     notes="Hermetic module (rlgen/algos/ibac_sni/), rebuilt base-first 2026-08-16 from joonleesky/train-procgen-pytorch @ 1678e4a (vendored verbatim at rlgen/algos/ibac_sni/_upstream_1678e4a/), with IBAC-SNI's semantics taken from the AUTHORS' OWN release, ext/IBAC-SNI (microsoft/IBAC-SNI @ 6b3a58b). PPO plus a variational information bottleneck and selective noise injection: SNI averages TWO complete clipped PPO surrogates -- one from the noisy pass, one from the deterministic pass -- at a hardcoded 1/2 (ppo2.py:96-107). CORRECTION 2026-08-16, this note previously said the mix includes 'the value estimate': it does not, and that was advertising a defect as a feature. The reference sets vf_run = vf_train = fc(h_vf,'v',1) under SNI (policies.py:161) -- the value function is entirely deterministic, with the authors' own comment 'VIB for regression seems like a bad idea'. Also corrected: there is no sni_lambda knob (the reference has no such flag), and ~/Downloads/IBAC_SNI_torch is a third party's re-derivation used for wiring only, never as the semantic reference. Full list of what is ours vs the authors': docs/INTEGRATION-DELTA.md. Tier T4 for the algorithm; the only numerical checks are against the PPO host (tests/test_ibac_sni_base_parity.py). Not verified against published returns."))
 
 for _n, _m, _p, _why in [
     ("__removed_ppg", "Phasic Policy Gradient", "Cobbe et al. 2020, arXiv:2009.04416",
      "On-policy, needs a rollout buffer, clipped surrogate and the phasic auxiliary phase. The "
      "previous `ppg.py` had none of these and no update() at all."),
-    ("__removed_ibac_sni", "IBAC-SNI", "Igl et al. 2019, arXiv:1901.10902",
+    ("__removed_ibac_sni", "IBAC-SNI", "Igl et al. 2019, arXiv:1910.12911",
      "PPO + variational information bottleneck + selective noise injection. Needs the on-policy "
      "trainer that PPG needs; the reference torch port is ~/Downloads/IBAC_SNI_torch."),
 ]:

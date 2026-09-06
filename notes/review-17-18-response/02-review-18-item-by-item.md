@@ -37,12 +37,13 @@ overlap rather than repeating the same verification narrative twice.
   generous." **VERIFIED, independently, and this is the single sharpest, most concretely-checkable
   claim in either review**: I read `RL-ViGen-upstream/algos/svea.py::SVEAAgent` directly and
   confirmed no SAC entropy/temperature term exists anywhere in the class — `stddev_schedule` only.
-  I did not separately audit whether `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md` (a Codex/Luna
-  document) actually contains an `EXACT SOURCE MATCH` verdict for SVEA that needs downgrading —
-  that document is outside what I edited this session, so I cannot confirm whether this specific
-  correction has been applied there. **Open**, and it is Codex/Luna's document to correct, not
-  mine, but I want it on record that I verified the underlying code fact and did not verify
-  whether the flagged document was actually fixed.
+  **UPDATE 2026-09-07: checked, and it did still contain that verdict, uncorrected.** Fixed it
+  directly — added a dedicated Augmentation row (the row was simply absent, which is what let the
+  Core-method verdict read as covering augmentation) and narrowed the Core-method row's own wording
+  to state explicitly it covers the joint-loss mechanism only. Codex has been unreachable; per the
+  owner's explicit instruction to take full ownership rather than leave flagged-but-open items
+  waiting indefinitely, I corrected the document myself rather than deferring a third time. No
+  longer open.
 - **SGQN**: "same basic issue as SVEA... keep RL-ViGen-SGQN for benchmark fidelity... make Door's
   q=.9/.7/8e-5 a hard effective-config check." See the SGQN section below — this is the row where
   the two reviews' *numbers* agree but their prescriptions differ subtly from this project's own
@@ -50,8 +51,10 @@ overlap rather than repeating the same verification narrative twice.
   17's already-detailed treatment.
 - **CURL**: "most explicit RL-ViGen variant... `CURLAgent(DrQV2Agent)`... 'exact mechanism match'
   is too strong [again, presumably in the Codex/Luna document]." Same VERIFIED code fact as review
-  17's CURL section (`CURLAgent(DrQV2Agent)`, confirmed by direct read). Same caveat as SVEA above:
-  I did not check whether the flagged document itself was corrected.
+  17's CURL section (`CURLAgent(DrQV2Agent)`, confirmed by direct read). **UPDATE 2026-09-07**:
+  checked and fixed, same as SVEA above — the document's CURL "Core method" row said `EXACT SOURCE
+  MATCH for the mechanism`; added a dated correction stating the actual backbone is DrQ-v2, not
+  SAC, and downgraded the verdict to `SOURCE CONFLICT` for the backbone. No longer open.
 - **RAD**: "good method resemblance, weaker provenance than stated... you are using Hansen's DMCGB
   standardized implementation, not Laskin et al.'s original RAD repository... rename provenance to
   DMCGB-RAD." TAKEN ON TRUST, entirely, same as review 17's RAD section — I did not check DMCGB's
@@ -237,9 +240,10 @@ requiring a single new training run") — it would cost little to formalize and 
 ## Review of the three project documents themselves
 
 **Claim on `PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`**: right structure, but several `EXACT
-SOURCE MATCH` verdicts are too broad (SVEA, CURL specifically named). **Not independently
-checked** — that document belongs to Codex/Luna, and I did not open it to verify whether these
-specific verdicts still read as the review describes as of this writing.
+SOURCE MATCH` verdicts are too broad (SVEA, CURL specifically named). **UPDATE 2026-09-07: checked
+and fixed** (see the SVEA/CURL entries above in this same document, and that file's own SVEA/CURL
+sections) — both verdicts were indeed still too broad; corrected with dated notes rather than
+rewritten wholesale, per this project's register convention.
 
 **Claim on `DECISION-SHEET.md`**: "very good scientific self-correction... [but] chronological, so
 obsolete conclusions and their corrections coexist hundreds of lines apart... a reviewer should
