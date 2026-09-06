@@ -907,6 +907,30 @@ fleet. **Until that exists, treat δ as bounded in roughly [0.4, 1.0] rather tha
 and prefer the higher end if a single operating value is needed now — a stricter competence bar that
 wrongly excludes a modest performer is a smaller cost than a lenient one that certifies noise.
 
+**RECONCILED 2026-09-06 — the number this entry is missing may not be the number that matters.**
+Checked whether δ (a margin on RAW RETURN above `R_floor`) is actually the operative competence
+gate anywhere in the code that runs today. It isn't: `scripts/results_table.py`'s and
+`scripts/regime_retention_report.py`'s own live denominator rule is
+`mtr[scene] > floor_mean AND success_rate(scene) >= MIN_DENOM_SUCCESS (0.25)` — a plain floor
+exceedance (no margin) combined with a **success-rate** threshold, not a return-margin one. And
+`regime_retention_report.py`'s own comment states exactly why: a return-based check alone let a
+policy scoring 1/20 on every scene — a shaped-reward plateau, never actually opening the door —
+pass through and read as "retention of 0.947." That is precisely the failure mode δ was invented
+to guard against, via a different (return-margin) mechanism that was never implemented because the
+success-rate gate already closed the hole first, for a stronger reason: success is a direct,
+task-defined signal, while return is dense, shaped, and exactly the quantity that can plateau
+without task success. A return-margin gate is provably weaker at the one thing it exists to catch.
+
+**My reading, offered as the "our best" operational answer rather than a further deferral**: the
+success-rate gate (`MIN_DENOM_SUCCESS = 0.25`) IS this project's competence gate, already live,
+already battle-tested against a real adversarial case, and should be treated as A23's actual
+resolution rather than leaving δ dangling as a second, unimplemented mechanism answering the same
+question worse. δ / `R_floor + δ` should be retired from the proposal rather than eventually
+resolved. What remains genuinely open, and is the owner's: whether 0.25 is the right success-rate
+threshold (a real, stateable number, unlike δ) — and whether train-regime success alone should gate
+train-vs-OOD comparisons, or whether OOD-regime success needs its own, possibly different,
+threshold. Not fixed here; noted as the narrower, better-posed question this reconciliation leaves.
+
 ### A24 DECIDED, 2026-09-05 — the missing-run policy
 
 §1.7 names the questions and does not answer them. **Corrected from "proposal" to "decided"**: unlike
