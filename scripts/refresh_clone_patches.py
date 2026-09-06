@@ -58,6 +58,54 @@ def patched_files(patch: pathlib.Path) -> list[str]:
     return names
 
 
+IGNORED_UNTRACKED_PARTS = {
+    "door.xml", "__pycache__", "logs", "models", "results", "exp_local", "data",
+    ".egg-info",
+}
+
+
+def _is_ignored_untracked(relative: str) -> bool:
+    parts = pathlib.PurePosixPath(relative).parts
+    return any(part in IGNORED_UNTRACKED_PARTS or part.endswith(".egg-info")
+               for part in parts)
+
+
+def clone_changed_files(clone: pathlib.Path) -> set[str]:
+    """Return relevant non-deleted paths changed from the clone's PRISTINE commit.
+
+    `--diff-filter=d` is deliberate: the runnable clones are slimmed copies and their absent
+    upstream assets are not authored deletions. Untracked source additions are included, while
+    the same run artifacts excluded by `scripts/deviations.py` are not treated as clone deltas.
+    """
+    base = subprocess.run(
+        ["git", "rev-list", "--max-parents=0", "HEAD"],
+        cwd=clone, capture_output=True, text=True,
+    )
+    if base.returncode != 0 or not base.stdout.strip():
+        raise RuntimeError(f"cannot identify PRISTINE commit for {clone}: {base.stderr.strip()[:200]}")
+    changed = subprocess.run(
+        ["git", "diff", "--name-only", "--diff-filter=d", base.stdout.splitlines()[0], "--"],
+        cwd=clone, capture_output=True, text=True,
+    )
+    if changed.returncode != 0:
+        raise RuntimeError(f"cannot list clone changes for {clone}: {changed.stderr.strip()[:200]}")
+    paths = {line for line in changed.stdout.splitlines() if line}
+
+    untracked = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        cwd=clone, capture_output=True, text=True,
+    )
+    if untracked.returncode != 0:
+        raise RuntimeError(f"cannot list untracked clone files for {clone}: "
+                           f"{untracked.stderr.strip()[:200]}")
+    for entry in untracked.stdout.split("\0"):
+        if entry.startswith("?? "):
+            relative = entry[3:]
+            if relative and not _is_ignored_untracked(relative):
+                paths.add(relative)
+    return paths
+
+
 def one_diff(source: pathlib.Path, clone: pathlib.Path, relative: str) -> str:
     """`git diff --no-index` works outside a repository, which is what ext/ and runnable/ are."""
     left, right = source / relative, clone / relative
@@ -103,7 +151,7 @@ def main() -> int:
     ap.add_argument("--check", action="store_true", help="report staleness, write nothing")
     args = ap.parse_args()
 
-    stale, missing = [], []
+    stale, missing, coverage_errors = [], [], {}
     for family in sorted(SOURCE_OF):
         patch = PATCHES / f"{family}.patch"
         if not patch.is_file():
@@ -111,6 +159,13 @@ def main() -> int:
         if not (ROOT / SOURCE_OF[family]).is_dir():
             missing.append(family)
             continue
+        if args.check:
+            changed = clone_changed_files(ROOT / "runnable" / family)
+            covered = set(patched_files(patch))
+            missing_paths = sorted(changed - covered)
+            extra_paths = sorted(covered - changed)
+            if missing_paths or extra_paths:
+                coverage_errors[family] = (missing_paths, extra_paths)
         current, stored = rebuild(family), patch.read_text(errors="replace")
         if current.strip() != stored.strip():
             stale.append(family)
@@ -120,6 +175,8 @@ def main() -> int:
     for family in sorted(SOURCE_OF):
         mark = ("MISSING SOURCE" if family in missing
                 else ("STALE" if family in stale else "current"))
+        if family in coverage_errors:
+            mark = "PATHS-MISMATCH"
         print(f"  {family:10} {mark}")
     if missing:
         print(f"\n  {len(missing)} family/families have no ext/ source here, so their snapshot could")
@@ -130,7 +187,15 @@ def main() -> int:
         if args.check:
             print("  RECOVERY-HANDOFF.md says the clones are reproducible from ext/ plus these")
             print("  files. While one is stale, that claim is false. Run without --check to fix.")
-    return 1 if (stale and args.check) else 0
+    if coverage_errors:
+        print("\n  clone patch path coverage mismatch:")
+        for family, (missing_paths, extra_paths) in sorted(coverage_errors.items()):
+            if missing_paths:
+                print(f"  {family}: missing from patch: {', '.join(missing_paths)}")
+            if extra_paths:
+                print(f"  {family}: patch-only paths: {', '.join(extra_paths)}")
+        print("  Re-export the snapshot after resolving the clone delta; --check never rewrites files.")
+    return 1 if (args.check and (stale or coverage_errors)) else 0
 
 
 if __name__ == "__main__":

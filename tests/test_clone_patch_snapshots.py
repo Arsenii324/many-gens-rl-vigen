@@ -44,6 +44,40 @@ def test_new_file_entries_are_not_dropped_by_the_parser():
     )
 
 
+def test_check_rejects_a_changed_clone_file_missing_from_patch_headers(tmp_path, monkeypatch, capsys):
+    """A patch cannot certify a clone if it omits one of the clone's changed source files."""
+    tool = _tool()
+    source = tmp_path / "ext" / "toy"
+    clone = tmp_path / "runnable" / "toy"
+    patches = tmp_path / "runnable" / "_patches"
+    source.mkdir(parents=True)
+    clone.mkdir(parents=True)
+    patches.mkdir()
+    for name in ("kept.py", "omitted.py"):
+        (source / name).write_text("base\n")
+        (clone / name).write_text("base\n")
+
+    subprocess.run(["git", "init", "-q"], cwd=clone, check=True)
+    subprocess.run(["git", "add", "kept.py", "omitted.py"], cwd=clone, check=True)
+    subprocess.run([
+        "git", "-c", "user.name=patch-test", "-c", "user.email=patch-test@example.invalid",
+        "commit", "-qm", "PRISTINE: toy",
+    ], cwd=clone, check=True)
+    (clone / "kept.py").write_text("kept change\n")
+    (clone / "omitted.py").write_text("omitted change\n")
+    (patches / "toy.patch").write_text(tool.one_diff(source, clone, "kept.py"))
+
+    monkeypatch.setattr(tool, "ROOT", tmp_path)
+    monkeypatch.setattr(tool, "PATCHES", patches)
+    monkeypatch.setattr(tool, "SOURCE_OF", {"toy": "ext/toy"})
+    monkeypatch.setattr(sys, "argv", ["refresh_clone_patches.py", "--check"])
+
+    assert tool.main() == 1
+    output = capsys.readouterr().out
+    assert "missing" in output.lower()
+    assert "omitted.py" in output
+
+
 def test_every_snapshot_currently_reproduces_its_clone():
     tool = _tool()
     proc = subprocess.run([sys.executable, str(ROOT / "scripts" / "refresh_clone_patches.py"),
