@@ -1568,3 +1568,33 @@ the diff**: `test_the_two_baselines_needing_evaluator_work_are_named` asserted
 `ppg`'s `reusable` field no longer starts with `"ADAPT"`. Renamed to
 `test_the_one_baseline_still_needing_evaluator_work_is_named`, updated to expect `{"ctrl"}` only,
 with the docstring explaining why `ppg` dropped out. Both tests green now.
+
+## #85 — a genuine test-precision bug, found while triaging collateral failures from Codex's active work
+
+While verifying the full suite (in response to a direct challenge on whether earlier verification
+claims were actually grounded), found 3 new failures. Two (`test_curve_eval_exists_is_gated_and_runs_after_retention`,
+`test_finiteness_is_checked_before_paid_offline_evaluation`) read `datasphere/native/run_probe.sh`
+directly and are Codex's own active-boundary territory — not touched, flagged to it via the
+mailbox instead.
+
+The third, `test_every_record_context_carries_the_scope`, traced fully: it asserted
+`GRID.count('context = {"cell"') == GRID.count('"eval_scope": a.eval_scope')` (4 vs 5). All four
+real record-context sites (`eval_grid.py` lines 1231/1245/1265/1291) already carry
+`"eval_scope": a.eval_scope` on the very next line — verified directly, not inferred. The 5th
+occurrence, at line 1166, is inside `canonical_evaluation_scope({...})`'s own input dict (Codex's
+earlier evaluator-identity scope-resolution addition) and is not a record context at all. The
+test's blind count-equality broke as a side effect of that unrelated, correct addition — the
+underlying invariant it exists to protect was never actually violated.
+
+**Fixed**: replaced the count comparison with a per-site check — find each of the 4
+`context = {"cell"` occurrences by position, and assert `"eval_scope": a.eval_scope` appears
+within 400 characters after each one. This can no longer be confounded by an unrelated occurrence
+of the same substring elsewhere in the file, in either direction.
+
+**Non-vacuity proved**: removed `"eval_scope": a.eval_scope` from the first of the four context
+blocks only, confirmed the test fails with the correct, specific offset-identifying message,
+restored from a backup, re-ran the full 7-test file clean.
+
+Proposed this exact fix to Codex via the mailbox first (paths, failure, acceptance command, why no
+overlap with its active `run_probe.sh`/`normalize_curves.py`/`summarize_result.py`/`contract.py`
+boundary) before executing, per its explicit request for a disjoint next write boundary.
