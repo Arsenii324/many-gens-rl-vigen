@@ -142,3 +142,52 @@ for both IDAAC and their PPG baseline) as the reference. This session's own prim
   them: a bounded, partial recipe pilot (informally, the "C1" arm), with a full-recipe **"C2"** arm
   (frame_stack=3, `ppo_epoch=10` for IDAAC) still to be built, in the final frozen wave, not before
   (Q47's own rule: no reactive resubmission of an already-running job).
+
+**All four jobs landed SUCCESS 2026-09-06; results read directly from `records.jsonl`, endpoint
+scope, 245760 frames, n=1 seed, 5 episodes/regime.** Numbers, not a verdict — see caveats below.
+
+| job | regime | return (mean±sd) | success_rate |
+|---|---|---:|---:|
+| idaac-p (`bt1opt8j8ehdhpdsfnv0`) | train | 10.39 ± 10.22 | 0.0 |
+| idaac-p | eval-easy | 13.26 ± 11.97 | 0.0 |
+| idaac-c1 (`bt1djeamji7gilgnndft`) | train | 59.57 ± 31.73 | 0.0 |
+| idaac-c1 | eval-easy | 87.71 ± 35.39 | 0.0 |
+| ppg-p (`bt1439jqhahgfbm2l9kb`) | train | 33.63 ± 42.06 | 0.2 |
+| ppg-p | eval-easy | 16.21 ± 5.96 | 0.0 |
+| ppg-c (`bt19878rgm9qnqrhopoj`) | train | 47.03 ± 21.93 | 0.0 |
+| ppg-c | eval-easy | 30.26 ± 22.99 | 0.0 |
+
+**Reading against each pilot's own pre-registered decision rule (A35/A36: "if the C arm reaches
+competence at least as well as P, make it primary; if it fails outright, P stays primary and C's
+result is reported, not discarded")**: `MIN_DENOM_SUCCESS = 0.25`
+(`scripts/regime_retention_report.py`). **Neither arm of either pilot clears it** — idaac-p and
+idaac-c1 both sit at 0.0 in both regimes; ppg-p's 0.2 (train) is closer but still under the bar,
+and ppg-c is 0.0 everywhere. Read plainly, this is not "C failed and P held" — **neither recipe
+demonstrated Door competence at this budget**, which the decision rule did not anticipate as an
+outcome for both arms at once.
+
+**Do not read the raw-return gap as a fidelity verdict.** idaac-c1's returns are 6-9x idaac-p's
+despite identical (zero) success rates — a real, directional signal that the C1 hyperparameters
+(mainly `order_loss_coef 0.1`, `value_freq 32`, `gamma .99`, `lr 3e-4`) move the reward-shaped
+return substantially, but Door's binary success criterion is a stricter, different quantity
+(`docs/CONSTRUCTION.md` — the dense reward has a non-zero floor, see A18's own note on why
+retention/return are not interchangeable). ppg's raw-return gap (47.0 vs 33.6 train) runs the same
+direction as idaac's despite ppg-p having the only nonzero success rate in the whole table — a
+reminder that "higher shaped return" and "reaches the success gate" can disagree even within one
+comparison, not just across families.
+
+**What this pilot round actually settles, and what it does not**:
+- Settled: none of these four cells reaches production-grade competence at 245760 frames (well
+  under a third of the eventual 600k budget) — consistent with a short pilot simply being too
+  short to observe competence, independent of which recipe is better, not evidence either
+  algorithm is broken.
+- Not settled: whether idaac's or ppg's `C` recipe out-competes `P` at production length/seed
+  count. n=1, a budget under half of production length, and a competence readout of exactly 0 or
+  1 successes out of 5 episodes is the small-n regime A23 already named as too thin to trust
+  (a single flipped episode moves ppg-p from "clears the bar" to "at the bar" and back).
+- Not settled, and explicitly deferred per Q47: the C1 vs C2 question for idaac (frame_stack=1 vs
+  3, ppo_epoch 3 vs 10) — this round says nothing about C2, which has not been built.
+- **My reading, offered not decided**: this result does not by itself justify extending either
+  pilot's budget or building C2 early — it's consistent with "too short to tell," which is exactly
+  what a longer, later, single frozen-tree measurement is for. Record and move on rather than
+  chase an inconclusive n=1 pilot with more pilots.

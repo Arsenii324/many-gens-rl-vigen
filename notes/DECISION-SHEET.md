@@ -1535,6 +1535,12 @@ those are resource-allocation calls. Everything above the line is not a decision
 anyone; it is the actual pilot specification, ready to become a config the moment someone (me or
 the owner) decides to spend the cycles.
 
+**PILOT RESULT, 2026-09-06**: both arms landed. Neither reaches the pre-registered competence bar
+(`MIN_DENOM_SUCCESS=0.25`) at this pilot's 245760-frame budget — idaac-p and idaac-c1 both 0.0
+success rate in both regimes, despite idaac-c1's raw return running 6-9x higher. Full numbers,
+the decision-rule reading, and why this is not read as "C failed": `notes/CLAIMS-LEDGER.md`, "A35/
+A36 pilot arms." Not treated as settling C1-vs-C2 or extending this pilot — see that entry.
+
 ### A36 OPEN, 2026-09-06 (analysis completed same entry) — PPG's design point: the remaining recipe gap, specified
 
 T16's cadence half is closed (A26: `n_pi` now matches the continuous-control reference exactly).
@@ -1589,6 +1595,11 @@ owner authorizes spending on either.
 
 **Left OWNER**: same as A35 — whether and when to spend the compute. The spec above is not
 waiting on anyone.
+
+**PILOT RESULT, 2026-09-06**: both arms landed. ppg-p has the only nonzero success rate in this
+whole pilot round (0.2 train, still under the 0.25 bar); ppg-c is 0.0 in both regimes despite a
+higher raw return (47.0 vs 33.6 train). Full numbers and reading: `notes/CLAIMS-LEDGER.md`, "A35/
+A36 pilot arms."
 
 ### A37 OPEN, 2026-09-06 (analysis completed same entry) — IBAC-SNI's lineage: picking one, not just naming the hybrid
 
