@@ -1,0 +1,44 @@
+# [Claude 2026-09-06] Re-run of cfg-alda-revalidate-v139.yaml (job bt10p8oorc64302metk8), which
+# crashed training at step 1500/10000 with "Object of type Tensor is not JSON serializable" --
+# CORRECTIONS.md #91. Root cause: the averaging loop above alda_trainer.py's train_metrics.jsonl
+# write (upstream, unmodified) can leave a residual 0-d Tensor in `self.logging_info[k]` when the
+# accumulated list holds Tensor elements; wandb.log tolerated that silently, json.dumps did not --
+# a latent bug in this project's own 2026-09-05 train_metrics.jsonl persistence patch, never
+# caught because the existing test was a pure source-text check. Fixed with a `default=` handler
+# in runnable/alda/trainers/alda_trainer.py; tests/test_alda_train_metrics_persist_without_wandb.py
+# now exercises the real fix behaviorally (non-vacuity proven: reverting the fix reproduces the
+# assertion failure). Payload rebuilt fresh (payload-v143-alda.tgz) to ship the fix.
+#
+# Same shape as cfg-alda-revalidate-v139.yaml otherwise: alda:1 for 10000 frames, then a
+# 2-regime x 1-scene x 5-episode endpoint grid on CUDA.
+name: vigen-alda-revalidate-v143
+desc: Re-validate the alda endpoint evaluator on CUDA, retry after fixing the Tensor-serialization crash (CORRECTIONS #91).
+cmd: >-
+  timeout --foreground 10800s env
+  CELLS=alda:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v143-alda.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

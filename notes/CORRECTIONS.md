@@ -1767,3 +1767,129 @@ tests/test_regime_retention_report.py` clean.
 
 `CONTAMINATION_RATIO` (also in `regime_retention_report.py`) was checked at the same time and has
 no duplicate elsewhere — left as is.
+
+## #90 — `production_gates.py::gate_external_anchor`'s message was stale against DECISION-SHEET.md's own A9 revision
+
+Found while grounding a reasoned lean for A33 (production scope) prompted a re-read of the other
+still-OWNER gates for the same staleness class already caught in #84 (`audit_eval_state.py`'s ppg
+entry). `gate_external_anchor` still said "nothing has reproduced a published RL-ViGen number...
+Establishing the anchor BEFORE the fleet is the ordering all three reviews recommend" — the
+ORIGINAL framing, from before DECISION-SHEET.md's "Revision, 2026-09-05 — A9 becomes free" section
+closed exactly this question: read RL-ViGen's own published table (units certified as RETURNS,
+C33/Q2, `notes/rlvigen-published-door-anchor.md`), found drqv2 Door eval-easy 3.6 across seeds
+{3,7,4,3,1} (range 1-7), and redefined the anchor as a **free acceptance test** ("the fleet's own
+drqv2 seeds should fall inside that published range") rather than a dedicated reproduction cell —
+satisfying the reviews' ordering-before-the-fleet requirement without costing a job.
+
+The live gate's message never caught up: it still read like the anchor was entirely unaddressed,
+when the actual remaining work is only (a) ratifying that this counts as satisfying the reviews'
+intent and (b) running the check once production drqv2 seeds exist — which is what the OWNER
+status should describe.
+
+**Fixed**: rewrote `gate_external_anchor`'s message to state the free-acceptance-test criterion
+directly, cite its source, and narrow what's actually still open. Verified via
+`tests/ -k "production_gates or gates"` (clean) and running `scripts/production_gates.py` directly
+to confirm the printed message reads correctly.
+
+## #91 — real, first-ever-exercised bug in this project's own 2026-09-05 ALDA train-metrics patch: a residual Tensor crashes `json.dumps`
+
+Found via job `bt10p8oorc64302metk8`, the fresh functional-endpoint re-validation of `alda`
+(submitted as part of closing "shared evaluator validated"). Training crashed at step 1500/10000:
+
+    TypeError: Object of type Tensor is not JSON serializable
+
+Traced to `runnable/alda/trainers/alda_trainer.py`'s `train()` loop. The averaging block just
+above the crash site (**upstream, unmodified**):
+
+```python
+for k, v in self.logging_info.items():
+    if isinstance(v, torch.Tensor):
+        v = v.item()
+    self.logging_info[k] = sum(v) / len(v)
+```
+
+only unwraps a bare-Tensor `v` before summing. `self.logging_info[k]` is actually built by
+`logging_info.setdefault(key, []).append(value)` across many steps, so `v` here is a **list**;
+`isinstance(v, torch.Tensor)` is always `False` for it. Several of ALDA's own metrics (critic
+loss, alpha, gradient norms, VQ/commitment/reconstruction losses) append the raw tensor rather
+than `.item()`-converting it first, so `sum(list_of_tensors) / len(list_of_tensors)` is Tensor
+arithmetic and leaves a 0-d `torch.Tensor` sitting in `self.logging_info[k]` after "averaging."
+`wandb.log()` tolerates a Tensor value silently; the plain `json.dumps()` this project's own
+2026-09-05 patch added (`train_metrics.jsonl` persistence, so `use_wandb=False` production runs
+keep a record instead of discarding every metric — see the patch's own comment in
+`runnable/alda/trainers/alda_trainer.py:640-650`) does not. The bug has been latent in that patch
+since the day it landed; nothing had exercised the exact log-interval/metric-value combination
+that trips it until this job did.
+
+The existing test, `tests/test_alda_train_metrics_persist_without_wandb.py`, could not have caught
+this: every assertion in it was a source-text substring check (`"json.dumps(self.logging_info)"
+in block`), never an execution of the code against data shaped like what the real training loop
+produces. Same failure class as CORRECTIONS #85/#38's stale/vacuous tests, in a different file.
+
+**Fixed**, scoped to the patch's own addition rather than upstream's averaging loop (declared
+deviations from upstream stay minimal and attributable — the averaging loop's partial Tensor
+handling is intentional upstream behavior, imperfect but not ours to silently extend):
+
+```python
+def _jsonable(value):
+    if isinstance(value, torch.Tensor):
+        return value.item()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+_f.write(json.dumps(self.logging_info, default=_jsonable) + "\n")
+```
+
+Added two real, execution-based tests to replace the source-text-only ones:
+`test_tensor_valued_metrics_serialize_without_crashing` (extracts the live `_jsonable` function's
+actual source and execs it, so the test tracks the shipped code rather than a hand-copied
+reimplementation that could drift) and `test_a_genuinely_unserializable_value_still_raises` (the
+handler must not swallow every failure, only Tensors). **Non-vacuity proven**: reverted the
+`default=` argument, confirmed `test_logging_info_is_persisted_when_wandb_is_off` fails with the
+exact expected message, restored, reran clean.
+
+Rebuilt `payload-v143-alda.tgz` and resubmitted as `cfg-alda-revalidate-v143.yaml` (job
+`bt18gmov8nbfkkd117s6`).
+
+## #92 — three tests broke against earlier-this-session's own legitimate changes, and only a full-suite run caught it
+
+Found running `pytest tests/ -q` proactively before committing (the discipline this project keeps
+re-learning: CORRECTIONS #88's timeout bug, the "is the structure ok?" full-gate-suite check, and
+now this — a scoped test run after a targeted edit is not the same as the full suite, and this
+session had been running scoped subsets after each individual fix). Three real regressions, all
+caused by earlier-this-session commits that were each individually verified with a narrower test
+run than the full suite:
+
+1. **`test_submission_memory_preflight.py::test_job_submission_forwards_configured_extra_overrides_to_memory_check`**
+   asserted the literal old inline mapping (`admission_tier="$tier"` / `admission_tier="gt4i.1"`)
+   as source text in `job.sh`. Centralizing that mapping into
+   `family.py::admission_tier_for` (this session, closing the #84-class duplication risk) removed
+   both literals from `job.sh` — correctly; the test was checking a mechanism, not the behavior it
+   existed to protect. **Fixed** by replacing the two stale text assertions with a real behavioral
+   test, `test_g11_submission_resolves_the_admission_tier_before_the_memory_check`: submit a
+   stubbed g1.1 config and confirm the memory check actually printed `on gt4i.1`, not `on g1.1`.
+   Non-vacuity proven: reverted the `admission_tier_for` call to a bare `admission_tier="$tier"`
+   and confirmed the new test fails with `unknown job tier: g1.1` (a real submission failure).
+2. **`tests/test_v100_gpu_budget.py`**, three tests, all sized against the OLD
+   `V100_BUDGET_CAP_MINUTES=120` before this session raised it to 240 (owner's explicit
+   instruction). `test_g11_submit_refuses_a_reservation_over_the_cumulative_cap` hardcoded
+   `"cap_minutes": 120` in its own state-file fixture, which `load_state()`'s consistency guard
+   (added in the same cap-raise edit, and which the edit's own comment already anticipated this
+   exact staleness) now refuses outright — failing one step before the cumulative-cap check it
+   meant to test was ever reached. `test_g11_ambiguous_cloud_failure_retains_reservation_and_blocks_followup`
+   used reservation sizes (100 + 30 = 130) that no longer exceed the new 240 cap, so the followup
+   it expected to be refused now legitimately succeeds. `test_v100_budget_reconcile_updates_actual_elapsed_and_status_is_local`
+   expected `remaining_minutes == 90.0` (120 - 30), now correctly 210.0 (240 - 30). **Fixed** by
+   rescaling all three fixtures to the current cap (200+50 sizing preserves "genuinely exceeds",
+   210.0 replaces 90.0) rather than reverting the cap.
+3. **`tests/test_job_knobs_are_read.py::test_no_cfg_knob_is_dead`** flagged
+   `NATIVE_V100_RESERVATION_MINUTES` (used in this session's two new V100 configs) as a dead knob
+   because it's read entirely by `job.sh`'s own local submit-time preflight, which the test's
+   `_in_job_surface()` deliberately never scans (job.sh runs on this machine before submission,
+   never inside the job). Genuinely the same category as the existing `PLATFORM` allowlist
+   (`RLVIGEN_ARCHIVE`, `RECORDS_OUT`, etc.), just never added when the knob was introduced.
+   **Fixed** by adding it to `PLATFORM`, confirmed by grep that job.sh and the two v100 cfgs are
+   its only readers.
+
+All three are genuine "the fix was right, the test just didn't travel with it" gaps, not product
+bugs — but each would have kept failing the full suite silently (or been discovered later, at a
+worse time) had `pytest tests/ -q` not been run in full. `pytest tests/ -q` clean after all three
+fixes (see full-suite run logged the same session).

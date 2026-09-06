@@ -1,55 +1,136 @@
 {
   "_comment": "One entry per evaluator family, written after human review of a retained endpoint artifact: complete diagnostics, distinct placement seeds, physical pairing with 0 unpaired, and a functional_endpoint scope attestation. family_code_revision, family_config_revision, and evaluator_revision must match the selected family closure; evaluator_scope and its scope/measurement revisions must match every applicable offline-eval row; evaluation_records_path and evaluation_records_sha256 bind the ledger to the artifact. These mechanics bind claims but do not prove source/job honesty or exhaust dynamic imports. The retained legacy common code_revision is historical only and cannot certify the new closure.",
   "rlvigen": {
-    "job": "bt1anj1cm0ni7p20ted3",
-    "baseline": "svea",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
+    "baseline": "drqv2",
+    "code_revision": null,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "evaluation_records_path": "results/records/bt16kl6q356klkg1v3vv__records.jsonl",
+    "evaluation_records_sha256": "8af749660588f9be190e4cd68b5276711a4c80798b9028c5aa1e233e3134f150",
+    "evaluator_measurement_revision": "7144b8ee2fa26e7f24845a089ac959fb3f202d5951c2e92f2391eb803b9ebb96",
+    "evaluator_revision": "d00a2b1e46848a48ad78663e472b8ffdcf44afa7a10556e7554838989f155158",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "drqv2",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "mode",
+      "eval_scope": "endpoint",
+      "family": "rlvigen",
+      "frame": 10000,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "28f44299e4f12b7bd8628d979f4a939d1a86c2d1e6f065cefbb02c13ee177fb1",
+    "family_code_revision": "420726e24ca721970d6345de43188f195ae22f07253c78ab1cc62db82117be07",
+    "family_config_revision": "d975656999040a67c81b42ee1c2cee47437f826535fa2d604db14a179b0be68f",
+    "job": "bt16kl6q356klkg1v3vv",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   },
   "dmc_gb": {
-    "job": "bt1fttbvedaunks2r7eh",
     "baseline": "rad",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
+    "code_revision": null,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "evaluation_records_path": "results/records/bt1hmjrbg4711e4nl32d__records.jsonl",
+    "evaluation_records_sha256": "2ebd2641bb5183055340c5458175a9d182ed0b149cc831d58a46d81e53aead6f",
+    "evaluator_measurement_revision": "dc9f725a6414a5106bf830cb0722ae4295b027627ac67fb43c2f6798e1368e83",
+    "evaluator_revision": "f1508942a8d42d23b1ab2ec15d1843da19a29828a0b988bc22dc1285f7cd1302",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "rad",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "mode",
+      "eval_scope": "endpoint",
+      "family": "dmc_gb",
+      "frame": 10000,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "62866cd0eda6186382a76250ff9a2ab338b60c953244b061877ec0f91cb5d734",
+    "family_code_revision": "2c6f538af579598980bcf49d2b75ca9c81edfae6c745798a658344281a99c2b7",
+    "family_config_revision": "4405374d310c683b1be7cdaf9370b291f6fb3f24d5574bfcb07fb060481e21bd",
+    "job": "bt1hmjrbg4711e4nl32d",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   },
   "idaac": {
-    "job": "bt1mjgl6r12pir8jnhe5",
     "baseline": "idaac",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
+    "code_revision": null,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "evaluation_records_path": "results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl",
+    "evaluation_records_sha256": "cc5e9f47627fb864ca375898740a0892c6b6713c1425ba0094f21e1297e8da1d",
+    "evaluator_measurement_revision": "eede2408a61cdcacc9d6a6b3bc74f166c0505a4f73ba221cf1009cac0435b868",
+    "evaluator_revision": "204992902a6e0d6fbada21b1522b950ddedfb3e36feff421f3bef49e800f21ae",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "idaac",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "sample",
+      "eval_scope": "endpoint",
+      "family": "idaac",
+      "frame": 9216,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "8f02b3bc9ff03dcbbf7ee3d140169f55df36dc999c091b78369708ddff59e929",
+    "family_code_revision": "b2a12205552de7aaa56fb25041678a57c529b671438ae89237a6340ba57bba97",
+    "family_config_revision": "d6732e2641c3f2a3eea81045d48b25444c961e97deb1a56839abed97bcc20b64",
+    "job": "bt1lpo9v9o2d34bvrmo7",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   },
   "alda": {
     "job": "bt1pb2kceart31caaqkq",
@@ -86,37 +167,91 @@
     "evaluation_records_sha256": null
   },
   "ppg": {
-    "job": "bt1ek01uo43rskotpm8b",
     "baseline": "ppg",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
+    "code_revision": null,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "evaluation_records_path": "results/records/bt11o1l70msqkc4d2qnr__records.jsonl",
+    "evaluation_records_sha256": "47167aebc3ab174c3e9258623808c2d35f22660dbfe0378bd2e2bc564b8b6c65",
+    "evaluator_measurement_revision": "79ddb322305bd888071097dacaad7e0aa6e802a2e84f34e2cb903ab0d4368cd2",
+    "evaluator_revision": "1aaed80f2adb840e8fbca4b0d75987aa387d3a74d8aba10483fe17d6a406c877",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "ppg",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "sample",
+      "eval_scope": "endpoint",
+      "family": "ppg",
+      "frame": 10240,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "5d1cf4116f97e1d3285ca7e20ccaf17e06a8649444ebb862b76e0293a74b38e0",
+    "family_code_revision": "56f215941a9a6dfd0c76b5d52633ffec40256bd5686dd416bff4dc3bac940087",
+    "family_config_revision": "cad1299ae7f31372bce1f8642cd26f701d8c8e3eca2067382255988531fdd903",
+    "job": "bt11o1l70msqkc4d2qnr",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   },
   "ibac_sni": {
-    "job": "bt10rvhafr2muvjkpc9g",
     "baseline": "ibac_sni",
-    "code_revision": "4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
-    "paired": true,
+    "code_revision": null,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "evaluation_records_path": "results/records/bt15dm9j6vm5r9m4cdri__records.jsonl",
+    "evaluation_records_sha256": "b042a757fe2e4646511a3e115f228e56bf011b21a6d15ac19ff478cbeb0a7ecd",
+    "evaluator_measurement_revision": "93acfc3b1c92bac25812702df01917bae49fb028e149a6ee17a3c886e1c4e509",
+    "evaluator_revision": "dc201a558bb6fffc4848c1249918fc195eeca43c4b96012a7f074f1c2cb5359d",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "ibac_sni",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "sample",
+      "eval_scope": "endpoint",
+      "family": "ibac_sni",
+      "frame": 10112,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "1add01a0487beb369b2fe016300c2edeee4e3069f939c683250a484d33d138e3",
+    "family_code_revision": "e2870f92fbbe2db59a85fbe7a772084270761b48f7ffd732c4abcc3d55abd3f5",
+    "family_config_revision": "c785e59418c5a0cde5eedfc3243835ac17f7db0997eff1ed5601c0619a4c336d",
+    "job": "bt15dm9j6vm5r9m4cdri",
+    "paired": true,
+    "runtime_imports_checked": true,
+    "validation_kind": "functional_endpoint"
   }
 }

@@ -1,3 +1,105 @@
+diff --git a/torch_rl/ibac_sni_runtime.py b/torch_rl/ibac_sni_runtime.py
+new file mode 100644
+index 0000000..91415b2
+--- /dev/null
++++ b/torch_rl/ibac_sni_runtime.py
+@@ -0,0 +1,96 @@
++"""RL-ViGen environment construction for IBAC-SNI's spawned workers.
++
++This deliberately has a unique top-level module name.  Spawn unpickles a callable before the
++training driver's module body can repair ``sys.path``; serialising ``utils.general.*`` therefore
++collides with RL-ViGen's own top-level ``utils.py``.  Keeping the factory here makes its pickle
++identity stable while leaving the historical ``utils.make_rlvigen_env`` compatibility API below.
++"""
++from __future__ import annotations
++
++import random
++
++import numpy
++import torch
++
++
++def make_rlvigen_env(env_id, seed):
++    """RL-ViGen robosuite as a plain gym env, in the shape this repo's own preprocessor expects.
++
++    ``utils.get_obss_preprocessor`` already has a generic branch for ``Box([H, W, 3])`` --
++    written for RGB environments but unused by MiniGrid -- so nothing about preprocessing needs
++    changing; the wrapper only presents that shape.  RL-ViGen itself yields
++    ``{'rgb': (3, H, W) uint8}``.
++
++    THE ONE DELIBERATE SCALING CHOICE: ``utils.format.preprocess_images`` constructs a float tensor
++    with no division.  That is correct for MiniGrid category indices and wrong for 0--255 RGB:
++    inputs would be two orders of magnitude outside the parameter initialisation's scale.  Division
++    by 255 occurs at this seam, rather than by altering the repository preprocessor.  Every other
++    baseline here also receives pixels in [0, 1].
++
++    ``RLVIGEN_MODE`` chooses train / eval-easy / eval-medium / eval-hard without adding a clone CLI
++    flag. ``RLVIGEN_SCENE_ID`` supplies the scene axis; it used to be literal 0 (C45).  An env var
++    keeps the adaptation in this existing seam and leaves every original caller unchanged when the
++    variable is absent.  This module owns the factory rather than ``utils.general`` solely because
++    spawned workers unpickle it before the driver can resolve the two repositories' conflicting
++    top-level ``utils`` names.
++    """
++    import os
++    import sys
++
++    import gym
++    import numpy as np
++
++    rlvigen_root = os.environ["RLVIGEN_ROOT"]
++    for path in (rlvigen_root, os.path.join(rlvigen_root, "envs", "robosuiteVGB")):
++        if path not in sys.path:
++            sys.path.insert(0, path)
++    from robosuitevgb.utils import make_env as robo_make_env
++
++    class HWCFloat(gym.ObservationWrapper):
++        def __init__(self, env):
++            super().__init__(env)
++            _channels, height, width = env.observation_space["rgb"].shape
++            self.observation_space = gym.spaces.Box(0.0, 1.0, (height, width, _channels), dtype=np.float32)
++
++        def observation(self, obs):
++            return np.asarray(obs["rgb"], dtype=np.float32).transpose(1, 2, 0) / 255.0
++
++        def seed(self, seed=None):
++            """The base environment receives its seed at construction."""
++            return []
++
++    task = env_id.split(":", 1)[1]
++    try:
++        scene_id = int(os.environ.get("RLVIGEN_SCENE_ID", "0"))
++    except ValueError as error:
++        raise ValueError(
++            "RLVIGEN_SCENE_ID=%r is not an integer; a scene axis that silently falls back to 0 "
++            "would report a one-scene number as a ten-scene sweep"
++            % os.environ.get("RLVIGEN_SCENE_ID")
++        ) from error
++
++    # Capture the authoritative fields on RL-ViGen's own outer wrapper before HWCFloat obscures
++    # them. This is construction evidence, not an extra reset/step: probing would consume C69's
++    # global numpy placement RNG before measured episodes begin.
++    base = robo_make_env(task_name=task, seed=seed, scene_id=scene_id,
++                         mode=os.environ.get("RLVIGEN_MODE", "train"))
++    applied_regime = {"mode": getattr(base, "_mode", None),
++                      "scene_id": getattr(base, "_scene_id", None)}
++    if None in applied_regime.values():
++        raise RuntimeError("RL-ViGen did not expose its applied mode/scene at construction")
++    wrapped = HWCFloat(base)
++    wrapped._vigen_regime = dict(applied_regime)
++    return wrapped
++
++
++def make_rlvigen_env_process(env_id, env_seed):
++    """Build one Door env in a spawned process with an independent global NumPy stream.
++
++    The upstream IBAC-SNI default is 16 processes because Procgen envs are safe to fork after
++    construction. MuJoCo/EGL is not: Door must be constructed after spawn, and its placement
++    sampler draws from global NumPy rather than the wrapper's ``seed`` method (C69).
++    """
++    random.seed(env_seed)
++    numpy.random.seed(env_seed)
++    torch.manual_seed(env_seed)
++    return make_rlvigen_env(env_id, env_seed)
 diff --git a/torch_rl/model.py b/torch_rl/model.py
 index 1523a27..355804a 100644
 --- a/torch_rl/model.py
@@ -911,6 +1013,73 @@ index 6e1abd5..a243ffc 100644
  
          return logs
  
+diff --git a/torch_rl/torch_rl/torch_rl/utils/penv.py b/torch_rl/torch_rl/torch_rl/utils/penv.py
+index 6e4f4f1..45ffebf 100644
+--- a/torch_rl/torch_rl/torch_rl/utils/penv.py
++++ b/torch_rl/torch_rl/torch_rl/utils/penv.py
+@@ -1,7 +1,11 @@
+-from multiprocessing import Process, Pipe
++import multiprocessing
+ import gym
+ 
+-def worker(conn, env):
++def worker(conn, env_or_factory):
++    # Door's renderer/context is process-local.  A factory is therefore intentionally invoked
++    # after the spawned interpreter starts, rather than pickling an already-constructed MuJoCo
++    # environment across the process boundary.  The factory owns the worker's explicit RNG seed.
++    env = env_or_factory() if callable(env_or_factory) else env_or_factory
+     while True:
+         cmd, data = conn.recv()
+         if cmd == "step":
+@@ -18,21 +22,30 @@ def worker(conn, env):
+ class ParallelEnv(gym.Env):
+     """A concurrent execution of environments in multiple processes."""
+ 
+-    def __init__(self, envs):
++    def __init__(self, envs, start_method=None):
+         assert len(envs) >= 1, "No environment given."
+ 
+         self.envs = envs
+         self.observation_space = self.envs[0].observation_space
+         self.action_space = self.envs[0].action_space
+ 
++        # A callable spec is the signal that construction must happen in a clean interpreter.
++        # Preserve the upstream fork path for the original object-based Procgen usage.
++        if start_method is None:
++            start_method = "spawn" if any(callable(env) for env in self.envs[1:]) else None
++        context = (multiprocessing.get_context(start_method)
++                   if start_method else multiprocessing.get_context())
++
+         self.locals = []
++        self.processes = []
+         for env in self.envs[1:]:
+-            local, remote = Pipe()
++            local, remote = context.Pipe()
+             self.locals.append(local)
+-            p = Process(target=worker, args=(remote, env))
++            p = context.Process(target=worker, args=(remote, env))
+             p.daemon = True
+             p.start()
+             remote.close()
++            self.processes.append(p)
+ 
+     def reset(self):
+         for local in self.locals:
+@@ -50,4 +63,12 @@ class ParallelEnv(gym.Env):
+         return results
+ 
+     def render(self):
+-        raise NotImplementedError
+\ No newline at end of file
++        raise NotImplementedError
++
++    def close(self):
++        for local in self.locals:
++            local.close()
++        for process in self.processes:
++            if process.is_alive():
++                process.terminate()
++            process.join(timeout=2)
 diff --git a/torch_rl/utils/agent.py b/torch_rl/utils/agent.py
 index f3c0605..5b432f3 100644
 --- a/torch_rl/utils/agent.py

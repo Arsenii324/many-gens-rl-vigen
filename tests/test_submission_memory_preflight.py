@@ -65,12 +65,34 @@ def test_job_submission_forwards_configured_extra_overrides_to_memory_check():
     source = JOB.read_text()
     assert "cfg_extra_overrides" in source
     assert "NATIVE_EXTRA_OVERRIDES=\"$cfg_extra_overrides\"" in source
-    # g1.1 has a different physical shape from the V100 *host profile*: its eight-vCPU,
-    # 48--96 GiB DataSphere node is admitted against the conservative gt4i.1 envelope. The
-    # submission check must use that resolved admission tier, rather than the raw requested tier.
-    assert "admission_tier=\"$tier\"" in source
-    assert "admission_tier=\"gt4i.1\"" in source
+    # The submission check must use the RESOLVED admission tier, rather than the raw requested
+    # tier, at the memory-check call site.
     assert "check-memory --cells \"$cells\" --tier \"$admission_tier\"" in source
+    # [Claude 2026-09-06] Used to also assert the literal inline mapping
+    # (admission_tier="$tier" ... if [[ "$tier" == "g1.1" ]]; then admission_tier="gt4i.1"; fi)
+    # as source text. That inline mapping was centralized into
+    # datasphere/native/family.py::admission_tier_for (job.sh now calls
+    # `family.py admission-tier --tier "$tier"`) after CORRECTIONS.md's own #84-class finding
+    # that scripts/audit_submission_configs.py's separate copy of the same mapping was missing
+    # and false-positive-failed two configs that had already run for real -- a duplicated-logic
+    # bug of exactly the kind this project's tests are supposed to catch, not one a source-text
+    # check on the OLD mechanism could ever have caught. That refactor broke this test's two
+    # literal-text assertions for reasons that had nothing to do with correctness, which is
+    # itself the sign a text check was the wrong tool. Replaced with a real behavioral check
+    # below: submit a stubbed g1.1 config and read what tier the memory check actually printed.
+
+
+def test_g11_submission_resolves_the_admission_tier_before_the_memory_check(tmp_path):
+    """g1.1 (one V100, 8 vCPU, 48-96 GiB) is admitted against the conservative gt4i.1 envelope --
+    family.py's own tier table has no g1.1 shape. Real behavior, not source text: submit a
+    stubbed g1.1 config and confirm the memory check actually ran against gt4i.1, not the raw
+    (unadmittable) g1.1 tier."""
+    config = _config(tmp_path, "CELLS=drqv2:1 printf ready", tier="g1.1")
+
+    result, log = _stubbed_submission(tmp_path, config)
+
+    assert "memory ok: drqv2:1 on gt4i.1" in result.stdout, result.stdout
+    assert "memory ok: drqv2:1 on g1.1" not in result.stdout
 
 
 def test_production_scale_without_explicit_profile_never_invokes_datasphere(tmp_path):

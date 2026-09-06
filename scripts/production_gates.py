@@ -488,11 +488,26 @@ def gate_release_suite_green():
 
 def gate_external_anchor():
     """Review 1 #30 / review 2 / review 3 all raise it: no published RL-ViGen number has been
-    reproduced under matched conditions, and the current plan makes a production cell double as the
-    anchor -- which inverts the dependency."""
-    return OWNER, ("C48 open: nothing has reproduced a published RL-ViGen number. Establishing the "
-                   "anchor BEFORE the fleet is the ordering all three reviews recommend, because a "
-                   "fleet measured against an unvalidated pipeline cannot be repaired afterwards")
+    reproduced under matched conditions, and the original plan made a production cell double as the
+    anchor -- which inverts the dependency.
+
+    [Corrected 2026-09-06: this message was stale against DECISION-SHEET.md's own A9 revision
+    (2026-09-05), which closed the "reproduce it as a separate run" question and left only
+    ratification. A dedicated anchor-reproduction cell is no longer the plan -- a free
+    acceptance test is. Do not re-read the old message as still describing what's missing.]
+    """
+    return OWNER, ("C48's ordering concern is answered without a dedicated cell, not left open: "
+                   "RL-ViGen's own published Robosuite table gives drqv2 Door eval-easy 3.6 across "
+                   "seeds {3,7,4,3,1} (range 1-7), read from the units-certified sheet "
+                   "(notes/rlvigen-published-door-anchor.md; RETURNS, not success rates -- C33/Q2). "
+                   "The stated criterion, fixed BEFORE the fleet runs as the reviews asked: the "
+                   "fleet's own drqv2 seeds should fall inside that published range -- not "
+                   "reproduce 3.6 itself, which two of their own three comparison methods "
+                   "(CURL 6.6, DrQ 14.0) don't either, and which a random policy alone can produce "
+                   "(our floor's max reaches 6.93). This makes the anchor a free check against "
+                   "results the fleet produces anyway (DECISION-SHEET.md A9), not a prerequisite "
+                   "job. OWNER only for ratifying that this counts as the anchor the reviews asked "
+                   "for, and for the check itself once production drqv2 seeds exist")
 
 
 def gate_scheduler_ram_invariant():

@@ -25,6 +25,11 @@ PLATFORM = {
     "CUDA_ROOT", "MUJOCO_GL", "PYOPENGL_PLATFORM", "WANDB_API_KEY", "WANDB_MODE",
     "GRPC_DNS_RESOLVER", "XLA_PYTHON_CLIENT_PREALLOCATE", "TOKENIZERS_PARALLELISM",
     "NATIVE_DISABLE_ONLINE_EVAL", "NATIVE_ISOLATE_ONLINE_EVAL",
+    # [Claude 2026-09-06] Read entirely by job.sh's own local submit-time preflight (the V100
+    # budget reservation), which `_in_job_surface()` deliberately does not scan -- job.sh never
+    # runs INSIDE the job, it runs on this machine before submission. Genuinely platform-local,
+    # not a typo: grep confirms the only readers are job.sh and the two v100 cfgs that set it.
+    "NATIVE_V100_RESERVATION_MINUTES",
 }
 
 

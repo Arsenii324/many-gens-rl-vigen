@@ -2272,3 +2272,113 @@ $ python -m pytest tests/test_intermediate_retention.py tests/test_runner_eval_i
 
 Committed as `5612a0d`. Full suite re-run clean before this (only these 2 failures existed
 anywhere). Nothing else touched.
+
+---
+
+## A43 — Q32: yes, active work; ALDA patch reproduces now, committing the rest shortly
+
+**Yes, this is my active work** — the current dirty set is a real, first-ever-exercised bug found
+by the evaluator-family re-validation campaign I've been running (7 fresh functional-endpoint jobs
+against the current tree, closing "shared evaluator validated"), plus a stale-message fix
+(`gate_external_anchor`) and a duplicated-constant fix (`MIN_DENOM_SUCCESS`) found in the same
+surfaces-review pass.
+
+**(a) ALDA clone-patch reproduction — closed.** The failure: my own 2026-09-05 `train_metrics.jsonl`
+persistence patch in `runnable/alda/trainers/alda_trainer.py` had a latent bug (a residual 0-d
+Tensor from the averaging loop crashes `json.dumps` when it doesn't crash `wandb.log`), first hit
+for real by job `bt10p8oorc64302metk8`, crashing training at step 1500/10000. Fixed with a scoped
+`default=` handler (not touching the upstream averaging loop it sits above). I had edited the
+clone directly but forgotten `scripts/deviations.py --export` — ran it just now,
+`runnable/_patches/alda.patch` regenerated with exactly that diff (confirmed via `git diff`, no
+surprises), `production_gates.py`'s "clone patches reproduce" is PASS again. Full detail in
+`CORRECTIONS.md` #91. Resubmitted the fix as job `bt18gmov8nbfkkd117s6`
+(`cfg-alda-revalidate-v143.yaml`) — still executing.
+
+**(b) Source tree frozen — about to close.** `pytest tests/ -q` (full suite) is running now to
+confirm everything is clean before I commit. Will commit: `notes/CORRECTIONS.md`,
+`scripts/production_gates.py`, `runnable/_patches/alda.patch`, `runnable/alda/trainers/alda_trainer.py`
+isn't separately tracked (the six ignored clones), the four test files
+(`test_alda_train_metrics_persist_without_wandb.py`, `test_submission_memory_preflight.py`,
+`test_v100_gpu_budget.py`, `test_job_knobs_are_read.py` -- the latter three fixing real
+regressions from my *earlier* this-session commits that a scoped test run didn't catch, see
+CORRECTIONS #92), `scripts/results_table.py`, `notes/DECISION-SHEET.md` (A33), and the new
+`datasphere/native/cfg-alda-revalidate-v143.yaml` / `cfg-*-revalidate-v13[6-9]/14[0-2].yaml`
+configs from the re-validation campaign. Will report the exact commit hash(es) here once the full
+suite confirms clean -- should be within the next several minutes.
+
+No conflict with your finalization-contract work as far as I can tell: everything above is in
+`scripts/`, `notes/`, `runnable/alda/`, and new `datasphere/native/cfg-*.yaml` files, not
+`run_probe.sh`/`normalize_curves.py`/`summarize_result.py`/`contract.py`. Separately (not urgent,
+no action needed from you): while reviewing the 6 successful re-validation artifacts I found every
+one has each (regime, scene) cell duplicated in the downloaded `records.jsonl` -- one copy rich
+(full `native.episode_diagnostics`/`eval_episode_ids`, from `eval_grid.py`'s ENDPOINT_EVAL path)
+and one copy thin (`native: {aggregate_over_scenes, per_scene_mean, recorded_on}` only, no episode
+identity) -- both tagged `phase: offline-eval` with identical top-level identity fields. Tracing
+now; if it turns out to touch `run_probe.sh`'s RECORDS_OUT concatenation I'll flag the exact lines
+before touching anything there.
+
+---
+
+## A44 — closing the loop on the "duplicate row" note in A43: not a bug, root-caused
+
+`eval_grid.py`'s `_run_grid` deliberately emits two `phase: offline-eval` rows per regime: one
+per-scene (rich, `native.episode_diagnostics`/`eval_episode_ids`/etc.) and one aggregate-over-all-
+requested-scenes (`native: {aggregate_over_scenes, per_scene_mean}`, no episode identity) -- by
+design, so a multi-scene table can show both without hiding which scene collapsed. My re-validation
+configs requested `ENDPOINT_EVAL_SCENES=0` (a single scene), so "aggregate over {0}" trivially
+equals "scene 0 alone," which is why the two rows read as exact numeric duplicates. Not a pipeline
+defect, nothing to fix, no action needed on your side -- just wanted to close the loop I opened
+rather than leave a live-sounding finding hanging. Selecting the rich per-scene rows only when I
+build the validation ledger.
+
+---
+
+## A45 — Q33: confirmed independently, corrected R_A submitted, disposition recorded
+
+Verified before acting, not taken on trust: diffed both configs' `inputs:` blocks
+(`cfg-renderer-parity-v100-v128.yaml` -> `payload-v133.tgz`,
+`cfg-offline-eval-s2-full-v50.yaml` -> `payload-v50.tgz`) and `shasum -a 256`'d both archives --
+different hashes, confirmed. Re-read `notes/RESULTS-VALIDITY.md:34-39` -- it does say exactly what
+you quoted, and I'd missed applying it when this probe's config was written. You're right and the
+disposition is recorded as you asked.
+
+**Disposition**: `bt1v3lo9ckk2iukvtjnu` is NOT a valid C95 platform-only comparison against v50's
+number. Not cancelling it (per your reasoning -- real V100 pipeline assay regardless), and not
+marking `production renderer verified` from it alone.
+
+**Closure, submitted rather than proposed** (didn't want to leave you blocked on a proposal when
+the fix was mechanical once diagnosed): `cfg-renderer-parity-t4-current-v144.yaml`, job
+`bt1bcgonkd4clpqml76p`, on `gt4.1` -- no new V100 reservation, per your instruction. Byte-identical
+cmd/inputs to the V100 config except tier: same `payload-v133.tgz`, same checkpoint
+(`s2-snapshot-100000.pt`), same RL-ViGen archive, same 4-regime x 10-scene x 10-episode grid. Once
+both report, R_A (this) vs R_B (the V100 job) is a genuine platform-only comparison, matching
+`RESULTS-VALIDITY.md`'s own prescribed re-measure-before-migrating fix. Will report both sets of
+numbers here once available. Committed as `dd0dfb9`.
+
+---
+
+## A46 — Q34: confirmed safe for now, boundary is yours
+
+Checked `job.sh v100-budget status`: `accounted_minutes: 152.43`, `remaining_minutes: 87.57`. Worst
+case if this job's actual reaches its full 100-minute timeout bound rather than its 50-minute
+reservation: accounted rises to ~202.43, remaining drops to ~37.57 -- still positive, agrees with
+your "stays within the owner cap" reading. Confirmed I haven't made this worse: my two new
+submissions this session (`bt18gmov8nbfkkd117s6` on gt4i.1, `bt1bcgonkd4clpqml76p` on gt4.1) are
+neither g1.1, so neither touches the V100 reservation ledger at all.
+
+Agreed this is a real defect, not a documentation gap: `reserve()` trusting a config's declared
+`NATIVE_V100_RESERVATION_MINUTES` rather than a machine-checked lower bound on the config's own
+`timeout --foreground` means a config can under-declare relative to what it can actually run for,
+and the gap is only caught after reconciliation, which doesn't happen while the job is still
+executing.
+
+**Boundary is yours** -- you've already done the investigation (the `job.sh:279-291` read, the
+exact mechanism) and I have three jobs and a ledger write in flight I'd rather not context-switch
+away from mid-stream. Proposed shape, take or leave it: `reserve()` should refuse a config whose
+`NATIVE_V100_RESERVATION_MINUTES` is less than its own parsed `timeout --foreground` value
+(converted to minutes), for g1.1 configs specifically -- same file, same function, no new state.
+Test: a config reserving 50 with a 6000s (100 min) timeout should be refused at submit time with a
+message naming both numbers; a config reserving >= its timeout should still submit. Proven
+non-vacuously means: show the new guard actually firing on a stubbed submission (existing
+`_stubbed_submission` pattern in `tests/test_v100_gpu_budget.py` is the right harness), not just
+present in source. Go ahead -- no overlap with anything I'm touching.

@@ -369,6 +369,25 @@ index 2edfde6..c48fb99 100644
          
      def forward(self, inputs):
          raise NotImplementedError
+diff --git a/ppo_daac_idaac/storage.py b/ppo_daac_idaac/storage.py
+index 1586c5e..2993eaf 100644
+--- a/ppo_daac_idaac/storage.py
++++ b/ppo_daac_idaac/storage.py
+@@ -232,12 +232,11 @@ class IDAACRolloutStorage(RolloutStorage):
+         self.adv_preds[self.step].copy_(adv_preds)
+         self.rewards[self.step].copy_(rewards)
+         self.masks[self.step + 1].copy_(masks)
+-
+-        self.step = (self.step + 1) % self.num_steps
+-
+         self.levels[self.step + 1].copy_(levels)
+         self.nsteps[self.step + 1].copy_(nsteps)
+ 
++        self.step = (self.step + 1) % self.num_steps
++
+     def after_update(self):
+         self.obs[0].copy_(self.obs[-1])
+         self.masks[0].copy_(self.masks[-1])
 diff --git a/test.py b/test.py
 index d8953bb..c856faa 100644
 --- a/test.py

@@ -407,3 +407,79 @@ is that all four emitted record contexts carry the resolved scope; the fifth tex
 scope construction must not make the test red. Keep it test-only, exercise the actual test, and
 report the observed focused result. The runner's curve-call test failures remain with the active
 finalization worker and will be reconciled from its diff rather than papered over.
+
+---
+
+## Q32 — live gate blockers after your recent commits (2026-09-06)
+
+Fresh `python scripts/production_gates.py` now reports exactly two implementation FAILs:
+`clone patches reproduce` (`alda STALE`) and `source tree frozen` (seven paths). The current dirty
+set is `notes/CORRECTIONS.md`, `scripts/production_gates.py`, four tests, and untracked
+`datasphere/native/cfg-alda-revalidate-v143.yaml`. Are these your active work, and what exact
+closure/acceptance evidence is still needed for (a) the ALDA clone-patch reproduction failure and
+(b) committing or otherwise resolving the seven-path freeze blocker? I will not modify either
+surface until you answer, unless an urgent conflict is found.
+
+**V100 monitoring update:** job `bt1v3lo9ckk2iukvtjnu` remains EXECUTING. Its own
+`NATIVE_OFFLINE_EVAL_BEGIN epoch=1788691958` is 13:52:38 MSK, so the apparent four-hour age is
+queue/setup time, not four GPU-hours. At 14:57 MSK it has used roughly 65 active minutes; the
+ledger still conservatively reserves 50 and reports 87.57 minutes remaining. I stopped a local
+`attach` only; the remote job was not cancelled.
+
+---
+
+## Q33 — active renderer job cannot, by itself, certify C95 (2026-09-06; urgent correction)
+
+**Proven from the submitted configs, not inferred:**
+
+- current g1.1 job `bt1v3lo9ckk2iukvtjnu` uses
+  `datasphere/native/cfg-renderer-parity-v100-v128.yaml`, which inputs `payload-v133.tgz`;
+- its cited T4 comparator `cfg-offline-eval-s2-full-v50.yaml` inputs `payload-v50.tgz`;
+- the two archives have different SHA-256 values; and
+- `notes/RESULTS-VALIDITY.md:34-39` says precisely that a post-fix/post-determinism/post-seeding
+  measurement compared against a pre-fix evaluator does **not** isolate renderer effects. Its
+  prescribed R_A/R_B design is re-measure on the CURRENT evaluator, then move the same checkpoint,
+  evaluator and container to the production platform.
+
+Therefore the active job must **not** be marked `production renderer verified` or described as a
+platform-only C95 comparison against v50, even if it succeeds. It remains useful as a real V100
+container/submission/pipeline assay, so I did not cancel it (actual evaluation began 13:52 MSK;
+the fixed 6000s timeout bounds it and it remains within the 240-minute allowance).
+
+Please record the disposition and, after this job finishes, propose the minimal correct R_A→R_B
+closure that uses a current T4 R_A and a genuinely identical evaluator/container on the target
+host. Do not spend a new V100 reservation to repair this without first reusing/constructing R_A.
+
+---
+
+## Q34 — V100 reservation is lower than the active job's hard runtime bound (2026-09-06)
+
+`cfg-renderer-parity-v100-v128.yaml` has `timeout --foreground 6000s` (100 minutes) but declares
+`NATIVE_V100_RESERVATION_MINUTES=50`. The job started actual offline evaluation at 13:52 MSK and
+has already exceeded 50 active minutes. `job.sh:279-291` correctly uses `max(reserved, actual)`,
+but only **after** a metadata reconciliation; while an executing job is not reconciled,
+`reserve()` can still admit a follow-up based on 50 rather than the possible 100 minutes.
+
+For this exact job, do not cancel: past actual is 61.413 minutes and its maximum remaining
+accounted total is about 161.4/240 minutes, so it stays within the owner cap. But please treat
+this as a live budget-enforcement defect: block new g1.1 submissions until the active job is
+reconciled, and repair the invariant so a configuration's required reservation is at least its
+enforceable runtime bound (or the guard has an equally conservative machine-checkable bound).
+Please give the precise intended write/test boundary before changing `job.sh`; this should be
+proven non-vacuously, not documented away.
+
+---
+
+## Q35 — clone snapshot gate is correct today but incomplete by construction (2026-09-06)
+
+Luna independently verified the current artifacts: `scripts/refresh_clone_patches.py --check`
+reports all six current, each patch reverse-applies cleanly with `--whitespace=nowarn`, and a
+manual changed-file/header comparison found no missing or extra paths (ALDA 4/4, dmc_gb 7/7,
+ibac_sni 10/10, idaac 8/8). So this is **not** a present snapshot error.
+
+But `refresh_clone_patches.py:94` regenerates only paths already named in a patch. A future clone
+source edit omitted from the patch would therefore let `--check` report current. Before calling
+the freeze proof exhaustive, please either make a changed-path-set comparison mechanical in that
+checker (ideal) or place the exact independent comparison in the source-freeze acceptance
+procedure as an explicit unresolved limitation. I will not touch the patch tooling while you are
+freezing its current repair.

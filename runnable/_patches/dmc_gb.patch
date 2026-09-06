@@ -11,6 +11,41 @@ index 0caecf1..88003ce 100644
 -}
 \ No newline at end of file
 +}
+diff --git a/src/algorithms/sac.py b/src/algorithms/sac.py
+index b1dbad5..b4609ec 100644
+--- a/src/algorithms/sac.py
++++ b/src/algorithms/sac.py
+@@ -95,6 +95,14 @@ class SAC(object):
+ 								 target_Q) + F.mse_loss(current_Q2, target_Q)
+ 		if L is not None:
+ 			L.log('train_critic/loss', critic_loss, step)
++			# [Claude 2026-09-05] Additive: current_Q1/Q2 and target_Q were already computed above
++			# for the loss and simply never logged, leaving RAD/SODA (both inherit this method)
++			# thinner than the RL-ViGen five's per-update Q diagnostics for no reason tied to the
++			# algorithm. No new computation, no control-flow change, nothing upstream of the
++			# gradient is touched.
++			L.log('train_critic/q1', current_Q1.mean(), step)
++			L.log('train_critic/q2', current_Q2.mean(), step)
++			L.log('train_critic/target_q', target_Q.mean(), step)
+ 
+ 		self.critic_optimizer.zero_grad()
+ 		critic_loss.backward()
+@@ -111,6 +119,15 @@ class SAC(object):
+ 			L.log('train_actor/loss', actor_loss, step)
+ 			entropy = 0.5 * log_std.shape[1] * (1.0 + np.log(2 * np.pi)
+ 												) + log_std.sum(dim=-1)
++			# [Claude 2026-09-05] Additive: `entropy` was computed and never logged -- a dead
++			# diagnostic, the same shape as `action_diagnostics()` found elsewhere tonight
++			# (CORRECTIONS #69). log_std itself is the more standard axis this project already
++			# watches for the continuous-Gaussian on-policy families (log_std growth = the
++			# ibac_sni/ctrl saturation pathology); SAC's tanh-squashed policy cannot saturate the
++			# same way, but a flat log_std trajectory is still the right health signal to have.
++			L.log('train_actor/entropy', entropy.mean(), step)
++			L.log('train_actor/log_std', log_std.mean(), step)
++			L.log('train_actor/q', actor_Q.mean(), step)
+ 
+ 		self.actor_optimizer.zero_grad()
+ 		actor_loss.backward()
 diff --git a/src/arguments.py b/src/arguments.py
 index e9a5be8..f663fb6 100644
 --- a/src/arguments.py

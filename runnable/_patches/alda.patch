@@ -125,7 +125,7 @@ index 0000000..4c4e022
 +      episode_length: 500
 +      scene_id: 0
 diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
-index 20801e2..b2dad29 100644
+index 20801e2..d323b64 100644
 --- a/trainers/alda_trainer.py
 +++ b/trainers/alda_trainer.py
 @@ -1,8 +1,10 @@
@@ -224,7 +224,7 @@ index 20801e2..b2dad29 100644
              if distracting_env:
                  self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
              elif color_env:
-@@ -595,6 +636,20 @@ class ALDA(TrainerBase):
+@@ -595,6 +636,38 @@ class ALDA(TrainerBase):
  
                  if self.use_wandb:
                      wandb.log(self.logging_info)
@@ -240,12 +240,30 @@ index 20801e2..b2dad29 100644
 +                    # Additive: writes the SAME dict wandb would have received, one JSON line per
 +                    # log interval, append-only so a mid-run crash keeps every line already
 +                    # written (the same streaming convention `scripts/eval_grid.py` uses).
++                    #
++                    # [Claude 2026-09-06] The averaging loop above (upstream, unmodified) only
++                    # unwraps a bare-Tensor `v` before summing; when the accumulated list itself
++                    # holds Tensor elements (several metrics append raw tensors, not `.item()`
++                    # floats), `sum(v) / len(v)` is Tensor arithmetic and leaves a 0-d Tensor in
++                    # `self.logging_info[k]`. `wandb.log` tolerates that silently; `json.dumps`
++                    # does not. First hit for real by job bt10p8oorc64302metk8 (2026-09-06,
++                    # re-validation run): crashed at step 1500/10000 with "Object of type Tensor
++                    # is not JSON serializable" -- a latent bug in this patch since 2026-09-05,
++                    # exposed only once a run's log-write cadence lined up with a Tensor-valued
++                    # metric. Scoped to this addition rather than upstream's averaging loop, which
++                    # is intentionally left alone (declared deviations stay minimal and
++                    # attributable): `default=` converts only what json.dumps itself cannot
++                    # already handle.
++                    def _jsonable(value):
++                        if isinstance(value, torch.Tensor):
++                            return value.item()
++                        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 +                    with open(Path(self.exp_dir) / "train_metrics.jsonl", "a") as _f:
-+                        _f.write(json.dumps(self.logging_info) + "\n")
++                        _f.write(json.dumps(self.logging_info, default=_jsonable) + "\n")
  
                  self.logging_info.clear()
  
-@@ -621,11 +676,55 @@ class ALDA(TrainerBase):
+@@ -621,11 +694,55 @@ class ALDA(TrainerBase):
              episode_step += 1
              self.env_steps += 1
  
@@ -303,7 +321,7 @@ index 20801e2..b2dad29 100644
              {
                  'env_steps': self.env_steps,
                  'actor_encoder': self.actor_encoder.state_dict(),
-@@ -643,12 +742,15 @@ class ALDA(TrainerBase):
+@@ -643,12 +760,15 @@ class ALDA(TrainerBase):
                  'log_alpha': self.log_alpha,
                  'log_alpha_optimizer': self.log_alpha_optimizer.state_dict(),
              },
@@ -320,7 +338,7 @@ index 20801e2..b2dad29 100644
  
      def load_checkpoint(self, path: str):
          path = Path(path)
-@@ -675,3 +777,19 @@ class ALDA(TrainerBase):
+@@ -675,3 +795,19 @@ class ALDA(TrainerBase):
  
          # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
          # self.buffer.load(buffer_fp)
