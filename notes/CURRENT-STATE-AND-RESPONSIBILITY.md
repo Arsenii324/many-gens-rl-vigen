@@ -4,8 +4,8 @@ Not a journal (that's `START-HERE.md`). This file is meant to be kept current an
 true RIGHT NOW, what's mine to keep doing, where everything else lives. Update it when something
 here goes stale rather than letting it drift — that's the whole point of it existing.
 
-**Last updated**: 2026-09-06, ~15:20 MSK, by Claude, mid-session (fully rewritten from the
-2026-09-06 ~13:50 version, which was stale within two hours — see "how fast this goes stale" below).
+**Last updated**: 2026-09-06, ~16:05 MSK, by Claude, mid-session (targeted update of the "in
+flight" section; see "how fast this goes stale" below — it keeps being right).
 
 ## The standing mandate (owner's own words, repeated verbatim across this session)
 
@@ -60,33 +60,37 @@ without checking the mailbox first.
 
 ## Right now, in flight (check before assuming any of this is stale)
 
-- **`gate_shared_evaluator_validated`: 4/7** (`rlvigen`, `dmc_gb`, `idaac`, `ibac_sni`), up from 0/7
-  this session. Each entry independently adversarially reviewed by a fresh agent, not self-graded.
-  - `ppg`: ledger entry exists but `runtime_imports_checked` is honestly `false` — the review found
-    `train.py` is loaded during evaluation (via `phasic_policy_gradient/__init__.py`) despite being
-    excluded from the hashed closure. Currently harmless, structurally real. See CORRECTIONS #93 /
-    DECISION-SHEET A34. Needs a fresh validation run once (ideally) the exclusion gap is closed.
-  - `alda`: needed a real fix first (CORRECTIONS #91 — a residual Tensor crashed `json.dumps` in
-    this project's own train_metrics.jsonl persistence patch, first hit for real by this campaign).
-    Fixed, re-running as job `bt18gmov8nbfkkd117s6`.
-  - `ctrl`: excluded on purpose — its runtime files are being actively edited live by Codex, so no
-    job's baked-in revision can match "current" right now. Needs a fresh run once those edits land.
-- **V100 budget**: **51.6 minutes remain** of the 240-minute cap (reconciled as of this writing;
-  re-check, it moves). Spent this session: two renderer-parity failures that found real bugs
-  (AppleDouble sidecars, #88; an undersized timeout), one that succeeded on evaluation but failed
-  record delivery (below).
-- **C95 renderer-parity is blocked on a real, live bug, not just waiting on compute.** Codex found
-  (Q37): `run_probe.sh` only collects/enriches `offline_eval_*.jsonl` when `RECORDS_OUT` is set,
-  but always calls `finalize_record_delivery`, which requires a delivered file for
-  `execution_kind=eval_only_validation` — so an eval-only config without `RECORDS_OUT` is
-  *guaranteed* to run the full (paid) evaluation and only then fail. Both C95 configs
-  (`cfg-renderer-parity-v100-v128.yaml`, `cfg-renderer-parity-t4-current-v144.yaml`) had this
-  omission. The V100 job (`bt1v3lo9ckk2iukvtjnu`) ran the full grid successfully (pooled train
-  108.58, eval-easy 2.97 — real data, recovered from `result.tgz`'s `offline_eval_cuda.jsonl`, but
-  not a certified delivery) then ERRORed on delivery. The T4 companion (`bt1bcgonkd4clpqml76p`)
-  was correctly cancelled by Codex before repeating the same paid failure. **Waiting on Codex's
-  systemic fix** (fail before the expensive step, not after) before resubmitting either side.
-  Do not resubmit a renderer-parity config without `RECORDS_OUT` set until that fix lands.
+- **`gate_shared_evaluator_validated`: 5/7** (`rlvigen`, `dmc_gb`, `idaac`, `ibac_sni`, `alda`).
+  Each entry independently adversarially reviewed by a fresh agent, not self-graded.
+  - `ppg`: `runtime_imports_checked` honestly `false` — `train.py` is loaded during evaluation
+    (via `phasic_policy_gradient/__init__.py`) despite being excluded from the hashed closure.
+    CORRECTIONS #93 / DECISION-SHEET A34.
+  - `ctrl`: excluded — runtime files were being actively edited live by Codex.
+  - **DO NOT launch a fresh ctrl or ppg validation right now — CORRECTIONS #94 (below) blocks it.**
+- **CORRECTIONS #94, found by Codex (Q39), independently verified — likely invalidates all 5
+  already-"validated" entries, not just the 2 pending.** `evaluator_identity.py` bakes
+  `NATIVE_HOST_PROFILE` into every family's code/config revision digest even though the current
+  host-profile overrides (`families.json`) are training-only params (replay buffer size,
+  checkpoint-retention cadence) with zero bearing on the offline evaluator. All 5 validated
+  entries were computed under the default `NATIVE_HOST_PROFILE=datasphere`; actual production
+  requires `v100`. As designed, no family can ever read "current" under `v100` once validated
+  under `datasphere` — the ledger is structurally unable to certify anything for production.
+  Codex is tracing the fix and owns `evaluator_identity.py`. **Do not launch any evaluator-family
+  validation (ctrl, ppg, or a re-check of the other 5) until that trace concludes** — whatever the
+  fix is, it requires revalidating all seven, and a validation run now would be wasted.
+- **V100 budget**: ~51.6 minutes remained as of the last check (moves — re-run
+  `job.sh v100-budget status`).
+- **C95 renderer-parity**: the record-delivery bug Codex found (Q37 — an eval-only job without
+  `RECORDS_OUT` runs the full paid evaluation and only fails afterward, on delivery) is **fixed and
+  committed** (Q38). Both configs now declare `RECORDS_OUT`/`records.jsonl` and were rebuilt
+  against `payload-v145-rlvigen.tgz`. `cfg-renderer-parity-t4-current-v144.yaml` (R_A, gt4.1,
+  doesn't touch V100 budget) resubmitted as job `bt14eu9l1tcvqdshjio3`, executing.
+  `cfg-renderer-parity-v100-v128.yaml` (R_B) is deliberately NOT resubmitted — it needs a
+  100-minute V100 reservation and only ~51.6 minutes remain. Once R_A reports, compare it against
+  the ORIGINAL V100 job's recovered numbers (`bt1v3lo9ckk2iukvtjnu`: pooled train 108.58, eval-easy
+  2.97, from `result.tgz`'s `offline_eval_cuda.jsonl` — not a certified delivery, but the same
+  measurement a re-run V100 job would reproduce) as a provisional read, pending enough V100 budget
+  for a fully certified re-run.
 - **CTRL memory measurement and the ibac_sni competence pilot remain genuinely blocked on
   DataSphere by design** (RAM-capacity-at-v100-settings specifically, not V100 work broadly — this
   was corrected once already this session after an overstatement; see CORRECTIONS/START-HERE for
