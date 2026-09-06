@@ -227,9 +227,14 @@ and it should be recorded as a deviation rather than discovered later.
 > auxiliary machinery can be checked against primary sources; the action distribution cannot. That
 > should be said in any write-up rather than left implicit.
 
-**Frame stacking**: all four Procgen methods run **without** frame stacking — Procgen games are
-fully observable, and CoinRun paints velocity into the image rather than stacking. We use a 3-frame
-stack `[RLV]`. Structurally different solution to partial observability.
+**Frame stacking**: three of the four Procgen-origin methods (`ppg`, `ibac_sni`, `ctrl`) run
+**without** frame stacking — Procgen games are fully observable, and CoinRun paints velocity into
+the image rather than stacking. [Corrected 2026-09-06, DECISION-SHEET A35: `idaac` is the
+exception — its authors' own DMC continuous-control experiments stack 3 frames, directly
+contradicting the theoretical "incoherent with its adversarial head" argument this project
+previously used to keep it single-frame (`docs/CONSTRUCTION.md#c2`); `idaac` now stacks 3 as its
+declared main config.] We use a 3-frame stack `[RLV]` for the RL-ViGen-native five. Structurally
+different solution to partial observability.
 
 **Truncation vs. termination — verified from robosuite's own source, not merely repeated.** Three
 places in this repo assert "Door/Lift never terminate early" (`replay.py`'s `SacView` docstring,
@@ -330,14 +335,35 @@ runs.
 
 ### `sgqn` — SGQN (Bertoin et al., NeurIPS 2022, arXiv:2209.09203)
 
-> ### RESOLVED 2026-08-10 by reading the vendored source — there is no single "RL-ViGen value"
+#### Active production null — RL-ViGen released-code profile, not Table 6
+
+The live launcher is `runnable/_launch/rlvigen.sh`, which runs RL-ViGen's own Hydra
+`train.py` with `cfgs/sgqn_config.yaml`. It **does not** use the retired `rlgen/` adapter
+discussed in the historical note below. Therefore the actual primary profile is:
+
+| quantity | RL-ViGen Door/Lift Table 6 | active released-code profile | where the active value reaches computation |
+|---|---:|---:|---|
+| attribution quantile | `.90` | **`.93`** | `cfgs/sgqn_config.yaml` → `SGQNAgent.quantile` → attribution mask |
+| attribution optimizer LR | `8e-5` | **`1e-4`** | `cfgs/sgqn_config.yaml` → `Adam(attribution_predictor.parameters())` |
+| optimizer first beta | not the Table-6 field | **`.99`** | `cfgs/sgqn_config.yaml` → attribution optimizer |
+| critic consistency coefficient | `.7` | **`.9`, hard-coded** | `algos/sgqn.py::update_critic` |
+
+This is a **named RL-ViGen released-code variant**, not a source-exact reproduction of the
+published Door/Lift table. The current one-run-per-algorithm campaign does **not** schedule a
+paper-profile arm; its values must not silently replace the released-code null. In particular,
+`.7` would require a declared code patch because the release exposes no configuration field for
+that loss coefficient. The active values above are pinned by the composed-config test, and the
+row's report label is
+`SGQN (RL-ViGen released-code profile)`.
+
+> ### Historical retired-port investigation (2026-08-10) — not the production path
 >
 > An external deep-research pass verified RL-ViGen's **paper** tables verbatim but could not
 > retrieve a single line of its **source** (GitHub, jsDelivr, Software Heritage and code-search
 > mirrors all robots-blocked). We have the source vendored, so the code side is now closed. It
 > does not agree with the paper, and the shipped default agrees with nothing.
 >
-> | knob | paper (Table 6, Door/Lift) | `cfgs/sgqn_config.yaml` | constructor default | canonical | **ours** |
+> | knob | paper (Table 6, Door/Lift) | `cfgs/sgqn_config.yaml` | constructor default | canonical | retired `rlgen/` path |
 > |---|---|---|---|---|---|
 > | `aux_lr` | **8e-5** | **1e-4** | **0.3** | 3e-4 | **0.3** |
 > | `sgqn_quantile` | **0.9** | **0.93** | **0.95** | 0.95 | **0.95** |
@@ -347,16 +373,15 @@ runs.
 > a value anyone used. (`scripts/train.sh` does define `aux_lr=8e-5` matching the paper, but the
 > lines that would pass it are **commented out**, and that script targets `env=dmc` anyway.)
 >
-> **We hit the trap because we bypass hydra.** `load_upstream_module()` loads the class by file
-> path and we construct it directly with our own kwargs; our config never names `aux_lr` for
-> `sgqn`, so the constructor default stands. So the defect is real for us and latent for them.
+> **The retired adapter hit the trap because it bypassed Hydra.** `load_upstream_module()` loaded
+> the class by file path and constructed it directly with its own kwargs; its config never named
+> `aux_lr` for `sgqn`, so the constructor default stood. That was real for that retired path and
+> latent for the release; it is not a statement about the active launcher.
 >
-> The fix target is **8e-5** — the paper's robosuite value, and the number behind the published
-> SGQN curves this project's comparison is calibrated against — with `sgqn_quantile 0.9`. Not
-> canonical 3e-4: RL-ViGen deliberately re-tuned SGQN for its unified DrQ-v2 backbone, so canonical
-> would reproduce neither their numbers nor the original SAC-based setup.
+> That retired path was changed to **8e-5** / `.9`, the paper's Robosuite values. This history
+> does not choose the active released-code profile or establish that it generated Table 6.
 
-> ### The critical finding
+> ### Historical critical finding
 > Canonical SGQN uses **`aux_lr = 3e-4`** for the attribution-predictor optimizer.
 > RL-ViGen's `algos/sgqn.py:120` defaults to **`aux_lr = 0.3`** — a factor of **1000**, consistent
 > with a decimal slip from `3e-4`.
@@ -435,12 +460,11 @@ RL-ViGen publishes a "SGQN critic weight" that **is not a parameter anywhere in 
 has no such key. Nobody running their code can reproduce their table. We instantiate their
 `SGQNAgent` directly, so we inherit **0.9** exactly as any RL-ViGen user does.
 
-**The rule this makes explicit:** we set what the config can reach, and we do not edit upstream
-algorithm internals without a declared patch. `aux_lr`/`sgqn_quantile` are constructor arguments,
-so we set them to Table 6's task-specific values; the critic weight is a literal inside a loss, so
-changing it would be a **P6** patch requiring an `apply_patches.py` entry. Matching their paper
-here would mean diverging from every published RL-ViGen *result*, which was produced at 0.9. Left
-as an owner decision, not a silent edit.
+**The active rule:** the released-code null keeps every value it actually ships; no upstream
+algorithm literal is edited merely to align a paper table. The current campaign has no
+paper-profile arm. The critic coefficient is a loss literal, so changing it would require a
+declared patch and a source-to-loss test. Nothing in the active row should imply that Table 6
+values were silently applied.
 
 Also dead in canonical: `attrib_coeff`, `svea_contrastive_coeff`, `svea_norm_coeff` are defined in
 argparse and **read by no loss**.
@@ -455,8 +479,8 @@ neither matching Table 6's 0.9 for Door/Lift. Attribution method is Captum's `Gu
 **Canonical SGQN did not tune any of this.** From the paper's own source: *"no fine-tuning of
 hyperparameters (learning rates, quantile threshold, etc.) was performed whatsoever."* Its table
 also lists a separate SSL optimiser at `Adam(lr=3e-4)` and `N_SL = 2` (our `aux_update_freq: 2`
-matches). That is why we take RL-ViGen's 8e-5 over canonical 3e-4: 8e-5 is the only value anyone
-tuned **on this benchmark**, and the alternative is one its authors decline to claim was tuned.
+matches). That provenance explains the Table-6 `8e-5`; the active null nevertheless remains the
+released code's complete `1e-4` profile, which is the one predeclared campaign configuration.
 
 **`aux_beta` was the same trap as `aux_lr` above, one knob over, found on the 2026-08-14 pipeline
 audit.** `SGQNAgent.__init__(self, aux_lr=0.3, aux_beta=0.9, sgqn_quantile=0.95, ...)`

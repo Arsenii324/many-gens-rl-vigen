@@ -110,7 +110,7 @@ has not yet been stress-tested against an item it did not already have to descri
 | ID | Item | Class | Status | Needs |
 |---|---|---|---|---|
 | [C1](#c1) | Time-limit handling splits 3 / 9 | INHERITED + FALSE-CERT | **OPEN** | your decision |
-| [C2](#c2) | Frame stack: 3 frames ×8, 1 frame ×4 | INHERITED | **OPEN** | your decision |
+| [C2](#c2) | Frame stack: 3 frames ×9, 1 frame ×3 (was ×8/×4; `idaac`'s "incoherent" theoretical argument was contradicted by the primary source, corrected 2026-09-06) | INHERITED | **OPEN** | your decision |
 | [C3](#c3) | Historical `ibac_sni` 64×64 trunk mismatch — repaired by the source-backed Impala default | OURS | MONITORED | — |
 | [C4](#c4) | float64 vs float32 alpha, CUDA only | UNDECLARED | **OPEN** | your decision |
 | [C5](#c5) | Render resolution 100→84 / 84 / 64 | INHERITED | MONITORED | — |
@@ -358,6 +358,28 @@ methods — in which case harmonise to bootstrap-through-truncation, and say so 
 then a different experiment with a different null.
 
 ### C2 — Frame stack: 3 frames for eight, 1 frame for four {#c2}
+
+> **CORRECTED 2026-09-06 — the split below is now nine and three, and `idaac`'s "incoherent"
+> claim is directly contradicted by primary-source evidence this entry itself said didn't exist.**
+> This entry's own 2026-09-04 default (immediately below) argues `idaac`'s adversarial head makes
+> stacking *structurally incoherent*, and its own "Provenance" paragraph at the end honestly flags
+> this as "reasoning from each method's own mechanism, not a citation — no document in this
+> project records an architectural block on frame stacking." That citation now exists and says the
+> opposite: `ext/idaac/raileanu21a-supp.pdf` §E, read directly, shows the authors' own DMC
+> continuous-control experiments run the *full* method — including the adversarial
+> order-prediction head this entry's incoherence argument is about — **with** 3 stacked frames,
+> and report it outperforming baselines. A theoretical argument was falsified by the primary
+> source it was reasoning in the absence of (DECISION-SHEET A35, and the review it survived
+> without being caught, `notes/review-17-18-response/`). `idaac` has since moved to the stacked
+> group as this project's declared main config for that baseline (Q55) once the implementation gap
+> closed (`A65`/`C98`) — the split is **9 stacked / 3 single** (`rlgen/protocol.py::
+> OBSERVATION_GEOMETRY`, `tests/test_observation_geometry.py`), not the 8/4 the rest of this entry
+> assumes throughout. `ctrl`'s "double-counting" and `ibac_sni`'s "mis-calibration" arguments below
+> are **not** re-examined by this correction — they were not the ones falsified, and I have not
+> independently checked them against a primary source the way `idaac`'s was checked. `ppg`'s "no
+> mechanism-level objection found" already correctly anticipated that it, unlike `idaac`, had no
+> such block — it remains single-frame as of this writing (its own continuous-control frame-stack
+> implementation is a separate, not-yet-done task, per Codex mailbox Q54).
 
 > **DEFAULT SET, 2026-09-04 — declare, do NOT equalise, and the reason is that no single answer is
 > right.** Equalising the stack points four different ways for the four single-frame baselines:
@@ -6335,7 +6357,7 @@ The mechanism runs. What changes is what it **means**, and the change is silent.
 |---|---|---|
 | [C6](#c6) | the action-distribution family the method assumes | three different families across twelve baselines; four had **no continuous head at all** and one was authored (`AUDIT-2026-08-17.md` §3) |
 | [C61](#c61) | an entropy coefficient calibrated to a 15-way categorical (max entropy ln 15 = 2.708) | a 7-D Gaussian at σ=1, entropy 9.93 — the same coefficient now scales a term **3.67× larger** |
-| [C2](#c2) | frame stack as the unit of temporal context | 3 frames for eight baselines, 1 for four |
+| [C2](#c2) | frame stack as the unit of temporal context | 3 frames for nine baselines, 1 for three (was eight/four; `idaac` moved, corrected 2026-09-06) |
 | [C3](#c3) | an encoder sized for its source domain | the former 64×64 MiniGrid trunk made `ibac_sni` a **227×** model; production now uses the source-backed Impala repair |
 | [C5](#c5) | render resolution and field of view | three different resolutions across the twelve |
 | [C74](#c74) | a notion of *distinguishable instance* | measured absent for `idaac` ([C49](#c49)); reasoned for five others |

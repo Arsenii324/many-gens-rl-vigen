@@ -451,9 +451,11 @@ guessed at.
 C28 is READY, so the wiring is a slot rather than a decision. **The declaration is not**, and it
 comes first: wiring a quantity into whichever baselines happen to expose the right local variable
 is exactly how a quantity becomes **Accidental**, this contract's defect class. The structural
-split is the 8/4 this document opens with — four on-policy PPO-family clones that compute an
-importance ratio against a clipped surrogate, eight off-policy actor-critics carrying a target
-network. Both halves were checked in code, not inferred from the method names.
+split is **4/8 by algorithm family** (`ppg`, `idaac`, `ctrl`, `ibac_sni` — the same four as
+Finding 5 originally, by coincidence of shared Procgen lineage, not the same fact any more now
+that Finding 5 itself reads 9/3) — four on-policy PPO-family clones that compute an importance
+ratio against a clipped surrogate, eight off-policy actor-critics carrying a target network. Both
+halves were checked in code, not inferred from the method names.
 
 | quantity | coverage class | subset, and the structural property fixing it |
 |---|---|---|
