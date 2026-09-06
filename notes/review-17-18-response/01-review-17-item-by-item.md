@@ -128,14 +128,21 @@ declared operational default, the paper-vs-code conflict is recorded, and a pape
 config was built and verified runnable (then retired once the campaign's scope narrowed to one
 predeclared run per algorithm, per a later owner instruction — see `03-changes-made.md`).
 
-**Confidence on the numbers themselves**: **CORROBORATED, NOT PRIMARY-VERIFIED.** I did not
-independently re-read CTRL's arXiv LaTeX source myself this session — I verified the *current
-code's* values directly, but the *paper's* values (num_envs=32, cluster_len=2, etc.) I have only
-because review 17 (which claims to have read the LaTeX directly, calling it more useful than the
-PDF) and review 18 (independently, by its own account) agree on the same numbers. Two independent
-extractions agreeing is real evidence, but it is not the same as my own primary-source check, and
-I want that distinction on the record — this is the single most important item in
-`04-blind-spots-and-unverified-claims.md`.
+**Confidence on the numbers themselves**: **UPDATE — now VERIFIED, independently, against the
+primary source.** This was originally written as this response set's single most important
+unverified claim (`04-blind-spots-and-unverified-claims.md` named it explicitly). I subsequently
+read `ext/papers-sorted/CTRL-Cross-Trajectory-Representation-Learning/latex-source/appendix.tex`
+directly — the actual LaTeX appendix, not either review's extraction of it — and every number both
+reviews cite is exactly correct (γ=.999, λ=.95, 256 timesteps/rollout, 1 epoch, 8192 samples,
+entropy=.01, clip=.2, 32 envs, frame_stack=1, 200 clusters, k=3, T=2, β=.3). **One real correction
+to how both reviews phrase it**: the paper's table has a single row, "Learning rate — Learning
+rate for RL and representation learning — 5e-4," not two independently-specified parameters
+(`lr_rl`, `lr_repr`) that happen to coincide — confirmed by grepping the same source for a second,
+representation-specific rate, which does not exist. This doesn't change the recommendation (both
+this project's `lr` and `lr_ctrl` would need to be 5e-4 to match the paper) but it is a real,
+citable difference from how both reviews describe the table. See `docs/CONSTRUCTION.md#c97` for
+the full citation, and `04-blind-spots-and-unverified-claims.md` for how this gap was found and
+closed.
 
 **The JAX/Flax/Optax version claim** ("authors' approximately JAX 0.2.17 / Flax 0.3.4 / Optax
 0.0.9 environment" vs. this project's 0.4.35/0.10.2/0.2.3): **TAKEN ON TRUST.** I did not verify

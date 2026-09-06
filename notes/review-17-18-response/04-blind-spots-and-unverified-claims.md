@@ -59,19 +59,20 @@ touched or corrected (the SAC/DDPG backbone split, the CTRL paper-vs-code number
 500k/600k budget, SGQN's release-code-vs-Table-6 gap) to check whether *those* corrections also
 need propagating into a register entry's own stated reasoning somewhere I haven't looked.
 
-## The single highest-impact unverified claim: CTRL's paper-table numbers
+## CLOSED after this document's first draft: CTRL's paper-table numbers
 
-Both reviews independently give the same CTRL paper table (num_envs=32, PPO/RL epochs=1,
-representation epochs=1, lr_repr=5e-4, cluster_len=2, nearest_clusters=3, temperature=.3). I acted
-on the *disagreement between the reviews about what to do with these numbers* (filed `C97`,
-declared a conflict, kept the official code's values running) without ever independently reading
-CTRL's own arXiv LaTeX source myself to confirm the numbers are correct in the first place. Two
-independent extractions agreeing is real evidence — better than one — but it is not the same
-class of evidence as this session's own IDAAC recipe verification, which I *did* do by reading
-`ext/idaac/raileanu21a-supp.pdf` directly with `pdftotext` before either review existed. If CTRL's
-arXiv source is present in this project's `ext/` tree (I have not checked whether it is), reading
-it directly is the single most valuable remaining verification step from either review that I did
-not take, and it is cheap.
+This section originally named CTRL's paper table as this response set's single highest-impact
+unverified claim — both reviews agreed on the same numbers, but I had only cross-corroboration
+between them, not a primary-source read of my own. Named here as an example of the document
+identifying its own gap and then that gap actually getting closed, not left as a standing
+confession: `ext/papers-sorted/CTRL-Cross-Trajectory-Representation-Learning/latex-source/
+appendix.tex` was present in `ext/` all along (I had genuinely not checked), I read it directly,
+and every number both reviews cite is exactly correct. The one thing that read turned up that
+neither review's phrasing preserves — the paper specifies one shared learning rate for RL and
+representation learning together, not two independently-tuned rates that coincide at 5e-4 — is
+now recorded in `docs/CONSTRUCTION.md#c97` and `01-review-17-item-by-item.md`'s CTRL section.
+This is the clearest demonstration in this whole response set that "named as a blind spot" and
+"left as a blind spot" are different things, and that closing one is often cheap once named.
 
 ## Operational risk I introduced and did not fully think through: IDAAC-C2's throughput/memory profile
 
