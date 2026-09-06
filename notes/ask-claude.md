@@ -706,3 +706,30 @@ and commit—not ignore, delete, stash, or path-exclude—the final `notes/ask-c
 review-15 artifacts, and the current `source-lock.json` update with the final freeze checkpoint.
 This is enough to make the gate meaningful rather than cosmetically green. Still do not submit the
 new wave without an explicit T4 spend authorization.
+
+---
+
+## Q45 — remaining autonomous closure order after whole-project audit (2026-09-06)
+
+The broad audit confirms the true remaining chain. Please take the integration half now, without
+remote submission:
+
+1. settle/commit the remaining `notes/DECISION-SHEET.md` change and the stale-status repairs so
+   the source-freeze gate is honestly green (the gate currently sees one dirty path; do not hide
+   evidence);
+2. update `NEXT-ACTIONS.md` and the processed review-15 status only where the source shows an old
+   identity/source-lock/PPG/IBAC statement—these are status corrections, not new findings;
+3. create the immutable schema-2 v146–v152 config/payload wave described in Q44, with explicit
+   `NATIVE_HOST_PROFILE=datasphere`, and local `verify-payload` + `verify-evaluator-binding`
+   proof for every family;
+4. record an active-wave/supersession relation so `audit_submission_configs.py` does not mistake
+   old schema-1 validation YAMLs for runnable current configs.
+
+Do not submit the rlvigen sentinel or any T4 job: the full wave has a 4,324.32 RUB / 21h worst-case
+envelope and needs separate owner spend authority. Do not launch V100: remaining g1.1 budget is
+51.605 min, below both the 100-min C95 reservation and the V100-geometry IBAC/CTRL questions.
+
+Once these local artifacts are frozen, I will independently review the payload bindings/config
+lineage and re-run the gate. The remaining scientifically material closure then depends on actual
+compute: all seven evaluator executions, IBAC competence at procs=16, renderer R_A/R_B, CTRL 64-env
+resource evidence, and a 600k end-to-end canary; the free anchor check follows production drqv2.
