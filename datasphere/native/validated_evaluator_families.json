@@ -133,21 +133,48 @@
     "validation_kind": "functional_endpoint"
   },
   "alda": {
-    "job": "bt1pb2kceart31caaqkq",
+    "job": "bt18gmov8nbfkkd117s6",
     "baseline": "alda",
-    "code_revision": "4a77df8be2c5a197484237f2e7f11141ce3f9c371351d6e7c687cf0ae1440e82",
-    "family_code_revision": null,
-    "family_config_revision": null,
-    "runtime_imports_checked": false,
+    "code_revision": null,
+    "family_code_revision": "919e8888f87b20a9920c02a02473a91165705fd175b54c6f319b96522cd0e4b5",
+    "family_config_revision": "dbc511fb4a4cb7f43164b35c0503d50328456d30547697ef5b8b44dc9a5ea872",
+    "runtime_imports_checked": true,
     "paired": true,
     "diagnostics_complete": true,
-    "validation_kind": null,
-    "evaluator_revision": null,
-    "evaluator_scope": null,
-    "evaluator_scope_revision": null,
-    "evaluator_measurement_revision": null,
-    "evaluation_records_path": null,
-    "evaluation_records_sha256": null
+    "validation_kind": "functional_endpoint",
+    "evaluator_revision": "2306f138e6f4aa2345cbc6426d085cd982674c648a566416f70547fb760e47db",
+    "evaluator_scope": {
+      "action_repeat": 1,
+      "baseline": "alda",
+      "deterministic_setting": {
+        "backend": "torch",
+        "enabled": true,
+        "mode": "torch.use_deterministic_algorithms"
+      },
+      "device": "cuda",
+      "episode_length": 500,
+      "episode_seed": 20260903,
+      "episodes": 5,
+      "eval_policy_mode": "mode",
+      "eval_scope": "endpoint",
+      "family": "alda",
+      "frame": 10000,
+      "frame_stack": 3,
+      "image_size": 100,
+      "regimes": [
+        "train",
+        "eval-easy"
+      ],
+      "scenes": [
+        0
+      ],
+      "seed": 1,
+      "task": "Door"
+    },
+    "evaluator_scope_revision": "1b10811132543beac9d92880774dc43dbe36cca4f197c5017006264755e61c0d",
+    "evaluator_measurement_revision": "23b210356a1d83ae39ac93fe732d249b51b4bd7da41be12145b134491369777f",
+    "evaluation_records_path": "results/records/bt18gmov8nbfkkd117s6__records.jsonl",
+    "evaluation_records_sha256": "a1596fbc6e7d299f53de2384da85b242b7f3239092d97b1dd292b55a9206a82e"
   },
   "ctrl": {
     "job": "bt1t3njt0m37dujrio2u",
