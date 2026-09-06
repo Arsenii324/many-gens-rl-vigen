@@ -111,7 +111,17 @@ FAMILY_RUNTIME_MEMBERS = {
         "runnable/ctrl/models.py",
         "runnable/ctrl/buffer.py",
         "runnable/ctrl/vec_env.py",
-        "runnable/ctrl/door.xml",
+        # [Claude 2026-09-06, CORRECTIONS #97] door.xml was here, and it should not have been.
+        # scripts/deviations.py's own "untracked but not counted" list already calls it out as a
+        # RUN ARTIFACT -- "a robosuite task model dumped at cwd during a run" -- not authored
+        # source. Two jobs on two different payload archives both reported a ctrl evaluator
+        # identity matching no local computation; a diagnostic job that hashes the remote
+        # filesystem live (after ctrl's own training has run and robosuite has dumped its own
+        # copy of this file) found the mismatch isolated to exactly this one member -- every other
+        # of the 36 hashed files matched. Static source cannot be a file the environment overwrites
+        # as a side effect of running; hashing it stamped "identity" with whatever robosuite
+        # happened to write during that specific job, not with anything that changes only when the
+        # code does.
         "runnable/_shim",
         "RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb",
         "RL-ViGen-upstream/envs/robosuiteVGB/cfg/robo_config.yaml",

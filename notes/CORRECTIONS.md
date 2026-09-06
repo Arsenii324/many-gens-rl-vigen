@@ -2107,3 +2107,45 @@ that before spending a second job on the assumption that resubmitting alone fixe
 **Not blocking**: the other six entries are real and current; `gate_shared_evaluator_validated` now
 correctly reads 6/7, a genuine improvement from 0/7, not a number to distrust because of `ctrl`'s
 anomaly.
+
+## #97 amendment — root-caused and fixed: `door.xml` was hashed as source but is a runtime-regenerated artifact
+
+Resolved via one deliberate diagnostic job rather than further guessing, after plain revalidation
+(v153, a completely fresh payload archive) reproduced the identical anomalous value and ruled out
+upload/cache staleness. `scripts/eval_grid.py` carried a temporary, opt-in block
+(`NATIVE_DIAGNOSE_EVALUATOR_IDENTITY=1`) that hashes `ctrl`'s full runtime-member set live, on the
+remote container, and prints it before exiting — job `bt1tnffd9m78e1t2uj0h` (4112 frames, the
+minimum that clears `ctrl`'s own curve-measurement floor, so training actually ran before the
+identity check).
+
+**Of 36 hashed files, exactly one differed from the known-good local hash**: `runnable/ctrl/
+door.xml` — remote `94e01f29...`, local `fcb09068...`. Every other member, including the five other
+`ctrl/*.py` files and all shared `RL-ViGen-upstream/envs/robosuiteVGB` members, matched exactly.
+
+**Root cause**: `door.xml` is not authored source — `scripts/deviations.py`'s own "untracked but
+not counted" list already documents it as "a run artifact — a robosuite task model dumped at cwd
+during a run." Robosuite writes its own resolved copy of this file to the working directory during
+environment construction, which for a real cell happens *before* `eval_grid.py`'s offline
+evaluation runs (training executes first). So by the time `evaluator_family_code_revision` re-hashes
+`FAMILY_RUNTIME_MEMBERS["ctrl"]` from disk, `door.xml` has already been overwritten by *this specific
+run's own robosuite construction* — the hash was never stable evaluator identity, it was whatever
+byte-for-byte artifact the last environment construction happened to write. `door.xml` was the
+*only* one of `ctrl`'s hashed members that is regenerated at runtime rather than fixed at code-change
+time, which is exactly why it was the only one that ever differed.
+
+**Fixed**: removed `"runnable/ctrl/door.xml"` from `FAMILY_RUNTIME_MEMBERS["ctrl"]`
+(`evaluator_identity.py`). No test named it explicitly (checked directly, not assumed), so nothing
+else needed updating. Verified: `pytest -k "evaluator_identity or evaluator_binding or ctrl"` clean;
+`production_gates.py`'s only remaining fail is the expected uncommitted-source-tree flag for this
+exact fix, pre-commit.
+
+**Consequence**: `ctrl`'s evaluator revision changes again with this fix (removing a hashed member
+changes the digest), so the v146-v152 wave's `ctrl` entry — already known-invalid from the original
+anomaly — needs one more clean revalidation run against the corrected closure, not a fourth guess.
+Not resubmitted in this entry; tracked as the immediate next step.
+
+**Why this is worth stating plainly**: this is the second real, first-ever-exercised bug this
+project's evaluator-identity mechanism has found by actually diffing a local computation against a
+live remote one (the first was #88's AppleDouble sidecars). Both bugs are the same shape — a file
+assumed static that a macOS-vs-Linux or code-vs-runtime boundary silently changes — found only
+because someone insisted the mismatch be explained rather than revalidated around.
