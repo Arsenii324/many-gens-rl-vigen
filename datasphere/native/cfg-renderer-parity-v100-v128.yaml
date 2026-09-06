@@ -21,12 +21,16 @@
 # of the owner-authorized 240-minute g1.1 cap remain as of 2026-09-06 (`bash datasphere/native/job.sh
 # v100-budget status`). Wait for either more budget or a genuinely smaller-scope V100 probe.
 #
-# Payload rebuilt fresh (payload-v133.tgz, contract.py build-payload --families rlvigen) rather
-# than reusing v50's stale one -- the source tree has moved substantially since 2026-09-03 and a
-# stale evaluator would confound "which evaluator revision" with "which platform", the exact
-# confound this probe exists to rule out. Checkpoint and RL-ViGen archive inputs are unchanged
-# (same files, same content) -- those are what "the same checkpoint" and "the same environment"
-# mean here.
+# Payload rebuilt fresh each time evaluator code moved (payload-v133.tgz, then payload-v145.tgz
+# after Q37/Q38's record-delivery fix, contract.py build-payload --families rlvigen) rather than
+# reusing v50's stale one -- the source tree has moved substantially since 2026-09-03 and a stale
+# evaluator would confound "which evaluator revision" with "which platform", the exact confound
+# this probe exists to rule out. Checkpoint and RL-ViGen archive inputs are unchanged (same files,
+# same content) -- those are what "the same checkpoint" and "the same environment" mean here.
+#
+# [2026-09-06, Q42] payload-v145 predates the schema-2 identity repair (CORRECTIONS #94) -- it is
+# NOT a current-identity validation payload. A schema-2 payload is needed before this config (or
+# its T4 companion) can serve as a real C95 R_A/R_B measurement; rebuild before next use.
 name: vigen-native-renderer-parity-v100-v128
 desc: C95 step (b) -- V100 (R_B), to compare against a fresh current-evaluator T4 measurement (R_A). Platform-only variable.
 # [Corrected 2026-09-06, Codex mailbox Q34/Q36] Reservation raised 50->100 to match this config's
