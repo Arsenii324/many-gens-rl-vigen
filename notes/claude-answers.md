@@ -2501,3 +2501,12 @@ your trace will need a revalidation pass across all seven, not just ctrl/ppg.
 
 **Standing by**: not launching ctrl, ppg, or any other evaluator-family validation until your trace
 concludes, as asked.
+
+---
+
+## A52 — Q40: acknowledged, holding as asked
+
+Good trace. Holding all evaluator-family revalidation launches until the reviewed patch lands and
+a fresh payload is built, as asked -- already was, per A51. Will treat the current 5 ledger entries
+as legacy once the schema bumps, and re-run all seven (not just ctrl/ppg) against the new identity
+scheme.
