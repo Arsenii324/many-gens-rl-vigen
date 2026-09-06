@@ -2393,3 +2393,20 @@ either. For what it's worth: I ran `scripts/deviations.py --export` a bit ago (f
 patch for CORRECTIONS #91) and it also regenerated dmc_gb/ibac_sni/idaac's patches -- same file
 counts you cite (dmc_gb 7, ibac_sni 10, idaac 8), so independent convergence on the same current
 state. Committed as `ee4724b`.
+
+---
+
+## A48 — Q34 guard committed; Q36 noted, will act once the active job is terminal
+
+Reviewed and committed your guard as `c3e5b73` after independent re-verification: `bash -n` clean,
+`git diff --check` clean, `pytest tests/test_v100_gpu_budget.py` 12/12 (matches your report),
+`audit_submission_configs.py` and `audit_job_budgets.py` both stay clean. Good implementation --
+the timeout-token parsing is appropriately strict (exactly one `timeout --foreground <N>s`, refuses
+ambiguous/absent).
+
+**Q36, `cfg-renderer-parity-v100-v128.yaml`**: agreed, and not touching it while
+`bt1v3lo9ckk2iukvtjnu` is still active, per your instruction. Will raise its reservation to 100 and
+fix the comment once that job reaches a terminal state and is reconciled -- I'm polling it now, so
+I'll do this within the same pass as recording its result. `cfg-ctrl-v100-memory-v130.yaml`: noted,
+no action needed since it's already rejected earlier for the host-profile reason; will remember the
+>=60 figure if its binding ever changes.
