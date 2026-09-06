@@ -7,6 +7,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 JOB = ROOT / "datasphere" / "native" / "job.sh"
@@ -14,8 +16,15 @@ IMAGE = json.loads((ROOT / "datasphere/native/source-lock.json").read_text())["c
 
 
 def _config(tmp_path: Path, *, tier: str = "g1.1", reservation: int | None = None,
-            cells: str = "") -> Path:
+            cells: str = "", timeout_seconds: int | None = 60,
+            timeout_command: str | None = None) -> Path:
     setting = ""
+    if timeout_command is None:
+        timeout_command = (
+            f"timeout --foreground {timeout_seconds}s env"
+            if timeout_seconds is not None else "env"
+        )
+    setting += f"{timeout_command} "
     if reservation is not None:
         setting += f"NATIVE_V100_RESERVATION_MINUTES={reservation} "
     if cells:
@@ -78,45 +87,107 @@ def test_g11_submit_requires_an_explicit_reservation_before_cloud_execute(tmp_pa
     assert not (tmp_path / "datasphere-invoked").exists()
 
 
+def test_g11_timeout_is_bounded_by_the_reservation_before_any_state_or_cloud_write(tmp_path):
+    state = tmp_path / "v100-budget.json"
+    result = _submit(
+        tmp_path,
+        _config(tmp_path, reservation=50, timeout_seconds=6000),
+        state,
+    )
+
+    assert result.returncode != 0
+    assert "100" in result.stderr
+    assert "timeout" in result.stderr.lower()
+    assert not state.exists()
+    assert not (tmp_path / "datasphere-invoked").exists()
+
+
+def test_g11_reservation_at_rounded_timeout_bound_reaches_cloud(tmp_path):
+    state = tmp_path / "v100-budget.json"
+    result = _submit(
+        tmp_path,
+        _config(tmp_path, reservation=101, timeout_seconds=6001),
+        state,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "datasphere-invoked").exists()
+    record = json.loads(state.read_text())["reservations"]
+    assert record[0]["reserved_minutes"] == 101
+
+
+@pytest.mark.parametrize(
+    "timeout_command",
+    [
+        "env",
+        "timeout --foreground nope env",
+        "timeout --foreground 60s env timeout --foreground 120s env",
+    ],
+    ids=["absent", "unparseable", "ambiguous"],
+)
+def test_g11_unbounded_timeout_is_refused_before_cloud(tmp_path, timeout_command):
+    result = _submit(
+        tmp_path,
+        _config(tmp_path, reservation=20, timeout_command=timeout_command),
+        tmp_path / "v100-budget.json",
+    )
+
+    assert result.returncode != 0
+    assert "timeout" in result.stderr.lower()
+    assert not (tmp_path / "datasphere-invoked").exists()
+
+
 def test_g11_submit_refuses_a_reservation_over_the_cumulative_cap(tmp_path):
+    # [Claude 2026-09-06] cap_minutes and the reservation amounts must both track
+    # V100_BUDGET_CAP_MINUTES (job.sh:29, raised 120->240 by explicit owner instruction). A state
+    # file whose cap_minutes disagrees with the script's own constant is refused outright
+    # (load_state's own consistency guard, job.sh:235) -- so this fixture using the OLD cap value
+    # started failing not because the cumulative-cap check broke, but one level earlier, before
+    # that check is ever reached. Sized so the scenario still genuinely exceeds the cap: 200 + 50
+    # = 250 > 240.
     state = tmp_path / "v100-budget.json"
     state.write_text(json.dumps({
         "schema": 1,
-        "cap_minutes": 120,
+        "cap_minutes": 240,
         "reservations": [{
             "reservation_id": "already-used",
             "tier": "g1.1",
-            "reserved_minutes": 100,
+            "reserved_minutes": 200,
             "actual_minutes": None,
             "job_id": "bt1oldabcdefghijklq",
             "status": "submitted",
         }],
     }))
 
-    result = _submit(tmp_path, _config(tmp_path, reservation=30), state)
+    result = _submit(tmp_path, _config(tmp_path, reservation=50), state)
 
     assert result.returncode != 0
-    assert "120" in result.stderr
+    assert "240" in result.stderr
     assert "exceed" in result.stderr.lower()
     assert not (tmp_path / "datasphere-invoked").exists()
     assert json.loads(state.read_text())["reservations"][0]["reservation_id"] == "already-used"
 
 
 def test_g11_ambiguous_cloud_failure_retains_reservation_and_blocks_followup(tmp_path):
+    # [Claude 2026-09-06] Sized against V100_BUDGET_CAP_MINUTES=240 (raised from 120 by explicit
+    # owner instruction, job.sh:29) so the followup genuinely still exceeds the cap: 200 + 50 =
+    # 250 > 240. At the old 100/30 sizing the followup no longer exceeds 240 and the scenario this
+    # test exists to check (a retained reservation from an ambiguous failure correctly blocks a
+    # followup that would breach the cap) stopped being exercised at all.
     state = tmp_path / "v100-budget.json"
-    first = _submit(tmp_path, _config(tmp_path, reservation=100), state, cloud_exit=17)
+    first = _submit(tmp_path, _config(tmp_path, reservation=200), state, cloud_exit=17)
 
     assert first.returncode != 0
     retained = json.loads(state.read_text())["reservations"]
     assert len(retained) == 1
-    assert retained[0]["reserved_minutes"] == 100
+    assert retained[0]["reserved_minutes"] == 200
     assert retained[0]["job_id"] is None
     assert retained[0]["status"] == "reserved"
     assert (tmp_path / "datasphere-invoked").exists()
 
     followup = tmp_path / "followup"
     followup.mkdir()
-    second = _submit(followup, _config(followup, reservation=30), state)
+    second = _submit(followup, _config(followup, reservation=50), state)
 
     assert second.returncode != 0
     assert "exceed" in second.stderr.lower()
@@ -157,14 +228,15 @@ def test_v100_budget_reconcile_updates_actual_elapsed_and_status_is_local(tmp_pa
     assert report["updated"] == 1
     assert report["actual_minutes_known"] == 30.0
     assert report["accounted_minutes"] == 30.0
-    assert report["remaining_minutes"] == 90.0
+    # V100_BUDGET_CAP_MINUTES=240 (job.sh:29) - 30 accounted = 210.
+    assert report["remaining_minutes"] == 210.0
 
     status = subprocess.run(
         ["bash", str(JOB), "v100-budget", "status"],
         cwd=ROOT, env=environment, text=True, capture_output=True,
     )
     assert status.returncode == 0, status.stderr
-    assert json.loads(status.stdout)["remaining_minutes"] == 90.0
+    assert json.loads(status.stdout)["remaining_minutes"] == 210.0
 
 
 def test_g11_invalid_reservation_is_rejected_before_cloud_execute(tmp_path):

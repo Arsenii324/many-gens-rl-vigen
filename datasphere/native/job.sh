@@ -410,6 +410,58 @@ else:
 PY
 }
 
+timeout_budget_minutes() {
+  local cfg="$1"
+  python3 - "$cfg" <<'PY'
+import re
+import shlex
+import sys
+from pathlib import Path
+
+config = Path(sys.argv[1])
+lines = config.read_text().splitlines()
+command_lines = []
+in_command = False
+for line in lines:
+    if line.startswith("cmd:"):
+        in_command = True
+        tail = line[len("cmd:"):].strip()
+        if tail and tail[0] not in ">|":
+            command_lines.append(tail)
+        continue
+    if in_command and line and not line[0].isspace():
+        break
+    if in_command and line.strip():
+        command_lines.append(line.strip())
+
+try:
+    tokens = []
+    for line in command_lines:
+        tokens.extend(shlex.split(line, comments=True, posix=True))
+except ValueError as error:
+    print(f"cannot parse forwarded cmd: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+matches = []
+for index, token in enumerate(tokens):
+    if token != "timeout":
+        continue
+    if (index + 2 >= len(tokens) or tokens[index + 1] != "--foreground"
+            or not re.fullmatch(r"[1-9][0-9]*s", tokens[index + 2])):
+        print("timeout must use exactly `timeout --foreground <positive-integer>s`", file=sys.stderr)
+        raise SystemExit(1)
+    matches.append(int(tokens[index + 2][:-1]))
+
+if len(matches) != 1:
+    print("command must contain exactly one parseable `timeout --foreground <positive-integer>s`",
+          file=sys.stderr)
+    raise SystemExit(1)
+
+seconds = matches[0]
+print(f"{seconds}\t{(seconds + 59) // 60}")
+PY
+}
+
 case "${1:-}" in
 submit)
   cfg="${2:?config path}"
@@ -455,6 +507,20 @@ submit)
       | head -1 | cut -d= -f2- || true)"
     if [[ -z "$reservation_minutes" ]]; then
       echo "refusing to submit g1.1: config must explicitly set NATIVE_V100_RESERVATION_MINUTES" >&2
+      exit 1
+    fi
+    if [[ ! "$reservation_minutes" =~ ^[1-9][0-9]*$ ]]; then
+      echo "NATIVE_V100_RESERVATION_MINUTES must be a positive integer number of minutes" >&2
+      exit 1
+    fi
+    timeout_budget="$(timeout_budget_minutes "$cfg")" || {
+      echo "refusing to submit g1.1: timeout bound is absent, ambiguous, or unparseable" >&2
+      exit 1
+    }
+    IFS=$'\t' read -r timeout_seconds required_minutes <<< "$timeout_budget"
+    if (( reservation_minutes < required_minutes )); then
+      echo "refusing to submit g1.1: reservation ${reservation_minutes} minutes is below " \
+           "the command timeout bound of ${required_minutes} minutes (${timeout_seconds}s)" >&2
       exit 1
     fi
     reservation_id="$(v100_budget_command reserve "$V100_BUDGET_STATE" "$cfg" "$reservation_minutes")" || {
