@@ -31,7 +31,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v171-alda-pilot.tgz: CODE
+  - datasphere/native/payload-v174-alda-pilot.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT

@@ -79,10 +79,10 @@ index e1e658d..ee35580 100644
  
 diff --git a/specs/train_alda_robosuite_door.yaml b/specs/train_alda_robosuite_door.yaml
 new file mode 100644
-index 0000000..4c4e022
+index 0000000..e666a97
 --- /dev/null
 +++ b/specs/train_alda_robosuite_door.yaml
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,48 @@
 +# RL-ViGen robosuite Door. A new spec is this repo's OWN configuration mechanism -- it ships one
 +# spec per task -- so this adds a file rather than modifying one. `domain_name: robosuite` selects
 +# the branch added to alda_trainer.initialize_env_dmc.
@@ -97,6 +97,13 @@ index 0000000..4c4e022
 +    values_per_latent: 12
 +    beta: 100
 +    n_train_steps: 500_000
++    # [Claude 2026-09-06, DECISION-SHEET A27] Declared at AldaConfig's own default (1.0) for the
++    # exact reason documented below for checkpoint_n_steps/eval_n_steps: `parse_spec_overrides`
++    # only accepts keys ALREADY PRESENT in the spec. Job bt1u05ella9ee52leo45 (ALDA-C, A27's
++    # utd=0.25 pilot arm) failed immediately with "Spec override key not found:
++    # trainer.config.utd" for exactly this reason -- adding the Python dataclass field was not
++    # enough on its own, unlike ordinary argparse configs elsewhere in this project.
++    utd: 1.0
 +    # [Claude 2026-09-05] Declared explicitly at ALDA's OWN default (trainers/alda_trainer.py:73)
 +    # so behaviour is unchanged, but the cadence becomes reachable. Two reasons it must be:
 +    #   1. `parse_spec_overrides` only accepts keys ALREADY PRESENT in the spec, so a key absent

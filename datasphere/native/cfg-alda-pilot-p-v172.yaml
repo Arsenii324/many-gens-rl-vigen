@@ -11,7 +11,7 @@
 # so 150k should be long enough to distinguish "diverges" from "doesn't" on Door too). Checkpoints
 # every 25000 frames for a stability curve, not just an endpoint read.
 #
-# Uses payload-v171-alda-pilot.tgz: added a `utd: float = 1.0` field to AldaConfig and a
+# Uses payload-v174-alda-pilot.tgz: added a `utd: float = 1.0` field to AldaConfig and a
 # fractional-accumulator update scheduler (default reproduces the original one-update-per-step
 # line exactly; verified locally: utd=1.0 over 10 simulated steps gives [1,1,1,1,1,1,1,1,1,1]).
 # This arm passes no override, so it exercises exactly that default path.
@@ -38,7 +38,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v171-alda-pilot.tgz: CODE
+  - datasphere/native/payload-v174-alda-pilot.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT
