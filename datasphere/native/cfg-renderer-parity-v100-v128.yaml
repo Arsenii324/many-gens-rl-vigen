@@ -1,29 +1,41 @@
-# [Claude 2026-09-06] C95 renderer-parity probe, step (b): the SAME checkpoint, evaluator and
-# container image as cfg-offline-eval-s2-full-v50.yaml (drqv2-s2 @ 100k frames, four regimes x
-# ten scenes x ten episodes), on g1.1 (V100) instead of gt4.1 (T4). Platform is the only changed
-# factor. R_A (the T4 measurement) is already on record: mean 89.47 (train), 3.07 (eval-easy) at
-# five episodes/scene (v49); the complete ten-episode four-regime grid this mirrors is v50's own
-# job. Compare this job's numbers against that recorded T4 baseline once both are in hand.
+# [Claude 2026-09-06, corrected same day per Codex mailbox Q33/Q36] C95 renderer-parity probe,
+# step (b): the SAME checkpoint, evaluator and container image as a fresh CURRENT-evaluator T4
+# measurement, on g1.1 (V100) instead of gt4.1 (T4). Platform is the only changed factor.
 #
-# Payload rebuilt fresh (payload-v127.tgz, contract.py build-payload --families rlvigen) rather
+# DO NOT compare this job's numbers against cfg-offline-eval-s2-full-v50.yaml's recorded T4
+# figures (mean 89.47 train / 3.07 eval-easy) -- that comparison would confound "which evaluator
+# revision" with "which platform" (v50 used payload-v50.tgz, a different sha256 from this config's
+# payload; notes/RESULTS-VALIDITY.md:34-39 documents exactly this hazard). R_A must be a FRESH
+# measurement on the CURRENT payload -- see cfg-renderer-parity-t4-current-v144.yaml.
+#
+# STATUS 2026-09-06: this exact job (bt1v3lo9ckk2iukvtjnu) ran the full grid successfully
+# (NATIVE_OFFLINE_EVAL_SECONDS 4558) then ERRORed on record delivery -- Codex mailbox Q37: an
+# eval-only job without RECORDS_OUT runs the whole (paid) evaluation and only fails afterward on
+# finalization. The real numbers survive inside that job's result.tgz (offline_eval_cuda.jsonl),
+# just not through a certified delivery path. Do not resubmit this config, or
+# cfg-renderer-parity-t4-current-v144.yaml, until Codex's fail-before-not-after fix lands and the
+# payload is rebuilt against it (see Q37's resolution in notes/ask-claude.md /
+# notes/claude-answers.md for current status).
+#
+# Payload rebuilt fresh (payload-v133.tgz, contract.py build-payload --families rlvigen) rather
 # than reusing v50's stale one -- the source tree has moved substantially since 2026-09-03 and a
 # stale evaluator would confound "which evaluator revision" with "which platform", the exact
 # confound this probe exists to rule out. Checkpoint and RL-ViGen archive inputs are unchanged
 # (same files, same content) -- those are what "the same checkpoint" and "the same environment"
 # mean here.
 name: vigen-native-renderer-parity-v100-v128
-desc: C95 step (b) -- reproduce v50's T4 measurement on g1.1 (V100), platform-only variable.
-# Reservation sized at 50 minutes: v49 (five episodes/scene, same 4 regimes x 10 scenes) took
-# 21 minutes on gt4.1; this config doubles episodes to ten, so ~40 min plus bootstrap/install
-# overhead on a platform of at least comparable speed. The remote `timeout --foreground` below is
-# set to match rather than left at a much larger value, so a runaway job cannot silently exceed
-# the local V100 budget accounting. NOTE FOR FUTURE EDITS: job.sh's submit path greps this whole
-# file's raw text for the reservation-minutes environment assignment (see the cmd block below) and
-# takes the first match, so no comment anywhere in this file may repeat that variable name
-# immediately followed by an equals sign, or it will shadow the real one.
+desc: C95 step (b) -- V100 (R_B), to compare against a fresh current-evaluator T4 measurement (R_A). Platform-only variable.
+# [Corrected 2026-09-06, Codex mailbox Q34/Q36] Reservation raised 50->100 to match this config's
+# own 6000s (100-minute) timeout bound -- job.sh's submit path now refuses (by design) a g1.1
+# reservation below the command's own timeout, and 50 no longer clears that guard. The original
+# 50-minute estimate (from v49's 21-minute five-episode run, doubled for ten episodes) undershot
+# the real cost: this job's own actual run took 85.965 minutes. NOTE FOR FUTURE EDITS: job.sh's
+# submit path greps this whole file's raw text for the reservation-minutes environment assignment
+# (see the cmd block below) and takes the first match, so no comment anywhere in this file may
+# repeat that variable name immediately followed by an equals sign, or it will shadow the real one.
 cmd: >-
   timeout --foreground 6000s env
-  NATIVE_V100_RESERVATION_MINUTES=50
+  NATIVE_V100_RESERVATION_MINUTES=100
   RLVIGEN_ARCHIVE=${RLVIGEN}
   OFFLINE_EVAL_SNAPSHOT=${SNAP}
   OFFLINE_EVAL_DEVICES=cuda
