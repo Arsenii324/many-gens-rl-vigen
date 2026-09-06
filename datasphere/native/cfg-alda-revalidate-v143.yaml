@@ -1,3 +1,8 @@
+# SUPERSEDED 2026-09-06: this config's payload predates CORRECTIONS.md #94's schema-2
+# evaluator-identity fix (schema 1 baked NATIVE_HOST_PROFILE into every family's revision,
+# so no validation done under one profile could ever read as current under another). Kept
+# as the record of the job that ran; resubmitting it would validate a superseded identity
+# scheme, not the current one. Replacement: cfg-alda-revalidate-v149.yaml.
 # [Claude 2026-09-06] Re-run of cfg-alda-revalidate-v139.yaml (job bt10p8oorc64302metk8), which
 # crashed training at step 1500/10000 with "Object of type Tensor is not JSON serializable" --
 # CORRECTIONS.md #91. Root cause: the averaging loop above alda_trainer.py's train_metrics.jsonl

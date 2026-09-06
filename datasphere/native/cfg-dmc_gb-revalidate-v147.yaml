@@ -1,0 +1,50 @@
+# [Claude 2026-09-06] Schema-2 evaluator-identity revalidation wave (Codex mailbox Q42-Q45).
+# CORRECTIONS.md #94 found the schema-1 identity scheme baked NATIVE_HOST_PROFILE into every
+# family's evaluator revision even though the profile overrides are training-only, making no
+# validation done under one profile ever readable as current under another -- so all five
+# families validated earlier this session (rlvigen/dmc_gb/idaac/ibac_sni/alda) are schema-1
+# legacy, not carried forward. Schema bumped to 2 (evaluator_identity.py), profile-invariant;
+# this config explicitly names NATIVE_HOST_PROFILE=datasphere (Q45) so the baked-in revision
+# matches what a local schema-2 recomputation expects, rather than relying on the (now harmless,
+# but better stated) default.
+#
+# Frame budget set to this family's own executed-endpoint rounding (10000, per Codex's own
+# audit against family.py's endpoint rule), not a uniform 10000 -- SAVE_EVERY_FRAMES matches so
+# the retained checkpoint lands exactly at the executed endpoint.
+#
+# LOCAL ARTIFACT ONLY as of this commit: payload-v147-dmc_gb.tgz built and passed both
+# `contract.py verify-payload --require-evaluator-identity` and `verify-evaluator-binding`
+# locally. NOT submitted -- the full seven-family wave has a stated 4,324.32 RUB / 21h worst-case
+# envelope needing separate owner spend authority (Q45); do not submit without it.
+name: vigen-dmc_gb-revalidate-v147
+desc: Schema-2 evaluator identity re-validation for dmc_gb, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 10800s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=rad:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v147-dmc_gb.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

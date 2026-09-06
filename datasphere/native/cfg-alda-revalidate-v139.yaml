@@ -1,3 +1,8 @@
+# SUPERSEDED 2026-09-06: this config's payload predates CORRECTIONS.md #94's schema-2
+# evaluator-identity fix (schema 1 baked NATIVE_HOST_PROFILE into every family's revision,
+# so no validation done under one profile could ever read as current under another). Kept
+# as the record of the job that ran; resubmitting it would validate a superseded identity
+# scheme, not the current one. Replacement: cfg-alda-revalidate-v149.yaml.
 # [Claude 2026-09-06] Re-validation of the alda evaluator family against the CURRENT tree,
 # superseding notes/EVALUATOR-VALIDATION-STATUS.md's 2026-09-05 entries (frozen hash
 # 4bef9881a418c2d88a450d38a902bd3aa159d724a651741917935caa826435d2) and validated_evaluator_families.json's
