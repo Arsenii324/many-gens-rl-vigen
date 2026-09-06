@@ -273,19 +273,29 @@ is the owner's to make, not a default to apply silently.
 Genuinely shared: robosuite `Door`, Panda, OSC_POSE, horizon 500, action repeat 1, `scene_id 0`,
 RGB. Those are `rlgen/protocol.py` fields and `tests/test_contract.py` pins them.
 
-**Finding 5 — frame stacking splits the twelve 8/4, and this is the largest comparability gap
+**Finding 5 — frame stacking split the twelve 8/4, and this was the largest comparability gap
 found so far.** Checked per seam rather than assumed from the protocol:
+
+**Corrected 2026-09-06 (DECISION-SHEET A35, reviews 17/18, `C98`): the split is now 9/3, not
+8/4.** `idaac` moved from the single-frame column to the stacked column: the project adopted the
+authors' own published DMC continuous-control recipe (which stacks 3 frames) as idaac's declared
+main config, once the implementation gap was closed (`make_rlvigen_venv` now applies a real
+`FrameStack`). See `tests/test_observation_geometry.py`'s identically-updated split and
+`rlgen/protocol.py::OBSERVATION_GEOMETRY["idaac"]`, now `(64, 3)`.
 
 | stacked (3 frames, 9 channels) | single frame (3 channels) |
 |---|---|
 | `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | `ppg` |
-| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `idaac` |
-| `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | `ibac_sni` |
-| | `ctrl` |
+| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `ibac_sni` |
+| `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | `ctrl` |
+| `idaac` (`FrameStack` in `make_rlvigen_venv`, added 2026-09-06) | |
 
-The split is not arbitrary and it is not ours: the right column is exactly the four whose
-originals are **Procgen**, which serves a single RGB frame and whose encoders were built for it.
-Stacking them would be a deviation in each clone; not stacking them is faithful.
+The split's origin is not arbitrary and it is not ours: the three remaining single-frame
+baselines are exactly the ones whose originals are **Procgen**, which serves a single RGB frame
+and whose encoders were built for it — stacking them would be a deviation in each clone, not
+stacking them is faithful. `idaac`'s origin is *also* Procgen, but its own publication supplies an
+explicit, source-backed continuous-control precedent that stacks 3 frames — a justified,
+documented exception (DECISION-SHEET A35), not a drift from the rule above.
 
 But the consequence is not cosmetic. On a robot manipulation task, a single frame is
 **velocity-blind** — the gripper's motion is unobservable, and the policy sees a strictly smaller

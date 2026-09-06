@@ -43,9 +43,10 @@ TASKS = ("Door", "Lift")
 #: build if one appears. These are RL-ViGen's own values -- but from three different files, so
 #: each line names its own source rather than inheriting one blanket claim.
 DEFAULT_IMAGE_SIZE = 84        # robo_config.yaml image_height / image_width
-DEFAULT_FRAME_STACK = 3        # robo_config.yaml + the paper's supplementary. TRUE FOR 8 OF THE
-                               # 12 BASELINES ONLY -- see OBSERVATION_GEOMETRY below, which is
-                               # the field that must be consulted per baseline.
+DEFAULT_FRAME_STACK = 3        # robo_config.yaml + the paper's supplementary. TRUE FOR 9 OF THE
+                               # 12 BASELINES ONLY (idaac joined 2026-09-06, DECISION-SHEET A35 --
+                               # was 8) -- see OBSERVATION_GEOMETRY below, which is the field that
+                               # must be consulted per baseline.
 
 #: Per-baseline observation geometry, because it is NOT shared and pretending otherwise makes the
 #: protocol hash certify a value four runs do not have.
