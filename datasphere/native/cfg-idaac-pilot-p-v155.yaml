@@ -1,0 +1,48 @@
+# [Claude 2026-09-06] DECISION-SHEET A35 fidelity pilot, control arm (IDAAC-P = current Door
+# defaults, unchanged). Companion to cfg-idaac-pilot-c-v156.yaml (IDAAC-C, the published
+# continuous-control recipe). Decision rule stated in A35 before either arm ran: if IDAAC-C
+# reaches competence at least as well as IDAAC-P (MIN_DENOM_SUCCESS gate), IDAAC-C becomes primary
+# for the full seed fleet; if IDAAC-C fails outright, IDAAC-P stays primary and IDAAC-C is reported
+# as a documented negative finding.
+#
+# Frame budget 245760 = 1024 x 240 = 2048 x 120 -- a common multiple of BOTH arms' rollout quanta
+# (P: num_processes=4 x num_steps=256=1024; C: 1 x 2048=2048), so neither arm's endpoint rounds to
+# a different executed count than the other for an unrelated reason. Bracket checkpoints every
+# 40960 frames (a multiple of both quanta) for a learning-curve read, not just an endpoint number.
+#
+# Reuses payload-v148-idaac.tgz: no code change needed for this arm (every A35 parameter for idaac
+# is an existing argparse flag; frame stack is held at 1 for both arms per the correction in A35
+# itself -- C2 found stacking structurally incoherent with IDAAC's adversarial temporal-order
+# objective, not merely a fidelity trade).
+name: vigen-idaac-pilot-p-v155
+desc: "A35 fidelity pilot: IDAAC-P (current Door defaults), one seed, 245760 frames."
+cmd: >-
+  timeout --foreground 16200s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=idaac:1
+  FRAMES=245760
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=40960
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v148-idaac.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

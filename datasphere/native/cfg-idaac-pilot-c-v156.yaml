@@ -1,0 +1,49 @@
+# [Claude 2026-09-06] DECISION-SHEET A35 fidelity pilot, treatment arm (IDAAC-C = the authors'
+# published continuous-control recipe, minimally Door-adapted). Companion to
+# cfg-idaac-pilot-p-v155.yaml (IDAAC-P, control). See that file for the shared decision rule and
+# frame-budget reasoning.
+#
+# NATIVE_EXTRA_OVERRIDES appends after family.py's own argv (run_probe.sh:248); argparse's
+# standard last-flag-wins resolves each duplicate in favor of this override. Every flag named here
+# already exists in runnable/idaac/ppo_daac_idaac/arguments.py (confirmed by direct grep before
+# writing this config, not assumed from the DECISION-SHEET table alone):
+#   num_processes 4->1, num_steps 256->2048, num_mini_batch 8->32, gamma .999->.99,
+#   entropy_coef .01->0, lr 5e-4->3e-4, value_freq 1->32, adv_loss_coef .25->.1,
+#   order_loss_coef .001->.1 (the headline 100x finding), ppo_epoch 1->3 (A35's own stated
+#   placeholder pending a primary-source check, not a finding).
+# Frame stack held at 1 (see A35's correction; changing it would confound this pilot's actual
+# question with C2's documented structural incoherence). LR schedule stays flat (A35: no code path
+# exists for decay in this port at all; declared, not implemented).
+name: vigen-idaac-pilot-c-v156
+desc: "A35 fidelity pilot: IDAAC-C (published continuous-control recipe), one seed, 245760 frames."
+cmd: >-
+  timeout --foreground 16200s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=idaac:1
+  FRAMES=245760
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=40960
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  NATIVE_EXTRA_OVERRIDES="--num_processes 1 --num_steps 2048 --num_mini_batch 32 --gamma 0.99 --entropy_coef 0 --lr 3e-4 --value_freq 32 --adv_loss_coef 0.1 --order_loss_coef 0.1 --ppo_epoch 3"
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v148-idaac.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

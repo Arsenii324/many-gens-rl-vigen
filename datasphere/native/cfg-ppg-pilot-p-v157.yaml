@@ -1,0 +1,47 @@
+# [Claude 2026-09-06] DECISION-SHEET A36 fidelity pilot, control arm (PPG-P = current Door
+# defaults, unchanged). Companion to cfg-ppg-pilot-c-v158.yaml (PPG-C, the published
+# continuous-control recipe). Same decision rule shape as A35/IDAAC: if PPG-C reaches competence
+# at least as well as PPG-P, PPG-C becomes primary for the full seed fleet; if it fails outright,
+# PPG-P stays primary and PPG-C's result is reported as a documented negative finding.
+#
+# Frame budget 245760 = 2048 x 120, a clean multiple of the rollout quantum (num_envs=8 x
+# nstep=256=2048, unchanged from A26's already-fixed cadence -- not re-litigated here). Same
+# number as the IDAAC pilots for a shared, comparable budget across this session's fidelity work.
+#
+# Uses payload-v154-ppg-pilot.tgz: this arm needs no override, but the payload must still carry
+# the new --gamma/--lr/--aux_lr/--nminibatch/--entcoef CLI flags added to
+# runnable/ppg/phasic_policy_gradient/train.py for the C arm to be expressible at all -- rebuilding
+# per-arm payloads from different trees would risk a code-revision confound between the two arms,
+# so both use the same (post-CLI-addition) payload; this arm simply passes no extra flags.
+name: vigen-ppg-pilot-p-v157
+desc: "A36 fidelity pilot: PPG-P (current Door defaults), one seed, 245760 frames."
+cmd: >-
+  timeout --foreground 18000s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ppg:1
+  FRAMES=245760
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=40960
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v154-ppg-pilot.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1

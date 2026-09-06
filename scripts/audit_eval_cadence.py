@@ -85,7 +85,7 @@ UNITS = {
               "regimes": [],
               "episodes": "none: training logs only. Evaluation is scripts/evaluate.py, offline.",
               "controllable": "n/a"},
-    "ppg":   {"file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 140, "unit": "none",
+    "ppg":   {"file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 146, "unit": "none",
               "anchor": "parser.add_argument('--interacts_total'",
               "regimes": [],
               "episodes": "none: train.py evaluates nothing at any point",

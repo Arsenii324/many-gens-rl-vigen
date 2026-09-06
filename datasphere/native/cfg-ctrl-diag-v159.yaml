@@ -1,0 +1,41 @@
+# [Claude 2026-09-06] CORRECTIONS.md #97 diagnostic. v152 and v153 (two different payload
+# archives, same source tree) both reported evaluator_revision=763de034c4ec..., which matches no
+# local computation. Ruling out payload/upload staleness leaves the remote computation itself as
+# the remaining variable. scripts/eval_grid.py carries a TEMPORARY, opt-in diagnostic block
+# (NATIVE_DIAGNOSE_EVALUATOR_IDENTITY=1) that prints the full per-file member-hash breakdown and
+# exits immediately, before running any real episode. FRAMES kept small (512, well below any
+# checkpoint-cadence boundary) purely to keep training brief -- the diagnostic exits before eval
+# regardless, so this bounds the job to container-start + brief training + immediate exit.
+name: vigen-ctrl-diag-v159
+desc: "CORRECTIONS #97 diagnostic: print ctrl's remote-computed evaluator identity member hashes, then exit."
+cmd: >-
+  timeout --foreground 1800s env
+  NATIVE_HOST_PROFILE=datasphere
+  NATIVE_DIAGNOSE_EVALUATOR_IDENTITY=1
+  CELLS=ctrl:1
+  FRAMES=512
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=512
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=1
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v159-ctrl-diag.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1

@@ -1460,6 +1460,13 @@ values — nothing here overrides them) plus `families.json`'s three constants:
 | frame stack | 1 | `rlgen/protocol.py::OBSERVATION_GEOMETRY["idaac"] = (64, 1)` — a protocol-level constant, not an argparse flag |
 | LR schedule | none — flat | no decay mechanism exists anywhere in this port; confirmed by reading `train.py` and the full argparse, not inferred |
 
+**CORRECTED 2026-09-06, before building any config from this table**: this entry originally read
+frame stack as "3, pending a code change" — engineering-cost framing only. Re-checked against
+`docs/CONSTRUCTION.md#c2`'s own already-documented finding, which this entry should have cross-
+referenced the first time: stacking frames for IDAAC specifically is not a fidelity trade, it is
+**structurally incoherent** with the auxiliary adversarial objective (see the table row below).
+Frame stack is now held at 1 for both arms; nothing else in this table changes.
+
 **Proposed IDAAC-C (minimally Door-adapted continuous-control design)**, changing only what the
 published continuous-control recipe (review 15 §4, citing the paper's Appendix E) actually
 specifies, holding everything else at IDAAC-P's value so the comparison isolates the recipe rather
@@ -1476,7 +1483,7 @@ than introducing untested combinations:
 | `value_freq` | 1 | **32** | Published value is described only as "approximately `N_pi`-style," and `N_pi=32` is the cadence review 15 §2 already confirms this project matched for PPG — using the same number here rather than inventing a different one |
 | `adv_loss_coef` | .25 | **.1** | Published value (`alpha_a`) |
 | `order_loss_coef` | .001 | **.1** | Published value (`alpha_i`) — the headline 100x finding |
-| frame stack | 1 | **3** (flag, pending) | Published value. **Not a flag change** — `OBSERVATION_GEOMETRY` is a protocol-level constant read by the shared wrapper, so this needs an actual code path (a per-baseline or per-pilot override), not just a new argparse value. Real implementation cost; do not silently drop it because it's harder than the others — declare it as the one item needing a code change before the pilot can include it |
+| frame stack | 1 | **1 — held, not changed** (revised below) | Original reading here said "3, pending a code change" and was wrong to stop at engineering cost. `docs/CONSTRUCTION.md#c2` already found this specific case **structurally incoherent**, not merely uniform-vs-not: IDAAC's auxiliary head predicts *which of two observations from one trajectory came first*, and the encoder is adversarially trained to make that prediction impossible. A stack embeds local motion **inside a single observation**, handing the discriminator exactly the signal the objective exists to destroy. Changing this for IDAAC-C would confound the pilot's actual question (does `order_loss_coef=.1` work) with an unrelated architectural conflict — a bad result could mean either, and the pilot could not tell them apart. **Held at 1 for both arms.** This also removes the one item that needed a new code path, but that is a side effect of the correction, not its reason |
 | `ppo_epoch` | 1 | **not resolved — see below** | Review 15 says only "substantially more PPO optimization," no exact number. I am not inventing one. Check the primary source (proceedings.mlr.press/v139/raileanu21a, Appendix E) before locking this value; a defensible placeholder if the primary source isn't checked in time is 3-4 (ordinary multi-epoch PPO convention), stated as a placeholder, not a finding |
 | LR schedule | flat | **declared, not implemented** | Linear decay has no code path in this port at all (checked `train.py` and the full argparse — genuinely absent, not just undocumented). Implementing it is a real code change. My reading: do not block the pilot on this specifically — it's one of the review's own "less obvious" differences, not the headline one (`order_loss_coef` is) — but state its absence explicitly in whatever writeup uses this pilot's result, rather than silently omitting it |
 | everything else (`clip_param`, `gae_lambda`, `max_grad_norm`, `eps`, `alpha`) | upstream default | **unchanged** | Review 15 does not name a continuous-control value for these; declare-don't-invent applies here as it does everywhere else in this project |
@@ -1543,7 +1550,7 @@ specifically, which strengthens rather than merely parallels review 15's ask.
 | `lr` / `aux_lr` | 5e-4 | **3e-4** | Published value |
 | `nminibatch` | 8 | **32** | Published value |
 | `entcoef` | .01 | **0** | Published value, independently corroborated by C61's measured categorical-to-Gaussian entropy-coefficient failure on the sibling `ibac_sni` port |
-| frame stack | 1 | **3** (code change, not a flag — same caveat as A35) | Published value |
+| frame stack | 1 | **1 — held for this pilot** (see note) | Published value is 3, and unlike IDAAC this is not incoherent (`docs/CONSTRUCTION.md#c2`: PPG is "lineage only," no mechanism-level objection). Held anyway for the first pilot because applying it needs real new code (wiring the shared `robosuiteVGB` frame-stack wrapper into PPG's env construction, plus verifying the CNN's input layer against a 9- vs 3-channel observation) — genuine engineering deserving its own verification pass, not something to fold into getting a first result. Declared explicitly, same treatment as A35's LR-schedule item, not silently dropped |
 | `num_envs` / `nstep` | 8 / 256 | **unchanged** | A26 already established this matches the continuous-control rollout cadence; do not re-litigate a closed axis inside a different pilot |
 | `n_epoch_pi`, `n_epoch_vf`, `n_aux_epochs`, `beta_clone`, `clip_param`, `kl_penalty` | upstream default | **unchanged** | Review 15 does not name continuous-control values for these; declare-don't-invent |
 

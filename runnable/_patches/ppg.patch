@@ -322,7 +322,7 @@ index 8ad07ab..6931011 100644
  @functools.lru_cache()
  def warn_no_gradient(model, task):
 diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
-index e32b3a1..170fb40 100644
+index e32b3a1..60c626d 100644
 --- a/phasic_policy_gradient/train.py
 +++ b/phasic_policy_gradient/train.py
 @@ -7,7 +7,18 @@ from . import logger
@@ -344,7 +344,19 @@ index e32b3a1..170fb40 100644
      arch="dual",  # 'shared', 'detach', or 'dual'
      # 'shared' = shared policy and value networks
      # 'dual' = separate policy and value networks
-@@ -32,13 +43,22 @@ def train_fn(env_name="coinrun",
+@@ -20,6 +31,11 @@ def train_fn(env_name="coinrun",
+     aux_lr=5e-4,
+     lr=5e-4,
+     nminibatch=8,
++    # [Claude 2026-09-06, DECISION-SHEET A36] entcoef was previously only reachable as
++    # ppo.compute_losses' own default (0.01) -- train_fn never named it, so no launch path could
++    # override it despite C61's measured categorical-to-Gaussian entropy-coefficient failure on
++    # the sibling ibac_sni port raising the same concern here. Default unchanged; now overridable.
++    entcoef=.01,
+     aux_mbsize=4,
+     clip_param=.2,
+     kl_penalty=0.0,
+@@ -32,13 +48,22 @@ def train_fn(env_name="coinrun",
      if comm is None:
          comm = MPI.COMM_WORLD
      tu.setup_dist(comm=comm)
@@ -368,11 +380,12 @@ index e32b3a1..170fb40 100644
  
      enc_fn = lambda obtype: ImpalaEncoder(
          obtype.shape,
-@@ -66,7 +86,13 @@ def train_fn(env_name="coinrun",
+@@ -66,7 +91,14 @@ def train_fn(env_name="coinrun",
              n_epoch_pi=n_epoch_pi,
              clip_param=clip_param,
              kl_penalty=kl_penalty,
 -            log_save_opts={"save_mode": "last"}
++            entcoef=entcoef,
 +            # [OURS 2026-09-04] `save_mode` was hardcoded "last", which writes one `model.jd`
 +            # and overwrites it, so ppg could only ever be evaluated at its endpoint. The
 +            # repository already supports the alternative -- `log_save_helper.py:129` writes
@@ -383,7 +396,7 @@ index e32b3a1..170fb40 100644
          ),
          aux_lr=aux_lr,
          aux_mbsize=aux_mbsize,
-@@ -76,6 +102,29 @@ def train_fn(env_name="coinrun",
+@@ -76,6 +108,29 @@ def train_fn(env_name="coinrun",
          comm=comm,
      )
  
@@ -413,7 +426,7 @@ index e32b3a1..170fb40 100644
  def main():
      parser = argparse.ArgumentParser(description='Process PPG training arguments.')
      parser.add_argument('--env_name', type=str, default='coinrun')
-@@ -87,6 +136,17 @@ def main():
+@@ -87,6 +142,25 @@ def main():
      parser.add_argument('--clip_param', type=float, default=0.2)
      parser.add_argument('--kl_penalty', type=float, default=0.0)
      parser.add_argument('--arch', type=str, default='dual') # 'shared', 'detach', or 'dual'
@@ -428,10 +441,18 @@ index e32b3a1..170fb40 100644
 +                             "model<NNN>.jd per save, which is what an offline curve needs")
 +    parser.add_argument('--ic_per_save', type=int, default=100_000,
 +                        help='interactions between saves')
++    # [Claude 2026-09-06, DECISION-SHEET A35/A36] These five were reachable as train_fn defaults
++    # but not from the command line, so no launch path could express the pilot's PPG-C arm.
++    # Defaults reproduce upstream exactly; an unchanged command line is unchanged.
++    parser.add_argument('--gamma', type=float, default=.999)
++    parser.add_argument('--lr', type=float, default=5e-4)
++    parser.add_argument('--aux_lr', type=float, default=5e-4)
++    parser.add_argument('--nminibatch', type=int, default=8)
++    parser.add_argument('--entcoef', type=float, default=.01)
  
      args = parser.parse_args()
  
-@@ -100,6 +160,11 @@ def main():
+@@ -100,6 +174,16 @@ def main():
          n_aux_epochs=args.n_aux_epochs,
          n_pi=args.n_pi,
          arch=args.arch,
@@ -440,6 +461,11 @@ index e32b3a1..170fb40 100644
 +        log_dir=args.log_dir,
 +        save_mode=args.save_mode,
 +        ic_per_save=args.ic_per_save,
++        gamma=args.gamma,
++        lr=args.lr,
++        aux_lr=args.aux_lr,
++        nminibatch=args.nminibatch,
++        entcoef=args.entcoef,
          comm=comm)
  
  if __name__ == '__main__':
