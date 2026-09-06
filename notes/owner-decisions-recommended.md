@@ -1,3 +1,54 @@
+# Current ratification batch — 2026-09-06 (read this section first)
+
+Everything below this line is the 2026-09-05 document, unedited. It is **not** superseded wholesale
+— §3 (estimands), §4 (seed policy), §5 (canary), and the later revisions are still this project's
+live reasoning and are folded into the table below by reference rather than repeated. §1 (IBAC-SNI)
+and §2 (shared evaluator validation) **are** stale: both predate CORRECTIONS #97 (the `door.xml`
+evaluator-identity bug and its fix), the resulting schema-2 rework (`C96`), and the seven-family
+`v170` re-validation wave — re-read those two sections as history, not as the current ask.
+
+This batch exists because the recommended defaults below have sat written-but-unratified across
+several sessions; it is the presentation pass this project's own plan calls for, not new analysis.
+Full reasoning for each row lives at the cited location — this table is a pointer, not a summary
+that could drift from it.
+
+| # | item | recommended default | status | where |
+|---|---|---|---|---|
+| 1 | estimands frozen | declare-and-quantify the time-limit split (3 bootstrap/9 terminal, no direction claimed); retention as a floor-adjusted ratio, never raw | ratify | DECISION-SHEET A4/A5/A18; §3 below |
+| 2 | seed policy frozen | fixed n=3 per reported row, no outcome-adaptive allocation | ratify | DECISION-SHEET A6/A28; §4 below |
+| 3 | checkpoint rule frozen | endpoint-as-headline, trajectory descriptive, no selected-best column | ratify | DECISION-SHEET A7 |
+| 4 | production scope frozen | Door alone; Lift a stated follow-on, not co-equal | ratify | DECISION-SHEET A33 |
+| 5 | external RL-ViGen anchor | fleet's own drqv2 seeds falling inside RL-ViGen's published range (1–7) is the anchor; free, checked once production drqv2 seeds exist | ratify the criterion now, check later | DECISION-SHEET A9 |
+| 6 | competence threshold | `MIN_DENOM_SUCCESS = 0.25`; OOD uses the same value, not a separate one | ratify | `scripts/regime_retention_report.py` |
+| 7 | checkpoint storage vs. real disk | 35.5 GB projected (12 baselines × 3 seeds × 13 stamps) never confirmed against the actual production host's free disk — only against this laptop's 73.1 GB | needs one number from the real host | `plan_production.py::checkpoint_storage_gb` |
+| 8 | scene comparisons unpaired (A21) | keep; state per-scene numbers as "scene+placement," not "scene" | ratify | DECISION-SHEET A21 |
+| 9 | Places365 trains on validation split, not train (A22) | keep; declare in `CLAIMS-LEDGER.md`; external review 18 dissents (prefers reverting to train for max fidelity) — noted, not applied | ratify or override | DECISION-SHEET A22 |
+| 10 | missing-run policy (A24) | rerun crashed seeds under the identical seed; no post-hoc replacement seeds; drop missing scenes rather than impute; report a method missing a seed at n=2, labelled | sign-off only — already merged into `EVAL-PROTOCOL.md` | DECISION-SHEET A24 |
+| 11 | 66→25 primary comparisons (A25) | group by algorithmic mechanism, not source repository; full 66-matrix + all raw data remain computable regardless | ratify (presentation-only, changes nothing collected) | DECISION-SHEET A25 |
+| 12 | `drq`/`dmc_gb` alpha dtype (C4) | declare the float32-vs-float64 asymmetry, don't harmonise | ratify | `docs/CONSTRUCTION.md#c4` |
+| 13 | six baselines with no persisted training-observation record (C58) | declare as a per-family evidence-availability limitation in `CLAIMS-LEDGER.md`; don't build new logging pre-production | ratify or override | `docs/CONSTRUCTION.md#c58` |
+| 14 | `ctrl`'s parameters match official code, not the paper table (C97, new 2026-09-06) | declare the paper↔code conflict; keep official-code production values; run the paper-table variant as a declared second arm only in the final frozen wave, not reactively | ratify | `docs/CONSTRUCTION.md#c97` |
+| 15 | production canary order and design | `soda` at full 6e5, one seed, through the entire pipeline; predeclared abort condition (exceeds wall-clock ceiling or is killed → stop and re-plan, never silently retry) | ratify | §5 below |
+
+Two items from §1/§2 below still need a fresh ask, restated for the current tree rather than
+answered as originally written:
+
+- **IBAC-SNI competence** — §1's entropy-coefficient pilot logic and predeclared criteria (the
+  redesigned, differential version near the end of this file) still hold; what changed is that the
+  *real* competence pilot needs `procs=16` at the final process geometry on the production host, per
+  this session's later plan — §1's 100k pilot is a cheaper, still-valid precursor, not a
+  replacement for it.
+- **Shared evaluator validation** — §2's "confounded instrument, discharge on production
+  checkpoints" reasoning is superseded by CORRECTIONS #97/`C96`: the ledger schema itself was
+  rebuilt (family-specific static closures, canonical scope revisions), and the live count is 0/7
+  validated on the *current* closure (six families' `v170` re-validation succeeded functionally;
+  `ctrl` failed at the DataSphere platform level, under separate investigation). The actual open
+  ask is Q47's governing rule: one final validation wave against the genuinely frozen tree, not
+  iteratively — nothing for the owner to ratify here beyond that sequencing, which is already
+  agreed.
+
+---
+
 # The five decisions that are yours — with a researched default for each
 
 Written 2026-09-05, after both external reviews and the gate pass (`scripts/production_gates.py`).
