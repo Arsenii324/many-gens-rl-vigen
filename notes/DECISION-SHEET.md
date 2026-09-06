@@ -961,11 +961,23 @@ honestly flagged as weak. Redone by algorithmic mechanism instead:
 - **On-policy PPO, differing in what regularizes it**: `idaac` (adversarial dynamics
   discriminator), `ibac_sni` (VIB bottleneck + SNI), `ppg` (auxiliary-phase distillation), `ctrl`
   (clustering + temporal contrastive) — 4 methods, 6 pairs.
-- **Off-policy SAC, differing in augmentation**: `drqv2`, `svea`, `sgqn`, `drq`, `rad`, `soda` — 6
-  methods, 15 pairs, all sharing a SAC backbone with augmentation as the varying axis.
-- **Off-policy SAC, differing in representation learning**: `curl` (contrastive), `alda`
+- **Off-policy, differing in augmentation**: `drqv2`, `svea`, `sgqn`, `drq`, `rad`, `soda` — 6
+  methods, 15 pairs, augmentation as the varying axis. **Corrected 2026-09-06 (external review 18,
+  independently verified against the actual classes rather than taken on the review's word)**: this
+  row previously said "all sharing a SAC backbone" — false for 3 of 6. `RL-ViGen-upstream/algos/
+  drqv2.py::DrQV2Agent` and `svea.py::SVEAAgent` use `stddev_schedule` (a scheduled deterministic
+  exploration noise) and have no `log_alpha`/entropy term anywhere — DDPG-style, not SAC.
+  `sgqn.py::SGQNAgent(DrQV2Agent)` inherits that backbone directly. Only `drq.py::DrQAgent` among
+  the RL-ViGen three is genuine SAC (`log_alpha`, `self.alpha.detach() * log_prob` in both actor and
+  critic losses, `drq.py:213-323`). `rad`/`soda` (via `dmc_gb`'s `SAC` class, `sac.py:35`,
+  `log_alpha` confirmed) are also genuine SAC. So the group is real and the augmentation axis is
+  real, but the backbone is not uniform within it — declare, don't claim uniformity that isn't
+  there, same rule this project applies everywhere else.
+- **Off-policy, differing in representation learning**: `curl` (contrastive), `alda`
   (autoencoder + latent dynamics model, confirmed from its own optimizer set —
-  `alda_trainer.py:105-109`: actor/critic/**ae**/**latent**/log_alpha) — 2 methods, 1 pair.
+  `alda_trainer.py:105-109`: actor/critic/**ae**/**latent**/log_alpha) — 2 methods, 1 pair. Same
+  correction applies: `curl.py::CURLAgent(DrQV2Agent)` is DDPG-style, not SAC; `alda` genuinely has
+  `log_alpha` and is the only true SAC member of this pair.
 - **Cross-group, best-in-group**: the winner of each of the three groups above against the other
   two — this is the comparison that actually answers the project's central question (does an
   on-policy regularizer, an augmentation choice, or a representation-learning approach generalize
@@ -1025,8 +1037,16 @@ claim as "this is now right."
 
 **Acted on already** (the "at our best" layer): the V100 profile's `num_envs: 16` override is
 reverted to the base `8`, restoring `8 x 256 x n_pi=32 = 65,536` interactions per auxiliary phase —
-exactly the cadence of the only published continuous-control PPG design point (IDAAC's
-continuous-control appendix). Full derivation and the four reference configurations: CORRECTIONS #58.
+the same **sample count and auxiliary-phase interaction cadence** as the only published
+continuous-control PPG design point (IDAAC's continuous-control appendix, `1 x 2048 x n_pi=32`).
+**Corrected 2026-09-06 (external reviews 17/18, independently reasoned through rather than taken on
+either review's word)**: this row previously said "exactly the cadence," which overclaims. `8x256`
+and `1x2048` agree on total samples/update and interactions/auxiliary-phase, but not on rollout
+geometry: eight independent 256-step fragments give GAE/bootstrap boundaries every 256 steps in
+eight parallel trajectories, while one 2048-step stream gives boundaries every 2048 steps across
+several concatenated Door episodes (horizon 500) in one trajectory — a real difference in temporal
+correlation and bootstrap placement, not a cosmetic one. Full derivation and the four reference
+configurations: CORRECTIONS #58.
 
 **Why this is the default I set rather than a question I held open.** Two of the standing
 preferences in this workspace point the same way: fidelity wins over speed in a baseline rebuild,
@@ -1519,16 +1539,32 @@ long enough to distinguish "learns" from "doesn't" on Door — the project's own
 convention (C60-style, checkpoints at 50k multiples) applied to a ~200k-300k frame ceiling, not
 600k. Extend only if the two arms are still close at that point and the question remains open.
 
-**Decision rule, stated before either arm is run, per review 15's own explicit ask** ("decide the
-primary using a stated fidelity principle before seeing the production outcome"): if IDAAC-C learns
-Door at least as well as IDAAC-P (competence, not exact parity — same success-rate gate as
-elsewhere, `MIN_DENOM_SUCCESS`), make IDAAC-C primary for the full seed fleet — it is the authors'
-own stated design for exactly this problem class (continuous visual control), which is the more
-defensible choice when a reviewer asks why these hyperparameters were chosen. If IDAAC-C fails
-outright on Door (does not reach competence within the pilot budget), keep IDAAC-P primary and
-report IDAAC-C's pilot result as a documented negative finding, not a discarded attempt. If both
-are affordable for the full fleet, run both and report both — the "only one affordable" case is
-what the rule above is actually for.
+**Decision rule, revised 2026-09-06 (external review 18's methodological point, accepted)**:
+the previous rule below let Door performance decide which arm gets *called* the source-faithful
+IDAAC ("if C reaches competence, make it primary; if not, keep P"). Review 18's objection is
+correct and sharper than this project's own earlier framing: that conflates two different
+questions — which variant is the source-fidelity target (a provenance fact, decidable from the
+paper alone, independent of any Door result) and which variant should be the headline production
+comparison (an empirical, reportable outcome). Collapsing them means a reader cannot tell "IDAAC
+generalized poorly" from "we relabeled IDAAC as whichever adaptation happened to learn Door,"
+exactly review 18's phrasing. **Split them:**
+- **Source-fidelity designation, decided now, independent of any pilot result**: once a `C2` arm
+  exists matching the published DMC recipe in full (frame_stack=3, `ppo_epoch=10`, the rest of
+  A35's table), *that* arm — not whichever arm happens to win — is the one entitled to be called
+  IDAAC's source-faithful Door port. This does not wait on Door performance.
+  - `IDAAC-P` (Procgen-parser defaults ported to Door) and `IDAAC-C1` (the partial recipe already
+    piloted, frame_stack=1/`ppo_epoch=3`) are both **adaptations**, not competing fidelity claims —
+    neither is entitled to the "faithful" label regardless of which learns Door better.
+- **Headline production comparison, still empirically gated**: among whichever arms are actually
+  run at production length, report the one(s) that reach competence as the headline number(s), and
+  report a competence failure as a documented negative finding, not a discarded attempt — this half
+  of the original rule stands unchanged, it just no longer also decides the fidelity label.
+
+**Original rule (superseded by the split above, kept for the record)**: if IDAAC-C learns Door at
+least as well as IDAAC-P (competence, not exact parity — same success-rate gate as elsewhere,
+`MIN_DENOM_SUCCESS`), make IDAAC-C primary for the full seed fleet; if it fails outright, keep
+IDAAC-P primary and report IDAAC-C's result as a documented negative finding; if both are
+affordable, run and report both.
 
 **Left OWNER**: whether to spend the compute on this pilot at all, and the exact frame ceiling —
 those are resource-allocation calls. Everything above the line is not a decision waiting on
@@ -1585,12 +1621,17 @@ specifically, which strengthens rather than merely parallels review 15's ask.
 | `num_envs` / `nstep` | 8 / 256 | **unchanged** | A26 already established this matches the continuous-control rollout cadence; do not re-litigate a closed axis inside a different pilot |
 | `n_epoch_pi`, `n_epoch_vf`, `n_aux_epochs`, `beta_clone`, `clip_param`, `kl_penalty` | upstream default | **unchanged** | Review 15 does not name continuous-control values for these; declare-don't-invent |
 
-**Pilot sizing and decision rule**: identical shape to A35's — one seed each, bounded budget
-(~200k-300k frames), same "if PPG-C reaches competence at least as well as PPG-P, it becomes
-primary; if it fails outright, PPG-P stays primary and PPG-C's result is reported, not discarded"
-rule, for the same reason (PPG-C is the authors' own design for this problem class). Given both
-pilots share the same episode budget and Door setup, running A35 and A36 as one combined job batch
-(one extra seed's worth of compute each, not two separate campaigns) is the efficient shape if the
+**Pilot sizing and decision rule**: identical shape to A35's, **including the 2026-09-06 split**
+(source-fidelity designation decided from the recipe alone, independent of any Door result; the
+empirically-gated headline-primary choice is separate and unchanged) — one seed each, bounded
+budget (~200k-300k frames). PPG-P (Procgen-parser defaults) and PPG-C (this pilot's frame_stack=1
+partial recipe) are both adaptations; neither the fidelity label nor "PPG-C wins if it reaches
+competence" collapse into one decision any more, for the same reason review 18 gave for A35 — and
+doubly so here, since (per the same review) the continuous-control recipe itself is a *third-party*
+DMC comparator config from the IDAAC authors, not OpenAI's own PPG design, so "PPG-C is the
+authors' own design" already overstated whose authorship it is. Given both pilots share the same
+episode budget and Door setup, running A35 and A36 as one combined job batch (one extra seed's
+worth of compute each, not two separate campaigns) is the efficient shape if the
 owner authorizes spending on either.
 
 **Left OWNER**: same as A35 — whether and when to spend the compute. The spec above is not
