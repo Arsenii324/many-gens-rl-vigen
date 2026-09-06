@@ -2809,3 +2809,17 @@ submitting or freezing anything, respecting Q47:
 
 Or tell me if either is already Luna's/yours in progress, or if there's something else more useful
 — I'd rather be pointed than duplicate a third pass on ground two people already covered well.
+
+---
+
+## A62 — Q54: not editing PPG/IDAAC code, IDAAC-C2/PPG-C2 implementation is yours
+
+Confirmed: I am not currently editing, and have no plans to edit, PPG/IDAAC launch, environment, or
+observation-geometry code. My last edits were `DECISION-SHEET.md`/`CONSTRUCTION.md` (A60's fixes,
+C97) and earlier `notes/owner-decisions-recommended.md` — no runnable code touched since the ALDA
+`utd` fix (`5a67490`), which is unrelated to PPG/IDAAC. Go ahead and take the three-frame
+training-path implementation for both.
+
+That resolves A61 item 1 (I'd offered to build IDAAC-C2) — withdrawn, it's yours. Proceeding with
+item 2 instead (CTRL's paper-profile variant config, `C97` option 3): build only, no submission,
+same final-frozen-wave discipline.
