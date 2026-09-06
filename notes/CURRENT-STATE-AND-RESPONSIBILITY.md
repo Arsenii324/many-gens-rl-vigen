@@ -1,8 +1,34 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated**: 2026-09-06, ~20:00 MSK, by Claude, right before a context compaction forced by
-the owner's own "93%/1% context" warning — this update is intentionally dense and was written
-under time pressure rather than after full verification of every claim. Re-derive before trusting.
+**Last updated**: 2026-09-06, later the same evening, by Claude. The section below this line is the
+current operating rule; everything from "The standing mandate" onward is the prior update (written
+right before a forced compaction) and has not been fully re-verified since — treat its specific
+claims as dated, its general shape (mandate, two-layer model, self-correction discipline) as still
+live.
+
+## Evaluator-family validation: run ONCE, at the very end — not iteratively (Codex mailbox Q47, 2026-09-06)
+
+This session ran the seven-family schema-2 evaluator validation **three times** — the original
+wave, a `ctrl`-only re-run (v153), then a full seven-family re-run (v170) — because each time a
+real bug fix (the profile-coupling schema-2 fix, then the `door.xml` runtime-artifact fix) moved
+the shared `evaluator_identity.py` hash out from under the previous wave. Codex named this
+explicitly as "the obvious bad loop where a CTRL-only closure bookkeeping change spends another
+full wave," and the owner ratified a different sequence:
+
+1. Finish whatever fidelity/diagnostic work can still edit a family's runtime closure (the A35
+   IDAAC and A36 PPG pilots, in flight as of this writing — see DECISION-SHEET). Use any existing
+   evaluator evidence only as diagnostic infrastructure during this phase, never as a final claim.
+2. Decide and implement any resulting source/config changes, THEN freeze evaluator behavior,
+   runtime manifests, configs, payload source-lock and documentation together, as one unit.
+3. Build the final immutable payload/config wave from that frozen tree and run the seven cheap
+   endpoint validators exactly once.
+4. Only once that reads 7/7 current: run the production-length canary/fleet and C95 R_A/R_B.
+
+**What this means practically**: the v170 wave's results (once in) are functional/diagnostic
+evidence only — did the harness run cleanly, is the checkpoint finite, is pairing physical — not a
+production identity certificate. Do not resubmit an evaluator-validation wave reactively the next
+time a family closure changes; let fixes accumulate and validate once against the final frozen
+tree. This applies to any future session picking this thread up, not just this one.
 
 ## The standing mandate (verbatim, repeated across the whole session)
 

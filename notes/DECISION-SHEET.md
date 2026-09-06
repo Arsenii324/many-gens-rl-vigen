@@ -1467,6 +1467,31 @@ referenced the first time: stacking frames for IDAAC specifically is not a fidel
 **structurally incoherent** with the auxiliary adversarial objective (see the table row below).
 Frame stack is now held at 1 for both arms; nothing else in this table changes.
 
+**CORRECTED AGAIN, 2026-09-06, same day — the correction above is empirically contradicted by the
+paper it invokes, checked against the vendored primary source, not a summary.**
+`ext/idaac/raileanu21a-supp.pdf` §E ("DeepMind Control Suite Experiments"), read directly via
+`pdftotext`: *"We also use 3 stacked frames as observations... for DAAC and IDAAC, we ran the same
+hyperparameter search as for Procgen and found that EV = 9, Nπ = 32, αa = 0.1, and αi = 0.1 worked
+best across all environments... our methods outperform the baselines on these continuous control
+tasks."* This is the authors' own full IDAAC method (adversarial order-prediction head included,
+`αi = 0.1` is exactly this table's `order_loss_coef` headline value) run **with** 3-frame stacking,
+reported as outperforming baselines — direct empirical evidence against C2's theoretical
+incoherence claim for this specific case, not merely a different opinion. C2's mechanism-level
+reasoning (a stack embeds motion the discriminator's objective tries to erase) may still describe a
+real pressure on the representation, but the authors' own DMC result says it does not prevent the
+method from working. Frame stack is restored to **3** for IDAAC-C, matching Appendix E exactly.
+
+**Not corrected reactively into the currently-running pilot** (`bt1djeamji7gilgnndft`, submitted
+before this check) — restarting it would be exactly the reactive-resubmission pattern Q47 asks this
+project to stop. Its frame_stack=1 result is not wasted: it becomes the "1" arm of the frame_stack
+∈ {1, 3} ablation this same source material (`notes/ai-help-16.md`, an external consultation
+independently reaching the same frame_stack=3 conclusion, now checked against the primary source
+rather than taken on its own word) recommends running anyway — "whether temporal information is
+actually needed on Door, or whether stacking primarily adds distractor information" is a real
+question, not a consolation prize. **A frame_stack=3 arm (IDAAC-C2) is the next pilot to build**,
+in the frozen final wave per Q47, not before. No code/config/remote action taken on this finding
+per Q48's explicit "no code, config, payload, or remote action is requested from you here."
+
 **Proposed IDAAC-C (minimally Door-adapted continuous-control design)**, changing only what the
 published continuous-control recipe (review 15 §4, citing the paper's Appendix E) actually
 specifies, holding everything else at IDAAC-P's value so the comparison isolates the recipe rather
@@ -1483,9 +1508,9 @@ than introducing untested combinations:
 | `value_freq` | 1 | **32** | Published value is described only as "approximately `N_pi`-style," and `N_pi=32` is the cadence review 15 §2 already confirms this project matched for PPG — using the same number here rather than inventing a different one |
 | `adv_loss_coef` | .25 | **.1** | Published value (`alpha_a`) |
 | `order_loss_coef` | .001 | **.1** | Published value (`alpha_i`) — the headline 100x finding |
-| frame stack | 1 | **1 — held, not changed** (revised below) | Original reading here said "3, pending a code change" and was wrong to stop at engineering cost. `docs/CONSTRUCTION.md#c2` already found this specific case **structurally incoherent**, not merely uniform-vs-not: IDAAC's auxiliary head predicts *which of two observations from one trajectory came first*, and the encoder is adversarially trained to make that prediction impossible. A stack embeds local motion **inside a single observation**, handing the discriminator exactly the signal the objective exists to destroy. Changing this for IDAAC-C would confound the pilot's actual question (does `order_loss_coef=.1` work) with an unrelated architectural conflict — a bad result could mean either, and the pilot could not tell them apart. **Held at 1 for both arms.** This also removes the one item that needed a new code path, but that is a side effect of the correction, not its reason |
-| `ppo_epoch` | 1 | **not resolved — see below** | Review 15 says only "substantially more PPO optimization," no exact number. I am not inventing one. Check the primary source (proceedings.mlr.press/v139/raileanu21a, Appendix E) before locking this value; a defensible placeholder if the primary source isn't checked in time is 3-4 (ordinary multi-epoch PPO convention), stated as a placeholder, not a finding |
-| LR schedule | flat | **declared, not implemented** | Linear decay has no code path in this port at all (checked `train.py` and the full argparse — genuinely absent, not just undocumented). Implementing it is a real code change. My reading: do not block the pilot on this specifically — it's one of the review's own "less obvious" differences, not the headline one (`order_loss_coef` is) — but state its absence explicitly in whatever writeup uses this pilot's result, rather than silently omitting it |
+| frame stack | 1 | **3 — restored, see the second correction above** | `ext/idaac/raileanu21a-supp.pdf` §E, checked directly: the authors' own DMC continuous-control experiments run the full IDAAC method (including the adversarial order-prediction head, `αi=0.1`) with 3 stacked frames and report it outperforming baselines. This empirically contradicts the `docs/CONSTRUCTION.md#c2`-based "structurally incoherent" reasoning this row previously used to hold frame stack at 1. Not applied to the already-running pilot (Q47: no reactive resubmission) — an `IDAAC-C2` arm at frame_stack=3 is the next pilot to build, in the frozen final wave |
+| `ppo_epoch` | 1 | **10** | `raileanu21a-supp.pdf` §E, same passage: the DMC-wide grid search ("learning rate in [1e-4,3e-4,7e-4,1e-3], minibatches in [8,16,32,64], entropy in [0,1e-2,1e-3,1e-4], ppo epochs in [3,5,10,20]") found 10 ppo epochs, 0.0 entropy, 3e-4 lr, 32 minibatches best "across these environments," applied as the DMC-wide base before DAAC/IDAAC's own additional search (`EV=9, Nπ=32, αa=0.1, αi=0.1`) layers on top. Resolves what the previous row left as "not resolved, do not invent a number" — this is read from the source, not guessed |
+| LR schedule | flat | **linear decay over 1M env steps, confirmed used, still not implemented in this port** | Same source, same passage: "linear rate decay over 1 million environment steps" is stated as part of the shared DMC recipe, not a maybe. This strengthens rather than changes the prior reading — the port genuinely has no code path for it (checked `train.py` and the full argparse), so it stays declared-not-implemented, but it is now confirmed a real omission from the published recipe rather than an unclear one |
 | everything else (`clip_param`, `gae_lambda`, `max_grad_norm`, `eps`, `alpha`) | upstream default | **unchanged** | Review 15 does not name a continuous-control value for these; declare-don't-invent applies here as it does everywhere else in this project |
 
 **Pilot sizing, not full production**: review 15 calls this a "bounded pilot," explicitly distinct
@@ -1546,9 +1571,9 @@ specifically, which strengthens rather than merely parallels review 15's ask.
 
 | parameter | PPG-P (current) | PPG-C (proposed) | reasoning |
 |---|---|---|---|
-| `gamma` | .999 | **.99** | Published continuous-control value (review 15 §2) |
-| `lr` / `aux_lr` | 5e-4 | **3e-4** | Published value |
-| `nminibatch` | 8 | **32** | Published value |
+| `gamma` | .999 | **.99** | Published continuous-control value (review 15 §2), confirmed 2026-09-06 against `ext/idaac/raileanu21a-supp.pdf` §E directly: γ=0.99 is stated as the shared DMC-experiment base all methods in that section (including PPG) were run under |
+| `lr` / `aux_lr` | 5e-4 | **3e-4** | Published value, same source confirmation: the DMC-wide grid search found 3e-4 best "across these environments" |
+| `nminibatch` | 8 | **32** | Published value, same confirmation (32 minibatches, DMC-wide grid-search result) |
 | `entcoef` | .01 | **0** | Published value, independently corroborated by C61's measured categorical-to-Gaussian entropy-coefficient failure on the sibling `ibac_sni` port |
 | frame stack | 1 | **1 — held for this pilot** (see note) | Published value is 3, and unlike IDAAC this is not incoherent (`docs/CONSTRUCTION.md#c2`: PPG is "lineage only," no mechanism-level objection). Held anyway for the first pilot because applying it needs real new code (wiring the shared `robosuiteVGB` frame-stack wrapper into PPG's env construction, plus verifying the CNN's input layer against a 9- vs 3-channel observation) — genuine engineering deserving its own verification pass, not something to fold into getting a first result. Declared explicitly, same treatment as A35's LR-schedule item, not silently dropped |
 | `num_envs` / `nstep` | 8 / 256 | **unchanged** | A26 already established this matches the continuous-control rollout cadence; do not re-litigate a closed axis inside a different pilot |

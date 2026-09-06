@@ -11,11 +11,14 @@ by another user** (15.1 GB, 67% util); GPU 1 free.
 **Development platform**: DataSphere `gt4.1` (4 cores, 14.5 GiB usable, T4) and `gt4i.1` (8 cores,
 27 GiB usable, L4).
 
-**Bounded DataSphere V100 validation allocation** (owner-authorized 2026-09-05): `g1.1` only,
-with a cumulative hard ceiling of **2.0 GPU-hours (120 minutes)**. This is a pre-production
-validation allowance, not the production host and not authority to begin the fleet. Before a
-`g1.1` submission, the local ledger must reserve its declared wall-time within the remaining
-120 minutes; after it ends, record the observed job lifetime and reconcile the reservation. The
+**Bounded DataSphere V100 validation allocation** (owner-authorized 2026-09-05, raised twice
+since): `g1.1` only, with a cumulative hard ceiling of **7.0 GPU-hours (420 minutes)** as of
+2026-09-06 (`datasphere/native/job.sh`'s `V100_BUDGET_CAP_MINUTES`, raised 120→240→420; check
+`job.sh v100-budget status` for what's actually left, not this number, since it only records the
+cap). This is a pre-production validation allowance, not the production host and not authority to
+begin the fleet. Before a `g1.1` submission, the local ledger must reserve its declared wall-time
+within whatever remains of the cap; after it ends, record the observed job lifetime and reconcile
+the reservation. The
 first permitted use remains a frozen-current evaluator/renderer or resource control, never an
 unbounded exploratory retry. `g1.1`'s V100 hardware does **not** make it the production
 `NATIVE_HOST_PROFILE=v100`: that profile represents the separate 16-core, 113-GiB owner host,
@@ -141,11 +144,25 @@ of its own — a real gap against the other order's step 7, closed below as step
    resource/throughput control measures each relevant runtime shape.
 5. Re-run `scripts/production_gates.py` and confirm nothing DataSphere-scoped is being read as a
    production pass.
-6. Run the T15 canary — train → stamp → retrieve → **fresh-process** reload → full grid → records —
+6. **Run the `ibac_sni` competence pilot at the final geometry, `procs=16`, on this host** —
+   `production_gates.py`'s own standing OWNER item ("ibac_sni competence": `entropy_coef=0` removes
+   the runaway, measured, but the evidence so far is ~25k frames with zero success events, at
+   `procs=1` — a different rollout geometry, not the production one). DataSphere's `gt4i.1` tier
+   proved only a short functional smoke (the process path is runnable, not that it competes); this
+   is the one pilot that genuinely cannot be reached from DataSphere at all, since `procs=16`
+   needs this host's core count and RAM to sustain long enough to show learning. Long enough means
+   past the point the existing ~25k-frame evidence stops, not another short smoke.
+7. Run the T15 canary — train → stamp → retrieve → **fresh-process** reload → full grid → records —
    end to end on this exact frozen evaluator, image and host. This is the step that turns "the
    pieces each work" into "the pipeline works"; nothing before it has run the whole loop at
-   production scale. Only a pass licenses step 7.
-7. Only then schedule the fleet.
+   production scale. Only a pass licenses step 8.
+8. Only then schedule the fleet.
+
+**Separately, not a host-migration step**: `scripts/requirements.py`'s R7 needs someone who has not
+seen this repository to run the documented clone-to-curve path end to end, on a clean machine,
+timed. No amount of work on this host substitutes for it — it is a different kind of check (a human
+acceptance test, not a resource or renderer control) and belongs on the pre-production checklist
+independently of when the steps above happen.
 
 **If you apply only some of §1–§2, say which in the records.** A run at 16 `ibac_sni` processes with
 a 300k replay cap is a third configuration that neither machine was analysed for.

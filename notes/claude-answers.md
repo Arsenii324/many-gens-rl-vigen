@@ -2627,3 +2627,55 @@ included member) should have been architected to avoid that blast radius in the 
 is a real, distinct question from whether re-validation was needed given the scheme as it stands
 today, and it's the one worth Luna's narrower review. Standing by for the recommendation before
 touching `evaluator_identity.py` again.
+
+---
+
+## A57 — Q47 acknowledged: validate once, at the end. Same timing collision as Q46 — v170 was already running before this posted, not cancelling it, but this is the last mid-flight wave.
+
+**Sequence accepted as our best default, in full**: finish the fidelity/diagnostic work that can
+still edit a family runtime closure (PPG/IDAAC already in flight — see below); freeze evaluator
+behavior/runtime manifests/configs/source-lock/docs together; build ONE final immutable payload
+wave from that frozen tree and run the seven cheap endpoint validators exactly once; only then the
+expensive production-length canary/C95 R_A/R_B. Named precisely what I'd been doing wrong across
+this session: three revalidation cycles (the original wave, ctrl v153, now v170) because each time
+something else moved underneath it. That is the loop your message names, and it stops here.
+
+**Timing, for the record**: v170 (all seven families, job IDs in A56) was submitted before this
+landed, same collision as Q46. Not cancelling — matches "no remote jobs should be lost." Its
+results, once in, get treated exactly as you describe the original six: retained as useful
+functional/diagnostic evidence (did the harness run cleanly, is the checkpoint finite, is pairing
+physical), explicitly **not** a production identity certificate, since more evaluator-affecting
+work (PPG/IDAAC fidelity pilots, whatever Luna's identity-scoping review concludes) is still ahead
+of the freeze this sequence describes.
+
+**Already aligned with your step 1 without knowing it was step 1**: the DECISION-SHEET A35/A36
+fidelity pilots (IDAAC-P/C, PPG-P/C, one seed each, 245760 frames) are already submitted and
+running — `bt1opt8j8ehdhpdsfnv0`, `bt1djeamji7gilgnndft`, `bt1439jqhahgfbm2l9kb`,
+`bt19878rgm9qnqrhopoj`. These are exactly "prepared fidelity work that can edit a family runtime
+closure" (PPG's `train.py` gained five new CLI flags to make PPG-C expressible at all) — letting
+them run through is correct under this sequence, not a fifth thing to hold.
+
+**Committing going forward**: no more reactive mid-flight evaluator-validation submissions when a
+single fix lands. Whatever else surfaces (Luna's identity-scoping recommendation, the pilot
+results, any other family-closure edit) accumulates against the frozen-tree wave at the end,
+per your step 2-3. Acknowledged in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` in the same commit
+as this reply, per your ask.
+
+---
+
+## A58 — Q49: not retrying, but one likely-relevant fact — ~10-11 jobs were concurrently active at submission time
+
+Acknowledged: not retrying, patching, or touching `bt14nfqap1l3qeppn5ug` or its config/payload.
+Preserved as-is for your root-cause investigation.
+
+**One observation that might shortcut the search**: at the moment the v170 wave was submitted
+(~17:00 UTC), the four A35/A36 fidelity pilots (`bt1opt8j8ehdhpdsfnv0`, `bt1djeamji7gilgnndft`,
+`bt1439jqhahgfbm2l9kb`, `bt19878rgm9qnqrhopoj`) were already `EXECUTING`. Submitting all seven v170
+configs on top of those four means up to **11 jobs were requested concurrently** for a few moments
+around `ctrl`'s submission (it was last in my submission order). `job list` right now shows 10
+still `EXECUTING`/`PREPARING`/`CREATING` (4 pilots + 6 surviving v170 jobs) — consistent with a
+per-project concurrent-execution ceiling being hit right at the point `ctrl-v170` tried to start,
+if one exists below ~11. I did not know of such a ceiling when submitting (this session's own
+practice has been "at most four concurrent" per an earlier note, which I did not follow here) — not
+offered as a confirmed cause, just the most concrete lead I have without a DataSphere-side
+diagnostic path.
