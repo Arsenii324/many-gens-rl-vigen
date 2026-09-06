@@ -361,12 +361,17 @@ config values (batch_size=128, num_latents=12, values_per_latent=12, beta=100, f
 experiment so there's no unique source-backed answer for some task-specific settings; overall
 favorable ("official-implementation-preserving Door adaptation").
 
-**PARTIALLY VERIFIED, one real correction made independent of this review.** I did not
-re-derive `batch_size`/`num_latents`/`values_per_latent`/`beta`/`frame_stack` against ALDA's own
-`specs/` directory myself this session — these values are already present, unchanged, in this
-project's own `runnable/alda/specs/train_alda_robosuite_door.yaml`, and I take the review's word
-that they match the official repository's own documented defaults. What I *did* independently
-find and fix, unprompted by either review: `n_train_steps` was hardcoded at ALDA's own source
+**UPDATE — now fully VERIFIED, and more precisely than either review states.** I read all four of
+`ext/ALDA_Official/specs/train_alda_{finger_spin,walker_walk,ball_in_cup_catch,cartpole_
+balance}.yaml` directly. `batch_size=128, num_latents=12, values_per_latent=12, beta=100,
+frame_stack=3` are byte-identical across **all four** official DMC-task specs — not just similar,
+identical — confirming these are genuinely uniform, task-independent authors' defaults never
+tuned per task, which is a stronger and more precise claim than "the specs/ directory documents
+the paper-result configuration" (review 17's own phrasing) on its own establishes: it also rules
+out the possibility that Door's own values were cherry-picked to match only one of several
+divergent official task configs. This project's `runnable/alda/specs/train_alda_robosuite_
+door.yaml` matches all five values exactly. What I *also* independently found and fixed,
+unprompted by either review: `n_train_steps` was hardcoded at ALDA's own source
 value (500,000) while every other baseline in this project targets a common 600,000-frame
 production budget — a genuine, previously undiagnosed ambiguity (review 18 separately raises
 this exact point, see that file) that I confirmed was real (not a stale doc) via
@@ -376,8 +381,9 @@ reportable. Also independently confirmed, as a side effect of the SVEA/CURL/DrQ 
 that ALDA's own trainer genuinely has a `log_alpha` (real SAC), consistent with the review's
 "preserves the source update structure" framing.
 
-**Confidence**: TAKEN ON TRUST for the specs/-vs-paper match on the five named hyperparameters.
-VERIFIED for the 500k/600k budget question, independently resolved (this session's own finding,
+**Confidence**: VERIFIED for the specs/-vs-paper match on the five named hyperparameters, against
+all four official task specs, not one. VERIFIED for the 500k/600k budget question, independently
+resolved (this session's own finding,
 not the review's).
 
 ---

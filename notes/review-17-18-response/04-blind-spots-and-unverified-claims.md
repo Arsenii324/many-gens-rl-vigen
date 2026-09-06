@@ -149,10 +149,11 @@ review made each claim:
   is defined once (`config.py:131`) and **read nowhere else in the entire source tree** — a dead
   flag, not DrQ-style shift or anything else. Reported to Codex. See review 17's item-by-item file
   for the full detail.
-- ALDA's five headline hyperparameters (`batch_size=128`, `num_latents=12`, `values_per_latent=12`,
-  `beta=100`, `frame_stack=3`) matching the official repo's `specs/` — accepted because they are
-  already, unchanged, present in this project's own spec file, not because I opened ALDA's
-  upstream repository to compare.
+- ~~ALDA's five headline hyperparameters~~ — **checked after this document's first draft: verified
+  against all four official DMC-task specs, not assumed.** `ext/ALDA_Official/specs/train_alda_
+  {finger_spin,walker_walk,ball_in_cup_catch,cartpole_balance}.yaml` are byte-identical on all
+  five values, confirming they're genuinely uniform authors' defaults, not task-tuned — stronger
+  evidence than either review states. See review 17's item-by-item file.
 - DrQ-v2's exact replay-capacity numbers (≈620k V100, 300k DataSphere, "effectively non-evicting
   for a 600k run") — accepted from the review and this project's pre-existing `CLAIMS-LEDGER.md`,
   arithmetic not independently redone.
