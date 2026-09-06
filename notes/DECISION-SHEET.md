@@ -1499,15 +1499,15 @@ than introducing untested combinations:
 
 | parameter | IDAAC-P (current) | IDAAC-C (proposed) | reasoning |
 |---|---|---|---|
-| `num_processes` | 4 | **1** | The published value. Unlike the Procgen case (64 envs genuinely don't fit), 1 robosuite/MuJoCo instance has no forcing constraint against it — this is a real fidelity restoration, not a forced compromise, and it changes rollout *structure* (one long trajectory vs. several short ones), which review 15 itself calls out as the more consequential axis for PPG and by the same logic applies here |
-| `num_steps` | 256 | **2048** | Published value; at `num_processes=1` this gives 2048 samples/rollout, matching the paper's own rollout size exactly rather than approximating it |
-| `num_mini_batch` | 8 | **32** | Published value (64 samples/minibatch at 2048 rollout) |
-| `gamma` | .999 | **.99** | Published value |
-| `entropy_coef` | .01 | **0** | Published value |
-| `lr` | 5e-4 | **3e-4** | Published value |
-| `value_freq` | 1 | **32** | Published value is described only as "approximately `N_pi`-style," and `N_pi=32` is the cadence review 15 §2 already confirms this project matched for PPG — using the same number here rather than inventing a different one |
-| `adv_loss_coef` | .25 | **.1** | Published value (`alpha_a`) |
-| `order_loss_coef` | .001 | **.1** | Published value (`alpha_i`) — the headline 100x finding |
+| `num_processes` | 4 | **1** | Confirmed directly against `ext/idaac/raileanu21a-supp.pdf` §E ("2048 steps, 1 process"), not just review 15's summary — this table's other rows originally cited review 15 alone and were corrected the same way once the frame-stack question forced a primary-source read. Unlike the Procgen case (64 envs genuinely don't fit), 1 robosuite/MuJoCo instance has no forcing constraint against it |
+| `num_steps` | 256 | **2048** | Same source, same sentence ("2048 steps"), confirmed directly |
+| `num_mini_batch` | 8 | **32** | Same source: the DMC-wide grid search "found... 32 minibatches to work best across these environments" — this is the shared base value, not the method-specific `Nπ=32` two rows below (the two happen to coincide numerically; confirmed as two distinct findings in the source, not one) |
+| `gamma` | .999 | **.99** | Same source, same sentence ("γ = 0.99") |
+| `entropy_coef` | .01 | **0** | Same source: grid search "found... 0.0 entropy coefficient" |
+| `lr` | 5e-4 | **3e-4** | Same source: grid search "found... 0.0003 learning rate" |
+| `value_freq` | 1 | **32** | Confirmed directly: "for DAAC and IDAAC, we ran the same hyperparameter search as for Procgen and found that EV = 9, Nπ = 32, αa = 0.1, and αi = 0.1 worked best" — `Nπ` here is IDAAC's own method-specific finding, not borrowed from PPG's cadence by analogy as the original version of this row assumed |
+| `adv_loss_coef` | .25 | **.1** | Same sentence: `αa = 0.1`, confirmed directly |
+| `order_loss_coef` | .001 | **.1** | Same sentence: `αi = 0.1`, confirmed directly — the headline 100x finding |
 | frame stack | 1 | **3 — restored, see the second correction above** | `ext/idaac/raileanu21a-supp.pdf` §E, checked directly: the authors' own DMC continuous-control experiments run the full IDAAC method (including the adversarial order-prediction head, `αi=0.1`) with 3 stacked frames and report it outperforming baselines. This empirically contradicts the `docs/CONSTRUCTION.md#c2`-based "structurally incoherent" reasoning this row previously used to hold frame stack at 1. Not applied to the already-running pilot (Q47: no reactive resubmission) — an `IDAAC-C2` arm at frame_stack=3 is the next pilot to build, in the frozen final wave |
 | `ppo_epoch` | 1 | **10** | `raileanu21a-supp.pdf` §E, same passage: the DMC-wide grid search ("learning rate in [1e-4,3e-4,7e-4,1e-3], minibatches in [8,16,32,64], entropy in [0,1e-2,1e-3,1e-4], ppo epochs in [3,5,10,20]") found 10 ppo epochs, 0.0 entropy, 3e-4 lr, 32 minibatches best "across these environments," applied as the DMC-wide base before DAAC/IDAAC's own additional search (`EV=9, Nπ=32, αa=0.1, αi=0.1`) layers on top. Resolves what the previous row left as "not resolved, do not invent a number" — this is read from the source, not guessed |
 | LR schedule | flat | **linear decay over 1M env steps, confirmed used, still not implemented in this port** | Same source, same passage: "linear rate decay over 1 million environment steps" is stated as part of the shared DMC recipe, not a maybe. This strengthens rather than changes the prior reading — the port genuinely has no code path for it (checked `train.py` and the full argparse), so it stays declared-not-implemented, but it is now confirmed a real omission from the published recipe rather than an unclear one |
