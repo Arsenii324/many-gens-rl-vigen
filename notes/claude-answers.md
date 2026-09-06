@@ -2694,3 +2694,91 @@ what each does and doesn't test, and credits reviews 2/8/10-15 for having raised
 point first (this session's primary-source check confirmed it directly, it didn't discover it).
 
 Not treated as a request to resubmit or touch running jobs — matches what I'd already recorded.
+
+---
+
+## A60 — Q52/Q53: decision map for reviews 17/18, three fixed, two flagged, not a matrix
+
+Read both in full, then read the code, not either review's summary of it, before writing anything
+below. Per Q53: this is a decision map, not a contradiction hunt — a conflict is named only where
+direct evidence actually requires it. Not duplicating Luna's exhaustive triage; these are the
+high-impact items I could independently verify and act on.
+
+**Already fixed (DECISION-SHEET.md, commit `5f7bbed`), each checked against the live tree, not
+taken on either review's word:**
+
+1. **A25's mechanism taxonomy said drqv2/svea/sgqn/drq/rad/soda "all share a SAC backbone."
+   False for 3 of 6, confirmed line-by-line**: `drqv2.py::DrQV2Agent` and `svea.py::SVEAAgent` use
+   `stddev_schedule` with no `log_alpha` anywhere — DDPG-style, not SAC.
+   `sgqn.py::SGQNAgent(DrQV2Agent)` inherits that backbone by declaration. Only
+   `drq.py::DrQAgent` has a genuine `log_alpha`/entropy term among the RL-ViGen three
+   (`drq.py:213-323`); `rad`/`soda` (`dmc_gb`'s `SAC` class, `sac.py:35`) are genuine SAC too.
+   Same correction applied to `curl` (`DrQV2Agent`) vs `alda` (genuine SAC) in the neighbouring
+   bucket. This is a stronger, more precise version of review 18's claim — it named the DrQ-v2
+   lineage issue but didn't verify which single RL-ViGen baseline (`drq`) is actually the SAC
+   exception within it.
+2. **A26 overclaimed PPG's `8x256` as "exactly the cadence" of the published `1x2048` design.**
+   Both reviews independently made the same point; corrected to: matches total samples/update and
+   auxiliary-phase interaction count, not rollout geometry — 256-step GAE/bootstrap boundaries
+   across eight parallel trajectories differ from 2048-step boundaries in one trajectory spanning
+   several Door episodes.
+3. **A35/A36's pilot decision rule let Door performance decide which arm gets called the
+   source-faithful port** ("if C reaches competence, make it primary"). Review 18's objection,
+   accepted: that conflates source-fidelity designation (a provenance fact, decidable from the
+   recipe alone) with the headline-production choice (empirically gated). Split them in both
+   entries — a future `C2` arm matching the full published recipe is the fidelity-designated port
+   regardless of which arm wins on Door; the empirical "report competence, don't discard failures"
+   half is unchanged.
+
+**New finding, not from either review's stated conclusion — from checking the tree once their
+disagreement made me look:** CTRL is a genuine, previously-undeclared paper-vs-official-code
+conflict, not a stale default. `train_ppo.py`'s own flags and `families.json`'s `v100` host profile
+run the *official code's* defaults (`num_envs=64` matching upstream exactly, `epoch_ppo=3`,
+`cluster_len=10`, `temp=0.1`, `myow_k=1`) — confirmed on disk, not assumed. The paper's LaTeX table
+gives a different, self-consistent set (`num_envs=32`, 1 PPO epoch, `cluster_len=2`, nearest
+clusters `=3`, `temp=0.3`, 5x higher `lr_ctrl`). Review 17 confidently says switch to the paper;
+review 18 explicitly says don't, calling it exactly what it is. **This is the one place where the
+two reviews give opposite prescriptions from identical evidence**, and it's structurally the same
+shape as this project's own C64 (SGQN) and the `action_repeat`-vs-`feature_dim` inconsistency C64
+already named. Filed as **C97** (`docs/CONSTRUCTION.md`, commit `9894b3b`), default set to option
+2 (declare, keep official-code production values, don't switch reactively mid-freeze) — matching
+this project's own prior CTRL decision (`num_envs` 4→16 was chosen specifically to move *toward*
+the released config) and Q47's sequencing rule. Running the paper-table variant as a declared
+second arm is the better long-run answer, in the same final frozen wave as IDAAC-C2, not before.
+
+**Flagged, not fixed — outside what I should touch:**
+
+- **`ext/baseline_resources/11_ibac_sni/paper_1901.10902.pdf` is not the IBAC-SNI paper.** Verified
+  by reading it directly (`pdftotext`): it's *InfoBot: Transfer and Exploration via the Information
+  Bottleneck* (Goyal et al., ICLR 2019, arXiv 1901.10902) — a different paper on a related topic,
+  same "information bottleneck" phrase, different method and authors. The actual IBAC-SNI paper
+  (Igl et al., *Generalization in RL with Selective Noise Injection and Information Bottleneck*,
+  NeurIPS 2019) is already present correctly at
+  `ext/papers-sorted/IBAC-SNI/IBAC-SNI_paper_neurips2019.pdf` — review 18's "wrong identifier"
+  framing undersells this; the `11_ibac_sni` directory's canonical PDF is the wrong paper entirely,
+  not just mislabeled. `ext/` is read-only per this workspace's own convention — this is Luna's
+  source-index to fix, pointing the manifest at the file that's already correctly present rather
+  than re-downloading anything.
+- **SGQN's quantile/aux_lr gap both reviews name is already fully tracked and diagnosed in more
+  depth than either review** — `docs/CONSTRUCTION.md#c64`, which already identifies the exact
+  same numbers (paper 8e-5/0.9, clone runs 1e-4/0.93) *and* the deeper internal inconsistency (this
+  project follows the paper for `action_repeat` and the shipped code for `aux_lr`/`feature_dim`,
+  with no stated rule choosing between them) *and* has a stated DEFAULT (keep shipped code, on
+  reproducibility grounds, with a named falsifier). No action needed from these reviews here beyond
+  corroboration. One sub-claim I could **not** verify either way in the time available: both
+  reviews also name a hard-coded `consistency_weight` of 0.9 (paper: 0.7) inside `sgqn.py` — a
+  `grep` for `consistency_weight`/`consistency_coef` in the live tree found nothing, so this is
+  either named differently in code or not yet landed in C64's analysis. Worth Luna's triage
+  confirming directly rather than me guessing at the variable name.
+- **ALDA 500k vs 600k**: checked `runnable/alda/specs/train_alda_robosuite_door.yaml`
+  (`n_train_steps: 500_000`) and `families.json`'s alda entries — both consistently say 500k, no
+  live contradiction found. Review 18's concern may be reading a stale document elsewhere or the
+  general "twelve baselines at a common 600k" framing without ALDA actually being claimed inside
+  it. Only a targeted grep, not exhaustive — flagging rather than asserting it's resolved.
+
+**Not touched, and I think correctly not touched**: Places365 train-vs-validation (review 18's
+dissent is duly-noted input against an already-ratified default, A22 — not new); the IDAAC/PPG
+frame-stack recipe itself (already independently verified from `ext/idaac/raileanu21a-supp.pdf`
+this session, both reviews corroborate rather than add to it); the twelve-baseline
+benchmark-fidelity-vs-method-fidelity naming scheme (review 18's best single proposal, but a
+presentation/taxonomy decision for Luna's full matrix, not a per-item fix I should make piecemeal).
