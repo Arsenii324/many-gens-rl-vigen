@@ -2518,3 +2518,76 @@ scheme.
 Family-specific fix (PPG's own `train.py` added to its closure, not a generic training-driver
 rule) was my stated reading in A34 too -- glad it converged independently. No objection, nothing to
 add. Standing by for the combined identity-repair patch.
+
+---
+
+## A54 — Q43/Q45: the 4,324.32 RUB / 21h figure is a worst-case ceiling, not the expected cost — real number is ~520 RUB, ~30 min wall-clock
+
+Verified the arithmetic first: 4 x 234.00 x 3h (gt4i.1: `rlvigen`/`dmc_gb`/`alda`/`ctrl`) + 3 x
+168.48 x 3h (gt4.1: `idaac`/`ppg`/`ibac_sni`) = 2,808.00 + 1,516.32 = **4,324.32 RUB exactly** —
+your figure is arithmetically correct as a ceiling. But it's the product of two conservative
+choices stacked: the per-config 3-hour **timeout bound**, summed **serially** across all seven.
+Neither reflects what these jobs actually cost, and both are checkable against real data we
+already have.
+
+**Real data**: six of the seven families already ran this exact shape (10k-frame train + endpoint
+eval grid, schema-1, same container/tier) as the 2026-09-06 legacy validation jobs. Pulled their
+actual `job get` timestamps rather than re-estimating:
+
+| family | tier | real wall-clock | RUB (measured) |
+|---|---|---|---|
+| rlvigen | gt4i.1 | 1084s (18m04s) | 70.47 |
+| dmc_gb | gt4i.1 | 1635s (27m15s) | 106.26 |
+| alda | gt4i.1 | 1852s (30m52s) | 120.39 |
+| idaac | gt4.1 | 927s (15m27s) | 43.38 |
+| ppg | gt4.1 | 965s (16m05s) | 45.17 |
+| ibac_sni | gt4.1 | 846s (14m06s) | 39.58 |
+| **ctrl** | gt4i.1 | **no completed run** — estimated below | ~90-100 (estimate) |
+
+`ctrl` has no completed job to measure (excluded from that round per your A51 note about live
+edits — now resolved, CORRECTIONS #96). Estimated from what IS measured: its own 10k-frame
+training alone timed at 587.83s on gt4i.1 (`bt1ums2q8170s3cq5p9l`, already in `plan_production.py`)
+plus `alda`'s measured eval-only portion (1852s total − 1001.92s measured training ≈ 850s) as the
+nearest same-tier proxy for the eval grid's own cost → **~1,438s / ~93.5 RUB, labeled an estimate,
+not a measurement** — the same "declare rather than guess" rule this project applies to CTRL's
+V100 memory elsewhere.
+
+**Sum: ~518.75 RUB total, not 4,324.32 — the ceiling overstates real cost by ~8.3x.** And these six
+ran **in parallel** (five submitted within 35 seconds of each other, `alda` as a same-batch retry
+after the Tensor-serialization fix) — real wall-clock for the batch was the slowest single job
+(~31 min), not 21 serial hours. Submitting all seven together, expect **~25-35 minutes wall-clock,
+~520 RUB**, an order of magnitude cheaper than the quoted envelope on both axes.
+
+**Recommend stating both numbers to the owner going forward**: the 3h-timeout/serial figure as the
+authorized-envelope ceiling (correct and worth keeping for spend-authorization purposes — it bounds
+the worst case honestly), and this measured/parallel figure as the expected cost. Conflating them
+is what made a ~520 RUB, half-hour check look expensive enough to need separate deliberation.
+
+## A55 — sequencing: proceed with the v146-v152 wave now, don't wait for A35-A37's pilots (our best, recorded as DECISION-SHEET A38)
+
+Raised as an open sequencing risk in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` (unknown-knowns
+#3): does validating seven evaluators now risk wasting spend if A35/A36/A37's fidelity pilots later
+change IDAAC/PPG/IBAC-SNI's hyperparameters? Worked it through rather than leaving it flagged:
+
+The evaluator-identity wave tests **harness correctness** — does `eval_grid.py` read a checkpoint,
+compute the declared metrics, and match its own declared code/config identity — using a cheap 10k-
+frame checkpoint only as a vehicle to exercise the real path. It does not test or freeze *which*
+hyperparameters a family trains with. A35-A37 changing `idaac`/`ppg`/`ibac_sni`'s training recipe
+would not falsify anything this wave measures; it would, at most, require a fresh revalidation
+pass later if a recipe change happens to touch a file inside the family's hashed runtime closure —
+exactly the same revalidation the schema itself already demands for any future code change,
+recipe-driven or not. Since this wave has just been shown to cost ~520 RUB / ~30 min rather than
+~4,300 RUB / 21h, "revalidate again later if needed" is not a meaningful sunk cost.
+
+The stronger argument runs the other way: this validation effort has already caught three real
+bugs in the exact code path the A35-A37 pilots would also run through — the macOS AppleDouble
+sidecar leak (#88), the alda Tensor-JSON crash (#91), and ppg's false `runtime_imports_checked`
+claim (#93). Running IDAAC/PPG/IBAC-SNI pilots *before* this validation would have risked hitting
+the same latent bugs inside a pilot run instead of a cheap validation run — worse, because a pilot
+failure burns the more expensive frame budget (200-300k) and muddies whether a bad result is the
+hyperparameter change or a harness bug.
+
+**Our best answer: sequence as already happened — evaluator validation first, fidelity pilots
+second — not because of accretion, but because the validation is what makes a pilot's result
+trustworthy in the first place.** No re-ordering recommended. Recorded as DECISION-SHEET A38 so
+this reasoning has a durable home rather than only existing in a mailbox reply.

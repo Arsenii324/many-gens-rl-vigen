@@ -1579,3 +1579,41 @@ separately blocked on the actual production host per A1's revision) should be ru
 CoinRun-lineage target parameters specifically, once that pilot is otherwise unblocked. The lineage
 choice itself is not a resource question, so it did not need to wait — only the pilot execution
 does.
+
+### A38 DECIDED, 2026-09-06 — evaluator-validation-before-fidelity-pilots sequencing, and the real cost of the schema-2 wave
+
+Raised as an open sequencing risk in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md`'s unknown-knowns
+hunt: enormous infrastructure investment (evaluator-identity schema, record-delivery fix,
+validation ledger) happened before A35-A37's fidelity pilots, which could change which baseline
+variant is worth validating. Worked through rather than left flagged.
+
+**The cost premise was wrong first.** Codex's quoted 4,324.32 RUB / 21h figure for the seven-family
+schema-2 wave (mailbox Q43) is arithmetically correct as a worst-case ceiling (seven configs' 3h
+timeouts, summed serially, at the two tiers' published rates) but is not the expected cost. Six of
+the seven families already ran this exact job shape under schema 1; their real `job get` timestamps
+sum to ~518.75 RUB (measured for six, one family estimated from its own separately-measured
+training time), and they ran in parallel — real wall-clock was the slowest single job, ~31 minutes,
+not 21 serial hours. Full derivation: `notes/claude-answers.md` A54. This matters for the
+sequencing question because "wasted spend if the pilots change the recipe first" was implicitly
+weighted against a ~4,300 RUB numbre; against the real ~520 RUB, a possible future re-validation is
+not a meaningful sunk cost either way.
+
+**The sequencing question itself**: evaluator-identity validation tests **harness correctness** —
+does `eval_grid.py` read a checkpoint and compute the declared metrics correctly, using a cheap
+10k-frame checkpoint only as a vehicle — not *which* hyperparameters a family should train with.
+A35-A37 changing `idaac`/`ppg`/`ibac_sni`'s recipe would not falsify anything this wave measures;
+at most it would require a revalidation pass later if the change touches a hashed runtime-closure
+file, which the schema already demands for any future code change regardless of cause.
+
+**The stronger argument runs the other way.** This validation effort already caught three real
+bugs in the exact code path a fidelity pilot would also execute: the macOS AppleDouble sidecar leak
+(CORRECTIONS #88), the alda Tensor-JSON crash (#91), and ppg's false `runtime_imports_checked`
+claim (#93). Running an A35/A36/A37 pilot before this validation would have risked hitting the same
+latent bugs inside a pilot run instead — worse, because a pilot burns the larger 200-300k frame
+budget and confounds "the hyperparameter change did this" with "the harness was broken."
+
+**Decision: no re-ordering.** Evaluator validation first, fidelity pilots second is kept as the
+sequence — not because it already happened that way, but because the validation is a precondition
+for trusting a pilot's result, not a competing use of the same budget. Submitting the v146-v152
+wave is a real-money action and still needs the owner's explicit go-ahead per this project's
+spend-authorization convention; this entry settles the *ordering* question, not the authorization.
