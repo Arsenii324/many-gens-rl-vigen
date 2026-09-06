@@ -149,11 +149,11 @@ def gate_ppg_auxiliary_kl():
 
 
 def gate_ibac_sni_competence():
-    """Review 2 gate #6. The entropy runaway is fixed; that the replacement configuration actually
-    learns is a separate claim and is not yet evidenced."""
-    return OWNER, ("entropy_coef=0 removes the runaway (measured), but the final configuration has "
-                   "~25k frames of evidence and zero success events. Needs a pilot at the intended "
-                   "settings long enough to show learning, not merely absence of explosion")
+    """Review 2 gate #6. Historical entropy evidence does not establish final-config competence."""
+    return OWNER, ("entropy_coef=0 removed runaway in a 25k historical procs=1 cell, but that "
+                   "artifact does not bind --beta 1e-4 or the current payload. No exact-final "
+                   "procs=16 V100 competence evidence exists. Needs a pilot at intended settings "
+                   "long enough to show learning, not merely absence of explosion")
 
 
 def gate_ctrl_config_binding():
@@ -847,10 +847,11 @@ def gate_clone_patches_reproduce():
 def gate_ibac_procs_is_runnable():
     """A configured process count that cannot start is worse than a small one that can.
 
-    `bt1q6jd096m3re2n7jp2` measured ibac_sni dying at `torch_rl.PPOAlgo`'s parallel env setup with
-    EOFError at procs=2: MuJoCo GL contexts do not survive a fork, and `train.py:110` FORCES
-    `set_start_method("fork")`. Any profile that raises procs above 1 therefore fails at startup
-    rather than running slowly, and external review 9 caught exactly that in the v100 target.
+    Before the Door-specific repair, `bt1q6jd096m3re2n7jp2` measured an EOFError at procs=2:
+    constructed MuJoCo/EGL environments were sent through the upstream fork path.  The repaired
+    Door path keeps that upstream default for non-Door use, but passes picklable factories through
+    an explicit spawn context.  This gate checks both source invariants and the later procs=16
+    functional smoke; it must not re-certify the historical fork failure as current state.
     """
     try:
         descriptors = json.loads(_read("datasphere/native/families.json"))

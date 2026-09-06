@@ -24,6 +24,8 @@
     "the measured process tree fits gt4i.1"
   ],
   "what_this_does_not_prove": [
+    "the --beta 1e-4 / --entropy-coef 0.0 production configuration (executed flags are not recorded)",
+    "the current source/payload revision (no source or payload digest is recorded)",
     "production V100 renderer or throughput",
     "600000-frame competence",
     "the final endpoint result"

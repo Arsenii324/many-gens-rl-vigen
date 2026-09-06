@@ -45,19 +45,21 @@ cd "$BASE"
 #
 # [Claude 2026-09-04] --model_type impala, for the same reason and by the same precedent as the
 # line above: the repository's default is not what its authors ran on this kind of input, and the
-# launcher's job is to select the paper's configuration.
+# launcher's job is to select the authors' CoinRun visual trunk. Remaining model-level differences are
+# declared below rather than hidden behind that selection.
 #
 # IBAC-SNI ships TWO implementations. `coinrun/` (TensorFlow) is the PIXEL one and pairs 64x64
 # frames with `impala_cnn`. `torch_rl/` (PyTorch, what we run) is the MiniGrid one, whose trunk
 # downsamples ONCE because MiniGrid is 7x7. This project took 64x64 from the pixel branch and left
 # the architecture behind, producing a configuration **nobody has ever run**: neither MiniGrid's
-# (7x7 + MiniGrid trunk) nor the paper's pixel one (64x64 + impala). At 64x64 the MiniGrid trunk
-# flattens to 53,824 and the model is 6,900,671 parameters against the paper's 360,399 -- see
-# docs/CONSTRUCTION.md#c3.
+# (7x7 + MiniGrid trunk) nor the CoinRun pixel trunk (64x64 + impala). At 64x64 the MiniGrid
+# trunk flattens to 53,824 and the model is 6,900,671 parameters, versus 360,399 for this port's
+# Impala trunk plus its 64-dimensional Torch-RL bottleneck -- see docs/CONSTRUCTION.md#c3. The
+# original CoinRun VIB has a 256-dimensional latent, so 360,399 is not a paper parameter count.
 #
-# `model_type impala` is that architecture, ported into `torch_rl/model.py` from IBAC-SNI's OWN
-# coinrun branch, and it completes the pairing rather than inventing one. Verified locally: 64x64
-# gives an 8x8x32 = 2,048 embedding, the paper's own figure.
+# `model_type impala` ports that visual trunk into `torch_rl/model.py` from IBAC-SNI's OWN CoinRun
+# branch. It completes the resolution/trunk pairing without claiming the Torch-RL port is the full
+# CoinRun configuration. Verified locally: 64x64 gives an 8x8x32 = 2,048 embedding.
 #
 # **This supersedes measurements taken on the hybrid**, including the C61 entropy-collapse run
 # (boundary_fraction 0.580 at 100k) -- that finding stands for the configuration it was measured

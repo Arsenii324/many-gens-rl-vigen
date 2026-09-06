@@ -48,8 +48,11 @@ def test_factory_workers_use_spawn_and_keep_independent_rng_streams():
         functools.partial(make_seeded_env, 102),
         functools.partial(make_seeded_env, 103),
     ]
-    parallel = ParallelEnv(envs, start_method="spawn")
+    # `scripts/train.py` calls ParallelEnv(envs) without this argument. Factories must make that
+    # production path choose a clean spawned interpreter, not merely support an opt-in test mode.
+    parallel = ParallelEnv(envs)
     try:
+        assert all(process._start_method == "spawn" for process in parallel.processes)
         observations = parallel.reset()
         values = [int(observation[0]) for observation in observations]
         assert len(set(values)) == len(values)
