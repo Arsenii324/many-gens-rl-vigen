@@ -1974,3 +1974,76 @@ this entry exists so the scope is on record: whatever the fix turns out to be, i
 requires revalidating all seven families' entries, not just the two (`ctrl`, `ppg`) still pending.
 Not launching any further evaluator-family validation until that trace concludes, per Codex's
 explicit request.
+
+## #95 — `source-lock.json`'s recorded root commit named the LEGACY tree, not this repository at all (external review 15 §1)
+
+Fixed and committed (`6d93300`) but never actually appended here — the ledger this project holds
+itself to had a gap in its own discipline. Recording it now rather than leaving the commit message
+as the only durable trace, since a reader of this file alone would have seen #94 and then #96 and
+concluded #95 never happened.
+
+`datasphere/native/source-lock.json`'s `nested_repository_commits.root` read
+`f041f5e170368d298e9b5b60127faa10ba5364e5` — confirmed via `git cat-file -t` that this object does
+not exist anywhere in this repository's history at all. It is the LEGACY
+`ccm-intro/projects/many-gens-rl-vigen` tree's HEAD (branch `nd-ln-architecture-transition`), not
+this recovery workspace's own history. `contract.py`'s `write_payload` copies this value verbatim
+into every payload manifest without ever recomputing it, so every payload built before this fix
+carried a root commit that could never be resolved in the repository the payload actually shipped
+from.
+
+**Fixed**: set to the current HEAD at fix time (`cea0991be313da900062a43831eee3d5d20544cb`).
+**Added** `test_source_lock_root_commit_is_from_this_repository` (`tests/test_production_defaults.py`)
+— deliberately checks the recorded root is a real, reachable ancestor of HEAD, not literal equality
+(which no committed value could ever satisfy the instant it's committed, since HEAD moves past it
+on the very next commit). Non-vacuity proven with the exact original bad value: fails with the
+precise "not reachable" message, restored clean.
+
+## #96 — the ctrl "in-progress, uncertain" caveat was a self-correction that turned out, on completion, to be simply wrong
+
+Recorded because leaving a retracted-but-unconfirmed claim sitting in a handoff note is exactly the
+"noted and moved past" failure mode this project's own discipline (per this entry's neighbors, and
+`docs/local-envs.md`'s general convention of writing corrections down rather than quietly fixing
+and moving on) exists to prevent.
+
+**What I wrote, and had to retract under direct questioning**: *"ctrl's new schema-2 payload
+freezes Codex's in-progress, uncommitted edits (477 lines) exactly as they stood when it went
+offline — self-consistent, but not confirmed finished or tested."* Two things were conflated: (1)
+`git status` showing `runnable/ctrl` as modified relative to its own nested repo's single
+`PRISTINE` commit — which is the **permanent, normal state of all six baseline clones** (their
+nested git history never advances past the pristine snapshot; every patch ever applied to them
+shows as "uncommitted" forever, confirmed identical for `alda`/`dmc_gb`/`ibac_sni`/`idaac`/`ppg`)
+— with (2) a separate, earlier belief that Codex was "actively editing ctrl live," never itself
+re-checked against the diff content.
+
+**Completed this session**: read all five changed files' diffs (`vec_env.py`, `algo.py`,
+`buffer.py`, `models.py`, `train_ppo.py` — 477 inserted / 84 deleted lines total) end to end, the
+same way a fresh reviewer would. Findings:
+
+- Every dated marker found (`[OURS 2026-09-04]`, `[Claude 2026-09-02 09:35 MSK]`) is at least two
+  days old at the time this was re-checked, not a live edit.
+- The content is CTRL's continuous-action-space port (Procgen's `ctrl_public` is Categorical-only;
+  RL-ViGen's Door is `Box(-1,1,(7,))`) plus a real upstream bug fix — `ctrl_public @ 7a118c8`
+  ships two commented-out lines (`w_clust_target = l2_normalize(...)` and its use) that make its
+  OWN `loss_cluster` raise `NameError` the first time `update_cluster` runs; this is not a porting
+  defect, `ctrl_public` cannot execute its own algorithm as released. The two lines are
+  un-commented with the reasoning stated inline.
+- Several JAX/Flax API-drift fixes are clearly separated from algorithm changes and labeled as
+  such (`jax.tree_multimap`→`jax.tree_util.tree_map`, `jax.ops.index_add`→`.at[].add`,
+  `FrozenDict.copy(add_or_replace=...)`→plain-dict merge, `.split`→`jnp.split`), each with the
+  API-version reasoning that makes the "semantics unchanged" claim checkable rather than asserted.
+- `algo.py` adds `clip_fraction`/`approx_kl_k3` PPO diagnostics — exactly the re-open trigger
+  DECISION-SHEET A30 already names for CTRL's raw-vs-executed-action question, wired through
+  `jax.value_and_grad(..., has_aux=True)` in a way that is provably a read of the existing `ratio`
+  computation, not a change to it.
+- `train_ppo.py` redacts a live 40-character W&B API key upstream shipped hardcoded for the
+  authors' own entity (cross-referenced to `docs/CONSTRUCTION.md#c16`), wires the shared
+  `scripts/metrics.py::gaussian_policy_health` diagnostic used by three other baselines, and adds
+  intermediate/terminal checkpointing with an explicit self-critical note that `evaluate_ppo.py`
+  still cannot read a robosuite checkpoint from this format.
+- `pytest tests/ -q -k "ctrl"` — 99 passed, 0 failed, re-run fresh (not trusted from memory).
+- `python scripts/refresh_clone_patches.py --check` — reports `ctrl current`, i.e. the committed
+  patch matches the clone's actual state exactly.
+
+**Verdict**: this is finished, cross-referenced, deliberately-reasoned, tested work, not an
+in-progress or uncertain state. The original caveat is retracted in full, not just in framing.
+`notes/CURRENT-STATE-AND-RESPONSIBILITY.md`'s partial retraction is superseded by this entry.

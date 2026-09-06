@@ -17,7 +17,7 @@ compute run (manual work) rather than more reading, and only then park it.
 "It's the owner's decision" is never a reason to leave that behavior arbitrary — implement the
 genuine best answer now, and only the *formal* resolved/PASS status waits on ratification.
 
-## A live self-correction from the end of this session — read this before trusting any "flagged" caveat elsewhere in this file or DECISION-SHEET.md
+## A self-correction, now FULLY settled (was "live"/partial as of the last update) — read this before trusting any "flagged" caveat elsewhere in this file or DECISION-SHEET.md
 
 I wrote, then had to retract under the owner's direct questioning: *"ctrl's new schema-2 payload
 freezes Codex's in-progress, uncommitted edits (477 lines), self-consistent but not confirmed
@@ -27,16 +27,21 @@ its own nested repo's single "PRISTINE" commit — which is the PERMANENT, NORMA
 baseline clones (their nested git history never advances past the pristine snapshot; every patch
 ever written to them shows as "uncommitted" forever). I treated that normal state as "in-progress,
 uncertain" because I'd separately heard Codex was "actively editing ctrl," and didn't check
-whether the actual diff content supported that. Partial re-check before compaction cut it off:
-`vec_env.py`'s added `RLViGenVecEnvCustom`/`_SyncVecEnv` classes are dated `[Added 2026-09-05]` —
-a day old, already cross-referenced by DECISION-SHEET A30 as an existing class, and
-`refresh_clone_patches.py --check` already reports `ctrl` as "current" (patch matches clone) — all
-of which points to this being finished, day-old work sitting in the normal uncommitted state, not
-a live mid-edit. **I did not finish confirming this** (was about to run `pytest -k ctrl` when
-compaction hit). Whoever picks this up: run the ctrl-specific tests fresh and check `algo.py`,
-`buffer.py`, `models.py`, `train_ppo.py`'s diffs the same way (look for dated comments, cross-check
-against what DECISION-SHEET/CORRECTIONS already reference) before repeating either claim — "it's
-untested" or "it's fine" — as fact.
+whether the actual diff content supported that.
+
+**Now fully confirmed wrong, not just probably wrong.** Read all five changed files' diffs in
+full (`vec_env.py`, `algo.py`, `buffer.py`, `models.py`, `train_ppo.py` — 477 inserted / 84 deleted
+lines) the way a fresh reviewer would: every dated marker is ≥2 days old; the content is CTRL's
+continuous-action-space port plus a real fix to an upstream bug (`ctrl_public @ 7a118c8` ships two
+commented-out lines that make its OWN `loss_cluster` raise `NameError` — not a porting defect, the
+released repository cannot run its own algorithm); JAX/Flax API-drift fixes are explicitly
+separated from algorithm changes with version reasoning; `algo.py` adds the `clip_fraction`/
+`approx_kl_k3` diagnostics DECISION-SHEET A30 already names as CTRL's re-open trigger;
+`train_ppo.py` redacts a live hardcoded W&B key upstream shipped and wires the shared
+cross-baseline policy-health diagnostic. `pytest tests/ -q -k "ctrl"` — 99 passed, 0 failed, run
+fresh. `refresh_clone_patches.py --check` — `ctrl current`. Full writeup: `notes/CORRECTIONS.md`
+#96. **Verdict: finished, cross-referenced, deliberately-reasoned, tested work — not in-progress,
+not uncertain.** The original caveat is retracted in full.
 
 **The general lesson, stated because the owner named it explicitly**: a caveat I write and don't
 act on is not neutral — it's either something I should have checked (cheap, just do it) or
