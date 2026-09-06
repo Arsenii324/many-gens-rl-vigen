@@ -633,9 +633,13 @@ def gate_production_scope_frozen():
     return OWNER, ("Door is the scoped task and every constant is Door's -- the C55 random floor of "
                    "1.842 (C55, re-measured over 200 paired episodes), the certified ten scenes, "
                    "the 500-step horizon, the published anchor "
-                   "table. Adding Lift means re-deriving each of those for Lift (a random arm "
-                   "reportedly scores ~7.5 there, so its floor is different), not reusing them. "
-                   "Decide before the fleet whether Lift is in scope")
+                   "table. Adding Lift means re-deriving each of those for Lift: its own floor "
+                   "exists (6.562) but only at 25 episodes against Door's 200, and its own "
+                   "published-value/floor relationship is flagged elsewhere as an unexplained "
+                   "anomaly Door does not share (faithfulness-reconciliation.md). Reading "
+                   "(DECISION-SHEET.md A33): Door alone for this production run, Lift as a stated "
+                   "follow-on rather than co-equal scope now. OWNER for ratifying that reading or "
+                   "stating an override")
 
 
 def gate_record_completeness():
