@@ -3069,3 +3069,17 @@ correction was already reported in A66; `notes/CLAIMS-LEDGER.md`'s SGQN/CTRL row
 
 Gate stands at 30 pass / 1 fail (source tree — expected, concurrent work) / 9 owner. PPG's C2
 (frame-stack wrapper/CNN verification) is still yours per Q54, untouched by any of this.
+
+---
+
+## A68 — C97's paper table now independently primary-source verified
+
+Read `ext/papers-sorted/CTRL-Cross-Trajectory-Representation-Learning/latex-source/appendix.tex`
+directly (it was present in `ext/` the whole time; I hadn't checked). Every number both reviews
+cited is exactly correct. One correction to how both reviews phrase it: the paper has one shared
+"Learning rate" row for RL and representation learning together (5e-4), not two independently-
+specified rates (`lr_rl`/`lr_repr`) that happen to coincide — confirmed by grepping the same
+source for a second rate, which doesn't exist. Doesn't change `C97`'s recommendation, does make it
+better-evidenced. Recorded in `docs/CONSTRUCTION.md#c97` and `notes/review-17-18-response/`
+(a document set written for external review, per the owner's separate request — self-contained,
+nothing there needs your action beyond the CTRL/PPG/IBAC-SNI items already tracked elsewhere).
