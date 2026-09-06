@@ -1,0 +1,66 @@
+# [Claude 2026-09-06] C97 fidelity pilot: CTRL's paper-table profile, as a declared second arm
+# alongside the official-code profile production already runs -- NOT a replacement for it (see
+# docs/CONSTRUCTION.md#c97, option 2 is still the production default; this is option 3, built now
+# so it is ready for the final frozen wave rather than built under time pressure then). BUILT ONLY,
+# NOT SUBMITTED -- Codex Q54 asked for no remote submission, and this session's own Q47 rule holds
+# every fidelity-affecting variant for one final wave against the genuinely frozen tree.
+#
+# What changes and what deliberately does not, cited against runnable/ctrl/train_ppo.py's own
+# absl flags (lines 94-119) and the paper's LaTeX appendix table (both reviews 17/18 extracted it
+# independently and agree on it):
+#   epoch_ppo   3 -> 1      (paper: "PPO/RL epochs = 1")
+#   cluster_len 10 -> 2     (paper: "cluster length (timesteps) = 2")
+#   myow_k      1 -> 3      (paper's "nearest clusters = 3" -- NOT the separate Sinkhorn `k`,
+#                            which stays at its default 1; review 17's named implementation trap)
+#   temp        0.1 -> 0.3  (paper: "cluster temperature = .3")
+#   lr_ctrl     1e-4 -> 5e-4 (paper: "representation LR = 5e-4", a 5x change)
+#   num_envs    UNCHANGED (16, DataSphere's own memory-bound value) -- deliberately not moved to
+#     the paper's 32. num_envs here is an infrastructure constant, not a paper-vs-code hyperparameter
+#     dispute (families.json's own note: DataSphere's 16 already "moves TOWARD the released
+#     configuration," not away from it); changing it would conflate two different questions.
+#   epoch_ctrl  UNCHANGED (1) -- already equals the paper's "representation epochs = 1" by
+#     coincidence; not a real divergence, so not touched.
+#
+# DIVISIBILITY CHECK (families.json's own documented trap, algo.py:517-520 --
+# `size_batch = num_envs * (n_steps - cluster_len + 1) // 2`, then reshaped by `// n_minibatch_ctrl`,
+# and attempt #11 (bt1qgrrl5dcpn07jcq40) died on exactly this after training successfully): at
+# num_envs=16, n_steps=256, cluster_len=2, n_minibatch_ctrl=8 (unchanged) --
+# size_batch = 16*(256-2+1)//2 = 16*255//2 = 2040; 2040/8 = 255.0, exact. Safe.
+#
+# FRAMES=49344 = 12 x 4112, a multiple of ctrl's own logging cadence (fires every 4112 frames,
+# per families.json's min_frames_reason) so the pilot yields ~12 SR_ID/SR_OOD log points, enough to
+# see a trend, not a competence claim. Timeout computed via scripts/audit_job_budgets.py against
+# MEASURED_TRAIN_FPS["ctrl"]=12.0 (bootstrap 200s + episodes*rate*1.25 margin) before use.
+name: vigen-ctrl-paper-profile-v175
+desc: "C97 fidelity pilot: CTRL's paper-table profile (epoch_ppo/cluster_len/myow_k/temp/lr_ctrl), one seed, 49344 frames. BUILD ONLY -- not submitted."
+cmd: >-
+  timeout --foreground 14400s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ctrl:1
+  FRAMES=49344
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=49344
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  NATIVE_EXTRA_OVERRIDES="--epoch_ppo=1 --cluster_len=2 --myow_k=3 --temp=0.3 --lr_ctrl=0.0005"
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v175-ctrl-paper-profile.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
