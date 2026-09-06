@@ -205,10 +205,11 @@ has not yet been stress-tested against an item it did not already have to descri
 | [C94](#c94) | greenmark cannot see the gitignored vendored tree, so an upstream-only edit reports "no pending changes" and skips the suite that holds the only instrument which would catch it; the test pinning this defect checks a string, not the pipeline | OURS | OPEN | — |
 | [C95](#c95) | a container-trained checkpoint may not be evaluated on this laptop: the same 60k snapshot reads train 131.5 in the container on BOTH CUDA and CPU and 13.85 here, so the device is exonerated and the **renderer** (`MUJOCO_GL=egl` vs macOS `glfw`) is the cause; the container figure also reproduces the run's own logged 135.71, validating `eval_grid.py`. Mechanism settled; recomputation of locally-produced numbers outstanding | OURS | OPEN | — |
 | [C96](#c96) | the shared-evaluator ledger's one global code revision was both too broad and too narrow: a training-only patch invalidated every family, while a change to a family evaluator's local runtime could leave its revision unchanged; the static family payload closure/config binding and row-level canonical scope/measurement revisions are now locally implemented and tested, but 0/7 families are remotely validated on the current closure | OURS + FALSE-CERTIFICATION | READY | a revalidation slot |
+| [C97](#c97) | `ctrl`'s production parameters (num_envs, ppo_epoch, cluster_len, myow_k, temperature) match the official repository's own flag defaults, not the paper's LaTeX appendix table, and nothing declares this a paper↔code conflict rather than an unexamined default | UNDECLARED | OPEN | your decision |
 
-**24 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 34 RESOLVED · 96 total.**
+**25 OPEN · 3 READY · 1 BLOCKED · 34 MONITORED · 34 RESOLVED · 97 total.**
 
-**14 items need a judgement that is yours** — [C1](#c1), [C2](#c2), [C4](#c4), [C16](#c16), [C29](#c29), [C30](#c30), [C43](#c43), [C45](#c45), [C48](#c48), [C54](#c54), [C57](#c57), [C58](#c58), [C60](#c60), [C84](#c84). The `READY` items need only a slot,
+**15 items need a judgement that is yours** — [C1](#c1), [C2](#c2), [C4](#c4), [C16](#c16), [C29](#c29), [C30](#c30), [C43](#c43), [C45](#c45), [C48](#c48), [C54](#c54), [C57](#c57), [C58](#c58), [C60](#c60), [C84](#c84), [C97](#c97). The `READY` items need only a slot,
 and C21 is waiting on compute access. *(This line read "7 items — C1, C2, C3, C4, C16, C29, C30"
 until 2026-08-18 while the table marked eleven: C33, C37, C43 and C45 had been added to the
 table without it. Four decisions the owner was never told were waiting. Now derived and
@@ -7649,6 +7650,67 @@ validated against the current closure.
 **What remains** Re-run each family against its native evaluator on the current payload, inspect
 the emitted import manifest, and record the paired result. This needs a bounded container slot,
 not an owner choice; the endpoint protocol remains blocked on those discharges.
+
+### C97 — `ctrl`'s production parameters match the official code's own defaults, not the paper's table {#c97}
+**Class** UNDECLARED · **Status** OPEN
+
+Surfaced by two independent external reviews (`notes/ai-review-17-external.md`,
+`notes/ai-review-18-external.md`), verified here against the live tree rather than taken on either
+review's word — this is not a case where the reviews agree on a fix; they give opposite prescriptions
+from the same evidence, and resolving that disagreement is the actual finding.
+
+**What's on disk today**, read directly, not from either review's summary:
+`runnable/ctrl/train_ppo.py`'s own `absl` flag defaults are `num_envs=64`, `epoch_ppo=3`, `temp=0.1`,
+`k=1` (Sinkhorn sub-iterations), `cluster_len=10`, `num_clusters=200`, `epoch_ctrl=1`, `myow_k=1`
+(nearest-neighbour count) — lines 94-119. `datasphere/native/families.json`'s `ctrl` entry runs
+DataSphere at `num_envs=16` (an already-declared memory constraint, `constants_note`: "moves TOWARD
+the released configuration rather than away, and the remaining gap is a memory decision, not a
+method one") and its `host_profiles.v100` override sets `num_envs=64` for the real production
+host — matching upstream's own default exactly, deliberately, per that same note. Every other
+listed constant is upstream's own default, unchanged.
+
+The paper's LaTeX appendix (both reviews independently extracted it; review 17 read it from the
+arXiv TeX source directly) gives a different table for the same experiment: `num_envs=32`,
+`ppo/RL epochs=1`, `representation epochs=1`, `cluster_len=2`, `k` (nearest clusters) `=3`,
+`temperature=0.3`, `lr_rl=5e-4`, `lr_repr=5e-4` (vs. the code's `lr_ctrl=1e-4`, a 5x difference).
+`num_clusters=200` and `n_steps=256` agree in both.
+
+**This is a genuine paper-vs-official-code conflict, not an unexamined default that merely needs
+updating.** Review 17's stance: use the paper's table, because reproducing the reported CTRL
+experiment is the goal. Review 18's stance, reached from the identical evidence: do *not* switch
+yet — "current T=10 is no less source-backed than T=2" — because both are authoritative sources
+that disagree with each other, and silently picking one is exactly the false-certification shape
+this project's own register exists to catch (structurally identical to [C64](#c64)'s SGQN
+paper-vs-superseded-port conflict, and to the general rule this project already states for
+`action_repeat` at C64's own cross-reference: *"for `action_repeat` we follow the paper, and for
+`feature_dim`/`aux_lr` we follow the shipped code — opposite answers to the same question, in one
+file, neither recorded as a rule."* CTRL has that same shape and, until this entry, no record at
+all.
+
+One implementation trap named by review 17 and confirmed in the flags above: the paper's "nearest
+clusters" `k=3` corresponds to this code's `myow_k`, not its separate `k` (Sinkhorn sub-iterations,
+default 1). Do not turn both to 3.
+
+**Options**
+1. **Switch to the paper's table.** Reproduces the specific reported experiment; a live-code
+   change requiring a new pilot to verify it trains, and — per this session's Q47 sequencing
+   rule — not something to do reactively mid-freeze.
+2. **Keep the official code's defaults, declare the conflict.** Zero code/config change. This is
+   what the tree already does today, and `families.json`'s own 2026-09-03 note shows this project
+   already chose "move toward the released configuration" once before (`num_envs` 4→16) rather than
+   toward the paper. Consistent with that precedent.
+3. **Run both as declared variants** (`ctrl-code` / `ctrl-paper`), same shape as A35/A36's P/C
+   arms, deferred to the same final-frozen-wave discipline.
+
+*My reading: (2) now — declare the conflict in `CLAIMS-LEDGER.md`, keep production as-is, because
+switching a live parameter set this late duplicates exactly the reactive-mid-freeze mistake this
+session already made once (the evaluator-identity re-validation loop) and because the tree's own
+prior CTRL decision already establishes "prefer official code" as this project's working default
+for this baseline specifically. (3) is the better long-run answer if compute allows it, in the same
+final wave as IDAAC-C2/PPG's frame-stack arms, not before. (1) alone, silently, is what both reviews
+agree not to do.*
+
+**Pinned by** unpinned — worth a test either way, same shape as C64's.
 
 ## Working agreement
 
