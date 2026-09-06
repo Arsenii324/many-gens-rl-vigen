@@ -136,11 +136,25 @@ except ValueError as error:
     print(f"refusing to submit: cannot parse the forwarded cmd: {error}", file=sys.stderr)
     raise SystemExit(1)
 
-assignments = {}
-for token in tokens:
-    match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", token)
-    if match:
-        assignments.setdefault(match.group(1), []).append(match.group(2))
+def assignment_prefix(start):
+    values = {}
+    index = start
+    while index < len(tokens):
+        match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", tokens[index])
+        if not match:
+            break
+        values.setdefault(match.group(1), []).append(match.group(2))
+        index += 1
+    return values
+
+
+# Live configs use either shell assignments before the command or `env` assignments after the
+# timeout wrapper. Do not treat an assignment-looking argument to the eventual command as a real
+# binding: submission safety depends on the value actually entering the runner environment.
+if "env" in tokens:
+    assignments = assignment_prefix(tokens.index("env") + 1)
+else:
+    assignments = assignment_prefix(0)
 
 profiles = assignments.get("NATIVE_HOST_PROFILE", [])
 if len(set(profiles)) > 1:
@@ -200,6 +214,102 @@ PY
   echo "submission host profile: admitted=$SUBMISSION_ADMITTED_PROFILE " \
        "selected=$SUBMISSION_SELECTED_PROFILE binding=$SUBMISSION_PROFILE_BINDING " \
        "production_scale=$SUBMISSION_PRODUCTION_SCALE"
+}
+
+validate_submission_record_delivery() {
+  local cfg="$1"
+  python3 - "$cfg" <<'PY'
+import re
+import shlex
+import sys
+from pathlib import Path
+
+config = Path(sys.argv[1])
+lines = config.read_text().splitlines()
+command_lines = []
+in_command = False
+for line in lines:
+    if line.startswith("cmd:"):
+        in_command = True
+        tail = line[len("cmd:"):].strip()
+        if tail and tail[0] not in ">|":
+            command_lines.append(tail)
+        continue
+    if in_command and line and not line[0].isspace():
+        break
+    if in_command and line.strip():
+        command_lines.append(line.strip())
+
+try:
+    tokens = []
+    for line in command_lines:
+        tokens.extend(shlex.split(line, comments=True, posix=True))
+except ValueError as error:
+    print(f"refusing to submit: cannot parse the forwarded cmd: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+assignments = {}
+for token in tokens:
+    match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)=(.*)", token)
+    if match:
+        assignments.setdefault(match.group(1), []).append(match.group(2))
+
+def one_assignment(name):
+    values = assignments.get(name, [])
+    if len(values) > 1 and len(set(values)) != 1:
+        print(f"refusing to submit: ambiguous {name} assignments in forwarded cmd", file=sys.stderr)
+        raise SystemExit(1)
+    return values[0] if values else None
+
+offline = one_assignment("OFFLINE_EVAL_SNAPSHOT")
+production_values = assignments.get("NATIVE_PRODUCTION", [])
+if len(production_values) > 1 and len(set(production_values)) != 1:
+    print("refusing to submit: ambiguous NATIVE_PRODUCTION assignments in forwarded cmd",
+          file=sys.stderr)
+    raise SystemExit(1)
+production = any(value == "1" for value in production_values)
+frames = [int(value) for value in assignments.get("FRAMES", []) if value.isdigit()]
+production = production or any(value >= 600_000 for value in frames)
+
+if not offline and not production:
+    raise SystemExit(0)
+
+records_values = assignments.get("RECORDS_OUT", [])
+if len(records_values) > 1:
+    print("refusing to submit: ambiguous RECORDS_OUT assignments in forwarded cmd", file=sys.stderr)
+    raise SystemExit(1)
+if len(records_values) != 1 or not records_values[0]:
+    print("refusing to submit: eval-only/production command must contain exactly one nonempty "
+          "RECORDS_OUT binding", file=sys.stderr)
+    raise SystemExit(1)
+records_value = records_values[0]
+if records_value not in {"${RECORDS}", "records.jsonl"}:
+    print("refusing to submit: RECORDS_OUT must use the supported ${RECORDS} or records.jsonl "
+          "binding", file=sys.stderr)
+    raise SystemExit(1)
+
+outputs = []
+in_outputs = False
+for line in lines:
+    if line == "outputs:":
+        in_outputs = True
+        continue
+    if in_outputs and line and not line[0].isspace():
+        break
+    if in_outputs:
+        match = re.match(r"^\s*-\s*([^:#\s]+)\s*:\s*([^#\s]+)", line)
+        if match:
+            outputs.append((match.group(1), match.group(2)))
+
+if records_value == "${RECORDS}":
+    valid = [path for path, name in outputs if name == "RECORDS"]
+else:
+    valid = [path for path, _ in outputs if path == records_value]
+if len(valid) != 1:
+    print("refusing to submit: RECORDS_OUT has no unique corresponding `outputs` declaration",
+          file=sys.stderr)
+    raise SystemExit(1)
+PY
 }
 
 v100_budget_command() {
@@ -475,6 +585,7 @@ submit)
   # datasphere/native/family.py::admission_tier_for.
   admission_tier="$(python3 datasphere/native/family.py admission-tier --tier "$tier")"
   validate_submission_host_binding "$cfg" "$tier"
+  validate_submission_record_delivery "$cfg"
   # Memory admission must see the argv the YAML will actually execute.  In particular, IBAC's
   # `--procs=16` creates sixteen independent EGL/MuJoCo worker processes; checking only the
   # descriptor's probe-safe procs=1 admitted a shape that the 16 GiB tier OOM-killed in 49 s

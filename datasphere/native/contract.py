@@ -380,10 +380,12 @@ RECORD_EXECUTION_KINDS = {
 RECORD_DELIVERY_STATUSES = {
     "pending",
     "complete",
+    "archive_only",
     "failed",
     "not_applicable",
     "empty_tolerated",
 }
+RECORD_DELIVERY_CHANNELS = {"external", "archive_internal"}
 
 
 def _record_artifact(path: Path, root: Path) -> dict | None:
@@ -496,6 +498,7 @@ def finalize_records(
     records_out: Path | None = None,
     execution_status: int = 0,
     collection_status: int = 0,
+    delivery_channel: str = "external",
 ) -> bool:
     """Finalize the JSONL delivery contract after all record sources are collected.
 
@@ -513,12 +516,15 @@ def finalize_records(
     kind = manifest.get("execution_kind")
     if kind not in RECORD_EXECUTION_KINDS:
         fail(f"run manifest has unsupported execution_kind: {kind!r}")
+    if delivery_channel not in RECORD_DELIVERY_CHANNELS:
+        fail(f"unsupported record delivery channel: {delivery_channel!r}")
 
     root = manifest_path.parent
     output_artifact = _record_artifact(records_out, root) if records_out else None
     input_artifacts = _record_inputs(root)
     artifacts = {"inputs": input_artifacts, "expected": None, "output": output_artifact}
     manifest["record_artifacts"] = artifacts
+    manifest["record_delivery_channel"] = delivery_channel
     manifest["record_delivery_error"] = None
 
     if kind == "preflight":
@@ -570,7 +576,9 @@ def finalize_records(
                     provenance = {
                         "finalization_schema": 1,
                         "execution_kind": kind,
-                        "record_delivery": "complete",
+                        "record_delivery": (
+                            "complete" if delivery_channel == "external" else "archive_only"
+                        ),
                         "source_row_count": expected_rows,
                         "source_canonical_sha256": expected_hash,
                     }
@@ -606,7 +614,9 @@ def finalize_records(
         _write_json_atomically(manifest_path, manifest)
         return False
 
-    manifest["record_delivery"] = "complete"
+    manifest["record_delivery"] = (
+        "complete" if delivery_channel == "external" else "archive_only"
+    )
     manifest["record_rows"] = valid_rows
     _write_json_atomically(manifest_path, manifest)
     return True
@@ -683,6 +693,8 @@ def main(argv: list[str] | None = None) -> int:
     finalize.add_argument("--records-out", type=Path, default=None)
     finalize.add_argument("--execution-status", type=int, default=0)
     finalize.add_argument("--collection-status", type=int, default=0)
+    finalize.add_argument("--delivery-channel", choices=sorted(RECORD_DELIVERY_CHANNELS),
+                          default="external")
     args = parser.parse_args(argv)
     try:
         if args.command == "build-payload":
@@ -712,6 +724,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.records_out.resolve() if args.records_out else None,
                 args.execution_status,
                 args.collection_status,
+                args.delivery_channel,
             ):
                 return 4
         else:

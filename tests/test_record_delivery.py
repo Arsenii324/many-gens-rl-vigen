@@ -33,6 +33,8 @@ def _run_finalizer(
     content: str | None,
     *,
     status: int = 0,
+    collection_status: int = 0,
+    delivery_channel: str = "external",
     internal: dict[str, str] | None = None,
 ):
     manifest = tmp_path / "run_manifest.json"
@@ -45,7 +47,8 @@ def _run_finalizer(
     if content is not None:
         records.write_text(content)
     command = [PYTHON, str(CONTRACT), "finalize-records", "--manifest", str(manifest),
-               "--execution-status", str(status)]
+               "--execution-status", str(status), "--collection-status", str(collection_status),
+               "--delivery-channel", delivery_channel]
     if content is not None:
         command += ["--records-out", str(records)]
     result = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
@@ -75,6 +78,37 @@ def test_eval_only_offline_row_succeeds_without_training_records_jsonl(tmp_path)
     assert manifest["record_delivery"] == "complete"
     assert manifest["failure_marker"] is None
     assert manifest["record_artifacts"]["output"]["row_count"] == 1
+
+
+def test_eval_only_without_external_output_finalizes_as_archive_only(tmp_path):
+    result, manifest, records = _run_finalizer(
+        tmp_path,
+        "eval_only_validation",
+        '{"frame": 100, "return": 3.5}\n',
+        delivery_channel="archive_internal",
+        internal={"offline_eval_cuda.jsonl": '{"frame": 100, "return": 3.5}\n'},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert manifest["record_delivery"] == "archive_only"
+    assert manifest["record_delivery_channel"] == "archive_internal"
+    assert manifest["record_artifacts"]["output"]["path"] == records.name
+
+
+def test_external_collection_failure_does_not_downgrade_to_archive_only(tmp_path):
+    result, manifest, _ = _run_finalizer(
+        tmp_path,
+        "eval_only_validation",
+        '{"frame": 100, "return": 3.5}\n',
+        collection_status=1,
+        delivery_channel="external",
+        internal={"offline_eval_cuda.jsonl": '{"frame": 100, "return": 3.5}\n'},
+    )
+
+    assert result.returncode != 0
+    assert manifest["record_delivery"] == "failed"
+    assert manifest["record_delivery_channel"] == "external"
+    assert "collector_write_failed" in manifest["record_delivery_error"]
 
 
 @pytest.mark.parametrize(
@@ -245,6 +279,41 @@ def _extract_function(name: str) -> str:
     raise AssertionError(f"missing {name}")
 
 
+def test_direct_eval_only_collection_creates_an_archive_internal_artifact(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "run_manifest.json").write_text(
+        json.dumps(_manifest("eval_only_validation")) + "\n"
+    )
+    source = out / "offline_eval_cuda.jsonl"
+    source.write_text('{"frame": 100, "return": 3.5}\n')
+    archive = tmp_path / "result.tgz"
+    script = tmp_path / "archive-only-harness.sh"
+    script.write_text(
+        "set -euo pipefail\n"
+        + _extract_function("collect_record_delivery")
+        + "\n"
+        + _extract_function("finalize_record_delivery")
+        + "\n"
+        + f'out="{out}"; collect_record_delivery "$out" ""\n'
+        + '[[ "$record_collection_status" -eq 0 ]]\n'
+        + f'finalize_record_delivery "$out" "$out/records_delivery.jsonl" 0 "$record_collection_status" archive_internal\n'
+        + f'tar -czf "{archive}" -C "{out}" .\n'
+    )
+
+    result = subprocess.run(["bash", str(script)], cwd=ROOT, text=True, capture_output=True)
+
+    assert result.returncode == 0, result.stderr
+    assert archive.is_file()
+    with tarfile.open(archive) as handle:
+        manifest = json.loads(handle.extractfile("./run_manifest.json").read())
+        delivered = handle.extractfile("./records_delivery.jsonl").read()
+    assert manifest["record_delivery"] == "archive_only"
+    assert manifest["record_delivery_channel"] == "archive_internal"
+    assert len(delivered.splitlines()) == 1
+    assert json.loads(delivered)["_delivery_provenance"]["record_delivery"] == "archive_only"
+
+
 def test_runner_archives_a_production_delivery_failure_before_returning_nonzero(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
@@ -275,10 +344,7 @@ def test_runner_archives_a_production_delivery_failure_before_returning_nonzero(
 
 
 def test_collector_write_failure_reaches_archive_boundary(tmp_path):
-    source = RUNNER.read_text()
-    start = source.index('if [[ -n "${RECORDS_OUT:-}" ]]')
-    end = source.index("\n# Finalization is part of the evidence boundary.", start)
-    collection = source[start:end]
+    collection = _extract_function("collect_record_delivery")
     out = tmp_path / "out"
     out.mkdir()
     (out / "records.jsonl").write_text('{"frame": 100}\n')
@@ -288,8 +354,9 @@ def test_collector_write_failure_reaches_archive_boundary(tmp_path):
     script = tmp_path / "collector-harness.sh"
     script.write_text(
         "set -euo pipefail\n"
-        f'out="{out}"; RECORDS_OUT="{destination}"; record_collection_status=0\n'
+        f'out="{out}"; RECORDS_OUT="{destination}"\n'
         + collection
+        + '\ncollect_record_delivery "$out" "$RECORDS_OUT"\n'
         + '\n[[ "$record_collection_status" -eq 1 ]]\n'
         + f'tar -czf "{archive}" -C "{out}" .\n'
     )
@@ -302,10 +369,7 @@ def test_collector_write_failure_reaches_archive_boundary(tmp_path):
 
 
 def test_collector_rejects_source_alias_before_truncation_and_archives_failure(tmp_path):
-    source = RUNNER.read_text()
-    start = source.index('if [[ -n "${RECORDS_OUT:-}" ]]')
-    end = source.index("\n# Finalization is part of the evidence boundary.", start)
-    collection = source[start:end]
+    collection = _extract_function("collect_record_delivery")
     out = tmp_path / "out"
     out.mkdir()
     source_records = out / "records.jsonl"
@@ -318,8 +382,9 @@ def test_collector_rejects_source_alias_before_truncation_and_archives_failure(t
     script = tmp_path / "alias-harness.sh"
     script.write_text(
         "set -euo pipefail\n"
-        f'out="{out}"; RECORDS_OUT="{aliased_destination}"; record_collection_status=0\n'
+        f'out="{out}"; RECORDS_OUT="{aliased_destination}"\n'
         + collection
+        + '\ncollect_record_delivery "$out" "$RECORDS_OUT"\n'
         + '\n[[ "$record_collection_status" -eq 1 ]]\n'
         + _extract_function("finalize_record_delivery")
         + "\n"
@@ -343,10 +408,7 @@ def test_collector_rejects_source_alias_before_truncation_and_archives_failure(t
 
 
 def test_collector_keeps_separate_destination_behavior(tmp_path):
-    source = RUNNER.read_text()
-    start = source.index('if [[ -n "${RECORDS_OUT:-}" ]]')
-    end = source.index("\n# Finalization is part of the evidence boundary.", start)
-    collection = source[start:end]
+    collection = _extract_function("collect_record_delivery")
     out = tmp_path / "out"
     out.mkdir()
     source_records = out / "records.jsonl"
@@ -356,8 +418,9 @@ def test_collector_keeps_separate_destination_behavior(tmp_path):
     script = tmp_path / "separate-destination-harness.sh"
     script.write_text(
         "set -euo pipefail\n"
-        f'out="{out}"; RECORDS_OUT="{destination}"; record_collection_status=0\n'
+        f'out="{out}"; RECORDS_OUT="{destination}"\n'
         + collection
+        + '\ncollect_record_delivery "$out" "$RECORDS_OUT"\n'
         + '\n[[ "$record_collection_status" -eq 0 ]]\n'
     )
 
@@ -389,6 +452,22 @@ def test_normalized_rows_carry_execution_kind_from_the_pre_normalization_manifes
 def test_summary_refuses_failed_production_delivery_by_default_but_allows_diagnostic_view(tmp_path):
     manifest = _manifest("training_production")
     manifest["record_delivery"] = "failed"
+    (tmp_path / "run_manifest.json").write_text(json.dumps(manifest) + "\n")
+
+    command = [PYTHON, str(ROOT / "datasphere/native/summarize_result.py"),
+               "--directory", str(tmp_path)]
+    refused = subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
+    diagnostic = subprocess.run(command + ["--diagnostic"], cwd=ROOT, text=True, capture_output=True)
+
+    assert refused.returncode != 0
+    assert "record delivery" in refused.stderr
+    assert diagnostic.returncode == 0
+
+
+def test_summary_refuses_archive_only_production_delivery_by_default(tmp_path):
+    manifest = _manifest("training_production")
+    manifest["record_delivery"] = "archive_only"
+    manifest["record_delivery_channel"] = "archive_internal"
     (tmp_path / "run_manifest.json").write_text(json.dumps(manifest) + "\n")
 
     command = [PYTHON, str(ROOT / "datasphere/native/summarize_result.py"),

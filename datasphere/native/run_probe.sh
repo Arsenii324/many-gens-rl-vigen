@@ -1347,10 +1347,12 @@ PY
 
 finalize_record_delivery() {
   local target="$1" delivery_path="${2:-}" execution_status="${3:-1}" collection_status="${4:-0}"
+  local delivery_channel="${5:-external}"
   local -a command=(python3 datasphere/native/contract.py finalize-records
                     --manifest "$target/run_manifest.json"
                     --execution-status "$execution_status"
-                    --collection-status "$collection_status")
+                    --collection-status "$collection_status"
+                    --delivery-channel "$delivery_channel")
   if [[ -n "$delivery_path" ]]; then
     command+=(--records-out "$delivery_path")
   fi
@@ -1369,8 +1371,9 @@ normalize_records "$out"
 # records come back -- and this is the mechanism that lets the rule be followed rather than
 # remembered.
 #
-# Additive: result.tgz is unchanged and still contains records.jsonl. RECORDS_OUT is optional, so
-# every existing configuration means exactly what it meant.
+# Additive: result.tgz is unchanged and still contains the native sources. RECORDS_OUT remains
+# optional for direct/legacy invocations, but those invocations now get an explicitly archive-only
+# delivery artifact rather than a post-evaluation missing-output failure.
 #
 # [Claude 2026-09-04] OFFLINE-EVAL JOBS WRITE THEIR RECORDS SOMEWHERE ELSE, and the first version
 # of this block did not know that. `normalize_curves.py` reads training CELLS and writes
@@ -1380,24 +1383,25 @@ normalize_records "$out"
 # while its four eval records rode home inside result.tgz -- the expensive artefact this block
 # exists to let the caller skip. The failure was silent and the job otherwise succeeded.
 #
-# Both sources are concatenated because both are records in the same schema; an eval-only job
-# contributes only the second, a training job only the first, and a job that does both gets both.
-record_collection_status=0
-if [[ -n "${RECORDS_OUT:-}" ]]; then
-  # Check before truncating: RECORDS_OUT is a delivery destination, never a native
-  # source.  resolve(strict=False) catches relative paths and symlink aliases even
-  # when the destination has not been created yet; samefile additionally catches
-  # an existing hard link to a source.
-  if python3 - "$out" "$RECORDS_OUT" <<'ALIAS_GUARD'
+collect_record_delivery() {
+  local root="$1" external="${2:-}" internal="$1/records_delivery.jsonl"
+  record_collection_status=0
+
+  # Check before truncating: either destination is never a native source. resolve(strict=False)
+  # catches relative paths and symlink aliases even when the destination has not been created yet;
+  # samefile additionally catches an existing hard link to a source.
+  if [[ -n "$external" ]] && python3 - "$root" "$external" "$internal" <<'ALIAS_GUARD'
 import os
 import sys
 from pathlib import Path
 
 root = Path(sys.argv[1]).resolve()
 destination = Path(sys.argv[2]).resolve(strict=False)
+internal = Path(sys.argv[3]).resolve(strict=False)
 sources = [root / "records.jsonl"]
 sources.extend(sorted(root.glob("offline_eval_*.jsonl")))
 sources.extend(sorted(root.glob("cells/*/offline_eval_*.jsonl")))
+sources.append(internal)
 
 for source in sources:
     resolved_source = source.resolve(strict=False)
@@ -1414,34 +1418,43 @@ for source in sources:
         pass
 ALIAS_GUARD
   then
-    if ! : > "$RECORDS_OUT"; then
-      echo "=== NATIVE_RECORDS_OUT_UNWRITABLE path=$RECORDS_OUT ===" >&2
+    :
+  else
+    if [[ -n "$external" ]]; then
+      echo "=== NATIVE_RECORDS_OUT_SOURCE_ALIAS path=$external ===" >&2
+      record_collection_status=1
+    fi
+  fi
+
+  if [[ "$record_collection_status" -eq 0 ]]; then
+    if ! : > "$internal"; then
+      echo "=== NATIVE_RECORDS_INTERNAL_UNWRITABLE path=$internal ===" >&2
       record_collection_status=1
     else
-  # An `if` rather than `[[ -s "$src" ]] && cat ...`: under `set -e` a false test as the LAST
-  # command of a loop body is the exit status of the body, and that is how two jobs died silently
-  # earlier in this project. An unmatched glob simply fails `-s` and is skipped.
-  # [Claude 2026-09-04: the per-CELL glob was missing, and the curve evaluation writes there.
-  # `run_curve_eval` emits one record per intermediate checkpoint into
-  # `$out/cells/<cell>/offline_eval_curve.jsonl`; a collector that looks only in `$out` would have
-  # left the entire offline curve -- the whole point of retaining intermediate checkpoints -- to
-  # ride home inside result.tgz and be reported as NATIVE_RECORDS_EMPTY. That is the same failure
-  # this block was written to fix, one directory level down.]
-  # [Claude 2026-09-05, external review 7 section 7] OFFLINE ROWS USED TO COME HOME WITHOUT RUN
-  # PROVENANCE. normalize_curves.py attaches `_run_provenance` (manifest/payload/asset digests,
-  # container image, resolved packages, EGL state) to every TRAINING row it writes into
-  # records.jsonl. The offline_eval_*.jsonl rows were concatenated raw, so the lightweight records
-  # bundle -- the exact mechanism that exists so the caller can skip downloading result.tgz --
-  # carried evaluation rows that were not independently auditable. The facts were only in the
-  # archive we were trying to avoid fetching.
-  #
-  # Enriched here rather than in eval_grid.py because the manifest is a property of the JOB, and
-  # eval_grid does not know it is running inside one; it is also written after eval_grid returns.
-  for src in "$out/records.jsonl" "$out"/offline_eval_*.jsonl "$out"/cells/*/offline_eval_*.jsonl; do
-    if [[ -s "$src" ]]; then
-      case "$src" in
-        *offline_eval_*)
-          if ! python3 - "$src" "$out/run_manifest.json" >> "$RECORDS_OUT" <<'ENRICH'
+      # An `if` rather than `[[ -s "$src" ]] && cat ...`: under `set -e` a false test as the LAST
+      # command of a loop body is the exit status of the body, and that is how two jobs died silently
+      # earlier in this project. An unmatched glob simply fails `-s` and is skipped.
+      # [Claude 2026-09-04: the per-CELL glob was missing, and the curve evaluation writes there.
+      # `run_curve_eval` emits one record per intermediate checkpoint into
+      # `$out/cells/<cell>/offline_eval_curve.jsonl`; a collector that looks only in `$out` would have
+      # left the entire offline curve -- the whole point of retaining intermediate checkpoints -- to
+      # ride home inside result.tgz and be reported as NATIVE_RECORDS_EMPTY. That is the same failure
+      # this block was written to fix, one directory level down.]
+      # [Claude 2026-09-05, external review 7 section 7] OFFLINE ROWS USED TO COME HOME WITHOUT RUN
+      # PROVENANCE. normalize_curves.py attaches `_run_provenance` (manifest/payload/asset digests,
+      # container image, resolved packages, EGL state) to every TRAINING row it writes into
+      # records.jsonl. The offline_eval_*.jsonl rows were concatenated raw, so the lightweight records
+      # bundle -- the exact mechanism that exists so a caller can skip downloading result.tgz --
+      # carried evaluation rows that were not independently auditable. The facts were only in the
+      # archive we were trying to avoid fetching.
+      #
+      # Enriched here rather than in eval_grid.py because the manifest is a property of the JOB, and
+      # eval_grid does not know it is running inside one; it is also written after eval_grid returns.
+      for src in "$root/records.jsonl" "$root"/offline_eval_*.jsonl "$root"/cells/*/offline_eval_*.jsonl; do
+        if [[ -s "$src" ]]; then
+          case "$src" in
+            *offline_eval_*)
+              if ! python3 - "$src" "$root/run_manifest.json" >> "$internal" <<'ENRICH'
 import json, sys
 rows, manifest_path = sys.argv[1], sys.argv[2]
 try:
@@ -1469,36 +1482,55 @@ with open(rows) as handle:
         row.setdefault("_run_provenance", manifest)
         print(json.dumps(row, sort_keys=True))
 ENRICH
-          then
-            echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
-            record_collection_status=1
-          fi
-          ;;
-        *)
-          if ! cat "$src" >> "$RECORDS_OUT"; then
-            echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
-            record_collection_status=1
-          fi
-          ;;
-      esac
+              then
+                echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
+                record_collection_status=1
+              fi
+              ;;
+            *)
+              if ! cat "$src" >> "$internal"; then
+                echo "=== NATIVE_RECORDS_COLLECTION_FAILED source=$src ===" >&2
+                record_collection_status=1
+              fi
+              ;;
+          esac
+        fi
+      done
+    fi
   fi
-  done
-    if [[ -s "$RECORDS_OUT" ]]; then
-      echo "=== NATIVE_RECORDS_EMITTED $(wc -l < "$RECORDS_OUT") rows -> $(basename "$RECORDS_OUT") ==="
-    else
-      echo "=== NATIVE_RECORDS_EMPTY no records were derived; the archive still holds the native curves ===" >&2
+
+  if [[ -n "$external" && "$record_collection_status" -eq 0 ]]; then
+    if [[ -d "$external" ]] || ! : > "$external" || ! cat "$internal" >> "$external"; then
+      echo "=== NATIVE_RECORDS_OUT_UNWRITABLE path=$external ===" >&2
+      record_collection_status=1
     fi
-    fi
+  fi
+  if [[ -s "$internal" ]]; then
+    echo "=== NATIVE_RECORDS_EMITTED $(wc -l < "$internal") rows -> $(basename "$internal") ==="
   else
-    echo "=== NATIVE_RECORDS_OUT_SOURCE_ALIAS path=$RECORDS_OUT ===" >&2
-    record_collection_status=1
+    echo "=== NATIVE_RECORDS_EMPTY no records were derived; the archive still holds the native curves ===" >&2
   fi
+}
+
+record_collection_status=0
+record_delivery_path="$out/records_delivery.jsonl"
+record_delivery_channel="archive_internal"
+if [[ "${EXECUTION_KIND:-}" == "preflight" ]]; then
+  record_delivery_path=""
+  record_delivery_channel="external"
+else
+  if [[ -n "${RECORDS_OUT:-}" ]]; then
+    record_delivery_path="$RECORDS_OUT"
+    record_delivery_channel="external"
+  fi
+  collect_record_delivery "$out" "${RECORDS_OUT:-}"
 fi
 
 # Finalization is part of the evidence boundary.  A required delivery failure updates the
 # manifest, but this status is propagated only after the archive below has been written.
 finalization_status=0
-if finalize_record_delivery "$out" "${RECORDS_OUT:-}" "$cell_status" "$record_collection_status"; then
+if finalize_record_delivery "$out" "$record_delivery_path" "$cell_status" "$record_collection_status" \
+  "$record_delivery_channel"; then
   :
 else
   finalization_status=$?

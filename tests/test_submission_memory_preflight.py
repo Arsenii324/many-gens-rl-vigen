@@ -139,8 +139,10 @@ def test_explicitly_bound_datasphere_production_reaches_stub_and_records_binding
     config = _config(
         tmp_path,
         "NATIVE_HOST_PROFILE=datasphere FRAMES=600000 "
+        "RECORDS_OUT=${RECORDS} "
         "NATIVE_PRODUCTION=1 printf ready",
     )
+    config.write_text(config.read_text() + "outputs:\n  - records.jsonl: RECORDS\n")
 
     result, log = _stubbed_submission(tmp_path, config)
 
