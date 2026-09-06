@@ -70,7 +70,7 @@ UNITS = {
                           "the level split its Procgen lineage assumes does not exist here"],
               "episodes": "evaluate()'s internal default",
               "controllable": "--log_interval, in updates of num_processes x num_steps frames"},
-    "alda":  {"file": "runnable/alda/trainers/alda_trainer.py", "line": 148, "unit": "steps",
+    "alda":  {"file": "runnable/alda/trainers/alda_trainer.py", "line": 154, "unit": "steps",
               "anchor": "self.distract_env = _build('eval-hard')",
               "regimes": ["train (env)", "eval-easy (color_env)", "eval-hard (distract_env)"],
               "episodes": "n_eval_episodes = 10, per regime",

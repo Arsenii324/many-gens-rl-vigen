@@ -481,7 +481,7 @@ def training_time_scene_coverage() -> tuple[dict, str]:
             out[b] = "scene 0 only | its own evaluator varies the regime, not the scene"
     return out, ("DERIVED: every non-native TRAINING-TIME evaluator builds its env with scene_id=0 "
                  "(idaac envs.py:101, ibac_sni general.py:74, dmc_gb wrappers.py:23, "
-                 "alda alda_trainer.py:142; ctrl and ppg take the same default)")
+                 "alda alda_trainer.py:148; ctrl and ppg take the same default)")
 
 
 def regimes_in_one_run() -> tuple[dict, str]:
@@ -721,7 +721,7 @@ def replay_capacity() -> tuple[dict, str]:
     return out, (f"DERIVED for host profile {HOST_PROFILE!r} from family.py's resolved rlvigen "
                  "production override, "
                  "RL-ViGen-upstream/cfgs/config.yaml, dmc_gb/src/train.py:111 and "
-                 f"alda_trainer.py:53; eviction compared against the {PRODUCTION_FRAMES} budget")
+                 f"alda_trainer.py:59; eviction compared against the {PRODUCTION_FRAMES} budget")
 
 
 def x_axis_accounting() -> tuple[dict, str]:
@@ -792,7 +792,7 @@ def updates_per_env_frame() -> tuple[dict, str]:
     out = {b: five for b in ("drqv2", "drq", "svea", "sgqn", "curl")}
     for b in ("rad", "soda"):
         out[b] = "1.0 | one update per new replay transition, ar dead-knob=1; source ar=4"
-    out["alda"] = "1.0 | alda_trainer.py:649, one update per new replay transition; source ar=4, see A27"
+    out["alda"] = "1.0 | alda_trainer.py:58, one update per new replay transition; source ar=4, see A27"
     # On-policy: grad steps per env frame = (epochs x minibatches) / (num_envs x num_steps).
     # [Claude 2026-09-05, notes/FINDING-on-policy-update-density.md, A29.] `ibac_sni` and `ctrl`
     # match their upstream default exactly once on the V100 profile that restores full parallelism
@@ -831,7 +831,7 @@ def warmup_length() -> tuple[dict, str]:
     out = {b: five for b in ("drqv2", "drq", "svea", "sgqn", "curl")}
     for b in ("rad", "soda"):
         out[b] = "1000 frames | --init_steps default 1000, dmc_gb/src/arguments.py:20, unmodified"
-    out["alda"] = "1000 frames | init_steps: int = 1000, alda_trainer.py:51, unmodified"
+    out["alda"] = "1000 frames | init_steps: int = 1000, alda_trainer.py:52, unmodified"
     for b in ("idaac", "ppg", "ibac_sni", "ctrl"):
         out[b] = "0 (no separate warmup phase) | on-policy: first rollout is the first update's data"
     return out, "DERIVED from each training loop's own unmodified upstream default"

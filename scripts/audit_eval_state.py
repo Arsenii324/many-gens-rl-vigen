@@ -56,7 +56,7 @@ STATE = {
               "running_stats": "none",
               "reusable": "yes, and it is the richest -- evaluate(step, distracting_env, color_env) "
                           "already drives three regimes",
-              "anchor": "runnable/alda/trainers/alda_trainer.py:518", "expect": "def evaluate(self, step, distracting_env=False, color_env=False):"},
+              "anchor": "runnable/alda/trainers/alda_trainer.py:525", "expect": "def evaluate(self, step, distracting_env=False, color_env=False):"},
     "idaac": {"policy_mode": "STOCHASTIC (dist.sample) -- `deterministic` defaults False and test.py does not pass it",
               "obs_scaling": "VecNormalize(ob=False): the wrapper does NOT scale observations; the model does",
               "running_stats": "ret_rms exists but is training-only; VecMonitor is inside VecNormalize so returns are raw",
