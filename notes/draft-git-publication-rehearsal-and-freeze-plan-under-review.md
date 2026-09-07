@@ -224,7 +224,7 @@ atomic and are not an acceptable substitute.
 - [ ] Confirm none of the two live source paths appears as an object alternate or required Git path.
 - [ ] Run the path, symlink, secret, large-file and exclusion-manifest checks again on the clean clone.
 - [ ] Execute the candidate Model-A bootstrap in a disposable cache and verify all six clone patch
-  identities plus RL-ViGen P1-P20.
+  identities plus RL-ViGen P1-P21.
 - [ ] Use `PROJECT_PYTHON` only for the local rehearsal checks it can support; record the exact
   interpreter and packages. The repository's clean-environment installation test is separate.
 - [ ] Run focused publication/reconstruction/provenance tests first.

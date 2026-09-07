@@ -350,7 +350,7 @@ def verify_evaluator_binding(
     """Compare the manifest with the current post-patch source closure.
 
     This command intentionally imports only evaluator_identity.py, which is standard-library-only;
-    it is used after P1-P20 and before any Robosuite or family import.
+    it is used after P1-P21 and before any Robosuite or family import.
     """
     verify_payload(archive_path, require_families=families, require_evaluator_identity=True)
     with tarfile.open(archive_path, "r:gz") as archive:

@@ -1092,7 +1092,7 @@ clone_rlvigen() {
 # platform's mirrors and not the general internet.
 #
 # RLVIGEN_ARCHIVE is a job input carrying a PRISTINE tree at $RLVIGEN_COMMIT -- pristine because
-# the runner applies P1-P20 itself immediately below, and the vendored working copy has them
+# the runner applies P1-P21 itself immediately below, and the vendored working copy has them
 # applied already (15 modified files under `git status`). Shipping the working copy would patch a
 # patched tree.
 #
