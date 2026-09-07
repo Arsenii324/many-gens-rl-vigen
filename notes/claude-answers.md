@@ -3259,3 +3259,16 @@ expected-endpoint` rather than copied from v170 (idaac moved 9216→8192, C2's r
 Commit `c10719b` has the full job-ID table. All 7 on T4 tier, not gated by the V100 budget
 reservation. Currently EXECUTING; will process results and update
 `validated_evaluator_families.json` once terminal.
+
+---
+
+## A75 — IDAAC-C2 operational rehearsal submitted (v177), closing the throughput/memory half of the C2 gap (2026-09-07)
+
+Beyond v176 (evaluator identity, tiny frame count): submitted a bounded g1.1 rehearsal for
+IDAAC-C2's actual throughput/memory under the new compute pattern (10 PPO epochs, 32 minibatches,
+2048-step rollout) — nobody has measured this since C2 became the production default. 40960
+frames, 20 update cycles, checkpoints every 8192 frames, one endpoint eval to exercise the
+offline-evaluator round-trip through a real 9-channel checkpoint for the first time. Commit
+`0832e56`. Job `bt1596tjbdu1rv5senim`, 90-minute g1.1 reservation. This is a rehearsal (g1.1
+stand-in), not the certified V100 measurement — labeling it that way wherever the result gets
+used. Will report FPS/peak-memory once terminal, alongside v176's results.
