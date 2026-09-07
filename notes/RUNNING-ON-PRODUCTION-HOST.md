@@ -157,12 +157,15 @@ Per off-policy cell, roughly **25 GB**:
 | what | size | where |
 |---|---|---|
 | replay episode files | ~19 GB (`replay_capacity` 300000 x 63,504 B per transition) | container-local run dir, never retained |
-| retained checkpoints | 1.7 GiB (`drqv2`) to 3.2 GiB (`drq`) | `NATIVE_OUT_HOST_DIR` |
+| retained checkpoints | 1.32 GiB (`rlvigen`, 13 stamps) down to 0.06 (`idaac`/`ppg`) — see the generated table in §6 | `NATIVE_OUT_HOST_DIR` |
 | result archive | comparable to the retained set | wherever `$2` points |
 
 On the DataSphere base profile, `preserve_snapshots=100000` keeps six of the twelve saves a 600k
 run makes, plus the endpoint. The resolved v100 production profile overrides this to `50000`, so
-the production host keeps all twelve stamps plus the endpoint.
+the production host keeps all twelve stamps plus the endpoint. `families.json`'s own prose put six
+rlvigen stamps at "about 1.7 GiB"; that figure is ~2.7x too high against the 104.1 MB per stamp
+measured from `retained.json`, and is corrected in place there. Checkpoints are a small term here —
+the replay episode files are the large one.
 On-policy families (`idaac`, `ppg`, `ctrl`, `ibac_sni`) hold no replay and need a small fraction of
 this. The script refuses a production-scale cell below **60 GB free** on `NATIVE_OUT_HOST_DIR`'s
 filesystem (`NATIVE_DISK_FLOOR_GB` overrides); it reports free space on every run.
@@ -188,15 +191,15 @@ persists `['agent', 'timer', '_global_step', '_global_episode']` only
 | `ctrl` | ctrl | flax to_bytes(train_state), optax optimizer state included | none -- on-policy | **model + optimizer state; no environment/RNG state** |
 | `ibac_sni` | ibac_sni | model.pt | none -- on-policy | **policy only; no optimizer/rollout state** |
 
-| family | saves every | retains every | curve points at 600k |
-|---|---|---|---|
-| `rlvigen` | 50000 | 50000 | 13 |
-| `dmc_gb` | 50000 | all stamps | 13 |
-| `alda` | 50000 | all stamps | 13 |
-| `idaac` | 50000 | all stamps | 13 |
-| `ppg` | 50000 | all stamps | 13 |
-| `ctrl` | 50000 | all stamps | 13 |
-| `ibac_sni` | 50000 | all stamps | 13 |
+| family | saves every | retains every | curve points at 600k | retained checkpoint bytes |
+|---|---|---|---|---|
+| `rlvigen` | 50000 | 50000 | 13 | 1.32 GiB |
+| `dmc_gb` | 50000 | all stamps | 13 | 1.32 GiB |
+| `alda` | 50000 | all stamps | 13 | 1.32 GiB |
+| `idaac` | 50000 | all stamps | 13 | 0.06 GiB |
+| `ppg` | 50000 | all stamps | 13 | 0.06 GiB |
+| `ctrl` | 50000 | all stamps | 13 | 0.51 GiB |
+| `ibac_sni` | 50000 | all stamps | 13 | 0.35 GiB |
 <!-- END checkpoint-semantics -->
 
 Regenerate with `python scripts/audit_checkpoint_semantics.py`; `--check` verifies this

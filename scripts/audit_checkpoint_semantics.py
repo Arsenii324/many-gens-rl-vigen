@@ -119,11 +119,22 @@ def rows(profile: str | None = "v100") -> list[dict]:
         # Derived, not typed: a hand-written list here invented a "pieg" baseline that exists
         # nowhere in this project -- the third hand-copied error in this one table.
         baselines = ", ".join(resolved.get("baselines") or [family])
+        import importlib.util as _il
+        _spec = _il.spec_from_file_location(
+            "_plan_for_audit", ROOT / "datasphere" / "native" / "plan_production.py")
+        plan = _il.module_from_spec(_spec)
+        _spec.loader.exec_module(plan)
         save_every = production.get("save_every")
         preserve = production.get("preserve_snapshots")
         stamps = (600_000 // save_every) if save_every else 0
         kept = (600_000 // preserve) if preserve else stamps
+        # Retained bytes, derived. The runbook's disk table used to carry "1.7 GiB (drqv2) to 3.2
+        # (drq)", which is families.json's figure for the BASE profile's six retained stamps -- on
+        # the v100 profile every family keeps thirteen, so the real number is roughly double and a
+        # hand-typed table was the reason nobody noticed.
+        checkpoint_mb = plan.CHECKPOINT_MB.get(family, 0.0)
         out.append({
+            "retained_gib": round((kept + 1) * checkpoint_mb / 1024.0, 2),
             "family": family,
             "baselines": baselines,
             "contents": meta["contents"],
@@ -150,11 +161,12 @@ def table() -> str:
         lines.append(f"| `{row['family']}` | {row['baselines']} | {row['contents']} | "
                      f"{row['buffer']} | **{row['resume']}** |")
     lines.append("")
-    lines.append("| family | saves every | retains every | curve points at 600k |")
-    lines.append("|---|---|---|---|")
+    lines.append("| family | saves every | retains every | curve points at 600k | retained checkpoint bytes |")
+    lines.append("|---|---|---|---|---|")
     for row in rows():
         preserve = f"{row['preserve']}" if row["preserve"] else "all stamps"
-        lines.append(f"| `{row['family']}` | {row['save_every']} | {preserve} | {row['curve_points']} |")
+        lines.append(f"| `{row['family']}` | {row['save_every']} | {preserve} | "
+                     f"{row['curve_points']} | {row['retained_gib']} GiB |")
     return "\n".join(lines)
 
 
