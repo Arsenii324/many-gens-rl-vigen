@@ -56,7 +56,7 @@ ANSI = re.compile(r"\x1b\[[0-9;]*m")
 #
 # `eval_policy_mode` was added 2026-09-02 without a schema bump. It records the action rule used by
 # the evaluator that produced the row, not merely whether the original repository shipped a
-# suitable evaluator. Four paths sample (`idaac`, `ppg`, `ibac_sni`, `ctrl`) and eight take the
+# suitable evaluator. Three paths sample (`idaac`, `ppg`, `ibac_sni`) and nine take the
 # distribution's mode. Two runs whose returns differ because one sampled and one did not are not
 # comparable, and the row must say which happened.
 #
@@ -99,7 +99,9 @@ CONVENTIONS = {
                  "eval_policy_mode": "sample"},
     "ctrl":     {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
                  "training_time_eval": "continuous",
-                 "eval_policy_mode": "sample"},
+                 # mode, not sample: ctrl's RELEASED EVALUATOR is greedy
+                 # (runnable/ctrl/evaluate_ppo.py:84 -> logits.argmax(1)). Corrected 2026-09-07.
+                 "eval_policy_mode": "mode"},
 }
 
 

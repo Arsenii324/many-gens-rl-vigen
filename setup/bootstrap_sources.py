@@ -139,8 +139,8 @@ def _verify_patch_hash(path: Path, entry: dict) -> None:
         raise BootstrapError(f"patch hash mismatch: {path}")
 
 
-def _apply_family_patch(source: Path, entry: dict) -> None:
-    patch = ROOT / entry["patch_file"]
+def _apply_family_patch(source: Path, entry: dict, root: Path = ROOT) -> None:
+    patch = root / entry["patch_file"]
     _verify_patch_hash(patch, entry)
     _run(["git", "-C", str(source), "apply", "--check", str(patch)])
     _run(["git", "-C", str(source), "apply", str(patch)])
@@ -188,8 +188,8 @@ def _retain_git_metadata(source: Path, destination: Path) -> None:
         raise BootstrapError(f"source has no Git metadata: {source}")
 
 
-def _case_sensitive_requirement() -> None:
-    if not filesystem_is_case_sensitive(ROOT):
+def _case_sensitive_requirement(root: Path = ROOT) -> None:
+    if not filesystem_is_case_sensitive(root):
         raise BootstrapError(
             "RL-ViGen reconstruction requires a case-sensitive filesystem; "
             "use Linux or a case-sensitive volume because upstream contains both "
@@ -207,18 +207,19 @@ def _publish(source: Path, destination: Path) -> None:
     os.rename(staged, destination)
 
 
-def _prepare_family(name: str, entry: dict, temporary: Path) -> list[tuple[Path, Path]]:
+def _prepare_family(name: str, entry: dict, temporary: Path,
+                    root: Path = ROOT) -> list[tuple[Path, Path]]:
     if name == "rlvigen":
-        _case_sensitive_requirement()
+        _case_sensitive_requirement(root)
     raw = temporary / name / "raw"
     raw.parent.mkdir(parents=True, exist_ok=True)
     _clone_exact(entry, raw)
     if entry["patch_kind"] == "git_patch":
-        _apply_family_patch(raw, entry)
+        _apply_family_patch(raw, entry, root)
     else:
         work = temporary / name / "registry-work"
         (work / "setup").mkdir(parents=True)
-        shutil.copy2(ROOT / "setup/apply_patches.py", work / "setup/apply_patches.py")
+        shutil.copy2(root / "setup/apply_patches.py", work / "setup/apply_patches.py")
         shutil.move(raw, work / "RL-ViGen-upstream")
         raw = work / "RL-ViGen-upstream"
         _run(["python3", "setup/apply_patches.py"], cwd=work)
@@ -227,17 +228,17 @@ def _prepare_family(name: str, entry: dict, temporary: Path) -> list[tuple[Path,
     _copy_materialized(raw, output, entry.get("exclude", []))
     _retain_git_metadata(raw, output)
     _check_expected_hash(output, entry)
-    outputs = [(output, ROOT / entry["destination"])]
+    outputs = [(output, root / entry["destination"])]
     for relocation in entry.get("relocate", []):
         source = raw / relocation["from"]
         target = temporary / name / "relocated" / relocation["to"]
         _copy_subtree(source, target)
         _check_expected_hash(target, relocation)
-        outputs.append((target, ROOT / relocation["to"]))
+        outputs.append((target, root / relocation["to"]))
     return outputs
 
 
-def _prepare_auxiliary(entry: dict, temporary: Path) -> tuple[Path, Path]:
+def _prepare_auxiliary(entry: dict, temporary: Path, root: Path = ROOT) -> tuple[Path, Path]:
     raw = temporary / "openai_baselines" / "raw"
     raw.parent.mkdir(parents=True, exist_ok=True)
     _clone_exact(entry, raw)
@@ -245,7 +246,7 @@ def _prepare_auxiliary(entry: dict, temporary: Path) -> tuple[Path, Path]:
     _copy_materialized(raw, output, entry.get("exclude", []))
     _retain_git_metadata(raw, output)
     _check_expected_hash(output, entry)
-    return output, ROOT / entry["destination"]
+    return output, root / entry["destination"]
 
 
 def _verify_destination(root: Path, entry: dict) -> None:
@@ -316,24 +317,24 @@ def bootstrap(root: Path = ROOT, families: Iterable[str] | None = None) -> None:
         outputs: list[tuple[Path, Path]] = []
         for name in sorted(selected):
             entry = manifest["families"][name]
-            destinations = [ROOT / entry["destination"]]
-            destinations.extend(ROOT / item["to"] for item in entry.get("relocate", []))
+            destinations = [root / entry["destination"]]
+            destinations.extend(root / item["to"] for item in entry.get("relocate", []))
             if name == "idaac":
-                destinations.append(ROOT / manifest["auxiliary"]["openai_baselines"]["destination"])
+                destinations.append(root / manifest["auxiliary"]["openai_baselines"]["destination"])
             present = [path.exists() or path.is_symlink() for path in destinations]
             if any(present):
                 if not all(present):
                     raise BootstrapError(f"partial existing source tree for {name}; refusing overwrite")
                 try:
-                    verify_all(families=[name])
+                    verify_all(root=root, families=[name])
                 except BootstrapError as error:
                     raise BootstrapError(
                         f"existing source tree for {name} does not match manifest; refusing overwrite"
                     ) from error
                 continue
-            outputs.extend(_prepare_family(name, manifest["families"][name], temporary))
-        if selected_auxiliary and not (ROOT / manifest["auxiliary"]["openai_baselines"]["destination"]).exists():
-            outputs.append(_prepare_auxiliary(manifest["auxiliary"]["openai_baselines"], temporary))
+            outputs.extend(_prepare_family(name, manifest["families"][name], temporary, root))
+        if selected_auxiliary and not (root / manifest["auxiliary"]["openai_baselines"]["destination"]).exists():
+            outputs.append(_prepare_auxiliary(manifest["auxiliary"]["openai_baselines"], temporary, root))
         for source, destination in outputs:
             if destination.exists() or destination.is_symlink():
                 raise BootstrapError(f"refusing to overwrite existing destination: {destination}")

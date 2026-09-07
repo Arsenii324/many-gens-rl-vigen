@@ -82,20 +82,25 @@ STATE = {
               "running_stats": "none",
               "reusable": "yes in principle -- upstream keeps evaluation in scripts/evaluate.py by design",
               "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:233", "expect": "if update % args.log_interval == 0:"},
-    "ctrl":  {"policy_mode": "STOCHASTIC (samples) IN THE PATH THAT REPORTS -- train_ppo.py:244 "
-                         "and :217 both pass sample=True for the ID and OOD test envs, and "
-                         "those are the calls behind Eprew200/Eprew0. algo.select_action CAN "
-                         "take pi.mode(), but nothing on the reporting path asks it to "
-                         "[corrected 2026-09-04]; evaluate_ppo.py's "
-                             "OWN helper is discrete-only and is the wrong function to call",
+    "ctrl":  {"policy_mode": "deterministic (pi.mode) -- evaluate_ppo.py:84 calls select_action("
+                         "..., greedy=True) and its greedy branch is logits.argmax(1) (:71-72), so "
+                         "ctrl's RELEASED EVALUATOR takes the greedy action "
+                         "[re-corrected 2026-09-07, external review 24 + owner verification]. "
+                         "The 2026-09-04 entry this replaces cited train_ppo.py:244,:217 passing "
+                         "sample=True -- but those are TRAINING calls, and the convention being "
+                         "reproduced is the evaluation-time one. It dismissed evaluate_ppo.py's "
+                         "helper as 'discrete-only and the wrong function to call'; that confuses "
+                         "the helper's action-space support with its SELECTION RULE. The rule is "
+                         "greedy, and pi.mode() is its continuous analogue",
               "obs_scaling": "stateless: state.astype(float32) / 255.",
               "running_stats": "none at eval -- evaluate_ppo passes normalize_rewards=False",
               "reusable": "ADAPT -- evaluate_ppo.py:67-74 calls a local discrete-only select_action "
-                          "(logits.argmax / jax.random.categorical), but algo.py:40-61 already has "
-                          "one that returns a DISTRIBUTION and does pi.mode() or pi.sample() for "
-                          "either action space. The eval loop points at the wrong helper; the "
-                          "continuous path it needs is the one training already uses",
-              "anchor": "runnable/ctrl/algo.py:56", "expect": "action = pi.sample(seed=key)"},
+                          "(logits.argmax / jax.random.categorical); algo.py:40-61 has one that "
+                          "returns a DISTRIBUTION and does pi.mode() or pi.sample() for either "
+                          "action space. Use algo.py's helper with sample=False: that preserves the "
+                          "evaluator's GREEDY RULE while supporting the continuous action space",
+              "anchor": "runnable/ctrl/evaluate_ppo.py:84",
+              "expect": "action, value, rng = select_action(loaded_state, state, rng, greedy=True)"},
 }
 STATE["svea"] = STATE["drq"] = STATE["sgqn"] = STATE["curl"] = STATE["drqv2"]
 STATE["soda"] = STATE["rad"]

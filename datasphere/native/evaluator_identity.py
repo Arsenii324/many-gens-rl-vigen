@@ -157,9 +157,18 @@ FAMILY_ALLOWED_BASELINES = {
 }
 KNOWN_EVAL_SCOPES = ("endpoint", "curve")
 KNOWN_REGIMES = ("train", "eval-easy", "eval-medium", "eval-hard")
+# [Claude 2026-09-07, external review 24 + owner verification] ctrl moved sample -> mode. The
+# criterion is each baseline's own EVALUATION-time convention, and ctrl's released evaluator is
+# deterministic: runnable/ctrl/evaluate_ppo.py:84 calls select_action(..., greedy=True), whose
+# greedy branch is logits.argmax(1) (:71-72). The previous value was derived from train_ppo.py's
+# sampling calls, which is the training reporting path -- the wrong provenance criterion.
+# idaac and ibac_sni keep `sample`: their released evaluation paths do sample. ppg keeps `sample`
+# with a weaker claim -- OpenAI's release contains no dedicated evaluation runner, so native
+# sampling follows the only released PpoModel.act() convention and is NOT independently verified
+# evaluation-time behaviour.
 FAMILY_EVAL_POLICY_MODE = {
-    "rlvigen": "mode", "dmc_gb": "mode", "alda": "mode",
-    "idaac": "sample", "ppg": "sample", "ibac_sni": "sample", "ctrl": "sample",
+    "rlvigen": "mode", "dmc_gb": "mode", "alda": "mode", "ctrl": "mode",
+    "idaac": "sample", "ppg": "sample", "ibac_sni": "sample",
 }
 
 

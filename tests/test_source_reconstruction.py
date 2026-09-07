@@ -109,3 +109,35 @@ def test_publish_refuses_existing_destination(tmp_path: Path):
     destination.mkdir()
     with pytest.raises(module.BootstrapError, match="refusing to replace"):
         module._publish(source, destination)
+
+def test_bootstrap_root_parameter_is_authoritative(tmp_path):
+    """`root=` must actually redirect writes, or an isolated test targets the real project.
+
+    It did not: `bootstrap(root=...)` accepted the argument and then used the module-global ROOT
+    for destinations, patch paths, case-sensitivity and verification. One of Luna's disposable
+    safety probes hit the real checkout because of it (external review 24).
+
+    Checked without a network clone: a destination that already exists must be seen at `root`,
+    not at ROOT. With an empty `root`, every family looks absent, so the refusal this asserts can
+    only come from the code consulting `root`.
+    """
+    bs = _load("bootstrap_sources", SETUP / "bootstrap_sources.py")
+
+    calls = []
+
+    def _no_network(name, entry, temporary, root=bs.ROOT):
+        calls.append((name, root))
+        raise bs.BootstrapError("stop before any clone")
+
+    original = bs._prepare_family
+    bs._prepare_family = _no_network
+    try:
+        with pytest.raises(bs.BootstrapError):
+            bs.bootstrap(root=tmp_path, families=["ctrl"])
+    finally:
+        bs._prepare_family = original
+
+    assert calls, "bootstrap never reached _prepare_family"
+    assert calls[0][1] == tmp_path, (
+        f"bootstrap passed {calls[0][1]} instead of the requested root {tmp_path}; the root "
+        "parameter is decorative and an isolated run would write into the real project")

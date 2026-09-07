@@ -72,3 +72,84 @@ said in a comment that the modes must not be pooled. What did not exist was the 
 comparability list, so no summary ever showed it — and `preprod_table.py` printed both blocks in one
 table without warning. Same shape as the other defects this week: **the evidence existed and nothing
 acted on it.**
+
+---
+
+## Revision, 2026-09-07 (later) — CTRL was on the wrong side of the split, and the owner has ruled
+
+Two things changed after the page above was written, and both change what R3 means here.
+
+### 1. CTRL's native rule was wrong, and correcting it moves the split from 8/4 to 9/3
+
+The page above listed `ctrl` among the four sampling reporters. That was a defect, not a fact.
+External review 24 and the owner's own source check found it independently, and it was then
+confirmed directly against the pinned upstream: `runnable/ctrl/evaluate_ppo.py:84` calls
+`select_action(..., greedy=True)`, whose greedy branch is `logits.argmax(1)` (:71-72). **CTRL's
+released evaluator is deterministic.**
+
+The 2026-09-04 entry that set it to `sample` reasoned from `train_ppo.py:244,253`, which pass
+`sample=True` — but those are TRAINING calls. The criterion this evaluator reproduces is each
+baseline's own EVALUATION-time rule. The earlier audit had even *seen* `evaluate_ppo.py`'s greedy
+helper and dismissed it as "discrete-only and the wrong function to call", which confuses the
+helper's action-space support with its selection rule. The rule is greedy; `pi.mode()` is its
+continuous analogue.
+
+Corrected in `evaluator_identity.py`, `eval_grid.py`, `normalize_curves.py` and
+`audit_eval_state.py` in one batch. Three of our own files had agreed with each other and were
+wrong together, which is precisely what an internal-consistency test cannot catch — so
+`tests/test_native_policy_mode_provenance.py` now anchors each family's native rule against the
+vendored upstream source rather than against another of our tables.
+
+**The blocks are now:**
+
+- **Block A, deterministic reporters (9)** — drqv2, svea, drq, sgqn, curl, rad, soda, alda, **ctrl**
+- **Block B, sampling reporters (3)** — idaac, ppg, ibac_sni
+
+### 2. The owner has ruled that this is not an axis problem
+
+Verbatim: *"maybe it's that the argmax vs proportional is an okay difference. Especially if
+originally so. I don't treat it as an axis problem."* And on the protocol: *"let's do the primaries
+now, no secondaries."*
+
+That is a decision on the estimand question, and it is the owner's to make. It rests on a condition
+— "especially if originally so" — which is now **verified per family**, and the verification is the
+reason this can be accepted rather than merely asserted:
+
+| family | native rule | released evaluator it is derived from | verified |
+|---|---|---|---|
+| idaac | sample | `model.py:332` `act(self, inputs, deterministic=False)`, `test.py` omits the flag | yes |
+| ibac_sni | sample | `torch_rl/scripts/evaluate.py`'s `--argmax` is store_true, default off | yes |
+| ctrl | **mode** | `evaluate_ppo.py:84` `select_action(..., greedy=True)` | yes |
+| ppg | sample | **no dedicated evaluation runner exists upstream** | **NO** |
+
+**PPG is the one family whose `native` rests on a rollout convention rather than on an evaluator.**
+OpenAI's release ships no evaluator; native sampling follows the only released `PpoModel.act()`
+convention. That is stated in `eval_grid.py`'s own docstring now rather than left implied, because
+it is the single weakest link in the "originally so" condition the owner's ruling depends on.
+
+### What this means for `scripts/requirements.py`
+
+**R3 still reads NOT MET, and it is deliberately left that way.** The mechanical check measures
+axis uniformity, and one UNITS axis still splits 9/3. The owner's ruling is that the split is
+acceptable, not that it is absent — those are different statements, and encoding the second to
+make a gate go green would delete the evidence a reader needs if the fleet's cross-block numbers
+later look strange. Per the standing instruction on ratification: record the judgement, do not
+close it in code.
+
+### What gets reported, decided in advance
+
+The fallback stated on this page is now the operative plan, not the contingency:
+
+- **Rank within a block; do not rank across blocks.**
+- Say why in the caption, not only in an appendix: the two blocks measure different quantities of
+  the policy, and this project chose each method's own reporting path over a harmonised one.
+- A25's three fixed cross-group contrasts (`idaac` vs `svea`, `idaac` vs `curl`, and the
+  group aggregate) are **descriptive**, not inferential.
+- The mechanism question — does an on-policy regulariser generalise better than an augmentation —
+  is **not answered by this fleet**. That is the price of the fidelity choice and it is stated
+  here rather than discovered in review.
+
+**No secondary deterministic pass is scheduled** (owner: "no secondaries"). `--policy-mode mode`
+remains implemented and reachable for the three Block B families, so the check remains available
+at 3% of campaign cost if a cross-block claim ever becomes necessary. It is not removed, and it is
+not run.

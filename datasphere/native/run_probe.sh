@@ -1244,7 +1244,10 @@ if cells_need_places365 "$cells"; then
   fi
   asset_dir="$work/places365-val"
   mkdir -p "$asset_dir"
-  tar --no-same-owner -xzf "$asset_archive" -C "$asset_dir"
+  # -xf, not -xzf: the canonical production asset is `places365standard_easyformat.tar`, which is
+  # NOT gzipped, while the val probe fixture is a .tgz. Both tar implementations auto-detect
+  # compression from the stream, so one flag reads either. -xzf refused the production archive.
+  tar --no-same-owner -xf "$asset_archive" -C "$asset_dir"
   asset_images="$asset_dir/val/images"
   python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"
   dataset_root="$work/places365-root"
@@ -1274,7 +1277,19 @@ if cells_need_places365 "$cells"; then
     echo "=== NATIVE_PLACES365_DECLARED_DEVIATION split=$places_split (A22 accepted explicitly) ===" >&2
   fi
   if [[ "$places_split" == "train" ]]; then
-    ln -sfn "$asset_dir/train" "$dataset_root/places365_standard/train"
+    # The canonical easyformat archive unpacks as `places365_standard/train`; the small probe
+    # fixture carries a flat `train/`. Accept either rather than assuming one, and refuse loudly
+    # instead of linking a path that does not exist.
+    if [[ -d "$asset_dir/places365_standard/train" ]]; then
+      train_source="$asset_dir/places365_standard/train"
+    elif [[ -d "$asset_dir/train" ]]; then
+      train_source="$asset_dir/train"
+    else
+      echo "REFUSING: NATIVE_PLACES365_SPLIT=train but the asset archive contains no train split." >&2
+      echo "  looked for: $asset_dir/places365_standard/train and $asset_dir/train" >&2
+      exit 3
+    fi
+    ln -sfn "$train_source" "$dataset_root/places365_standard/train"
   fi
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split"
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split" --check
@@ -1286,7 +1301,12 @@ if cells_need_places365 "$cells"; then
     python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb --split "$places_split"
     python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb --split "$places_split" --check
   fi
-  python3 - "$dataset_root/places365_standard/val" <<'PY'
+  # [Claude 2026-09-07, external review 24] This asserted `.../val` unconditionally, while the
+  # loader immediately above was configured for $places_split. Under the DECIDED production value
+  # `train` the loader correctly resolves to the train root and this check then failed it --
+  # "loader selected .../train, expected .../val". The check is right to exist; it was asserting
+  # the wrong partition.
+  python3 - "$dataset_root/places365_standard/$places_split" <<'PY'
 import pathlib
 import sys
 import utils

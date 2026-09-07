@@ -595,9 +595,15 @@ def _ppg_setup() -> None:
 def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None, policy_mode="native"):
     """One (regime, scene) cell for ppg, through PPG's own Roller and VecMonitor2.
 
-    **It SAMPLES.** `PpoModel.act` draws from the policy distribution and this repository ships no
-    deterministic-action path to call instead -- the same statement `ppg_eval.py` makes at length,
-    reproduced here because the grid must report the same estimator its own launcher does.
+    **It SAMPLES, on a weaker claim than the other three.** `PpoModel.act` draws from the policy
+    distribution and this repository ships no deterministic-action path to call instead.
+
+    State the provenance precisely (external review 24): OpenAI's release contains NO dedicated
+    evaluation runner. Native sampling here follows the only released `PpoModel.act()` convention;
+    it is NOT independently verified evaluation-time behaviour, as it is for idaac and ibac_sni,
+    whose released evaluation paths sample, or for ctrl, whose released evaluator takes the mode.
+    This is the one family whose `native` rests on a rollout convention rather than on an
+    evaluator, and the deterministic `--policy-mode mode` pass is the check against it.
 
     Episodes are counted by `roller.episode_count`, which PPG's `VecMonitor2` increments when an
     env resets. Counting closed episodes rather than steps is what makes the sample size the
@@ -971,9 +977,17 @@ def _ctrl_train_state(snapshot, n_actions: int = 7):
 def run_scene_ctrl(built, task, scene_id, mode, episodes, seed, policy_mode="native"):
     """One (regime, scene) cell for ctrl, through its own vec env and `algo.select_action`.
 
-    **It SAMPLES**, and that is the correction of 2026-09-04: `select_action(..., sample=False)`
-    returns `pi.mode()`, but `train_ppo.py:244` and `:253` -- the calls behind the numbers a ctrl
-    cell reports -- both pass `sample=True`. Reproducing the reporting path means sampling.
+    **It TAKES THE MODE**, and that reverses the 2026-09-04 entry this docstring used to carry.
+
+    That entry reasoned from `train_ppo.py:244,253`, which pass `sample=True`, and concluded that
+    reproducing "the reporting path" meant sampling. Wrong criterion: those are TRAINING calls. The
+    convention this evaluator reproduces is each baseline's own EVALUATION-time rule, and ctrl
+    ships one -- `runnable/ctrl/evaluate_ppo.py:84` calls `select_action(..., greedy=True)`, whose
+    greedy branch is `logits.argmax(1)` (:71-72). The continuous analogue of that discrete argmax
+    is `pi.mode()`, i.e. `sample=False`.
+
+    So ctrl's `native` and `mode` policy modes coincide, and `FAMILY_EVAL_POLICY_MODE["ctrl"]` is
+    `mode`. Found by external review 24 and confirmed against the pinned upstream.
 
     **The observation scaling is theirs**: `state.astype(float32) / 255.`, exactly as at those call
     sites. `RLViGenVecEnvCustom` yields the stacked-frame layout the model expects.
@@ -1038,7 +1052,9 @@ def run_scene_ctrl(built, task, scene_id, mode, episodes, seed, policy_mode="nat
         while not done:
             action, _, _, key = select_action(train_state.params, train_state.apply_fn, model.ac,
                                               jnp.asarray(state).astype(jnp.float32) / 255.,
-                                              key, sample=(policy_mode != "mode"))
+                                              # ctrl's native rule IS the deterministic one, so
+                                              # both policy modes coincide here. See the docstring.
+                                              key, sample=False)
             action_for_env = np.asarray(action)
             action_probe.observe(action_for_env)
             state, reward, done_arr, infos = env.step(action_for_env)
