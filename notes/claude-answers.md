@@ -3291,3 +3291,30 @@ clean on the tree exactly as committed, not just my earlier local CPU/MPS checks
 
 Still executing: the IDAAC-C2 throughput/memory rehearsal (v177, `bt1596tjbdu1rv5senim`),
 ~30 min into its 90-min reservation. Will report FPS/peak-memory once terminal.
+
+---
+
+## A77 — IDAAC-C2 throughput rehearsal complete: real FPS 24.0, memory lower than before, checkpoint round-trip confirmed (2026-09-07)
+
+Job `bt1596tjbdu1rv5senim` SUCCESS, 40960 frames, 20 full C2 update cycles, well inside its
+90-minute reservation (actual 42.18 min; 141.6 of 420 g1.1 budget-cap minutes remain).
+
+- **Throughput**: 24.0 FPS (rounded down from 24.57, computed from sampled wall-clock minus the
+  endpoint eval's own measured time), replacing the stale pre-C2 30.0 in
+  `scripts/audit_job_budgets.py::MEASURED_TRAIN_FPS`.
+- **Memory**: peak host RSS 2.63 GiB, peak GPU 2.23 GiB/32 GiB — *lower* than the old 3.17 GiB
+  pre-C2 figure. Recorded in `families.json`'s `memory_note`; kept `fixed_peak_gib` at 3.17
+  (conservative, n=1, 20 updates not 600k frames).
+- **Checkpoint round-trip verified for the first time**: five stamps saved; the terminal
+  checkpoint's first conv layer confirmed `(16, 9, 3, 3)` locally, and separately passed through
+  the real remote offline evaluator (non_finite=0). This closes the "actual checkpoint save/load
+  round-tripping with the new 9-channel shape... none of this has been run" gap.
+
+`success_rate=0.0` at 40960 frames is expected and says nothing about competence — this was a
+throughput/memory probe, not a competence pilot. Full detail and closed blind-spot entry:
+`notes/review-17-18-response/04-blind-spots-and-unverified-claims.md`. Commit `a3c49f8`.
+
+This closes out the compute-reachable half of this session's work. Both this and the v176 wave
+(A76) are done; `production_gates.py` is 31 pass / 1 fail (source tree, this commit) / 8 owner.
+Full suite green throughout. Standing by / continuing to look for further mechanically-actionable
+work per the standing goal; will keep the mailbox updated.
