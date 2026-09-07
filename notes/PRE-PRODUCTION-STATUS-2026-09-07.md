@@ -7,11 +7,26 @@ this page says exactly why, with the evidence for each item rather than a status
 is a true statement about the instruments and a misleading one about readiness, which is why this
 page exists beside it.
 
+## Status at last update (2026-09-07, late)
+
+**One blocker left, and its evidence is in hand.** Codex's PPG geometry probe
+`bt1hoiefp159flmrv7hj` (1x2048, 65,536 frames = one auxiliary cycle) completed SUCCESS, and it ran
+the matched 8x256 control on the same tier, which removes the gt4i.1-vs-gt4.1 confound that would
+otherwise have decided the question on the tier rather than the geometry. **What remains is reading
+the two arms and deciding A36**, then freezing and running ONE validation wave covering all seven
+families.
+
+Everything else on this page is unchanged and still true. Since it was written, recommendation 22
+was audited (thirteen of sixteen requirements met; the three that were not are fixed) and four
+launch surfaces were reconciled with the practice settled that day -- including one wrong number,
+the campaign budget, which lacked the deterministic second endpoint pass and moves 876 -> 893 GPU-h.
+
 ## The short answer
 
 Three things block release, and they are different in kind:
 
-1. **One source decision must close before the evaluator closure can be frozen** — down from two:
+1. **One source decision must close before the evaluator closure can be frozen** — A36's geometry,
+   whose probe and control have both now run; down from two:
    the policy-mode override landed the same day it was found. Until A36's geometry answer arrives, a
    validation wave would have to be re-run, so no wave should be run. **All seven attestations are
    now superseded**, not two, because the policy-mode change touches the shared evaluator; that does
