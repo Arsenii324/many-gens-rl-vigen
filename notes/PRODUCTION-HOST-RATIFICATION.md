@@ -83,30 +83,27 @@ production profile overrides that value to `50000`, so every family keeps twelve
 endpoint. The generated checkpoint-semantics table and production gate both resolve the v100
 profile; this is the operational production default, pending formal ratification.
 
-**Trajectory-grid cost is the campaign's largest unmeasured term.** Corrected here after I got
-it wrong twice in one session, which is the useful part of the record. I first reported that the
-curve is seven points for the RL-ViGen five and thirteen for the others, and proposed unifying it.
-Both the finding and the proposal were artefacts of reading the **base** descriptor: `rlvigen`'s
-base `preserve_snapshots` of 100000 is a DataSphere container-disk value, and its v100 profile
-already overrides it to 50000. On the profile production runs, all twelve baselines keep twelve
-stamps plus the endpoint — which `production_gates.gate_checkpoint_cadence_matches_fleet`
-independently pins, and which is what failed when I "fixed" the non-problem in `families.json`.
-Both instruments are now profile-aware and default to v100.
+**Trajectory-grid cost — RESOLVED 2026-09-07, and it cost nothing to resolve.** This entry
+previously recorded a 165 GPU-h uncertainty (160-325) because six of twelve baselines had never had
+an evaluation episode timed and carried `audit_job_budgets.UNMEASURED_DEFAULT = 30 s/episode`, and
+recommended measuring them during the step-2 throughput calibration on the production host.
 
-What is genuinely open is the cost. `plan_production.curve_eval_hours`, rewritten to read the
-resolved descriptor and the measured per-episode wall-clock rather than training FPS, puts the
-trajectory grid at **325 GPU-h** against 601 GPU-h of training — where `PRODUCTION-CALENDAR.md`
-had 176, computed by hand against a flat 12 s/episode. The gap is not a modelling preference: the
-measured rates are 9 s/episode for `rlvigen` and 25 for `idaac`, and **six of twelve baselines have
-no measurement at all** and carry `audit_job_budgets.UNMEASURED_DEFAULT = 30`. So the true figure
-lies between roughly 160 and 325 GPU-h, and which end decides whether the trajectory grid costs a
-week.
+**They did not need a host trip.** The v176 evaluator-validation wave already ran an endpoint grid
+per family, all seven at the identical scope (2 regimes x 1 scene x 5 episodes = 10 episodes), and
+every job's log carries its own `NATIVE_ENDPOINT_EVAL_SECONDS`. Extracting them gives 9.0, 8.6, 9.5,
+10.6, 8.9, 9.9 and 10.2 s/episode — **every family between 8.6 and 10.6, against a placeholder of
+30**. The method validates itself: drqv2's extracted 90s/10 reproduces the independently measured 9
+from a different job at a different scope.
 
-Implemented default: leave the cadence alone (uniform 13 points is the fleet decision and is what
-makes curves comparable) and **measure the six missing per-episode rates during the step-2
-throughput calibration**, which is one number per family from a run that has to happen anyway.
-Recommend against pre-emptively thinning the grid on an estimate — the same estimate that has been
-wrong by 2x once already in this file.
+The trajectory grid is therefore **148 GPU-h against 601 of training, 25%** — below even the
+optimistic end of the range this entry used to carry, and with no family estimated. The recommendation
+to measure on the host is withdrawn as unnecessary; what remains is the caveat that these are
+single-scene 10-episode grids against production's ten-scene 800-episode one, which the canary
+checks.
+
+**The lesson worth keeping**: the measurement had existed for a day, inside jobs run for a different
+purpose, and the plan called for buying it again on scarcer hardware. Before scheduling a
+measurement, check whether a completed job already contains it.
 
 **Related, and fixed rather than left open**: `preserve_snapshots` had no mechanism outside
 `rlvigen`. `family.py` expressed it as `RLVIGEN_PRESERVE_SNAPSHOTS`, which only P18's patch in

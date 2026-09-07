@@ -55,11 +55,37 @@ BOOTSTRAP_SECONDS = 200
 #: Per-episode cost is FAMILY-dependent, and these are measured wall-clock points, not estimates.
 #: A single flat rate produced a false FAIL on cfg-offline-eval-s2-full-v50 -- a config that
 #: demonstrably SUCCEEDED -- which is the same class of error this audit exists to prevent.
+#: [Claude 2026-09-07] Extended from two families to all seven, at zero compute cost: the v176
+#: evaluator-validation wave already ran an endpoint grid per family, every one at the SAME scope
+#: (ENDPOINT_EVAL_REGIMES=train,eval-easy x ENDPOINT_EVAL_SCENES=0 x ENDPOINT_EVAL_EPISODES=5 = 10
+#: episodes), and each job's log carries its own NATIVE_ENDPOINT_EVAL_SECONDS. Six of twelve
+#: baselines had been carrying UNMEASURED_DEFAULT = 30 s/episode, and that single placeholder was
+#: the whole of a 165 GPU-h spread in the campaign's trajectory-grid estimate.
+#:
+#: The method validates itself: drqv2's extracted 90s/10 = 9.0 reproduces the independently
+#: measured 9 above, from a different job at a different scope.
+#:
+#: EVERY family lands between 8.6 and 10.6. The pessimistic 30 was 3x too high for all of them.
+#:
+#: idaac is the one conflict and the newer number is the right one. The old 25 came from
+#: bt1ip5f8c6mqqm7fd2bn, which predates the C2 recipe (4 processes, 256-step rollout); the v176
+#: wave ran the current C2 configuration against the current evaluator. Both are kept visible
+#: rather than one silently replacing the other.
 MEASURED_SECONDS_PER_EPISODE = {
     "drqv2": 9,      # bt1rr9hodosm5sn09t1a: 400 episodes in 3593s wall -> 8.5, rounded up
-    "rlvigen": 9,    # same evaluator path as drqv2
-    "idaac": 25,     # bt1ip5f8c6mqqm7fd2bn: 40 episodes in 1022s wall  -> 22, rounded up
+    "rlvigen": 9,    # bt1lmtfcqafcpbh02ai7 (v176 wave): 90s / 10 episodes = 9.0 -- confirms the above
+    "dmc_gb": 9,     # bt1k600n8r2e4divs2dk: 86s / 10 = 8.6, rounded up
+    "alda": 10,      # bt1m638bct3b2rs1g844: 95s / 10 = 9.5, rounded up
+    "ppg": 11,       # bt11qhufomconlujompu: 106s / 10 = 10.6, rounded up
+    "ibac_sni": 9,   # bt1crbkhqkpi8s7ngqf9: 89s / 10 = 8.9, rounded up
+    "ctrl": 10,      # bt13vlerk8p1vop3bmep: 99s / 10 = 9.9, rounded up
+    "idaac": 11,     # bt1vcs013fq6lk17crou (v176, C2 recipe): 102s / 10 = 10.2, rounded up.
+                     # Supersedes 25 from bt1ip5f8c6mqqm7fd2bn, which predates C2.
 }
+#: What these numbers do NOT establish: they are 10-episode grids over ONE scene, while production
+#: runs 800 episodes over ten. Per-episode cost should be equal or slightly lower there, since the
+#: fixed environment construction amortises over more episodes -- but that is reasoning, not
+#: measurement, and the production canary is where it gets checked.
 #: Families with no completed timing yet: pessimistic, and reported AS unmeasured rather than
 #: presented as knowledge.
 UNMEASURED_DEFAULT = 30
