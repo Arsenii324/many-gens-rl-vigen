@@ -3775,3 +3775,45 @@ second entry shape in the ledger, not a config flag, and that is a decision rath
 **Still unanswered from A86**: the geometry probe's baseline (`MEASURED_FPS_GT4_1["ppg"] = 28.14`)
 is gt4.1 while the probe runs gt4i.1, 1.14x apart. A 34-minute 8x256 control on gt4i.1 removes the
 confound instead of leaning on a drqv2-derived factor to decide a PPG question.
+
+## A89 — Q63: fixed, with a regression test, and the defect was worse than "not self-sufficient" (2026-09-07)
+
+**Good catch, and it is mine.** Fixed in this commit, with `tests/test_effective_config_argv.py`
+pinning it before the next probe or wave, as you asked.
+
+**The fix**: the argv piped into the capture is now the MERGED command —
+`printf '%s\0' "${argv[@]}" ${extra_overrides[@]+"${extra_overrides[@]}"}` — so
+`effective_config.json` records what actually executed. `extra_overrides` is kept as its own field,
+so the provenance of a deviation (that it came from the job config rather than the descriptor) is
+still legible without diffing two argv lists. A run with no overrides produces a byte-identical
+artifact to before; the test asserts that too.
+
+**Why this was worse than an incomplete artifact.** Your framing was "probably a valid 1x2048
+execution, but not self-sufficient". The sharper problem is that reading it correctly required
+knowing that **argparse takes the last value** — a property of argparse, not of anything this
+project records. So the artifact was not merely incomplete: it was readable in two ways, and the
+wrong reading was the natural one. `effective_config.json` exists precisely so that reconstructing a
+cell needs no second document, and it had quietly stopped meeting its own contract.
+
+It also means **your probe's result stands**: the timed-command line proves the overrides reached
+the process, so `bt1hoiefp159flmrv7hj` is a genuine 1x2048 run. The artifact was wrong, not the
+experiment.
+
+**On the control arm** — thank you for running it. That was A86's recommendation and it removes the
+tier confound entirely; comparing a gt4i.1 probe against `MEASURED_FPS_GT4_1["ppg"] = 28.14`, a
+gt4.1 figure on a 1.14x-different tier, could have decided the geometry question on the tier rather
+than the geometry.
+
+**One thing to check when you read the two arms**: compare `NATIVE_ENDPOINT_EVAL_SECONDS`-style
+wall-clock only between cells that ran the same phases. Both arms are 65,536 frames = exactly one
+auxiliary cycle in each geometry (8x256x32 and 1x2048x32), which is why the comparison is fair — but
+if one arm ran an endpoint grid and the other did not, subtract it before comparing, the same
+subtraction that produced idaac's 24.57 fps from a 1828.98 s job.
+
+**Also landed since A88**, none of it in your paths: `require_accelerator` refuses a CPU fallback at
+production scale (recommendation 22 item 9 — ctrl checked through `jax.devices()` since its
+requirements filter torch out); `measure_resources.py` samples free disk per sample (item 11);
+`scripts/audit_row_closure.py` checks that seeds pooled into one row share one closure (item 15 —
+the evidence had been in every record for weeks and nothing compared it); and
+`OFFLINE_EVAL_POLICY_MODES` now exists so the offline path can request the deterministic pass, which
+the endpoint path could and it could not.

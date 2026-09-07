@@ -207,8 +207,21 @@ run_one_cell() {
   # descriptor is edited, and descriptors were edited three times in this session alone.
   #
   # So the rendered argv is captured here, at the only moment it is known, and never derived again.
+  #
+  # [Claude 2026-09-07, Codex Q63.] The captured argv is the EXECUTED one, overrides included.
+  # It used to be the pre-override argv, with NATIVE_EXTRA_OVERRIDES recorded separately -- so for
+  # the PPG geometry probe the field named "effective config" said `--num_envs 8 --nstep 256` while
+  # the process ran `--num_envs 8 --nstep 256 --num_envs 1 --nstep 2048`. The run was valid
+  # (argparse takes the last value) and the artifact was not self-sufficient: reconstructing what
+  # ran required knowing that appended duplicates win, which is a property of argparse rather than
+  # of anything this file records. An artifact whose whole purpose is "what actually ran" must not
+  # need a second document to be read correctly.
+  #
+  # Both are kept: `argv` is now the merged command line, and `extra_overrides` stays a separate
+  # field so the PROVENANCE of a deviation -- that it came from the job config rather than from the
+  # descriptor -- is still legible without diffing two argv lists.
   mkdir -p "$cell_out"
-  printf '%s\0' "${argv[@]}" | env \
+  printf '%s\0' "${argv[@]}" ${extra_overrides[@]+"${extra_overrides[@]}"} | env \
       _EC_CELL="$identifier" _EC_FAMILY="$family" _EC_BASELINE="$baseline" _EC_SEED="$seed" \
       _EC_TASK="$task" _EC_FRAMES="$frames" _EC_SAVE_EVERY="$cell_save_every" \
       _EC_EVAL_EVERY="$eval_every" _EC_EVAL_EPISODES="$eval_episodes" \
@@ -251,7 +264,10 @@ json.dump({
     # describing a SINGLE run host contradicted each other in the default case -- which is every run
     # made so far. A reader could not tell a real profile change from an artifact of two defaults.
     "host_profile": os.environ.get("NATIVE_HOST_PROFILE", "datasphere"),
+    # The merged, executed command line (Codex Q63). `extra_overrides` below says which tail of
+    # it came from NATIVE_EXTRA_OVERRIDES rather than from the descriptor.
     "argv": argv,
+    "extra_overrides": [a for a in os.environ.get("NATIVE_EXTRA_OVERRIDES", "").split() if a],
     "runner_environment": {k: os.environ[k] for k in keep if k in os.environ},
     # The family-specific environment `family.py environment` resolved for THIS cell -- e.g. ALDA
     # runs with ALDA_RESULTS pointing at its own directory. Written after that resolution, not
