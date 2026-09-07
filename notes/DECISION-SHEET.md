@@ -985,6 +985,45 @@ honestly flagged as weak. Redone by algorithmic mechanism instead:
   methods under one repository.
 
 **25 named primary comparisons** (6+15+1+3), down from 66; full matrix published as supplementary.
+
+### A25 REVISED, 2026-09-07 — the cross-group contrast is no longer winner-versus-winner
+
+**External review 21 #10, and it is right.** The "cross-group, best-in-group" row above selects the
+empirically best method in each group and then compares those three. That is post-selection
+inference: the selected method's advantage is inflated by the selection itself, and predeclaring
+*that you will select the winner* does not remove the bias — it only makes it honest. At n=3, with
+this project's own resolving-power analysis saying close rankings are poorly resolved, the winner
+of a 6-method group is frequently the luckiest rather than the best.
+
+**Implemented default, replacing that row with two things that are not the same as each other:**
+
+1. **A fixed, pre-named representative per group, chosen on scientific grounds and frozen now,
+   before any production outcome exists.**
+   - On-policy PPO group → **`idaac`**. The group's most-cited method and the only one with
+     published continuous-control evidence at this scale (its own supplement's DMC experiments),
+     so it is the member whose behaviour a reader can situate.
+   - Off-policy-by-augmentation group → **`svea`**. The canonical "augmentation done right"
+     method of the group, and the one whose mechanism the group is named for. `drqv2` is
+     deliberately NOT the representative: it is the no-augmentation control and appears in the
+     within-group pairs as such.
+   - Representation-learning group → **`curl`**. The canonical contrastive method; `alda` is the
+     autoencoder+latent-dynamics member and the pair's second arm.
+   These three give **3 fixed cross-group pairs**, selected without reference to any outcome.
+2. **A group-level aggregate contrast** as the headline for "does the mechanism class matter",
+   which avoids member selection entirely and answers that question more directly than any single
+   member can. Reported with the within-group spread beside it, so a reader can see whether the
+   class difference is larger than the variation inside a class — which at n=3 it very often will
+   not be, and saying so is the point.
+
+**Winner-versus-winner is retained but demoted**: reported in the supplementary matrix, labelled
+explicitly as post-selected and descriptive, never as a primary contrast and never with an
+inferential claim attached. It is genuinely informative as a description of what happened; it is
+not evidence about which mechanism is better.
+
+Count is unchanged at 25 (6 + 15 + 1 + 3), because the three cross-group pairs are now fixed rather
+than outcome-selected. Presentation-only, like the row it revises: nothing about what is collected
+or retained changes, and this is reversible at zero cost if the owner prefers a different
+representative or a different aggregation.
 The remaining open choice is genuinely a value judgment, not unfinished analysis: whether to group
 by mechanism (as here) is itself an assumption about what makes methods "comparable," and a
 differently-motivated axis (e.g. frame-stack presence, or estimator type) could be argued instead.
