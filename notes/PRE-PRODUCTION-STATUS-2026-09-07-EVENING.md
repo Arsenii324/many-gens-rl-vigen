@@ -117,3 +117,50 @@ remaining six follow only if it lands.
 A seven-job wave submitted before that check is how a shared-core mistake gets paid for seven
 times, and the suite above is a fair warning that shared-core mistakes are what this session has
 been finding.
+
+---
+
+## The observation-geometry chain, traced — and the part of it that is not yet observed
+
+Asked whether the frame-stack values can be trusted or whether something overrides them. Traced
+end to end rather than read off the table, because the chain used to be long and one link of it
+was silently wrong until today.
+
+**The chain, as it now stands:**
+
+1. **Declared once.** `rlgen/protocol.py::OBSERVATION_GEOMETRY`, `(image_size, frame_stack)` per
+   baseline. 10 of 12 stack three frames; `ctrl` and `ibac_sni` are single-frame, which is their
+   released Procgen geometry.
+2. **Training.** `family.py command` emits `--frame_stack 3` explicitly for `ppg` and `idaac`. The
+   other five families take their own clone's default and pass nothing. `ppg_cell.sh` — the
+   launcher `family.py` actually names — **refuses to start** without an explicit `--frame_stack`
+   (`:?ppg_cell needs --frame_stack`), so it cannot silently inherit a wrong one.
+3. **Evaluation.** Since the authority fix of 2026-09-07, `eval_grid.py` reads
+   `OBSERVATION_GEOMETRY` DIRECTLY. `--frame-stack` is no longer a passthrough that can redefine
+   the declaration; a value contradicting the protocol raises. Before that fix the two flags
+   defaulted to dmc_gb's `100/3` and `run_probe.sh` passed neither, so **every family's
+   `evaluator_scope` was stamped with dmc_gb's geometry** — the `(3, 100)` pairs still visible in
+   older records are that bug, not a measurement.
+4. **Runtime.** All seven family paths call `verify_runtime_observation_geometry`, which compares
+   the ACTUAL observation tensor against the declared pair and raises on mismatch. This is not
+   decorative: it fired on `rad` today — "expected 9 channels in CHW at 100x100, observed
+   (9, 84, 84)" — and that is what exposed the missing `RLVIGEN_IMAGE_SIZE` in the eval paths.
+5. **Recorded.** `evaluator_scope` stamps the pair per baseline, so a record says which geometry
+   produced it.
+
+**Nothing overrides the declared value.** `run_probe.sh` sets no frame-stack variable at all.
+
+### What is NOT yet observed
+
+The runtime assertion only runs when a cell is evaluated, so it is evidence only for baselines
+that have produced a record. Five of twelve never have:
+
+| baseline | declared | status |
+|---|---|---|
+| drqv2, rad, alda, ppg, idaac, ibac_sni, ctrl | — | **observed**: a record carries the declared pair |
+| svea, soda | (3,84), (3,100) | covered by the v196 wave |
+| **drq, curl, sgqn** | (3,84) | **never run; first checked during production** |
+
+For those three the geometry is declared and *would* be checked, not verified. The exposure is
+bounded — a mismatch fails the cell loudly rather than producing a wrong number, which is exactly
+what happened to `rad` — but it is not proof, and it should not be described as if it were.
