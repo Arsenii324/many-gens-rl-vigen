@@ -80,3 +80,40 @@ reporting consequence decided in advance: rank within a block, never across.
    unprovable on a case-insensitive filesystem.
 
 Only then the fleet.
+
+---
+
+## Addendum: the first completed full suite, and why the wave is one job before it is seven
+
+**The full suite had never been run to completion in this tree.** The `release suite green` gate
+says so in its own text — it runs the fast audits only. The first complete run reported **14
+failures**, and roughly half predate this session:
+
+- `test_row_closure_audit`'s fixture used `execution_kind="production"`, the same string
+  `audit_row_closure.py` compared against, which `contract.py` can never emit. Test and code
+  agreed with each other and both disagreed with reality, so `--strict` could not fail — a
+  synthetic mixed-closure production row passed it. This is the check standing behind A24/A25's
+  no-pooling rule.
+- `test_host_profile_gate_is_not_vacuous` asserted `-ge 600000` was globally absent after
+  stripping one guard. Four unrelated guards use that threshold, so the fixture asserted its own
+  inertness rather than the gate's behaviour.
+- `test_datasphere_native_contract` sliced the runner on `"\nelse\n  run_cell_list"`, which
+  stopped being that branch's first line when `require_accelerator` was inserted ahead of it.
+- `test_eval_grid_action_provenance` matched ANY `.observe()`, so ppg's `venv.observe()` counted
+  as the action probe and the probe's construction looked like it came after its own first use.
+
+**That is the same shape as the CTRL defect**: internal consistency with nothing anchoring it
+outside our own files. Every fix above either anchors the check against an external source
+(`contract.py`'s vocabulary, the upstream evaluator) or makes it structural instead of textual.
+
+### Consequence for the wave
+
+The seven-family wave is deliberately **not** submitted as seven jobs. The shared-core changes
+this session — CTRL's policy mode and P21 — are validated on **one** job first, `dmc_gb` via
+`soda`, because that single cell exercises the most machinery that has never run: the Places365
+train path end to end, P21's revision stability, and the `RLVIGEN_IMAGE_SIZE` repair. The
+remaining six follow only if it lands.
+
+A seven-job wave submitted before that check is how a shared-core mistake gets paid for seven
+times, and the suite above is a fair warning that shared-core mistakes are what this session has
+been finding.
