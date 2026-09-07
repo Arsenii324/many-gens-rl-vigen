@@ -458,7 +458,9 @@ if [[ "${1:-}" == "--run-cells" ]]; then
   require_production_configuration
   python3 "$FAMILY_TOOL" check-budget --cells "$cells_arg" --frames "${FRAMES:-10000}"
   if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
-    run_eval_every=2147483647
+    # Same fix as the production path below: a numeric sentinel evaluates at step 0 because
+    # `step % cadence == 0` holds there for every cadence (external review 21, P0).
+    run_eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-null}"
   else
     run_eval_every="${EVAL_EVERY_FRAMES:-${FRAMES:-10000}}"
   fi
@@ -737,10 +739,15 @@ task="${TASK:-Door}"
 # NATIVE_PRODUCTION_UNAPPLIED rather than being silently dropped.]
 apply_production_settings "$cells"
 if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
-  # Every production training loop has a final-evaluation hook. A very large positive cadence
-  # suppresses periodic evaluation without passing a family-specific `None` spelling through
-  # argparse/Hydra; the final hook still supplies the endpoint artifact and curve.
-  eval_every=2147483647
+  # [Claude 2026-09-07, external review 21 P0] A very large positive cadence DOES NOT suppress
+  # periodic evaluation: every one of these loops gates on `step % cadence == 0` and 0 % anything
+  # is 0, so step 0 evaluated anyway -- for drqv2, svea, drq, sgqn, curl, rad, soda and alda --
+  # while the manifest recorded online evaluation as disabled. That evaluation consumes the
+  # process-global NumPy stream Door's placement draws from, so the eight baselines received
+  # DIFFERENT training-placement perturbations, which is exactly what disabling it was meant to
+  # prevent. The spelling is now the family's own: `null` where the loop has an upstream disable
+  # path, and an explicit source guard where the cadence must stay an integer.
+  eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-2147483647}"
 else
   eval_every="${EVAL_EVERY_FRAMES:-$frames}"
 fi

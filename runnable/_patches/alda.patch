@@ -142,7 +142,7 @@ index 0000000..d96fd27
 +      episode_length: 500
 +      scene_id: 0
 diff --git a/trainers/alda_trainer.py b/trainers/alda_trainer.py
-index 20801e2..3a6af96 100644
+index 20801e2..f26ab21 100644
 --- a/trainers/alda_trainer.py
 +++ b/trainers/alda_trainer.py
 @@ -1,8 +1,10 @@
@@ -253,7 +253,22 @@ index 20801e2..3a6af96 100644
              if distracting_env:
                  self.logging_info.setdefault('eval/episode_reward_distracting', []).append(episode_reward)
              elif color_env:
-@@ -595,6 +641,38 @@ class ALDA(TrainerBase):
+@@ -565,7 +611,13 @@ class ALDA(TrainerBase):
+             if done:
+ 
+                 # eval
+-                if step % self.eval_n_steps == 0:
++                # [Claude 2026-09-07, external review 21 P0] The runner disables periodic evaluation by passing a 
++                # huge cadence, and that never worked at step 0: `step % cadence == 0` is true for step 0 whatever the cad
++                # ence is. So this loop ran a full online evaluation before the first training reset, under a manifest
++                #  recording online evaluation as disabled, consuming the process-global NumPy stream that places Door
++                # . RL-ViGen has an upstream disable path (a None cadence); this loop's cadence is an int by construction, so the disable is explicit here.
++                if (step % self.eval_n_steps == 0
++                        and os.environ.get('NATIVE_DISABLE_ONLINE_EVAL') != '1'):
+                     logger.info(f'Evaluating episode {episode}, step {step}')
+                     self.evaluate(step)
+                     self.evaluate(step, distracting_env=True)
+@@ -595,6 +647,38 @@ class ALDA(TrainerBase):
  
                  if self.use_wandb:
                      wandb.log(self.logging_info)
@@ -292,7 +307,7 @@ index 20801e2..3a6af96 100644
  
                  self.logging_info.clear()
  
-@@ -607,7 +685,18 @@ class ALDA(TrainerBase):
+@@ -607,7 +691,18 @@ class ALDA(TrainerBase):
  
              # run training update
              if step >= self.init_steps:
@@ -312,7 +327,7 @@ index 20801e2..3a6af96 100644
                  for _ in range(num_updates):
                      self.update(self.buffer, step)
  
-@@ -621,11 +710,55 @@ class ALDA(TrainerBase):
+@@ -621,11 +716,55 @@ class ALDA(TrainerBase):
              episode_step += 1
              self.env_steps += 1
  
@@ -370,7 +385,7 @@ index 20801e2..3a6af96 100644
              {
                  'env_steps': self.env_steps,
                  'actor_encoder': self.actor_encoder.state_dict(),
-@@ -643,12 +776,15 @@ class ALDA(TrainerBase):
+@@ -643,12 +782,15 @@ class ALDA(TrainerBase):
                  'log_alpha': self.log_alpha,
                  'log_alpha_optimizer': self.log_alpha_optimizer.state_dict(),
              },
@@ -387,7 +402,7 @@ index 20801e2..3a6af96 100644
  
      def load_checkpoint(self, path: str):
          path = Path(path)
-@@ -675,3 +811,19 @@ class ALDA(TrainerBase):
+@@ -675,3 +817,19 @@ class ALDA(TrainerBase):
  
          # buffer_fp = self.cp_dir.joinpath(f'sac_{self.env_name}_replay_buffer.npz')
          # self.buffer.load(buffer_fp)

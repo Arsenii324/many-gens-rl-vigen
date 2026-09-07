@@ -23,11 +23,26 @@
     "repository": "RL-ViGen-upstream",
     "launcher": "runnable/_launch/rlvigen.sh",
     "provenance": {
-      "drqv2": {"source_target": "RL-ViGen released code", "source_variant": "DrQ-v2 implementation on RL-ViGen Door with documented replay/protocol adaptation"},
-      "svea": {"source_target": "RL-ViGen released code", "source_variant": "SVEA source mechanism, RL-ViGen Door configuration"},
-      "drq": {"source_target": "RL-ViGen released code", "source_variant": "DrQ source implementation with RL-ViGen Door recipe"},
-      "sgqn": {"source_target": "RL-ViGen released code", "source_variant": "SGQN source mechanism with explicit Door descriptor overrides"},
-      "curl": {"source_target": "RL-ViGen released code", "source_variant": "CURL source mechanism on RL-ViGen Door; preprocessing variant declared"}
+      "drqv2": {
+        "source_target": "RL-ViGen released code",
+        "source_variant": "DrQ-v2 implementation on RL-ViGen Door with documented replay/protocol adaptation"
+      },
+      "svea": {
+        "source_target": "RL-ViGen released code",
+        "source_variant": "SVEA source mechanism, RL-ViGen Door configuration"
+      },
+      "drq": {
+        "source_target": "RL-ViGen released code",
+        "source_variant": "DrQ source implementation with RL-ViGen Door recipe"
+      },
+      "sgqn": {
+        "source_target": "RL-ViGen released code",
+        "source_variant": "SGQN source mechanism with explicit Door descriptor overrides"
+      },
+      "curl": {
+        "source_target": "RL-ViGen released code",
+        "source_variant": "CURL source mechanism on RL-ViGen Door; preprocessing variant declared"
+      }
     },
     "host_profiles": {
       "v100": {
@@ -111,6 +126,8 @@
       "replay_semantics": "A cap turns the buffer into a recency ring: _try_fetch walks newest-first and breaks on the first episode already held, _store_episode evicts oldest-first and unlinks the file. Disk stays flat either way because _save_snapshot is hardcoded False (replay_buffer.py:94).",
       "replay_capacity_floor": "max_size // num_workers must exceed the longest episode or that worker fetches nothing and starves -- _try_fetch breaks on `fetched_size + eps_len > max_size` before storing. At 300k over 4 workers that is 75,000 against a 500-step episode.",
       "eval_every": null,
+      "online_eval_disabled_spelling": "null",
+      "online_eval_disabled_spelling_reason": "[Claude 2026-09-07, external review 21 P0] How this family spells 'never evaluate periodically'. The runner used to pass 2147483647 for every family, which does NOT disable evaluation: every one of these loops gates on `step % cadence == 0`, and 0 % anything is 0, so a step-0 evaluation ran under a manifest claiming online evaluation was suppressed -- advancing the same global NumPy stream that places Door, differently per family. RL-ViGen has an upstream disable path (utils.Every returns False when its cadence is None), so it gets `null` and needs no source change. dmc_gb and alda take the cadence through argparse/spec typing and cannot express None, so their call sites carry an explicit NATIVE_DISABLE_ONLINE_EVAL guard instead and this value is inert.",
       "eval_every_reason": "disabled for production: online evaluation consumes Door's global placement RNG; the container-side offline grid is the measurement and the final hook still emits the endpoint artifact",
       "eval_episodes": 20,
       "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
@@ -150,8 +167,14 @@
     "repository": "runnable/dmc_gb",
     "launcher": "runnable/_launch/dmc_gb.sh",
     "provenance": {
-      "rad": {"source_target": "DMC Generalization Benchmark released code", "source_variant": "RAD source augmentation/SAC on Door, not original DMC setting"},
-      "soda": {"source_target": "DMC Generalization Benchmark released code", "source_variant": "SODA source mechanism with source-required 100 render and Door adaptation"}
+      "rad": {
+        "source_target": "DMC Generalization Benchmark released code",
+        "source_variant": "RAD source augmentation/SAC on Door, not original DMC setting"
+      },
+      "soda": {
+        "source_target": "DMC Generalization Benchmark released code",
+        "source_variant": "SODA source mechanism with source-required 100 render and Door adaptation"
+      }
     },
     "positional": [
       "{baseline}",
@@ -220,6 +243,8 @@
       "replay_capacity_option": null,
       "replay_capacity_reason": "DECIDED 2026-09-02: leave rad/soda UNCAPPED. utils.ReplayBuffer takes capacity=args.train_steps (train.py:111) with no flag and prefill_memory touches every slot at construction, so a cap needs a source change -- an ENABLES-class change to what two of twelve baselines measure. Priced both ways with plan_production.py at 600k x 3 seeds: uncapped is 103,350 RUB over 9.4 days with both on gt4i.1 alone; capped at 300k is 94,696 RUB over 10.0 days on gt4.1. The cap saves 8,654 RUB (8%) and COSTS 0.6 days, because gt4.1 is cheaper per hour and slower. Not worth a fidelity change. An earlier pass of this file declared 300000 here for symmetry with the RL-ViGen five; symmetry was the wrong reason -- their cap is what makes them runnable at all, and this one buys 8%.",
       "eval_every": null,
+      "online_eval_disabled_spelling": "2147483647",
+      "online_eval_disabled_spelling_reason": "[Claude 2026-09-07, external review 21 P0] How this family spells 'never evaluate periodically'. The runner used to pass 2147483647 for every family, which does NOT disable evaluation: every one of these loops gates on `step % cadence == 0`, and 0 % anything is 0, so a step-0 evaluation ran under a manifest claiming online evaluation was suppressed -- advancing the same global NumPy stream that places Door, differently per family. RL-ViGen has an upstream disable path (utils.Every returns False when its cadence is None), so it gets `null` and needs no source change. dmc_gb and alda take the cadence through argparse/spec typing and cannot express None, so their call sites carry an explicit NATIVE_DISABLE_ONLINE_EVAL guard instead and this value is inert.",
       "eval_every_reason": "disabled for production: online evaluation consumes Door's global placement RNG; the container-side offline grid is the measurement and the final hook still emits the endpoint artifact",
       "eval_episodes": 20,
       "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
@@ -256,7 +281,10 @@
     "repository": "runnable/idaac",
     "launcher": "runnable/_launch/idaac.sh",
     "provenance": {
-      "idaac": {"source_target": "IDAAC authors' DMC continuous-control profile", "source_variant": "IDAAC Door port using source-backed C2 geometry and update profile; full-length validation pending"}
+      "idaac": {
+        "source_target": "IDAAC authors' DMC continuous-control profile",
+        "source_variant": "IDAAC Door port using source-backed C2 geometry and update profile; full-length validation pending"
+      }
     },
     "constants": {
       "num_processes": "1",
@@ -443,7 +471,10 @@
     "repository": "runnable/alda",
     "launcher": "runnable/_launch/alda.sh",
     "provenance": {
-      "alda": {"source_target": "ALDA authors' released code", "source_variant": "ALDA source algorithm with explicit robosuite Door branch"}
+      "alda": {
+        "source_target": "ALDA authors' released code",
+        "source_variant": "ALDA source algorithm with explicit robosuite Door branch"
+      }
     },
     "environment": {
       "ALDA_RESULTS": "{run_dir}"
@@ -517,6 +548,8 @@
     ],
     "production": {
       "eval_every": null,
+      "online_eval_disabled_spelling": "2147483647",
+      "online_eval_disabled_spelling_reason": "[Claude 2026-09-07, external review 21 P0] How this family spells 'never evaluate periodically'. The runner used to pass 2147483647 for every family, which does NOT disable evaluation: every one of these loops gates on `step % cadence == 0`, and 0 % anything is 0, so a step-0 evaluation ran under a manifest claiming online evaluation was suppressed -- advancing the same global NumPy stream that places Door, differently per family. RL-ViGen has an upstream disable path (utils.Every returns False when its cadence is None), so it gets `null` and needs no source change. dmc_gb and alda take the cadence through argparse/spec typing and cannot express None, so their call sites carry an explicit NATIVE_DISABLE_ONLINE_EVAL guard instead and this value is inert.",
       "eval_every_reason": "eval_n_steps, overridable through the spec",
       "eval_episodes": 10,
       "offline_eval_regimes": "train,eval-easy,eval-medium,eval-hard",
@@ -552,7 +585,10 @@
     "repository": "runnable/ppg",
     "launcher": "runnable/_launch/ppg_cell.sh",
     "provenance": {
-      "ppg": {"source_target": "PPG authors' released code", "source_variant": "continuous-action port of PPG using the IDAAC-authors' DMC comparator profile"}
+      "ppg": {
+        "source_target": "PPG authors' released code",
+        "source_variant": "continuous-action port of PPG using the IDAAC-authors' DMC comparator profile"
+      }
     },
     "constants": {
       "num_envs": "8",
@@ -711,7 +747,10 @@
     "repository": "runnable/ibac_sni",
     "launcher": "runnable/_launch/ibac_sni_cell.sh",
     "provenance": {
-      "ibac_sni": {"source_target": "IBAC-SNI authors' released code", "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations"}
+      "ibac_sni": {
+        "source_target": "IBAC-SNI authors' released code",
+        "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations"
+      }
     },
     "constants": {
       "procs": "1",
@@ -846,7 +885,10 @@
     "repository": "runnable/ctrl",
     "launcher": "runnable/_launch/ctrl_cell.sh",
     "provenance": {
-      "ctrl": {"source_target": "CTRL authors' released code", "source_variant": "CTRL source mechanism with declared continuous Door/window adaptation"}
+      "ctrl": {
+        "source_target": "CTRL authors' released code",
+        "source_variant": "CTRL source mechanism with declared continuous Door/window adaptation"
+      }
     },
     "constants": {
       "num_envs": "16",
@@ -861,19 +903,19 @@
       "lr_ctrl": "0.0001",
       "max_grad_norm": "0.5"
     },
-      "host_profiles": {
-        "v100": {
-          "constants": {
-            "num_envs": "64"
-          },
-          "production": {
-            "host_memory_model": {
-              "cell_ram_gib": 54.28,
-              "basis": "linear extrapolation of the measured 13.57 GiB 16-env peak to 64 envs; direct V100 measurement still required"
-            }
-          },
-          "constants_reason": "The separate production host has 113 GiB available RAM; CTRL's measured 16-env peak was 13.57 GiB, so the upstream 64-env rollout is approximately 54 GiB and fits when CTRL runs alone. Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate."
-        }
+    "host_profiles": {
+      "v100": {
+        "constants": {
+          "num_envs": "64"
+        },
+        "production": {
+          "host_memory_model": {
+            "cell_ram_gib": 54.28,
+            "basis": "linear extrapolation of the measured 13.57 GiB 16-env peak to 64 envs; direct V100 measurement still required"
+          }
+        },
+        "constants_reason": "The separate production host has 113 GiB available RAM; CTRL's measured 16-env peak was 13.57 GiB, so the upstream 64-env rollout is approximately 54 GiB and fits when CTRL runs alone. Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate."
+      }
     },
     "constants_note": [
       "[Claude 2026-09-02 12:20 MSK] CORRECTED. The first version of this descriptor carried the",

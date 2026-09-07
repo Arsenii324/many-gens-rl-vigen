@@ -2166,3 +2166,61 @@ uncertainty.
 The short-process resource-sampler race found while verifying this correction was fixed alongside
 it: `run_probe.sh` now holds a supervisor until `measure_resources.py` has emitted its first sample,
 so a successful short command cannot leave an empty `resources.json` merely due to startup timing.
+
+## #99 — "online evaluation disabled" was never disabled at step 0, for eight of twelve baselines
+
+**Found by external review 21 (P0), 2026-09-07. Verified here before acting, and it is exactly
+right.**
+
+`family.py` decides that periodic online evaluation must be off for `rlvigen`, `dmc_gb` and `alda`
+because those loops' evaluators consume the process-global NumPy stream that Door's placement draws
+from. `run_probe.sh` implemented that decision by passing a cadence of `2147483647`.
+
+That is not a disable. Every affected loop gates on `step % cadence == 0`, and **0 % anything is
+0**, so each ran a full online evaluation before its first training reset:
+
+```
+Every(2147483647, 1)(0) = True      # the bug, executed in this tree
+Every(None, 1)(0)       = False     # upstream's own disable path
+```
+
+- `rlvigen` (drqv2, svea, drq, sgqn, curl): `utils.Every` at `RL-ViGen-upstream/train.py:277`,
+  called at `:315`.
+- `dmc_gb` (rad, soda): `runnable/dmc_gb/src/train.py`, `if step % args.eval_freq == 0` inside the
+  `if done:` block that runs at step 0 — and under production settings that is 20 episodes on the
+  training env plus 20 on the test env.
+- `alda`: `runnable/alda/trainers/alda_trainer.py`, evaluating three environments at step 0.
+
+**Why it matters beyond tidiness**: the eight baselines advanced Door's placement stream by
+*different* amounts before training, while every manifest recorded online evaluation as disabled.
+That is a silent, family-dependent perturbation of the training distribution in exactly the place
+the project had already identified as dangerous.
+
+**The gate could not see it.** `gate_train_eval_rng_isolation` reads `families.json`'s
+`eval_every: null` and passes — a descriptor claim, not the executed path. Its own FAIL message
+already named the correct mechanism ("upstream's own `utils.Every` returns False when `every is
+None`"), so the knowledge was in the text and not in the check.
+
+**Fixed, per family, by mechanism rather than by number:**
+
+- `rlvigen` now passes `eval_every_frames=null`, using upstream's own None-cadence path. No source
+  change.
+- `dmc_gb` and `alda` take the cadence through argparse and a typed spec and cannot express None,
+  so their call sites now carry an explicit `NATIVE_DISABLE_ONLINE_EVAL` guard.
+- The spelling is a descriptor field (`online_eval_disabled_spelling`), so the runner no longer
+  hardcodes a number it cannot validate. Both of `run_probe.sh`'s cadence paths — the production
+  one and the `--cells` diagnostic one — take it.
+- New gate `online eval disable executed` reads the mechanism: it requires either an upstream
+  None-path or a guard at the named call site, and fails on a bare numeric sentinel.
+- `tests/test_online_eval_disable.py` pins the arithmetic that made the old mechanism wrong.
+
+**Consequence for the evaluator ledger**: `alda_trainer.py` is inside `runnable/alda/trainers`,
+which is in alda's hashed runtime closure, so alda's evaluator revision moved and its attestation
+is now superseded. `gate_shared_evaluator_validated` detected that on its own and reports
+`6/7 ... needs re-run: alda`. Per Q47 that re-run belongs in the single final validation wave after
+all source changes, not in a reactive job now.
+
+**What this does not tell us**: how much the step-0 evaluation actually shifted any result. Every
+completed run in this project's corpus carried it, so there is no unaffected arm to compare
+against. The correction is to the mechanism; the historical records stay as they are, with this
+entry as the reason a pre-2026-09-07 training placement stream is not identical to a post-fix one.

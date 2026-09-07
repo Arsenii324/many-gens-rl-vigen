@@ -59,7 +59,9 @@ UNITS = {
               "regimes": ["eval-easy x10 scenes", "train x scene 0"],
               "episodes": "num_eval_episodes // len(scenes), floored at 1 -- a TOTAL, not per-scene",
               "controllable": "eval_every_frames, num_eval_episodes"},
-    "rad":   {"file": "runnable/dmc_gb/src/train.py", "line": 158, "unit": "steps",
+    # [Claude 2026-09-07] 158 -> 163: the disable guard for review 21's step-0 finding
+    # added five comment lines above this call site. The anchor text is unchanged.
+    "rad":   {"file": "runnable/dmc_gb/src/train.py", "line": 163, "unit": "steps",
               "anchor": "evaluate(test_env, agent, video, args.eval_episodes, L, step, test_env=True)",
               "regimes": ["train (env)", "--eval_mode (test_env)"],
               "episodes": "--eval_episodes, per regime",

@@ -122,6 +122,60 @@ def gate_train_eval_rng_isolation():
                   "already the measurement (EVAL-PROTOCOL 0)")
 
 
+def gate_online_eval_disable_is_executed():
+    """The DESCRIPTOR saying `eval_every: null` is not evidence that no evaluation runs.
+
+    External review 21, P0, and it was right: the runner implemented "disabled" by passing
+    2147483647 as the cadence, and every one of these loops gates on `step % cadence == 0`, which
+    is TRUE at step 0 for any cadence. So drqv2, svea, drq, sgqn, curl, rad, soda and alda each ran
+    an unrequested initial evaluation -- consuming the process-global NumPy stream Door's placement
+    draws from, by a different amount per family -- while `gate_train_eval_rng_isolation` passed by
+    reading the descriptor rather than the executed path. A gate that cannot see the mechanism it
+    certifies is the failure mode this file exists to prevent, so this one reads the mechanism.
+
+    Two acceptable mechanisms, both checked here:
+      * an upstream disable path -- RL-ViGen's `utils.Every` returns False for a None cadence, so
+        `eval_every_frames=null` needs no source change; or
+      * an explicit `NATIVE_DISABLE_ONLINE_EVAL` guard at the call site, for loops whose cadence is
+        an int by construction (argparse, a typed spec).
+    """
+    try:
+        descriptors = json.loads(_read("datasphere/native/families.json"))
+    except Exception as error:
+        return FAIL, f"could not read families.json: {type(error).__name__}"
+    guarded_sources = {
+        "dmc_gb": "runnable/dmc_gb/src/train.py",
+        "alda": "runnable/alda/trainers/alda_trainer.py",
+    }
+    bad = []
+    for family, entry in descriptors.items():
+        if family.startswith("_") or not isinstance(entry, dict):
+            continue
+        production = entry.get("production") or {}
+        has_option = any("{eval_every}" in str(option) for option in entry.get("options", []))
+        if production.get("eval_every") is not None or not has_option:
+            continue
+        spelling = str(production.get("online_eval_disabled_spelling", "2147483647"))
+        if spelling == "null":
+            if "if self._every is None" not in _read("RL-ViGen-upstream/utils.py"):
+                bad.append(f"{family}: spelled null, but utils.Every no longer honours a None cadence")
+            continue
+        source = guarded_sources.get(family)
+        if source is None:
+            bad.append(f"{family}: numeric cadence {spelling} and no known guarded call site")
+            continue
+        if "NATIVE_DISABLE_ONLINE_EVAL" not in _read(source):
+            bad.append(f"{family}: numeric cadence {spelling} and {source} has no disable guard, "
+                       "so step 0 still evaluates")
+    if "NATIVE_ONLINE_EVAL_DISABLED_SPELLING" not in _read("datasphere/native/run_probe.sh"):
+        bad.append("run_probe.sh still hardcodes the cadence instead of taking the family's spelling")
+    if bad:
+        return FAIL, "; ".join(bad)
+    return PASS, ("disabling online evaluation is executed, not just declared: rlvigen through "
+                  "upstream's own None-cadence path, dmc_gb and alda through an explicit guard "
+                  "at the call site. A numeric sentinel alone evaluates at step 0")
+
+
 def gate_idaac_level_seed():
     """Review 2 gate #4. A worker slot cannot be the same-instance identity when every episode
     resets to an independent physical instance."""
@@ -1118,6 +1172,7 @@ GATES = [
     ("evaluation pairing", gate_evaluation_pairing),
     ("regime verification fail-closed", gate_regime_verification_fail_closed),
     ("train/eval RNG isolation", gate_train_eval_rng_isolation),
+    ("online eval disable executed", gate_online_eval_disable_is_executed),
     ("idaac level_seed semantics", gate_idaac_level_seed),
     ("ppg auxiliary KL scaling", gate_ppg_auxiliary_kl),
     ("ibac_sni competence", gate_ibac_sni_competence),

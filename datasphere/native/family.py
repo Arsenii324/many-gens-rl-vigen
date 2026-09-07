@@ -345,6 +345,14 @@ def production_env(cells: str, path: Path | None = None) -> dict:
         # Door. Production measurements come from the offline grid, so disable those evaluators
         # explicitly rather than allowing the runner's numeric fallback to turn them back on.
         out["NATIVE_DISABLE_ONLINE_EVAL"] = "1"
+        # [Claude 2026-09-07, external review 21 P0] The spelling matters, not just the intent.
+        # 2147483647 was not a disable: `step % 2147483647 == 0` is TRUE at step 0, so every one
+        # of these eight baselines ran an unrequested initial evaluation under a manifest saying
+        # online evaluation was off -- and advanced Door's placement stream by a different amount
+        # per family. RL-ViGen's own `utils.Every` returns False for a None cadence, so it is
+        # disabled through upstream's own path; the other two guard their call sites explicitly.
+        out["NATIVE_ONLINE_EVAL_DISABLED_SPELLING"] = str(
+            settings.get("online_eval_disabled_spelling", "2147483647"))
     if settings.get("online_eval_rng_isolated") is True:
         out["NATIVE_ISOLATE_ONLINE_EVAL"] = "1"
     # A production cell has two measured products: one reportable endpoint grid and a shallower
