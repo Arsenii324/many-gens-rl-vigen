@@ -418,10 +418,10 @@ index 8ad07ab..6931011 100644
  @functools.lru_cache()
  def warn_no_gradient(model, task):
 diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
-index e32b3a1..bf09173 100644
+index e32b3a1..5b31ddf 100644
 --- a/phasic_policy_gradient/train.py
 +++ b/phasic_policy_gradient/train.py
-@@ -7,7 +7,19 @@ from . import logger
+@@ -7,24 +7,46 @@ from . import logger
  from .envs import get_venv
  
  def train_fn(env_name="coinrun",
@@ -441,7 +441,16 @@ index e32b3a1..bf09173 100644
      arch="dual",  # 'shared', 'detach', or 'dual'
      # 'shared' = shared policy and value networks
      # 'dual' = separate policy and value networks
-@@ -20,11 +32,17 @@ def train_fn(env_name="coinrun",
+     # 'detach' = shared policy and value networks, but with the value function gradient detached during the policy phase to avoid interference
+     interacts_total=100_000_000,
+     num_envs=64,
++    # [OURS 2026-09-07, A36 geometry probe] Expose the rollout length so the published
++    # continuous-control comparator (1 process x 2048 serial steps) can be measured against the
++    # current Door port (8 x 256). The default remains PPG's released 256-step rollout.
++    nstep=256,
+     n_epoch_pi=1,
+     n_epoch_vf=1,
+     gamma=.999,
      aux_lr=5e-4,
      lr=5e-4,
      nminibatch=8,
@@ -459,7 +468,7 @@ index e32b3a1..bf09173 100644
      beta_clone=1.0,
      vf_true_weight=1.0,
      log_dir='/tmp/ppg',
-@@ -32,13 +50,23 @@ def train_fn(env_name="coinrun",
+@@ -32,13 +54,23 @@ def train_fn(env_name="coinrun",
      if comm is None:
          comm = MPI.COMM_WORLD
      tu.setup_dist(comm=comm)
@@ -484,7 +493,12 @@ index e32b3a1..bf09173 100644
  
      enc_fn = lambda obtype: ImpalaEncoder(
          obtype.shape,
-@@ -66,16 +94,47 @@ def train_fn(env_name="coinrun",
+@@ -62,20 +94,52 @@ def train_fn(env_name="coinrun",
+             γ=gamma,
+             λ=0.95,
+             nminibatch=nminibatch,
++            nstep=nstep,
+             n_epoch_vf=n_epoch_vf,
              n_epoch_pi=n_epoch_pi,
              clip_param=clip_param,
              kl_penalty=kl_penalty,
@@ -533,7 +547,7 @@ index e32b3a1..bf09173 100644
  def main():
      parser = argparse.ArgumentParser(description='Process PPG training arguments.')
      parser.add_argument('--env_name', type=str, default='coinrun')
-@@ -84,9 +143,34 @@ def main():
+@@ -84,9 +148,35 @@ def main():
      parser.add_argument('--n_epoch_vf', type=int, default=1)
      parser.add_argument('--n_aux_epochs', type=int, default=6)
      parser.add_argument('--n_pi', type=int, default=32)
@@ -546,6 +560,7 @@ index e32b3a1..bf09173 100644
      parser.add_argument('--arch', type=str, default='dual') # 'shared', 'detach', or 'dual'
 +    # [Gemini 2026-08-31] Expose interacts_total CLI argument for custom budget control
 +    parser.add_argument('--interacts_total', type=int, default=100_000_000)
++    parser.add_argument('--nstep', type=int, default=256)
 +    # [Claude 2026-09-02 07:10 MSK: see train_fn's note]
 +    parser.add_argument('--seed', type=int, default=0)
 +    parser.add_argument('--frame_stack', type=int, default=1,
@@ -568,7 +583,7 @@ index e32b3a1..bf09173 100644
  
      args = parser.parse_args()
  
-@@ -99,7 +183,19 @@ def main():
+@@ -99,7 +189,20 @@ def main():
          n_epoch_vf=args.n_epoch_vf,
          n_aux_epochs=args.n_aux_epochs,
          n_pi=args.n_pi,
@@ -576,6 +591,7 @@ index e32b3a1..bf09173 100644
          arch=args.arch,
 +        interacts_total=args.interacts_total,
 +        seed=args.seed,
++        nstep=args.nstep,
 +        frame_stack=args.frame_stack,
 +        log_dir=args.log_dir,
 +        save_mode=args.save_mode,
