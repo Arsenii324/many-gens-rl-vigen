@@ -11,18 +11,26 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 VENV="${VENV:-$REPO/.venv}"
-UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/gemcollector/RL-ViGen.git}"
-UPSTREAM_COMMIT="90d8b8c40acb63af6f938c1f4cc79a0cfee7d7ec"
 
 say() { printf '\n=== %s ===\n' "$1"; }
 
-say "1/6  RL-ViGen upstream"
+# [Claude 2026-09-07, external review 24] Source acquisition lives in ONE place. This script used
+# to clone RL-ViGen itself, pinning the commit in a second location and knowing nothing about the
+# other six families or the OpenAI Baselines auxiliary tree -- so a new user had two different
+# answers to "how do I get the source?". setup/bootstrap_sources.py is the authority now; this
+# script builds the ENVIRONMENT and verifies it.
+say "1/6  pinned sources"
 if [[ ! -d RL-ViGen-upstream ]]; then
-  git clone "$UPSTREAM_URL" RL-ViGen-upstream
-  git -C RL-ViGen-upstream checkout "$UPSTREAM_COMMIT"
-else
-  echo "present at $(git -C RL-ViGen-upstream rev-parse --short HEAD)"
+  echo "RL-ViGen-upstream is absent. Reconstruct the pinned sources first:"
+  echo "    python3 setup/bootstrap_sources.py"
+  echo "    python3 setup/verify_sources.py"
+  echo "(RL-ViGen needs a case-sensitive filesystem; see docs/RUN-THIS-PROJECT.md.)"
+  exit 2
 fi
+python3 setup/verify_sources.py --family rlvigen || {
+  echo "the reconstructed RL-ViGen tree does not match its manifest; refusing to build on it" >&2
+  exit 2
+}
 
 say "2/6  virtualenv"
 if [[ ! -x "$VENV/bin/python" ]]; then python3 -m venv "$VENV"; fi
@@ -41,7 +49,7 @@ rm -rf ./RL-ViGen-upstream/third_party/robosuite/build \
        ./RL-ViGen-upstream/third_party/robosuite/*.egg-info
 "$PY" -m pip install -q --no-deps -e ./RL-ViGen-upstream/third_party/robosuite
 
-say "5/6  patch upstream"
+say "5/6  patch upstream (idempotent; bootstrap_sources.py already applied these)"
 "$PY" setup/apply_patches.py
 
 say "6/6  VERIFY"
