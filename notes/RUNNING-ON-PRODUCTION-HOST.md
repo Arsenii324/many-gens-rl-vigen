@@ -160,7 +160,9 @@ Per off-policy cell, roughly **25 GB**:
 | retained checkpoints | 1.7 GiB (`drqv2`) to 3.2 GiB (`drq`) | `NATIVE_OUT_HOST_DIR` |
 | result archive | comparable to the retained set | wherever `$2` points |
 
-`preserve_snapshots=100000` keeps six of the twelve saves a 600k run makes, plus the endpoint.
+On the DataSphere base profile, `preserve_snapshots=100000` keeps six of the twelve saves a 600k
+run makes, plus the endpoint. The resolved v100 production profile overrides this to `50000`, so
+the production host keeps all twelve stamps plus the endpoint.
 On-policy families (`idaac`, `ppg`, `ctrl`, `ibac_sni`) hold no replay and need a small fraction of
 this. The script refuses a production-scale cell below **60 GB free** on `NATIVE_OUT_HOST_DIR`'s
 filesystem (`NATIVE_DISK_FLOOR_GB` overrides); it reports free space on every run.

@@ -48,7 +48,7 @@ different** envs — the logs read `Now the mode is train` then `Now the mode is
 before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `rad` | `runnable/dmc_gb` | **yes** — 1k steps, real losses, train + eval-easy | shared, below |
 | `soda` | `runnable/dmc_gb` | **yes** — 1k steps, `aux_loss` live, train + eval-easy | shared, below |
-| `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +257/−9 |
+| `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +264/−10 |
 | `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +318/−9 |
 | `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 9 files, +582/−50 |
 | `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 10 files, +630/−183 |
@@ -120,7 +120,7 @@ unreachable import would land on every environment this baseline ever runs in.
 
 ## Deviations, per clone
 
-### `dmc_gb` (covers `rad`, `soda`, and the SAC they share) — 7 files, +135 / −10
+### `dmc_gb` (covers `rad`, `soda`, and the SAC they share) — 7 files, +141 / −11
 
 | file | change | why |
 |---|---|---|
@@ -129,7 +129,7 @@ unreachable import would land on every environment this baseline ever runs in.
 | `src/utils.py` | +2 / −2 | `np.array(x, copy=False)` → `np.asarray(x)`; NumPy 2 made the former an error |
 | `setup/config.cfg` | +1 / −1 | fill the repo's own `"/your/data/path/here/"` placeholder |
 
-### `alda` — 4 files, +257 / −9
+### `alda` — 4 files, +264 / −10
 
 One guarded branch in `trainers/alda_trainer.py::initialize_env_dmc` building all three envs and
 returning early, so no existing line is modified. The regimes map onto RL-ViGen's own:

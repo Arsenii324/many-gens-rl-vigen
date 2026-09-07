@@ -77,13 +77,11 @@ resumed-with-empty-buffer runs admissible and labelling them — would save wall
 crash but introduces a category of run whose comparability nothing currently verifies. Recommend
 the rerun; the owner may prefer the saving.
 
-**The reported curve is seven points, and a disk decision set that.** `SAVE_EVERY_FRAMES=50000`
-writes twelve stamps plus the endpoint; `preserve_snapshots=100000` retains six plus the endpoint;
-curve evaluation runs against what retention kept. `families.json`'s own reason is that a
-50k-spaced curve is "twice as dense as any plot needs" — defensible, and I agree with it, but it
-means a presentation parameter is currently set by a storage argument. Recommend leaving it at
-100k and stating the spacing in the results write-up; raising it is a `preserve_snapshots` change
-plus the §5 disk arithmetic, nothing structural.
+**Curve cadence is profile-dependent.** The DataSphere base profile uses
+`preserve_snapshots=100000` for RL-ViGen, keeping six stamps plus the endpoint. The resolved v100
+production profile overrides that value to `50000`, so every family keeps twelve stamps plus the
+endpoint. The generated checkpoint-semantics table and production gate both resolve the v100
+profile; this is the operational production default, pending formal ratification.
 
 **Trajectory-grid cost is the campaign's largest unmeasured term.** Corrected here after I got
 it wrong twice in one session, which is the useful part of the record. I first reported that the
