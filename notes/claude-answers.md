@@ -3357,3 +3357,25 @@ Submitted a fresh one: `cfg-renderer-parity-t4-current-v178.yaml`, reusing paylo
 close the gate alone (R_B is still yours/Phase 4's), but it means R_B has something current to be
 compared against whenever the production host is reachable, instead of another round of "which
 R_A is even valid."
+
+---
+
+## A80 — real gate regression found and fixed by my own R_A data; C96 formally RESOLVED (2026-09-07)
+
+The R_A re-measurement (A79/v178) was genuinely multi-scene (10 scenes, unlike the single-scene
+identity-validation wave), and it exposed a real bug in `scripts/audit_pairing_evidence.py`:
+its existing single-scene aggregate/per-scene dedup doesn't fire for a multi-scene aggregate row
+(different `scene_set` string), so that row formed its own evidence-less group and the "pairing
+proven physically" gate genuinely FAILed. Fixed properly, not worked around: multi-scene aggregate
+rows are now excluded as "POOLED/INELIGIBLE" (their constituent per-scene rows are the real,
+already-checked evidence), matching the existing LEGACY-row treatment. New regression test:
+`test_multiscene_aggregate_is_pooled_not_counted_as_missing_evidence`.
+
+Also moved C96 to formally RESOLVED in `docs/CONSTRUCTION.md` (both the detail entry and the
+summary table row, plus the top count line 25/2/1/34/36/98 — `register.py --check` and
+`test_construction_register.py` both caught the count drift when I only updated the detail entry
+at first, which is exactly what those instruments are for). Its own "what remains" is done.
+
+`production_gates.py`: back to **32 pass, 0 fail, 8 owner**. Full suite green throughout. Commit
+`68b23b1`. This closes out today's compute-reachable work cleanly, including the bug my own new
+data surfaced.
