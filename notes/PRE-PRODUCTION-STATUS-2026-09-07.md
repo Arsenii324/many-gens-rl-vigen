@@ -10,7 +10,7 @@
 Written to answer one question directly: **can the 36-cell production fleet be released?** No, and
 this page says exactly why, with the evidence for each item rather than a status word.
 
-`scripts/production_gates.py` reads **32 pass / 0 fail / 9 owner**. "No mechanical failures remain"
+`scripts/production_gates.py` reads **33 pass / 0 fail / 8 owner**. "No mechanical failures remain"
 is a true statement about the instruments and a misleading one about readiness, which is why this
 page exists beside it.
 

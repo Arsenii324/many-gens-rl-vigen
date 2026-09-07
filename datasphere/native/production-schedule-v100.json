@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "7661f5717be16ee3e45c49b9c683186e1462ada7754da02c8e60114ee51bd82b",
+  "resolved_descriptor_sha256": "82f26eab814557d46b739d7c7d6c45e253c997f77219ff20b7ff24051e1e4ab7",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
@@ -374,14 +374,14 @@
       "baseline": "ppg",
       "family": "ppg",
       "requested_frames": 600000,
-      "executed_endpoint": 606208,
+      "executed_endpoint": 600064,
       "seeds": [
         101,
         102,
         103
       ],
       "runtime_constants": {
-        "num_envs": "8",
+        "num_envs": "1",
         "nstep": "2048",
         "frame_stack": "3",
         "gamma": ".99",

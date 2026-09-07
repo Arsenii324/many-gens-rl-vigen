@@ -30,10 +30,10 @@ the artifact builder, mailbox, and `ext/` were not edited.
 
 - **PPG snapshot was stale.** Review 19 correctly says `1×2048/32 minibatches` is the IDAAC
   authors' DMC comparator, not an OpenAI PPG paper setting. It incorrectly treats the supplied
-  artifact's old PPG state as current. Production descriptor now passes `frame_stack=3` and keeps
-  the explicit PPG-shaped `8×256`, `nminibatch=8`, `n_pi=32` adaptation
-  (`datasphere/native/families.json:536-580`). This remains a continuous-action Door port, not
-  published PPG or the IDAAC DMC comparator. No PPG C2 source was changed here.
+  artifact's old PPG state as current. The active production descriptor now passes `frame_stack=3`
+  and uses the resolved `1×2048` geometry; the former `8×256` text is historical and superseded
+  by A36. This remains a continuous-action Door port, not published PPG or the IDAAC DMC
+  comparator. No PPG C2 source was changed here.
 - **IDAAC snapshot was stale.** Current descriptor is IDAAC-C2: one process, 2048 steps, 32
   minibatches, 10 PPO epochs, lr `3e-4`, gamma `.99`, entropy `0`, frame stack 3, linear decay
   (`families.json:247-373`). The primary-source reconciliation was corrected from the obsolete

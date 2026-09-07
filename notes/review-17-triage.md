@@ -7,6 +7,11 @@ action; it is not a reason to discount a finding merely because the external rev
 not inspect every local file. No code, configuration, result, or remote job was changed for this
 triage.
 
+> **Superseding update, 2026-09-07:** this triage is a pre-A36 snapshot. Its PPG rows below
+> describe the then-current 8×256 profile and should be read as historical reasoning. A36 is now
+> resolved in the live descriptor as 1×2048 on every host profile; the current decision and probe
+> evidence are in `notes/DECISION-SHEET.md` and `notes/PRE-PRODUCTION-STATUS-2026-09-07.md`.
+
 ## Reading rule
 
 The review was read in full. Its findings are presumed substantive and were checked against the live runnable source,

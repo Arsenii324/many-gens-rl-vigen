@@ -589,7 +589,7 @@
     "provenance": {
       "ppg": {
         "source_target": "PPG authors' released code",
-        "source_variant": "the IDAAC authors' DMC continuous-control PPG comparator, ported to Door: PPG's released code run at raileanu21a-supp.pdf SS E's shared grid (lr 3e-4, gamma .99, 32 minibatches, entropy 0, linear LR decay over 1e6 env steps) with PPG's own searched values (N_pi 32, E_pi 1, E_V 1, E_aux 6, beta_clone 1, all equal to its released defaults). One documented departure from SS E: the rollout is 8x256 rather than 1x2048 -- same 2048 samples per update and same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry (A36)"
+        "source_variant": "the IDAAC authors' DMC continuous-control PPG comparator, ported to Door: PPG's released code run at raileanu21a-supp.pdf SS E's shared grid (lr 3e-4, gamma .99, 32 minibatches, entropy 0, linear LR decay over 1e6 env steps) with PPG's own searched values (N_pi 32, E_pi 1, E_V 1, E_aux 6, beta_clone 1, all equal to its released defaults). The active production geometry is SS E's 1x2048; the prior 8x256 wording is historical and superseded by A36."
       }
     },
     "constants": {
@@ -603,14 +603,7 @@
       "entcoef": "0",
       "lr_decay_env_steps": "1000000"
     },
-    "host_profiles": {
-      "v100": {
-        "constants": {
-          "num_envs": "8"
-        },
-        "constants_reason": "[Claude 2026-09-05] REVERTED from 16 to the base 8, and this is a fidelity fix, not a tuning preference. PPG's defining auxiliary phase fires every num_envs x nstep x n_pi interactions. At the base 8 x 256 x 32 that is 65,536 -- EXACTLY the cadence implied by the only published continuous-control PPG design point (IDAAC's continuous-control appendix: 2048-step rollouts, one process, n_pi=32). The V100 override to 16 doubled it to 131,072, moving the run off that reference for throughput, with no recorded reason -- the only value in this file's V100 profiles that carried none. External review 11 section 7 raised the cadence as the clearest 'handicapped baseline?' attack surface on this project; it computed 16x against a 4-rank Procgen configuration, which is the worst-case reading, but the finding survives at any reading because the base config already matched the right reference and the override was what broke it. Reverting preserves n_pi=32, PPG's own defining constant, rather than compensating by halving it. COST: 8 envs instead of 16 is less parallel rollout collection, so PPG's wall-clock per cell rises -- the fidelity/throughput trade is real and is surfaced as decision A26 rather than settled here."
-      }
-    },
+    "host_profiles": {},
     "constants_note": [
       "[Claude 2026-09-02 08:50 MSK, corrected 2026-09-05] num_envs 8 is the value this project's",
       "own smoke used and is an OWNER DECISION recorded as the current best hypothesis. PPG's",

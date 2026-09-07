@@ -91,7 +91,7 @@ def test_v100_schedule_is_resolved_from_its_profile_and_makes_throughput_unknown
     # per-host throughput knob). executed_endpoint (1x2048 quantum) is unaffected by this line.
     assert rows["idaac"]["runtime_constants"]["num_processes"] == "1"
     assert rows["idaac"]["executed_endpoint"] == 598_016
-    assert rows["ppg"]["runtime_constants"]["num_envs"] == "8"
+    assert rows["ppg"]["runtime_constants"]["num_envs"] == "1"
     assert rows["ppg"]["executed_endpoint"] == 600_064
     assert rows["ibac_sni"]["executed_endpoint"] == 600_064
     assert generated["resolved_descriptor_sha256"]

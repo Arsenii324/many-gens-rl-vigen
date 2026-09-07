@@ -177,6 +177,7 @@ def test_families_with_no_eval_dial_expose_only_a_save_cadence():
         # are container-side measurements and therefore allowed, but no training-time cadence may
         # appear merely because the runner can now make those measurements.
         allowed = {"SAVE_EVERY_FRAMES", "CURVE_EVAL", "ENDPOINT_EVAL",
+                   "ENDPOINT_EVAL_POLICY_MODES",
                    "CURVE_EVAL_REGIMES", "CURVE_EVAL_SCENES", "CURVE_EVAL_EPISODES",
                    "ENDPOINT_EVAL_REGIMES", "ENDPOINT_EVAL_SCENES", "ENDPOINT_EVAL_EPISODES"}
         if baseline in {"ctrl", "idaac"}:
@@ -218,7 +219,7 @@ def test_v100_profile_is_explicit_and_changes_only_its_declared_runtime_knobs(mo
     """A V100 run must not silently inherit T4-safe rollout and replay reductions."""
     monkeypatch.delenv("NATIVE_HOST_PROFILE", raising=False)
     assert FAMILY.host_profile() == "datasphere"
-    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "8"
+    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "1"
     assert FAMILY.production("rlvigen")["replay_capacity"] == 300_000
 
     monkeypatch.setenv("NATIVE_HOST_PROFILE", "v100")
@@ -228,7 +229,7 @@ def test_v100_profile_is_explicit_and_changes_only_its_declared_runtime_knobs(mo
     # requirement, not a per-host throughput knob any more), so this is the one family this test
     # deliberately does NOT expect to change between profiles.
     assert FAMILY.full_fields("idaac", {"frames": "600000"})["num_processes"] == "1"
-    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "8"
+    assert FAMILY.full_fields("ppg", {"frames": "600000"})["num_envs"] == "1"
     assert FAMILY.expected_endpoint("ppg", 600_000) == 600_064
     assert FAMILY.full_fields("ibac_sni", {"frames": "600000"})["procs"] == "16"
     assert FAMILY.full_fields("ctrl", {"frames": "600000"})["num_envs"] == "64"

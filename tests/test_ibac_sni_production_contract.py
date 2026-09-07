@@ -85,7 +85,8 @@ def test_shared_evaluator_rebuilds_the_native_agent_on_its_selected_device():
     assert 'os.environ.setdefault("RLVIGEN_IMAGE_SIZE", "64")' in evaluator
     assert 'os.environ["RLVIGEN_MODE"] = mode' in evaluator
     assert 'os.environ["RLVIGEN_SCENE_ID"] = str(scene_id)' in evaluator
-    assert "ibac_utils.Agent(env_id, env.observation_space, str(model_dir), False, 1," in evaluator
+    assert "ibac_utils.Agent(env_id, env.observation_space, str(model_dir)," in evaluator
+    assert "policy_mode == \"mode\", 1," in evaluator
     assert "device=device)" in evaluator
     assert "--model_type impala --entropy-coef 0.0 --beta 1e-4" in launch
     assert 'export MUJOCO_GL="${MUJOCO_GL:-egl}"' in launch

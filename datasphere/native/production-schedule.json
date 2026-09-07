@@ -17,7 +17,7 @@
     "drqv2": 26.05,
     "ibac_sni": 26.63,
     "idaac": 34.82,
-    "ppg": 28.14,
+    "ppg": 21.3,
     "rad": 6.14,
     "sgqn": 6.5,
     "soda": 3.25,
@@ -31,7 +31,7 @@
     "drqv2": "measured",
     "ibac_sni": "measured",
     "idaac": "measured PRE-C2; the C2 recipe measured 24.57 fps on g1.1 V100",
-    "ppg": "measured",
+    "ppg": "gt4.1 8x256 measurement scaled by a same-tier 1x2048/8x256 ratio",
     "rad": "measured",
     "sgqn": "measured",
     "soda": "measured",
@@ -40,7 +40,8 @@
   "estimated_baselines": [
     "alda",
     "ctrl",
-    "idaac"
+    "idaac",
+    "ppg"
   ],
   "frames": 600000,
   "seeds": [
