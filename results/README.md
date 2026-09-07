@@ -22,6 +22,10 @@ that reason. These files are that gap closed.
 - **`logs/`** — the training curve each baseline writes in its own format, straight from the
   returned archive: `train.csv`/`eval.csv` for the RL-ViGen five, `progress*.csv` for `idaac` and
   `ppg`, `log.csv` for `ibac_sni`. These are the inputs the shared plotter reads.
+- **`validation/`** — the v185 functional endpoint attestations for all seven evaluator families,
+  retained as JSONL and bound by SHA256 in `datasphere/native/validated_evaluator_families.json`.
+  These prove current evaluator-path execution and record completeness; they are not production
+  competence runs.
 
 Filenames are `<job id>__<cell>__<original name>`, so every row traces to the DataSphere job that
 produced it and nothing here is anonymous.
@@ -37,11 +41,9 @@ them may be compared with which is decided by `docs/EVAL-DECOMPOSITION.md` and
 - `ctrl`'s and `ibac_sni`'s rows are **outside the pooled table** for stated reasons — a different
   estimand ([`COMPARABILITY_CONTRACT`](../docs/COMPARABILITY_CONTRACT.md) §5d) and a policy whose
   action mass is mostly outside the action box ([C61](../docs/CONSTRUCTION.md#c61)).
-- All seven evaluator families currently have an **undischarged shared-evaluator burden** under the
-  current family-specific evaluator identity (`scripts/production_gates.py`), so every baseline's
-  number here is historical evidence from an instrument not yet revalidated on the exact evaluator
-  closure that the fleet will run. The older paired rows are retained for diagnosis, not as current
-  cross-baseline evidence; the live count is recomputed by the production gate.
+- The older paired rows are historical evidence from superseded evaluator closures. The seven
+  current functional attestations in `validation/` are shallow endpoint checks, not competence or
+  production-length evidence; their acceptance is recomputed by `scripts/production_gates.py`.
 
 ## Regenerating
 

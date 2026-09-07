@@ -49,7 +49,7 @@ before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `rad` | `runnable/dmc_gb` | **yes** — 1k steps, real losses, train + eval-easy | shared, below |
 | `soda` | `runnable/dmc_gb` | **yes** — 1k steps, `aux_loss` live, train + eval-easy | shared, below |
 | `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +264/−10 |
-| `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +355/−9 |
+| `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +362/−9 |
 | `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 9 files, +582/−50 |
 | `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 10 files, +630/−183 |
 | `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 5 files, +477/−84 |
@@ -144,7 +144,7 @@ production runs otherwise discard every metric) had a latent bug — a residual 
 from the averaging loop above it crashes `json.dumps` where `wandb.log` tolerated it silently.
 Fixed with a `default=` handler scoped to this addition. See `notes/CORRECTIONS.md` #91.
 
-### `ppg` — 8 files, +355 / −9
+### `ppg` — 8 files, +362 / −9
 
 `envs.py` gains `get_robosuite_venv` and a one-line dispatch in `get_venv` on a `robosuite:`
 prefix. The venv is `gym3.ConcatEnv` of `gym3.FromGymEnv` — **gym3's own classes**, already a

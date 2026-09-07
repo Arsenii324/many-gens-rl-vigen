@@ -1,5 +1,12 @@
 # Pre-production status, 2026-09-07 — what is finished, what is not, and what "not" costs
 
+> **Superseding update:** A36 is now resolved: the operational PPG default is 1 process ×
+> 2048 steps, chosen after the matched 1×2048 / 8×256 gt4i.1 probe. The final seven-family
+> evaluator wave has completed successfully against the resulting tree: all seven endpoint
+> artifacts were returned, structurally checked, copied into `results/validation/`, and entered
+> into the ledger. The live gate now accepts **7/7 current evaluator attestations**. The old
+> A36/wave wording below is retained as a dated historical snapshot, not current state.
+
 Written to answer one question directly: **can the 36-cell production fleet be released?** No, and
 this page says exactly why, with the evidence for each item rather than a status word.
 
@@ -7,7 +14,7 @@ this page says exactly why, with the evidence for each item rather than a status
 is a true statement about the instruments and a misleading one about readiness, which is why this
 page exists beside it.
 
-## Status at last update (2026-09-07, late)
+## Historical snapshot before the A36 decision (2026-09-07, late)
 
 **One blocker left, and its evidence is in hand.** Codex's PPG geometry probe
 `bt1hoiefp159flmrv7hj` (1x2048, 65,536 frames = one auxiliary cycle) completed SUCCESS, and it ran

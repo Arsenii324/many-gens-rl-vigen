@@ -1,5 +1,11 @@
 # Which families are validated on the CURRENT evaluator, and how
 
+> **Superseding update, 2026-09-07:** the final v185 endpoint wave completed for all seven
+> evaluator families, including CTRL (`bt10tugtltvqoi2ag2cj`). Its seven retained JSONL
+> artifacts are in `results/validation/`, and `production_gates.py` now accepts **7/7 current
+> closures**. The stale table and 0/7 wording below are historical evidence from before that
+> wave; do not read them as current state.
+
 **STALE 2026-09-05, external review 14 §9-adjacent finding (P1): this document's table below is
 historical evidence, not a live validation ledger. It claims several families "VALIDATED, current
 revision" against `a8664a7f98dc3311`, which is no longer the current revision — many edits have
