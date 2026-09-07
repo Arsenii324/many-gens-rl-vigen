@@ -129,6 +129,22 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     echo "refusing: FRAMES=$FRAMES is production scale and NATIVE_HOST_PROFILE is unset." >&2
     echo "  run_probe.sh requires it explicitly at this scale (its own line ~391)." >&2
     exit 3; }
+  # [Claude 2026-09-07, external recommendation 22] A production cell with no per-cell ceiling can
+  # burn the whole job's wall clock on one stuck family, and because the result archive is written
+  # LAST, a job cut off at the job level loses the evidence of every cell that already finished.
+  # run_probe.sh honours CELL_TIMEOUT_SECONDS and simply does not cap when it is unset.
+  #
+  # The right VALUE needs the host throughput measurement and cannot be guessed from here -- so
+  # this refuses rather than inventing one. That converts a silent omission into a decision made
+  # at submit time, which is the part that was missing; the number still comes from measurement.
+  #   ceiling ~= (frames / measured frames-per-second) x a factor for eval and checkpointing
+  [[ -n "${CELL_TIMEOUT_SECONDS:-}" ]] || {
+    echo "refusing: FRAMES=$FRAMES is production scale and CELL_TIMEOUT_SECONDS is unset." >&2
+    echo "  Without a per-cell ceiling one stuck cell burns the job and the result archive --" >&2
+    echo "  written last -- is lost for every cell that already completed." >&2
+    echo "  Derive it from the host throughput measurement (runbook step 2), not from a guess:" >&2
+    echo "    CELL_TIMEOUT_SECONDS ~= (FRAMES / measured_fps) * headroom_for_eval_and_saves" >&2
+    exit 3; }
 fi
 
 # Disk. A production cell needs far more than its checkpoints: the RL-ViGen five keep their replay

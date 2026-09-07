@@ -60,3 +60,22 @@ def test_thread_pool_limits_are_forwardable():
     """External review 25: unforwarded OMP/MKL limits let every process pick its own default."""
     forwarded = _forwarded_by_wrapper()
     assert {"OMP_NUM_THREADS", "MKL_NUM_THREADS"} <= forwarded
+
+
+def test_production_scale_refuses_without_a_per_cell_ceiling():
+    """A stuck cell must not be able to burn the job and take the result archive with it.
+
+    The archive is written LAST, so a job-level cutoff loses every completed cell's evidence.
+    `run_probe.sh` caps a cell only when `CELL_TIMEOUT_SECONDS` is set, and silently does not cap
+    when it is absent (external recommendation 22). The VALUE needs the host throughput
+    measurement, so the wrapper refuses rather than inventing one -- the decision is forced to be
+    made, the number still comes from measurement.
+    """
+    text = WRAPPER.read_text()
+    assert "CELL_TIMEOUT_SECONDS is unset" in text, (
+        "a production-scale run with no per-cell ceiling must be refused, not accepted silently")
+    # Inside the production-scale block, beside the other two refusals.
+    block = text[text.index('if [[ "${FRAMES:-10000}" -ge 600000 ]]; then'):]
+    block = block[:block.index("\nfi\n")]
+    for required in ("NATIVE_PRODUCTION", "NATIVE_HOST_PROFILE", "CELL_TIMEOUT_SECONDS"):
+        assert required in block, f"{required} refusal is not in the production-scale guard"

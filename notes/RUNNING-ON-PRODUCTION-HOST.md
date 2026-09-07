@@ -172,6 +172,27 @@ whole script, not the docker command:
 nohup bash datasphere/native/run_on_production_host.sh ... > run.log 2>&1 &
 ```
 
+## 3b. The per-cell wall-clock ceiling — required at production scale
+
+`run_on_production_host.sh` REFUSES a run at `FRAMES >= 600000` unless `CELL_TIMEOUT_SECONDS` is
+set. That is deliberate and it is not a value this repository can supply: it depends on the host's
+measured throughput.
+
+Why it is required rather than optional: `run_probe.sh` caps a cell only when the variable is set,
+and the result archive is written **last**. So one stuck cell with no ceiling burns the job's whole
+wall clock and takes down the evidence of every cell that already finished — the failure mode the
+per-cell cap exists to prevent.
+
+Derive it after step 2's throughput measurement:
+
+```
+CELL_TIMEOUT_SECONDS ~= (FRAMES / measured_frames_per_second) * headroom
+```
+
+where `headroom` covers the endpoint grid, checkpoint writes and the packaging step, not just
+training. Round up: the cost of a ceiling that is too generous is a late failure; the cost of one
+that is too tight is a killed cell that was working.
+
 ## 4. Packing two cells
 
 Packing is **one container with two cells**, not two invocations:
