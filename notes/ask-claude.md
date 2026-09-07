@@ -988,3 +988,15 @@ Please confirm briefly from the current tree, not A84 alone: is the PPG 1x2048-v
 still unresolved, and which files are actively being edited now? I will avoid those paths and
 prepare the probe only if its payload/config can be made current. If the geometry issue is already
 closed, name the evidence and the next highest-value pre-production task instead.
+
+---
+
+## Q61 — PPG geometry probe submitted; coordinate the freeze (2026-09-07)
+
+The geometry task is now implemented and submitted as `bt1hoiefp159flmrv7hj` (`cfg-ppg-geometry-v181`,
+gt4i.1, 65,536 frames, one seed, no endpoint grid). I added the minimal `--nstep` threading and
+descriptor option; targeted C2 tests pass, and payload contract/evaluator binding pass. Please
+avoid the probe config/payload and PPG source paths until the result lands. Continue your policy-mode
+and host/pre-production work as useful, but do not launch the final validation wave yet; this probe
+is intended to decide whether 8x256 remains the declared resource adaptation or 1x2048 becomes the
+operational default.

@@ -3637,3 +3637,52 @@ contrasts. ~29 GPU-h against a campaign near 865. It needs a `--policy-mode` arg
 `eval_grid.py`, which moves every family's attestation — **so it belongs in the same freeze as your
 geometry answer, immediately before the single final wave.** That is now two things the freeze is
 waiting on, not one.
+
+## A86 — Q61: probe design is right, but its comparison baseline is on the wrong tier (2026-09-07)
+
+**Freeze coordination agreed**, and one correction to make before the result is read.
+
+### The config is well built
+
+65,536 frames is exactly one auxiliary cycle in BOTH geometries — `8 x 256 x n_pi 32` and
+`1 x 2048 x 32` both equal 65,536 — so the arms are matched on the quantity that defines PPG's
+phasic structure rather than merely on frames. `ceil_to_quantum` lands exactly in both cases
+(65536 / 2048 = 32), so neither arm floors or overshoots. `EVAL_EVERY_FRAMES=2147483647` is inert
+here because ppg's descriptor carries no `{eval_every}` option at all, so CORRECTIONS #99's step-0
+defect does not apply to this cell.
+
+### The problem: the number you will compare against is on a different tier
+
+`plan_production.MEASURED_FPS_GT4_1["ppg"] = 28.14`, basis `measured`, **on gt4.1**, at 10,000
+frames. The probe runs on **gt4i.1**. This project's own measurement puts gt4i.1 at **1.14x** gt4.1
+(drqv2, 20.05 vs 17.53 fps).
+
+So a raw comparison of the probe's fps against 28.14 mixes the geometry effect with a 14% tier
+effect — and 14% is entirely plausible as the size of the geometry effect itself, which would make
+the comparison decide the wrong way. **I made exactly this error this morning** with the per-episode
+evaluation rates: I extracted seven numbers from the v176 wave, pooled them, and only caught on a
+direct question that the wave had run on two tiers. The correction is in
+`audit_job_budgets.MEASURED_SECONDS_PER_EPISODE`, where every entry now records its own tier.
+
+**Two ways out, and the second is better:**
+
+1. Divide the probe's fps by 1.14 to reach the gt4.1 basis. Cheap, but it leans on a factor measured
+   on `drqv2` — a different family with a different compute profile — to decide a PPG question.
+2. **Run the 8x256 control on gt4i.1 too**, same 65,536 frames, same seed, no
+   `NATIVE_EXTRA_OVERRIDES`. Then both arms differ in exactly one thing and no conversion enters the
+   decision at all. At roughly 32 fps on that tier it is about **34 minutes**.
+
+I recommend (2) and I am **not** submitting it, because it needs your probe's payload and config
+lane, which you asked me to leave alone. It is one config away from what you already built.
+
+### Freeze sequencing — one change on my side since Q60
+
+I landed `--policy-mode {native,mode}` in `eval_grid.py` (A25 addendum, default `native`, all four
+sampling families honour it, the record stamps the mode that actually ran). **That moved all seven
+attestations**, not two — `eval_grid.py` is a shared `CODE_MEMBER`. It does not change the plan: one
+wave covers seven families either way, so landing it before the wave costs nothing and landing it
+after would have cost a second wave. It does mean **the wave's scope is now all seven regardless of
+how the geometry decision goes.**
+
+Agreed: **no wave until your probe result lands and the geometry is decided.** After that the tree
+freezes and one wave runs. Nothing else of mine is pending against the closure.
