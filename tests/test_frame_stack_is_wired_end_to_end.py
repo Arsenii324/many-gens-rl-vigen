@@ -81,3 +81,32 @@ def test_the_runtime_default_is_one_so_an_unset_variable_is_never_a_silent_three
     for path in ("runnable/ibac_sni/torch_rl/ibac_sni_runtime.py", "runnable/ctrl/vec_env.py"):
         source = (ROOT / path).read_text()
         assert 'os.environ.get("RLVIGEN_FRAME_STACK", "1")' in source, path
+
+
+def test_the_runtime_assertion_refuses_the_pre_change_shape():
+    """The backstop, and the reason the attestation wave is self-checking.
+
+    `verify_runtime_observation_geometry` compares the REAL observation tensor against the declared
+    pair on every family path. With the declaration at 3 it demands 9 channels, so if the authored
+    stack failed to reach the evaluator the cell would fail loudly rather than produce a number
+    measured on a one-frame policy — which is exactly how the `RLVIGEN_IMAGE_SIZE` mismatch
+    surfaced (`expected 100x100, observed (9, 84, 84)`), and the only reason that cost one cell
+    instead of a campaign.
+
+    The layouts differ and both are checked: `ctrl` emits NHWC from `RLViGenVecEnvCustom`,
+    `ibac_sni` emits HWC from `build_hwc_stack`.
+    """
+    import numpy as np
+    from scripts.eval_across_scenes import verify_runtime_observation_geometry as check
+
+    good = {"ctrl": np.zeros((1, 64, 64, 9), dtype=np.uint8),
+            "ibac_sni": np.zeros((64, 64, 9), dtype=np.float32)}
+    stale = {"ctrl": np.zeros((1, 64, 64, 3), dtype=np.uint8),
+             "ibac_sni": np.zeros((64, 64, 3), dtype=np.float32)}
+    for baseline, observation in good.items():
+        size, stack = OBSERVATION_GEOMETRY[baseline]
+        check(observation, image_size=size, frame_stack=stack, family=baseline)
+    for baseline, observation in stale.items():
+        size, stack = OBSERVATION_GEOMETRY[baseline]
+        with pytest.raises(Exception, match="geometry mismatch"):
+            check(observation, image_size=size, frame_stack=stack, family=baseline)

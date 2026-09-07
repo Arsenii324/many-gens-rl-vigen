@@ -155,3 +155,46 @@ measurement.
 5. Still genuinely open and correctly so: `ibac_sni`'s VIB parity (64-d vs 256-d, 1 sample vs 12 —
    an engineering gap no configuration closes), CTRL's raw-vs-executed action in the clustering
    objective (diagnostic wired, comparison never run), and the nine OWNER gates.
+
+---
+
+## Addendum — the wave, priced and pre-flighted
+
+Seven `cfg-*-attest-v197.yaml`, each bound to a `payload-v197-*` verified against the live tree
+with `--require-evaluator-identity`, all recording `source_commit cb98337e` and
+`source_dirty False`.
+
+| cell | budget | audit says it needs |
+|---|---|---|
+| idaac | 3600s | 1183s |
+| ppg | 3600s | 1268s |
+| alda | 3600s | 2146s |
+| ctrl | **5400s** | 1811s |
+| ibac_sni | **5400s** | 2312s |
+| rlvigen (svea) | **9000s** | 5905s |
+| dmc_gb (soda) | **9000s** | 5905s |
+
+**~5.7 GPU-hours in total**, ~1.6h wall clock if run concurrently — against a production campaign
+near 893 GPU-hours, so about 0.6%. `ctrl` and `ibac_sni` carry the raised budget because their
+measured throughput was taken at `frame_stack=1` and no measurement of the stacked rate exists;
+this cell is that measurement. Budgets are ceilings, not consumption: a job exits when it finishes.
+
+**Pre-flighted before spending any of it:**
+
+- `check-asset` run locally with the config's declared values against the real
+  `places365-train-attest.tgz` — exit 0. The declared count and digest are the **train** tree's
+  (1000, `c08327c5…`), which is the split these cells actually consume; the old config declared
+  the val tree's and would have certified 36,500 images nobody opened.
+- `verify_runtime_observation_geometry` accepts the exact tensors both authored stacks emit
+  (`ctrl` NHWC `(1,64,64,9)`, `ibac_sni` HWC `(64,64,9)`) and **refuses** the pre-change
+  single-frame shapes. So the wave is self-checking on precisely the new code: if the stack failed
+  to reach the evaluator, the cell dies loudly instead of reporting a number measured on a
+  one-frame policy.
+- Every input file present; `audit_submission_configs.py` clean; `audit_job_budgets.py` clean.
+
+**Deliberately not bundled:** five baselines (`drqv2`, `drq`, `curl`, `sgqn`, `rad`) will still
+have no record under the live closure after this wave, so the runtime geometry assertion will
+never have run for them. That is bounded rather than unsafe — a mismatch fails the cell, it does
+not produce a wrong number, and the gate says so in its own PASS text. Closing it costs roughly
+five short cells (~2.8 GPU-hours). It is the obvious next candidate, and it is worth deciding with
+the wave's real throughput in hand rather than before it.
