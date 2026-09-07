@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "families": {
+    "rlvigen": {
+      "url": "https://github.com/gemcollector/RL-ViGen.git",
+      "commit": "90d8b8c40acb63af6f938c1f4cc79a0cfee7d7ec",
+      "tree": "506ed233884652f6f754f469954b035d744ff95f",
+      "destination": "RL-ViGen-upstream",
+      "patch_kind": "apply_patches_registry",
+      "patch_file": "setup/apply_patches.py",
+      "expected_tree_hash": "e908a33eefe5da87a09b0161c628ff79d01accb5c52905ec9cb61d19a393aa75",
+      "exclude": [
+        "envs/DMCVGB",
+        "img",
+        "results",
+        "cfgs/task/TwoArmHandover.yaml",
+        "third_party/robosuite/robosuite/models/assets/robots/sawyer",
+        "third_party/robosuite/robosuite/models/assets/robots/baxter",
+        "third_party/robosuite/robosuite/models/assets/robots/ur5e",
+        "third_party/robosuite/robosuite/models/assets/robots/iiwa",
+        "third_party/robosuite/robosuite/models/assets/robots/kinova3",
+        "third_party/robosuite/robosuite/models/assets/robots/jaco"
+      ]
+    },
+    "dmc_gb": {
+      "url": "https://github.com/nicklashansen/dmcontrol-generalization-benchmark.git",
+      "commit": "ff9c0aa8d47685ed972414c67f1b7225e37ff85e",
+      "tree": "0fb5e4d0f5f7ece8f2bab3c39374618294301b37",
+      "destination": "runnable/dmc_gb",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/dmc_gb.patch",
+      "patch_sha256": "dab94c3ce68588156ac30c17359f173a301514e893af455aabe95f559942341a",
+      "expected_tree_hash": "47d5b947875335b49bd91607d957f5fb87f2bf196b8d4c01adb1bea224778a58",
+      "exclude": [
+        "src/env/data",
+        "data",
+        "door.xml",
+        "results",
+        "logs",
+        ".egg-info"
+      ]
+    },
+    "alda": {
+      "url": "https://github.com/SumeetBatra/ALDA_Official.git",
+      "commit": "8dcc96810840e5b0b7c743eda1501664eab06751",
+      "tree": "b1252cb276a38944d50343672e9fdd1857828658",
+      "destination": "runnable/alda",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/alda.patch",
+      "patch_sha256": "96632f4b7a78a507fc49ac413cbaae9e96d66ee6c8ce39432ff46737d2f0c228",
+      "expected_tree_hash": "6e4da2ab3620785fbefce5e53ad6fb1768c9255b94049d3dc723a30007cf6d23",
+      "exclude": [
+        "dmcontrol_generalization_benchmark/src/env/data",
+        "dmcontrol_generalization_benchmark/datasets",
+        "models",
+        "results",
+        "logs",
+        ".egg-info"
+      ],
+      "relocate": [
+        {"from": "models", "to": "third_party/alda/models", "expected_tree_hash": "cc71e3dce66686f8bcc3bab360de578203bfa6987b97df4b20306e096b1134a2"}
+      ]
+    },
+    "ppg": {
+      "url": "https://github.com/openai/phasic-policy-gradient.git",
+      "commit": "7295473f0185c82f9eb9c1e17a373135edd8aacc",
+      "tree": "a4d48863ac78045ca000d7f9c0549ad175d00a72",
+      "destination": "runnable/ppg",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/ppg.patch",
+      "patch_sha256": "323b5bc546d8d9d57074a443abc6d3e4bdccd93a459574799a3302b9bfd644f3",
+      "expected_tree_hash": "e505edca46fd76de7cb86c3827d35abba2c0a5bee8821a7f2735394e33dd930d",
+      "exclude": ["phasic_policy_gradient/results", "results", "logs", ".egg-info"]
+    },
+    "idaac": {
+      "url": "https://github.com/rraileanu/idaac.git",
+      "commit": "2fe30202942898b1b09d76e5d8c71d5a7db3686b",
+      "tree": "1b00786c221b5ff805b0809985c0c9cbda55c148",
+      "destination": "runnable/idaac",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/idaac.patch",
+      "patch_sha256": "cc5a48132619490bdd9ba8c77d19eaf392a4d40826ba8becaeb4a0323469d5cd",
+      "expected_tree_hash": "e24575c7512affaae62bb7225b7355ec702bc8700cc8849f34a6901e5d6af201",
+      "exclude": ["results", "logs", ".egg-info"]
+    },
+    "ibac_sni": {
+      "url": "https://github.com/microsoft/IBAC-SNI.git",
+      "commit": "6b3a58bfc23a1e8e2bbb669a4e96e24dabc32d71",
+      "tree": "be4ec1ea0d87da41fb3ec6648ab2909874966c2d",
+      "destination": "runnable/ibac_sni",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/ibac_sni.patch",
+      "patch_sha256": "cf6378bf7bfaef89790602615575fa28db77191f91884912b9ad3c02f4d284dd",
+      "expected_tree_hash": "2cd7c7c6e5ee605b2f1364c366f2eb173f5b0fbff3634fa61bb4e2bb05327510",
+      "exclude": ["results", "logs", "storage", "models", "door.xml", ".egg-info"]
+    },
+    "ctrl": {
+      "url": "https://github.com/bmazoure/ctrl_public.git",
+      "commit": "7a118c8df3ae4198a22b8f59f8cd03db0da42cfe",
+      "tree": "b351f983a6e1bc12cb544f80c95367d89db0b3d6",
+      "destination": "runnable/ctrl",
+      "patch_kind": "git_patch",
+      "patch_file": "runnable/_patches/ctrl.patch",
+      "patch_sha256": "f38bdf8f7971d12f58069fd14c2751d46ef1d6410c46bdfa836529530efb53e5",
+      "expected_tree_hash": "23865d519436b5be7f681ab9c28ab88363546b4d95c29f235caa1be619407be2",
+      "exclude": ["results", "logs", "storage", "models", "door.xml", ".egg-info"]
+    }
+  },
+  "auxiliary": {
+    "openai_baselines": {
+      "url": "https://github.com/openai/baselines.git",
+      "commit": "ea25b9e8b234e6ee1bca43083f8f3cf974143998",
+      "tree": "715e372b9071cc25de37d4fc2eeb09a5091a7397",
+      "destination": "ext/baselines",
+      "expected_tree_hash": "9c1aa2ce8de89e8b1a48cb1f51619134645421cb498f2fd53c2bbf0c0882a130",
+      "exclude": ["data/cartpole.gif", "data/fetchPickAndPlaceContrast.png", "data/logo.jpg"]
+    }
+  }
+}

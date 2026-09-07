@@ -30,6 +30,8 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 >   [`notes/PRODUCTION-HOST-RATIFICATION.md`](notes/PRODUCTION-HOST-RATIFICATION.md).
 > - **[`docs/RUNNABLE-ORIGINALS.md`](docs/RUNNABLE-ORIGINALS.md)** — Part 1: what runs, what was
 >   changed to make it run, and what the T4 has and has not proved.
+> - **[`setup/SOURCE-BOOTSTRAP.md`](setup/SOURCE-BOOTSTRAP.md)** — reconstruct every ignored source
+>   tree from public pinned repositories, apply tracked adaptations, and verify source closures.
 > - **[`docs/PART2-METRIC-INVENTORY.md`](docs/PART2-METRIC-INVENTORY.md)** — Part 2: what each
 >   baseline emits and against what, with seven findings. Two of them change what the benchmark
 >   measures: RL-ViGen's own runner evaluated on the *training* distribution, and frame stacking
