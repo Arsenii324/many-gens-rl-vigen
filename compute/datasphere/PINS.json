@@ -1,10 +1,10 @@
 {
   "_comment": "Every upstream this project runs, at the exact commit its local clone was taken from. scripts/deviations.py verifies the local side of this; the Kaggle kernel clones these SHAs and applies patches/<name>.patch, so a green remote run also proves the patches reproduce the clones from public sources.",
-  "rl_vigen": {"url": "https://github.com/gemcollector/RL-ViGen.git", "sha": "90d8b8c"},
-  "dmc_gb":   {"url": "https://github.com/nicklashansen/dmcontrol-generalization-benchmark.git", "sha": "ff9c0aa"},
-  "ppg":      {"url": "https://github.com/openai/phasic-policy-gradient.git", "sha": "7295473"},
-  "idaac":    {"url": "https://github.com/rraileanu/idaac.git", "sha": "2fe3020"},
-  "ibac_sni": {"url": "https://github.com/google-research/IBAC-SNI.git", "sha": "6b3a58b"},
-  "ctrl":     {"url": "https://github.com/ssingh24/ctrl_public.git", "sha": "7a118c8"},
-  "alda":     {"url": "https://github.com/HanpingZhang/ALDA_Official.git", "sha": "8dcc968"}
+  "rl_vigen": {"url": "https://github.com/gemcollector/RL-ViGen.git", "sha": "90d8b8c40acb63af6f938c1f4cc79a0cfee7d7ec"},
+  "dmc_gb":   {"url": "https://github.com/nicklashansen/dmcontrol-generalization-benchmark.git", "sha": "ff9c0aa8d47685ed972414c67f1b7225e37ff85e"},
+  "ppg":      {"url": "https://github.com/openai/phasic-policy-gradient.git", "sha": "7295473f0185c82f9eb9c1e17a373135edd8aacc"},
+  "idaac":    {"url": "https://github.com/rraileanu/idaac.git", "sha": "2fe30202942898b1b09d76e5d8c71d5a7db3686b"},
+  "ibac_sni": {"url": "https://github.com/microsoft/IBAC-SNI.git", "sha": "6b3a58bfc23a1e8e2bbb669a4e96e24dabc32d71"},
+  "ctrl":     {"url": "https://github.com/bmazoure/ctrl_public.git", "sha": "7a118c8df3ae4198a22b8f59f8cd03db0da42cfe"},
+  "alda":     {"url": "https://github.com/SumeetBatra/ALDA_Official.git", "sha": "8dcc96810840e5b0b7c743eda1501664eab06751"}
 }
