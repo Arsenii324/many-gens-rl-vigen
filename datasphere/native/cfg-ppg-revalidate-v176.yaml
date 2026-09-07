@@ -10,9 +10,9 @@
 # idaac moved 9216 -> 8192 because C2's num_steps floor is 2048 (was 1024) -- every other
 # family's endpoint is unchanged from v170 (its rollout quantum did not move).
 #
-# payload-v185-ppg.tgz built and passed both `contract.py verify-payload
+# payload-v186-ppg.tgz built and passed both `contract.py verify-payload
 # --require-evaluator-identity` and `verify-evaluator-binding` locally before submission.
-name: vigen-ppg-revalidate-v176
+name: vigen-ppg-revalidate-v186
 desc: Schema-2 evaluator identity re-validation for ppg, NATIVE_HOST_PROFILE=datasphere explicit.
 cmd: >-
   timeout --foreground 10800s env
@@ -35,7 +35,7 @@ cmd: >-
   bash ${JOB} ${CODE} ${RESULT}
 inputs:
   - datasphere/native/run_probe.sh: JOB
-  - datasphere/native/payload-v185-ppg.tgz: CODE
+  - datasphere/native/payload-v186-ppg.tgz: CODE
   - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
 outputs:
   - result.tgz: RESULT
