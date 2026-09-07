@@ -1,4 +1,9 @@
-"""Configure the pinned RL-ViGen Places loader for the validation split only."""
+"""Configure a pinned Places365 overlay loader (RL-ViGen or dmc_gb flavor) for one split.
+
+Takes `--split {val,train}`; `train` is the decided production value (DECISION-SHEET A22).
+The module name and the `_val` suffix predate that decision and are kept for compatibility --
+see `--split`'s own help text, not this docstring, for the current default and rationale.
+"""
 
 from __future__ import annotations
 
@@ -109,7 +114,7 @@ def configure(repo: Path, dataset_root: Path, check_only: bool, flavor: str = "r
 
     if check_only:
         if changed or not config_is_correct:
-            fail("Places365 validation loader is not configured")
+            fail(f"Places365 {split} loader is not configured")
         return
 
     if changed:

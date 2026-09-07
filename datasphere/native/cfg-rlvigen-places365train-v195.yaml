@@ -4,12 +4,15 @@
 # rlvigen's Places365-needing baseline; this exercises configure_places365_val.py under
 # NATIVE_PLACES365_SPLIT=train and produces the family_code_revision that actually reflects it.
 #
-# places365-train-attest.tgz: places365-val.tgz's own val/images/ (36500 files, unchanged hash)
-# plus a 1000-image/20-class sample of the real train split (extracted locally from the now-
-# verified places365standard_easyformat.tar) under train/. configure_places365_val.py only checks
-# that places365_standard/train/ is a directory for split=train -- no count/hash requirement, per
-# its own source -- so a small representative sample is sufficient to exercise the real code path
-# without shipping the full ~1.8M-image production population to a smoke cell.
+# places365-train-attest.tgz is a TRAIN LOADER-PATH ATTESTATION FIXTURE, NOT production Places365
+# dataset certification: places365-val.tgz's own val/images/ (36500 files, unchanged hash) plus a
+# 1000-image/20-class sample of the real train split (extracted locally from the now-verified
+# places365standard_easyformat.tar) under train/. configure_places365_val.py only checks that
+# places365_standard/train/ is a directory for split=train -- no count/hash requirement, per its
+# own source -- so a small representative sample is sufficient to exercise the real code path
+# without shipping the full ~1.8M-image, 365-class production population to a smoke cell. The
+# production asset must separately pass `python3 setup/verify_datasets.py --split train` on the
+# production host before svea/sgqn/soda run against it.
 name: vigen-rlvigen-places365train-v195
 desc: Schema-2 evaluator identity re-validation for rlvigen under the DECIDED train split (A22), via svea.
 cmd: >-

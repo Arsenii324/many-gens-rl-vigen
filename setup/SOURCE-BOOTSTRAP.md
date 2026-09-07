@@ -37,30 +37,26 @@ The source manifest is `setup/source-reconstruction.json`. The older
 smoke scripts; tests require their URL and full-commit projection to match the
 manifest.
 
-## Known gap found on replay, 2026-09-07 (Claude)
+## Snapshot-repo verification, closed 2026-09-07
 
-`python setup/verify_sources.py` run against the WORKING tree reports:
-
-    error: wrong source commit at .../runnable/alda
-
-**This is not a provenance problem with alda, and the pin is correct.** The shipped clones under
-`runnable/` are project-created SNAPSHOT repositories, not clones of upstream history:
-`runnable/alda` contains exactly one commit, `f9609c2`, whose message is
+`runnable/` ships project-created SNAPSHOT repositories, not clones of upstream history:
+`runnable/alda`, for instance, contains exactly one commit, `f9609c2`, whose message is
 
     PRISTINE: ALDA_Official @ 8dcc968, as cloned
 
-So the upstream identity lives in the commit *message*, while `HEAD` is a locally minted SHA that
-can never equal the upstream pin. `verify_all` compares `HEAD` to the pin, which is the right check
-for a freshly BOOTSTRAPPED tree and the wrong one for a snapshot clone.
+so the upstream identity lives in the commit *message*, while `HEAD` is a locally minted SHA that
+never equals the upstream pin. `verify_sources.py` used to compare `HEAD` to the pin only, which is
+correct for a freshly bootstrapped tree but rejected every snapshot clone with a "wrong source
+commit" error that read like corruption.
 
-Consequences, stated so neither is assumed:
+`bootstrap_sources.py::_verify_destination` now accepts a matching `HEAD^{tree}` when `HEAD`
+differs from the pinned commit -- tree equality is as strong a content proof as commit equality for
+a repo whose only divergence is its locally-authored HEAD commit -- and skips git-identity checks
+entirely when the destination carries no `.git` of its own (a destination without its own `.git`
+was otherwise checked, via `git -C`'s walk-up behaviour, against *this* project's HEAD). The
+closure-hash check runs unconditionally either way, so content is still proven in every case.
 
-- **The bootstrap path is unaffected.** A fresh `bootstrap_sources.py` clone checks out the pinned
-  commit directly, so `HEAD` does equal the pin there. Luna's six-family PASS was against that path.
-- **`verify_sources.py` cannot currently be used as a health check on a working checkout**, which is
-  the way a new contributor would most naturally reach for it. Either it should detect a snapshot
-  repository and verify the recorded pin instead, or it should refuse that input explicitly rather
-  than reporting a wrong-commit error that reads like corruption.
-
-Not fixed here: the replay onto current main was kept to a clean cherry-pick, and changing the
-verifier's semantics is a decision about what it certifies rather than a defect in the replay.
+`python setup/verify_sources.py` therefore runs cleanly against both a fresh `bootstrap_sources.py`
+checkout and the shipped snapshot repositories under `runnable/`. RL-ViGen remains the one family
+`verify_all` cannot verify on a case-insensitive filesystem (see above); it is reported by name as
+`NOT VERIFIED HERE` rather than as a hash mismatch.

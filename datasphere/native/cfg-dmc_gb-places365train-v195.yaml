@@ -5,9 +5,12 @@
 # NATIVE_PLACES365_SPLIT=train (dmc_gb flavor: runnable/dmc_gb/src/augmentations.py) and produces
 # the family_code_revision that reflects the DECIDED (A22) production split.
 #
-# Same places365-train-attest.tgz as the rlvigen sibling job: val/images unchanged (36500,
-# hash intact), train/ a 1000-image/20-class representative sample -- sufficient for
-# configure_places365_val.py's directory-only check on the train branch.
+# Same places365-train-attest.tgz as the rlvigen sibling job -- a TRAIN LOADER-PATH ATTESTATION
+# FIXTURE, NOT production Places365 dataset certification: val/images unchanged (36500, hash
+# intact), train/ a 1000-image/20-class representative sample -- sufficient for
+# configure_places365_val.py's directory-only check on the train branch. The production asset
+# (~1.8M images, 365 classes) must separately pass `python3 setup/verify_datasets.py --split train`
+# on the production host before svea/sgqn/soda run against it.
 name: vigen-dmc_gb-places365train-v195
 desc: Schema-2 evaluator identity re-validation for dmc_gb under the DECIDED train split (A22), via soda.
 cmd: >-
