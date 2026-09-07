@@ -141,3 +141,160 @@ def test_bootstrap_root_parameter_is_authoritative(tmp_path):
     assert calls[0][1] == tmp_path, (
         f"bootstrap passed {calls[0][1]} instead of the requested root {tmp_path}; the root "
         "parameter is decorative and an isolated run would write into the real project")
+
+
+def _synthetic_manifest(**families: dict) -> dict:
+    return {"schema": 1, "families": families, "auxiliary": {}}
+
+
+def test_bootstrap_refuses_partial_existing_family_destinations(tmp_path: Path, monkeypatch):
+    """One of a family's destinations exists, the other does not: refuse rather than guess.
+
+    A family with a `relocate` entry (like ALDA) has two destinations. If only one is present,
+    the tree cannot be treated as either "absent" (clone it) or "already reconstructed" (verify
+    it): it is neither, and bootstrap() must say so instead of silently overwriting or silently
+    trusting the half that exists.
+    """
+    module = _load("bootstrap_sources_partial_test", SETUP / "bootstrap_sources.py")
+    widget = {
+        "url": "https://example.invalid/widget.git",
+        "commit": "1" * 40,
+        "tree": "2" * 40,
+        "destination": "runnable/widget",
+        "patch_kind": "git_patch",
+        "patch_file": "runnable/_patches/widget.patch",
+        "expected_tree_hash": "0" * 64,
+        "exclude": [],
+        "relocate": [
+            {"from": "models", "to": "extra/widget-extra", "expected_tree_hash": "0" * 64},
+        ],
+    }
+    monkeypatch.setattr(module, "load_manifest", lambda: _synthetic_manifest(widget=widget))
+    (tmp_path / "runnable" / "widget").mkdir(parents=True)
+    # extra/widget-extra deliberately left absent.
+    with pytest.raises(module.BootstrapError, match="partial existing source tree"):
+        module.bootstrap(root=tmp_path, families=["widget"])
+
+
+def test_bootstrap_refuses_modified_existing_destination(tmp_path: Path, monkeypatch):
+    """An existing destination whose content disagrees with the manifest is refused, not overwritten.
+
+    bootstrap() treats any existing destination as "already reconstructed, just verify it" -- so a
+    tree that was hand-edited (or corrupted) after a prior bootstrap must fail that verification
+    and refuse, rather than being silently accepted or silently clobbered.
+    """
+    module = _load("bootstrap_sources_modified_test", SETUP / "bootstrap_sources.py")
+    destination = tmp_path / "runnable" / "widget2"
+    destination.mkdir(parents=True)
+    (destination / "code.py").write_text("value = 1\n", encoding="utf-8")
+    widget2 = {
+        "url": "https://example.invalid/widget2.git",
+        "commit": "1" * 40,
+        "tree": "2" * 40,
+        "destination": "runnable/widget2",
+        "patch_kind": "git_patch",
+        "patch_file": "runnable/_patches/widget2.patch",
+        # Deliberately wrong: does not match the content just written above.
+        "expected_tree_hash": "f" * 64,
+        "exclude": [],
+    }
+    monkeypatch.setattr(module, "load_manifest", lambda: _synthetic_manifest(widget2=widget2))
+    with pytest.raises(module.BootstrapError, match="does not match manifest"):
+        module.bootstrap(root=tmp_path, families=["widget2"])
+
+
+def test_verify_all_detects_missing_idaac_auxiliary_baselines_tree(tmp_path: Path, monkeypatch):
+    """idaac's auxiliary OpenAI Baselines checkout is required; verify_all must not pass without it.
+
+    Uses the real manifest's idaac entry (so the destination path and structure match production)
+    with `patch_sha256` dropped and `expected_tree_hash` recomputed against a fabricated destination,
+    so the test needs neither the real patch file nor a network clone.
+    """
+    module = _load("bootstrap_sources_idaac_aux_test", SETUP / "bootstrap_sources.py")
+    manifest = json.loads((SETUP / "source-reconstruction.json").read_text())
+    idaac_entry = dict(manifest["families"]["idaac"])
+    idaac_entry.pop("patch_sha256", None)
+    destination = tmp_path / idaac_entry["destination"]
+    destination.mkdir(parents=True)
+    (destination / "code.py").write_text("value = 1\n", encoding="utf-8")
+    idaac_entry["expected_tree_hash"] = module.normalized_tree_hash(
+        destination, idaac_entry.get("exclude", []))
+    monkeypatch.setattr(module, "load_manifest", lambda: {
+        "families": {"idaac": idaac_entry}, "auxiliary": manifest["auxiliary"],
+    })
+    # ext/baselines (the auxiliary destination) is deliberately left absent under tmp_path.
+    # Current behaviour surfaces this as an uncaught FileNotFoundError rather than a clean
+    # BootstrapError (normalized_tree_hash walks a directory that does not exist) -- still a
+    # detection, just not a tidy one, so the test accepts either.
+    with pytest.raises((module.BootstrapError, FileNotFoundError)):
+        module.verify_all(root=tmp_path, families=["idaac"])
+
+
+def test_verify_all_detects_missing_alda_relocated_models(tmp_path: Path, monkeypatch):
+    """ALDA's `models` package is relocated to `third_party/alda/models`; its absence must fail verify_all.
+
+    Uses the real manifest's alda entry (so the relocate target is the real production path,
+    `third_party/alda/models`) with `patch_sha256` dropped and `expected_tree_hash` recomputed
+    against a fabricated destination, so no network clone or real patch file is required.
+    """
+    module = _load("bootstrap_sources_alda_reloc_test", SETUP / "bootstrap_sources.py")
+    manifest = json.loads((SETUP / "source-reconstruction.json").read_text())
+    alda_entry = dict(manifest["families"]["alda"])
+    alda_entry.pop("patch_sha256", None)
+    destination = tmp_path / alda_entry["destination"]
+    destination.mkdir(parents=True)
+    (destination / "code.py").write_text("value = 1\n", encoding="utf-8")
+    alda_entry["expected_tree_hash"] = module.normalized_tree_hash(
+        destination, alda_entry.get("exclude", []))
+    monkeypatch.setattr(module, "load_manifest", lambda: {
+        "families": {"alda": alda_entry}, "auxiliary": manifest["auxiliary"],
+    })
+    assert alda_entry["relocate"][0]["to"] == "third_party/alda/models"
+    # third_party/alda/models is deliberately left absent under tmp_path.
+    with pytest.raises(module.BootstrapError, match="required relocated source is absent"):
+        module.verify_all(root=tmp_path, families=["alda"])
+
+
+def test_pins_json_copies_are_byte_identical_and_agree_with_manifest():
+    """The two legacy PINS.json copies must stay byte-identical, not just individually correct.
+
+    `test_legacy_pin_copies_match_reconstruction_manifest` already checks each file's projection
+    against the manifest independently; it does not catch the two copies drifting from EACH OTHER
+    while each still happens to satisfy that projection (e.g. differing whitespace, key order, or
+    an extra family in only one file). Byte-identity is the stronger, and the actually-intended,
+    invariant.
+    """
+    datasphere_bytes = (ROOT / "compute/datasphere/PINS.json").read_bytes()
+    kaggle_bytes = (ROOT / "compute/kaggle-src/PINS.json").read_bytes()
+    assert datasphere_bytes == kaggle_bytes
+
+    manifest = json.loads((SETUP / "source-reconstruction.json").read_text())
+    pin_names = {"rlvigen": "rl_vigen"}
+    expected = {
+        pin_names.get(name, name): {"url": entry["url"], "sha": entry["commit"]}
+        for name, entry in manifest["families"].items()
+    }
+    pins = json.loads(datasphere_bytes)
+    for name, values in expected.items():
+        assert name in pins, name
+        assert pins[name]["url"] == values["url"], name
+        assert len(pins[name]["sha"]) == 40, name
+        assert pins[name]["sha"] == values["sha"], name
+
+
+def test_case_sensitive_requirement_raises_on_case_insensitive_filesystem(
+    tmp_path: Path, monkeypatch,
+):
+    """`_case_sensitive_requirement` must refuse when the filesystem is case-insensitive.
+
+    Monkeypatches `filesystem_is_case_sensitive` instead of relying on the real filesystem, so
+    this is deterministic on both a case-insensitive default macOS volume and a case-sensitive
+    Linux one.
+    """
+    module = _load("bootstrap_sources_case_insensitive_test", SETUP / "bootstrap_sources.py")
+    monkeypatch.setattr(module, "filesystem_is_case_sensitive", lambda path: False)
+    with pytest.raises(module.BootstrapError, match="case-sensitive filesystem"):
+        module._case_sensitive_requirement(tmp_path)
+
+    monkeypatch.setattr(module, "filesystem_is_case_sensitive", lambda path: True)
+    module._case_sensitive_requirement(tmp_path)  # does not raise
