@@ -499,7 +499,19 @@ if [[ "${1:-}" == "--run-cells" ]]; then
   if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
     # Same fix as the production path below: a numeric sentinel evaluates at step 0 because
     # `step % cadence == 0` holds there for every cadence (external review 21, P0).
-    run_eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-null}"
+    #
+    # The spelling is PER FAMILY and must be resolved, not defaulted. `null` is right for rlvigen
+    # (Hydra parses it to None and utils.Every returns False) and WRONG for dmc_gb and alda, whose
+    # cadence reaches argparse with `type=int` -- `--eval_freq null` would fail to parse before a
+    # single frame ran. Those two disable through their guarded call sites instead, so the numeric
+    # value is inert for them. Falling back to the sentinel rather than to `null` keeps the failure
+    # mode "an extra step-0 evaluation in a diagnostic probe" instead of "the cell will not start".
+    run_eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-}"
+    if [[ -z "$run_eval_every" ]]; then
+      run_eval_every="$(python3 "$FAMILY_TOOL" production-env --cells "$cells_arg" 2>/dev/null \
+        | sed -n 's/^NATIVE_ONLINE_EVAL_DISABLED_SPELLING=//p' | head -1)"
+    fi
+    [[ -n "$run_eval_every" ]] || run_eval_every=2147483647
   else
     run_eval_every="${EVAL_EVERY_FRAMES:-${FRAMES:-10000}}"
   fi

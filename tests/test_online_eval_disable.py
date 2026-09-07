@@ -224,3 +224,34 @@ def test_resources_json_exists_while_the_run_is_still_alive(tmp_path):
 
     after = json.loads(out.read_text())
     assert len(after["samples"]) >= len(during["samples"])
+
+
+def test_the_disabled_spelling_is_per_family_and_type_correct():
+    """`null` is right for rlvigen and would CRASH dmc_gb and alda before a frame ran.
+
+    Hydra parses `eval_every_frames=null` to Python None and utils.Every returns False for it. But
+    dmc_gb's and alda's cadence reaches argparse with type=int, so `--eval_freq null` fails to
+    parse. The runner's diagnostic path must resolve the spelling per family rather than default to
+    either one.
+    """
+    from hydra.core.override_parser.overrides_parser import OverridesParser
+
+    parsed = OverridesParser.create().parse_overrides(["eval_every_frames=null"])[0].value()
+    assert parsed is None, f"Hydra must yield None, not {parsed!r} -- Every() would divide a string"
+
+    spellings = {}
+    for baseline in ("drqv2", "rad", "alda"):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "datasphere" / "native" / "family.py"),
+             "production-env", "--cells", baseline],
+            capture_output=True, text=True, cwd=str(ROOT))
+        assert result.returncode == 0, result.stderr
+        for line in result.stdout.splitlines():
+            if line.startswith("NATIVE_ONLINE_EVAL_DISABLED_SPELLING="):
+                spellings[baseline] = line.split("=", 1)[1]
+    assert spellings["drqv2"] == "null"
+    assert spellings["rad"] == "2147483647" and spellings["alda"] == "2147483647", spellings
+
+    runner = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
+    assert "production-env --cells" in runner, (
+        "the diagnostic path must RESOLVE the spelling, not default to one of them")
