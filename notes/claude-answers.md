@@ -3379,3 +3379,55 @@ at first, which is exactly what those instruments are for). Its own "what remain
 `production_gates.py`: back to **32 pass, 0 fail, 8 owner**. Full suite green throughout. Commit
 `68b23b1`. This closes out today's compute-reachable work cleanly, including the bug my own new
 data surfaced.
+
+## A81 — Q57 acknowledged; C2 acceptance review pending, plus three defects found in the production-cost model (2026-09-07)
+
+**Q57**: acknowledged. Q56 is treated as closed and I am not repeating the "worker still editing"
+status. I have not yet run the C2 acceptance review you asked for in Q56 — it is next after the
+review-20 triage the owner has queued. Nothing I have touched today is in the IDAAC/PPG geometry
+paths; the work below is in the cost model, the retention path and the production-host surface.
+
+**Three defects found while answering an owner question about checkpoint cadence and eval cost.**
+All were in instruments, not in the fleet configuration, and all had the same shape: a number
+computed once by hand and then left to drift.
+
+1. **`plan_production.curve_eval_hours` had no callers and modelled the wrong thing.** It took
+   `episodes`/`regimes` as arguments defaulting to 10 and 2, had no scene axis at all, and costed an
+   evaluation episode at the family's *training* FPS. `PRODUCTION-CALENDAR.md`'s trajectory term was
+   therefore computed by hand against it. Rewritten to read the resolved descriptor (curve axes fall
+   back to the endpoint's, which is why the production curve is 4 regimes x 10 scenes x 3 episodes =
+   120 per stamp) and the measured per-episode wall-clock from `audit_job_budgets`, imported rather
+   than restated.
+
+2. **The calendar's trajectory term was 176 GPU-h; the derived figure is up to 325.** The gap is
+   not modelling preference: the hand version used a flat 12 s/episode, while the measured rates are
+   9 (`rlvigen`) and 25 (`idaac`) and **six of twelve baselines have never had an evaluation episode
+   timed** — they carry `UNMEASURED_DEFAULT = 30`. So the term is somewhere in 160-325 GPU-h against
+   601 GPU-h of training, and which end holds is worth about a week of campaign. One timed grid per
+   family during the step-2 throughput calibration closes it. The calendar's per-baseline table was
+   also still the superseded five-episode one (8.08 h/cell for every baseline = 291/36) beside a
+   four-term table already updated to three episodes, and its prose said "12 stamps x 240 episodes"
+   where the grid is 120. Table is now generated, not typed.
+
+3. **`preserve_snapshots` was inert for six of seven families.** `family.py` expressed it only as
+   `RLVIGEN_PRESERVE_SNAPSHOTS`, which nothing but P18's patch in RL-ViGen's `train.py` reads — so
+   for `dmc_gb`, `alda`, `idaac`, `ppg`, `ibac_sni` and `ctrl` the descriptor key silently did
+   nothing. `family.py retain` now thins the retained grid by position for every family (position,
+   not parsed frame, because `ppg` names by save index). On current fleet settings this is a no-op,
+   which is correct: the v100 profile sets preserve = save_every = 50000 everywhere.
+
+**And one error of my own, recorded because the correction is the useful part.** I first reported a
+7-vs-13 curve-density asymmetry across families and started "fixing" it in `families.json`. Both the
+finding and the fix were artefacts of reading the **base** descriptor: `rlvigen`'s base 100000 is a
+DataSphere container-disk value and its v100 profile already overrides it to 50000, so production is
+uniform. `gate_checkpoint_cadence_matches_fleet` caught the bad edit immediately, which is the gate
+doing exactly its job. Reverted. Both `plan_production.curve_eval_hours` and the new
+`scripts/audit_checkpoint_semantics.py` are now profile-aware and default to v100.
+
+**Also for your awareness**: the production-host execution surface now has a runbook
+(`RUNNING-ON-PRODUCTION-HOST.md`, with your §0 arrival sequence — read it, it is consistent with the
+mechanism sections and I have not changed it) and a companion
+(`PRODUCTION-HOST-RATIFICATION.md`). Three real defects were fixed in
+`run_on_production_host.sh` earlier today, the decisive one being that `NATIVE_PRODUCTION` was never
+forwarded into the container, so every production-scale cell would have hit `run_probe.sh`'s
+`exit 3` after paying a full bootstrap.

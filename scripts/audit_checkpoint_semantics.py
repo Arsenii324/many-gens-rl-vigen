@@ -34,7 +34,6 @@ END = "<!-- END checkpoint-semantics -->"
 # claim in the runbook is no longer supported by the code.
 FAMILIES_META = {
     "rlvigen": {
-        "baselines": "drqv2, svea, sgqn, drq, curl, pieg",
         "contents": "agent (networks + optimizers), timer, _global_step, _global_episode",
         "buffer": "on disk during the run, never in the checkpoint and never retained",
         "evidence": [
@@ -44,37 +43,31 @@ FAMILIES_META = {
         ],
     },
     "dmc_gb": {
-        "baselines": "rad, soda",
         "contents": "networks + optimizers",
         "buffer": "in memory only, never written",
         "evidence": [("runnable/dmc_gb/src/utils.py", r"def prefill_memory\(obses, capacity, obs_shape\)")],
     },
     "alda": {
-        "baselines": "alda",
         "contents": "networks + optimizers (sac_*_step_*.pt)",
         "buffer": "in memory only, never written",
         "evidence": [],
     },
     "idaac": {
-        "baselines": "idaac",
         "contents": "[actor_critic, envs.ob_rms]",
         "buffer": "none -- on-policy",
         "evidence": [("runnable/idaac/train.py", r"_payload\s*=\s*\[actor_critic,\s*getattr\(envs,\s*'ob_rms',\s*None\)\]")],
     },
     "ppg": {
-        "baselines": "ppg",
         "contents": "model<N>.jd via LogSaveHelper",
         "buffer": "none -- on-policy",
         "evidence": [],
     },
     "ctrl": {
-        "baselines": "ctrl",
         "contents": "flax to_bytes(train_state), optax optimizer state included",
         "buffer": "none -- on-policy",
         "evidence": [("runnable/ctrl/train_ppo.py", r"_flax_to_bytes\(train_state\)")],
     },
     "ibac_sni": {
-        "baselines": "ibac_sni",
         "contents": "model.pt",
         "buffer": "none -- on-policy",
         "evidence": [],
@@ -98,18 +91,36 @@ def check_evidence() -> list[str]:
     return failures
 
 
-def rows() -> list[dict]:
-    descriptors = json.loads(FAMILIES.read_text())
+def rows(profile: str | None = "v100") -> list[dict]:
+    """Cadences as the PRODUCTION profile resolves them, not as the base descriptor states them.
+
+    [Claude 2026-09-07] The first version of this script read the base descriptor and reported
+    `rlvigen` as a 7-point curve. That is the DataSphere value: `rlvigen`'s v100 profile overrides
+    `preserve_snapshots` to 50000 because the container disk limit that motivated 100000 does not
+    exist on the 113 GiB production host. On the profile the fleet actually runs, every family
+    keeps twelve stamps plus the endpoint -- which `production_gates.gate_checkpoint_cadence_
+    matches_fleet` independently pins. A table generated from the wrong profile is exactly the
+    drift this script was written to stop, so it defaults to the profile production uses.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_native_family_for_audit", ROOT / "datasphere" / "native" / "family.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     out = []
     for family, meta in FAMILIES_META.items():
-        production = descriptors.get(family, {}).get("production", {}) or {}
+        resolved = module.resolved_descriptor(family, profile=profile)
+        production = resolved.get("production") or {}
+        # Derived, not typed: a hand-written list here invented a "pieg" baseline that exists
+        # nowhere in this project -- the third hand-copied error in this one table.
+        baselines = ", ".join(resolved.get("baselines") or [family])
         save_every = production.get("save_every")
         preserve = production.get("preserve_snapshots")
         stamps = (600_000 // save_every) if save_every else 0
         kept = (600_000 // preserve) if preserve else stamps
         out.append({
             "family": family,
-            "baselines": meta["baselines"],
+            "baselines": baselines,
             "contents": meta["contents"],
             "buffer": meta["buffer"],
             "resume": "NOT a full restart -- empty buffer" if family in OFF_POLICY

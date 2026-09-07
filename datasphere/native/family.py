@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -475,6 +476,34 @@ def retain(family: str, fields: dict, output: Path, path: Path | None = None) ->
     if intermediate:
         matches = [item for item in sorted(root.glob(render(intermediate, fields)))
                    if item.is_file() and item.resolve() != checkpoint.resolve()]
+        # [Claude 2026-09-07] Thin the retained grid to `preserve_snapshots`, for EVERY family.
+        #
+        # This cadence existed only on the write side and only for RL-ViGen: `family.py` emits
+        # RLVIGEN_PRESERVE_SNAPSHOTS, which P18's patch in RL-ViGen's own train.py reads. The
+        # other six families write every stamp and kept every stamp, so a 600k cell produced a
+        # 7-point curve for the RL-ViGen five and a 13-point curve for everyone else -- two x-grids
+        # in one figure, from a descriptor field that six families simply could not honour rather
+        # than from any decision. The trajectory grid is evaluated per retained stamp, so the same
+        # asymmetry doubled their evaluation cost: measured at 3 episodes x 4 regimes x 10 scenes,
+        # 13 stamps is 10.8 GPU-h/cell for idaac against 2.1 for drqv2 (plan_production.
+        # curve_eval_hours), and idaac's own training is only ~4.8 h -- a curve costing twice its
+        # run.
+        #
+        # Thinning by POSITION rather than by parsed frame number, because stamps are evenly spaced
+        # by construction (every `save_every`) and ppg names its files by save INDEX, not frame --
+        # so a frame-parsing rule would need ppg's training log here, which retain does not read.
+        # Idempotent for RL-ViGen, whose write side has already thinned.
+        settings = entry.get("production", {}) or {}
+        preserve = settings.get("preserve_snapshots")
+        save_every = settings.get("save_every")
+        if preserve and save_every and preserve > save_every and matches:
+            keep_every = max(int(preserve) // int(save_every), 1)
+            ordered = sorted(matches, key=lambda item: _stamp_order(item.name))
+            matches = [item for index, item in enumerate(ordered, start=1)
+                       if index % keep_every == 0]
+            retained["intermediate_thinned_to"] = {"preserve_snapshots": preserve,
+                                                   "keep_every_nth_stamp": keep_every,
+                                                   "kept": len(matches), "written": len(ordered)}
         if matches:
             (output / "checkpoints").mkdir(exist_ok=True)
             retained["intermediate_checkpoints"] = {}
@@ -484,6 +513,13 @@ def retain(family: str, fields: dict, output: Path, path: Path | None = None) ->
     (output / "retained.json").write_text(json.dumps(retained, indent=2, sort_keys=True) + "\n")
     return retained
 
+
+
+def _stamp_order(name: str) -> int:
+    """The trailing integer a stamped checkpoint carries: a frame for six families, a save index
+    for ppg. Only its ORDER is used here, and both orderings agree."""
+    digits = re.findall(r"\d+", name)
+    return int(digits[-1]) if digits else 0
 
 def option_value(entry: dict, flag: str) -> str | None:
     """The literal an option carries, still in template form if the descriptor wrote one."""

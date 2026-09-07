@@ -10,7 +10,7 @@ evaluation half has changed shape since it was written (A20's trajectory grid di
 |---|---|---|
 | **training** | **601** | the schedule's per-baseline `solo_hours_per_seed_gt4_1`, x3 seeds. **Measured** for ten of twelve; alda and ctrl converted from gt4i.1 at x1.14 |
 | **endpoint evaluation** | **96** | 36 cells x 800 episodes at 12 s/episode (measured, `bt1e81rq286p23d3l4l9`) |
-| **trajectory evaluation** | **176** | **A20 DECIDED at 3 episodes/stamp, 2026-09-05.** Was 291 at 5, which is 48% of the training budget for a figure that carries no inferential claim. 579 at 10. |
+| **trajectory evaluation** | **160-325** | **A20 DECIDED at 3 episodes/stamp, 2026-09-05.** [Recomputed 2026-09-07 by `plan_production.curve_eval_hours`, which now reads the resolved v100 descriptor and MEASURED per-episode wall-clock instead of a flat 12 s.] 325 is the upper bound: six of twelve baselines have no measured evaluation rate and carry `audit_job_budgets.UNMEASURED_DEFAULT = 30 s/episode`. Measured rates are 9 (`rlvigen`) and 25 (`idaac`). If the six unmeasured evaluate like `rlvigen`, the term is ~160. |
 | **env construction** | **3.4** | 20,160 constructions at **0.6 s measured**, not the 28–168 h previously budgeted |
 | **total** | **~876 GPU-h** | **37 days sequential on one GPU** |
 
@@ -42,34 +42,49 @@ With two-way packing where RAM allows: **~21 days**.
 So the curve costs about **six sequential days** over endpoint-only at the current default. That is
 the number to weigh against "the first look at a learning curve happens after the campaign".
 
-## The trajectory grid costs 29% of all training — and it lands very unevenly
+## The trajectory grid costs 27-54% of all training — and it lands very unevenly
 
 Evaluation is **sequential with training**, not parallel: `run_one_cell` runs training, then
 `retain`, then the curve, then the endpoint grid. So the hours add.
 
-| baseline | train h/seed | trajectory h/cell | trajectory as % of training |
-|---|---|---|---|
-| idaac | 4.8 | 8.08 | **169%** |
-| ppg | 5.9 | 8.08 | **136%** |
-| ibac_sni | 6.3 | 8.08 | **129%** |
-| drqv2 | 6.4 | 8.08 | **126%** |
-| ctrl | 11.2 | 8.08 | 72% |
-| curl / drq / svea | 12.7-16.7 | 8.08 | 48-64% |
-| alda / sgqn / rad | 19.1-27.1 | 8.08 | 30-42% |
-| soda | 51.3 | 8.08 | **16%** |
+| baseline | train h/seed | trajectory h/cell | as % of training | rate basis |
+|---|---|---|---|---|
+| rad | 27.1 | 13.00 | **48%** | **unmeasured (30 s/ep default)** |
+| soda | 51.3 | 13.00 | **25%** | **unmeasured (30 s/ep default)** |
+| alda | 19.1 | 13.00 | **68%** | **unmeasured (30 s/ep default)** |
+| ctrl | 11.2 | 13.00 | **116%** | **unmeasured (30 s/ep default)** |
+| ibac_sni | 6.3 | 13.00 | **206%** | **unmeasured (30 s/ep default)** |
+| ppg | 5.9 | 13.00 | **220%** | **unmeasured (30 s/ep default)** |
+| idaac | 4.8 | 10.83 | **226%** | measured |
+| drqv2 | 6.4 | 3.90 | **61%** | measured |
+| svea | 16.7 | 3.90 | **23%** | measured |
+| drq | 13.4 | 3.90 | **29%** | measured |
+| sgqn | 25.6 | 3.90 | **15%** | measured |
+| curl | 12.7 | 3.90 | **31%** | measured |
 
-**Fleet: 601 GPU-h training against 176 GPU-h trajectory evaluation — trajectory evaluation is 29%
-of training.** Endpoint evaluation and environment construction add another ~99 GPU-h to the
-campaign total; they are not part of the trajectory-depth comparison.
+**Fleet: 601 GPU-h training against 160-325 GPU-h trajectory evaluation — between 27% and 54% of
+training.** Endpoint evaluation and environment construction add another ~99 GPU-h to the campaign
+total; they are not part of the trajectory-depth comparison.
 
-The unevenness is the point. The curve is a **fixed** cost per cell (12 stamps x 240 episodes), while
-training cost varies elevenfold across baselines. So **the four cheapest baselines pay more for
-their curve than for their training**, and soda pays 16%.
+**The width of that range is the finding.** It is not modelling caution: `soda`, `rad`, `alda`,
+`ppg`, `ibac_sni` and `ctrl` have never had an evaluation episode timed, so the arithmetic above
+uses a pessimistic 30 s/episode for half the fleet. One timed grid per family — a by-product of the
+step-2 throughput calibration on the production host — replaces a 165 GPU-h uncertainty with a
+number. Regenerate with `plan_production.curve_eval_hours(600_000, 3)`; do not re-derive it by
+hand, which is how the table above previously came to hold the superseded five-episode figures
+(8.08 h/cell for every baseline, from 291 GPU-h / 36 cells) beside a four-term table that had
+already moved to three episodes.
 
-The 240-episode figure above is the current 3-episode setting (12 stamps x 4 regimes x 10 scenes x
-3). The earlier 400-episode arithmetic belonged to the former five-episode setting and remains
-only in the superseded table above. The uniform-grid choice is operationally set, while the
-owner-facing A20 record remains ratifiable.
+The unevenness is the point. The curve is a **fixed** grid per cell — 13 retained stamps x 120
+episodes (4 regimes x 10 scenes x 3 episodes) = 1,560 evaluation episodes — while training cost
+varies elevenfold across baselines. So **`idaac`'s curve costs more than twice its own training**,
+and `soda`'s costs a quarter of its. The per-cell hours differ only through the per-episode rate,
+which is why measuring the six unmeasured rates is worth more than any further modelling.
+
+Corrected 2026-09-07: this section previously said "12 stamps x 240 episodes". The production grid
+is 120 episodes per stamp, not 240, and the per-baseline table carried the superseded five-episode
+hours. The uniform-grid choice is operationally set, while the owner-facing A20 record remains
+ratifiable.
 
 Three ways to respond, and this is really part of A20's historical reasoning:
 

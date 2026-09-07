@@ -51,7 +51,16 @@ DECLARED_PACKING_CAP = {baseline: entry.get("production", {}).get("cells_per_job
 # alternative was to leave a 1.49x error standing on the single largest cost driver.
 MEASURED_FPS_GT4_1 = {
     "drqv2": 26.05, "curl": 13.11, "drq": 12.48, "svea": 9.99, "sgqn": 6.50,
-    "rad": 6.14, "soda": 3.25, "idaac": 34.82, "ppg": 28.14, "ibac_sni": 26.63,
+    "rad": 6.14, "soda": 3.25,
+    # [Claude 2026-09-07] idaac 34.82 is a PRE-C2 measurement: 4 processes, a 256-step
+    # rollout, 1 PPO epoch, 8 minibatches. C2 runs 1 process x 2048 steps, 10 epochs, 32
+    # minibatches -- heavier per environment step, and a bounded g1.1 V100 rehearsal (job
+    # bt1596tjbdu1rv5senim) measured 24.57 fps for the current recipe. The two numbers are
+    # on different tiers AND different recipes, so this one is not simply replaced: it is
+    # flagged, because substituting a V100 figure into a dict defined on the gt4.1 basis
+    # would be the pooling-an-estimate-with-a-measurement error this file forbids. Treat
+    # idaac hours below as PRE-C2 until a gt4.1 C2 cell or a V100 schedule replaces them.
+    "idaac": 34.82, "ppg": 28.14, "ibac_sni": 26.63,
     # [Claude 2026-09-04] alda and ctrl were absent because this file's header said they "have no
     # successful CUDA run yet". **Stale on both counts, and the totals were excluding a sixth of
     # the fleet**: `alda` completed bt13km8g093do0fdtc58 (all five NATIVE_ALDA_STAGE markers,
@@ -70,7 +79,8 @@ MEASURED_FPS_GT4_1 = {
 #: How each rate was obtained: a directly timed gt4.1 cell, or a gt4i.1 cell converted by 1.14.
 FPS_BASIS = {b: "measured" for b in
              ("drqv2", "curl", "drq", "svea", "sgqn", "rad", "soda", "idaac", "ppg", "ibac_sni")}
-FPS_BASIS.update({"alda": "converted from gt4i.1 x1.14", "ctrl": "converted from gt4i.1 x1.14"})
+FPS_BASIS.update({"alda": "converted from gt4i.1 x1.14", "ctrl": "converted from gt4i.1 x1.14",
+                  "idaac": "measured PRE-C2; the C2 recipe measured 24.57 fps on g1.1 V100"})
 #: Which budget each rate above was measured at, so a reader can see the inconsistency rather than
 #: infer it. Anything at 10000 should be re-measured before a production commitment.
 FPS_MEASURED_AT_FRAMES = {
@@ -155,28 +165,76 @@ FAMILY_OF = {**{b: "rlvigen" for b in RLVIGEN}, **{b: "dmc_gb" for b in DMC_GB},
              "alda": "alda", "ctrl": "ctrl", "ibac_sni": "ibac_sni", "idaac": "idaac", "ppg": "ppg"}
 
 
-def curve_eval_hours(frames: int, save_every: int, seeds: int, episodes: int = 10,
-                     regimes: int = 2, episode_steps: int = 500) -> dict:
+#: Measured wall-clock per evaluation episode, by family. Imported rather than restated: this is
+#: the same measurement `scripts/audit_job_budgets.py` uses to check that a job's timeout covers its
+#: own grid, and the project has already paid once (Q12) for keeping one number in several places.
+def _seconds_per_episode() -> dict:
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_audit_job_budgets", _HERE.parents[1] / "scripts" / "audit_job_budgets.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return dict(module.MEASURED_SECONDS_PER_EPISODE), module.UNMEASURED_DEFAULT
+
+
+def curve_eval_hours(frames: int, seeds: int, path: Path | None = None,
+                     profile: str | None = "v100") -> dict:
     """Job-hours added by evaluating the intermediate grid in the container.
 
-    Derived from the same measured throughputs the cost model already uses, so it needs no new
-    measurement: an evaluation episode is `episode_steps` environment steps of forward passes with
-    no gradient, which is at worst as slow as training at that family's measured FPS -- and in
-    practice faster, since there is no update. Treating it as equal is the conservative direction.
+    [Claude 2026-09-07] Rewritten. The previous version took `save_every`, `episodes` and `regimes`
+    as arguments with defaults of 10 and 2, modelled no scene axis at all, and had NO CALLERS --
+    so `PRODUCTION-CALENDAR.md`'s trajectory numbers were computed by hand against it and then
+    drifted: the calendar's per-baseline table still carried the superseded five-episode figure
+    (8.08 h/cell = 291 GPU-h / 36) beside a four-term table that had been updated to the
+    three-episode decision (176 GPU-h), and its prose said "12 stamps x 240 episodes" where the
+    production grid is 4 regimes x 10 scenes x 3 episodes = 120.
 
-    Reported separately from training rather than folded in, because it is the price of a decision
-    (evaluate every stamp, or only the endpoint) and a reader has to be able to see what dropping
-    the curve would save.
+    This version reads the real thing instead: each family's `save_every` and `preserve_snapshots`
+    give the number of stamps that actually survive `retain` and therefore get evaluated, and the
+    curve scope comes from the descriptor the way `family.py` resolves it -- `curve_eval_<axis>`
+    falling back to `offline_eval_<axis>`, which is why the production curve runs the full ten
+    scenes and four regimes at three episodes rather than the runner's shallow probe defaults.
+
+    Cost per episode is measured wall-clock, not derived from training FPS. The old docstring
+    argued an eval episode is "at worst as slow as training at that family's FPS", which is wrong
+    in the direction that matters: idaac trains at 34.8 fps on gt4.1 but its measured evaluation
+    is 25 s/episode, so training-FPS arithmetic understated its curve by an order of magnitude.
     """
-    stamps = max(frames // save_every, 0) + 1
-    per_baseline = {}
-    for baseline, fps in MEASURED_FPS_GT4_1.items():
-        steps = stamps * regimes * episodes * episode_steps
-        hours = steps / fps / 3600.0
-        per_baseline[baseline] = {"stamps": stamps, "eval_steps": steps,
-                                  "hours_per_seed": hours, "hours_all_seeds": hours * seeds}
-    total = sum(v["hours_all_seeds"] for v in per_baseline.values())
-    return {"stamps": stamps, "rows": per_baseline, "total_hours": total}
+    # PROFILE-AWARE, and that is not a detail: `rlvigen`'s base `preserve_snapshots` is 100000 --
+    # a DataSphere container-disk decision -- while its v100 profile overrides it to 50000, because
+    # the 113 GiB production host has no such limit. Reading the base descriptor here would model a
+    # 7-stamp curve for five baselines that in production retain all thirteen, and understate their
+    # trajectory cost by half. `production_gates.gate_checkpoint_cadence_matches_fleet` pins the
+    # fleet at 12 stamps + endpoint at 50k on this profile.
+    per_episode, unmeasured = _seconds_per_episode()
+    rows = {}
+    for baseline, family in FAMILY_OF.items():
+        settings = (_family.resolved_descriptor(family, path=path, profile=profile)
+                    .get("production") or {})
+        save_every = settings.get("save_every")
+        if not save_every:
+            continue
+        preserve = settings.get("preserve_snapshots")
+        written = max(frames // save_every, 0)
+        # `retain` keeps the stamps at multiples of `preserve_snapshots`, plus the endpoint; with
+        # no cadence every written stamp survives.
+        kept = (frames // preserve if preserve else written) + 1
+        regimes = settings.get("curve_eval_regimes", settings.get("offline_eval_regimes")) or ""
+        scenes = settings.get("curve_eval_scenes", settings.get("offline_eval_scenes")) or []
+        episodes = settings.get("curve_eval_episodes", settings.get("offline_eval_episodes")) or 0
+        n_regimes = len(regimes.split(",")) if isinstance(regimes, str) and regimes else 1
+        n_scenes = len(scenes) if isinstance(scenes, list) else 1
+        per_stamp = n_regimes * n_scenes * episodes
+        seconds = per_episode.get(baseline, per_episode.get(family, unmeasured))
+        hours = kept * per_stamp * seconds / 3600.0
+        rows[baseline] = {
+            "stamps_written": written + 1, "stamps_evaluated": kept,
+            "episodes_per_stamp": per_stamp, "seconds_per_episode": seconds,
+            "measured": baseline in per_episode or family in per_episode,
+            "hours_per_seed": hours, "hours_all_seeds": hours * seeds,
+        }
+    total = sum(v["hours_all_seeds"] for v in rows.values())
+    return {"rows": rows, "total_hours": total}
 
 
 def checkpoint_storage_gb(frames: int, save_every: int, seeds: int) -> dict:

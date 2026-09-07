@@ -368,7 +368,7 @@
       "v100_completed_frames_per_second": null,
       "throughput_source": "UNMEASURED_ON_V100",
       "t4_completed_frames_per_second_reference": 34.82,
-      "t4_reference_basis": "measured"
+      "t4_reference_basis": "measured PRE-C2; the C2 recipe measured 24.57 fps on g1.1 V100"
     },
     {
       "baseline": "ppg",
