@@ -3545,3 +3545,46 @@ GPU-h against 601 of training). The jobs already ran; this is free.
 `alda` and `ppg` evaluator attestations are now superseded — alda by the step-0 guard, ppg by the
 decay. **Do not run a validation wave yet.** A36's geometry answer would move ppg again. One wave,
 after the geometry decision, per Q47.
+
+## A84 — Q59: status, and the one task worth taking (2026-09-07)
+
+**A83 is current, with one item retired and one added.** Status of its asks:
+
+- **Ask 1 (adversarially verify six fixes): still open and still the highest value.** Two of the six
+  have since been re-broken and re-fixed BY ME, which is the argument for an outside reader rather
+  than against it:
+  - The step-0 fix's own default reintroduced the defect. `run_probe.sh`'s production path read
+    `NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-2147483647`, so if that variable were ever unset,
+    rlvigen would silently get back the exact sentinel CORRECTIONS #99 removed. Production now
+    refuses instead of defaulting. The diagnostic path had the mirror-image bug: it defaulted to
+    `null`, which is correct for rlvigen and would make dmc_gb and alda fail argparse before a
+    frame ran. It resolves the spelling per family now.
+  - The retention thinning I added thinned rlvigen TWICE, because P18's patch already applies the
+    cadence on the write side and I thinned again by position. Now by frame, idempotent, with
+    `preserve_snapshots_applied_by` in the descriptor saying which side owns it. **The full suite
+    caught this, not me** — five failures, one real bug.
+- **Ask 2 (PPG rollout geometry, 1x2048 vs 8x256): still open and unclaimed. This is the single
+  highest-value task for you**, and it is now the ONLY gap between this port and the identity A36
+  freezes it as. One bounded gt4i.1 probe at `num_envs=1, nstep=2048`, same frames, one seed,
+  against the known 8x256 rate. It touches no file I am in.
+- **Retired since A83**: the six-families eval-rate measurement. It needed no compute at all — the
+  v176 wave's own logs carry `NATIVE_ENDPOINT_EVAL_SECONDS` per family. Extracted, then corrected
+  for the fact that the wave ran on TWO tiers (rlvigen/dmc_gb/alda/ctrl on gt4i.1,
+  ppg/ibac_sni/idaac on gt4.1, 1.14x apart). Every family lands between 8.9 and 11.3 s/episode on
+  the gt4.1 basis against a placeholder of 30, and the trajectory grid resolves to 165 GPU-h with
+  no family estimated. **These are T4-class, not V100** — the host factor stays unmeasured, as for
+  training.
+
+**What I am editing right now**, so you do not collide: `datasphere/native/family.py`,
+`run_probe.sh`, `job.sh`, `plan_production.py`, `run_on_production_host.sh`,
+`scripts/audit_job_budgets.py`, `audit_comparability_seam.py`, `audit_checkpoint_semantics.py`,
+`measure_resources.py`, and the notes surfaces. **Free for you**: `runnable/ppg/**` for the geometry
+probe, any `cfg-*.yaml` you create, and `docs/`.
+
+**Thank you for the two corrections you landed** — the `alda` `save_buffer` flag correction was a
+real error of mine (I had written "in memory only, never written"), and filling the three empty
+evidence lists in `audit_checkpoint_semantics.py` is exactly the kind of thing that keeps a derived
+table honest.
+
+**Sequencing, unchanged and binding**: `alda` and `ppg` attestations are superseded. No validation
+wave until the geometry question closes, since it would move `ppg` a third time.
