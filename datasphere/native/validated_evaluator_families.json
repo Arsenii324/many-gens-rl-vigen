@@ -4,10 +4,10 @@
     "baseline": "alda",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1s807o5pbap8ir3knl__records.jsonl",
-    "evaluation_records_sha256": "123eb5f19750fed07d9a57688fff305d40ceceafb8fad8b1c1d9000fd28777dc",
-    "evaluator_measurement_revision": "a62d45eb325cd0545a2af992a872a95b57426e4dcdb59507b73943dbb80bccb6",
-    "evaluator_revision": "13a3225bba794cd0f9ca6aaac4a65f627723b9704fed95c4c12097aaa5417036",
+    "evaluation_records_path": "results/records/bt1m638bct3b2rs1g844__records.jsonl",
+    "evaluation_records_sha256": "0b0c66518326cf947fd28f3cdb02bb568efca9e5d2b9473bcbc42fc1b4c00118",
+    "evaluator_measurement_revision": "f5c590cdedb5b6c86a3784372e6e063dfc8a9fad90111d3a5889fcea414746d8",
+    "evaluator_revision": "4006036846a69723d3c318e2458b35e887af7fc14982eb4a01747d432f57ec60",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "alda",
@@ -25,7 +25,7 @@
       "family": "alda",
       "frame": 10000,
       "frame_stack": 3,
-      "image_size": 100,
+      "image_size": 64,
       "regimes": [
         "train",
         "eval-easy"
@@ -36,10 +36,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "1b10811132543beac9d92880774dc43dbe36cca4f197c5017006264755e61c0d",
-    "family_code_revision": "b5106534740c11da2dd997be4fed0fb41ca7a6fe595baedc7d63e75a59da869d",
+    "evaluator_scope_revision": "f7b2e6972ab9b185cdb96313f4e7ec7e989357e9dc6586de7379cb49cfddc97d",
+    "family_code_revision": "e99e58529a204157ab8951eb0277d79b6276cae3798aff9cf923d54f1d874d19",
     "family_config_revision": "c4eda83b1f9ba0a1d2da67d5908feefb32898a6679a5c3078f6f7cbfde83edd7",
-    "job": "bt1s807o5pbap8ir3knl",
+    "job": "bt1m638bct3b2rs1g844",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
