@@ -1114,9 +1114,15 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
                                                  a.episode_seed, a.image_size, a.episode_length,
                                                  baseline=a.baseline)
             else:
+                # [Claude 2026-09-07] `declared_image_size` is a local of `main()`; referencing it
+                # here raised `NameError: name 'declared_image_size' is not defined` for every
+                # rlvigen cell, which is why this branch alone failed while the other six families
+                # passed the same wave. Read the protocol directly, the same authority rule the
+                # frame-stack check now follows -- `_run_grid` has the baseline and needs no
+                # value threaded from a caller to know the geometry.
                 returns, succ, flags = run_scene(agent, a.task, scene, regime, a.episodes,
                                           a.episode_seed, a.action_repeat, a.frame_stack, frame,
-                                          image_size=declared_image_size)
+                                          image_size=OBSERVATION_GEOMETRY[a.baseline][0])
                 witnesses = list(_eval_across_scenes.LAST_PLACEMENT_WITNESSES)
                 diagnostics = list(_eval_across_scenes.LAST_EPISODE_DIAGNOSTICS)
             if a.family != "rlvigen":
