@@ -419,6 +419,63 @@ if [[ "${1:-}" == "--cells-need-places365" ]]; then
   exit "$?"
 fi
 
+require_accelerator() {
+  # [Claude 2026-09-07, external recommendation 22 item 9.] Fail closed on wrong runtime identity.
+  #
+  # The environment record below already DETECTS the accelerator -- torch.cuda for six families,
+  # jax.devices() for ctrl -- but only to write it into a manifest. Detecting is not refusing. A
+  # ctrl cell that falls back to JAX CPU runs perhaps fifty times slower and produces a
+  # valid-looking result with an honest manifest saying it had no GPU, which is exactly the
+  # "succeeds quietly" failure require_production_configuration exists to prevent for host
+  # profiles. Recommendation 22 names this case specifically.
+  #
+  # Production scale only. A probe may legitimately run on CPU -- several diagnostic configs in
+  # this directory do, deliberately -- and refusing there would break them for no benefit.
+  local cells="$1"
+  [[ "${FRAMES:-10000}" -ge 600000 ]] || return 0
+  [[ "${NATIVE_ALLOW_CPU:-0}" == "1" ]] && {
+    echo "=== NATIVE_ACCELERATOR_CHECK_SKIPPED NATIVE_ALLOW_CPU=1 ===" >&2
+    return 0
+  }
+  local family
+  family="$(python3 "$FAMILY_TOOL" family-of --baseline "${cells%%:*}" 2>/dev/null)" || family=""
+  python3 - "$family" <<'ACCEL' || exit 3
+import sys
+
+family = sys.argv[1]
+if family == "ctrl":
+    try:
+        import jax
+    except Exception as error:                                   # noqa: BLE001
+        print(f"REFUSING: ctrl needs JAX and it did not import: {error}", file=sys.stderr)
+        raise SystemExit(1)
+    devices = [d for d in jax.devices() if d.platform in ("gpu", "cuda", "rocm")]
+    if not devices:
+        print("REFUSING: ctrl resolved NO JAX GPU device -- this is the CPU fallback.",
+              file=sys.stderr)
+        print(f"  jax.devices() = {jax.devices()}", file=sys.stderr)
+        print("  A CPU cell finishes, reports honestly that it had no GPU, and costs the",
+              file=sys.stderr)
+        print("  campaign a slot. Set NATIVE_ALLOW_CPU=1 only for a deliberate CPU probe.",
+              file=sys.stderr)
+        raise SystemExit(1)
+    print(f"=== NATIVE_ACCELERATOR ctrl jax {devices[0]} ===")
+else:
+    try:
+        import torch
+    except Exception as error:                                   # noqa: BLE001
+        print(f"REFUSING: {family or 'this family'} needs torch and it did not import: {error}",
+              file=sys.stderr)
+        raise SystemExit(1)
+    if not torch.cuda.is_available():
+        print(f"REFUSING: {family or 'this family'} resolved no CUDA device at production scale.",
+              file=sys.stderr)
+        print("  Set NATIVE_ALLOW_CPU=1 only for a deliberate CPU probe.", file=sys.stderr)
+        raise SystemExit(1)
+    print(f"=== NATIVE_ACCELERATOR {family} torch {torch.cuda.get_device_name(0)} ===")
+ACCEL
+}
+
 require_production_configuration() {
   # A production-length run must NAME its host. `host_profile()` defaults to "datasphere" so that
   # every existing probe config keeps working -- but that same default is the silent failure the
@@ -495,6 +552,7 @@ if [[ "${1:-}" == "--run-cells" ]]; then
   echo "=== NATIVE_HOST_PROFILE $(python3 "$FAMILY_TOOL" host-profile) ==="
   apply_production_settings "$cells_arg"
   require_production_configuration
+  require_accelerator "$cells_arg"
   python3 "$FAMILY_TOOL" check-budget --cells "$cells_arg" --frames "${FRAMES:-10000}"
   if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
     # Same fix as the production path below: a numeric sentinel evaluates at step 0 because
@@ -1223,6 +1281,12 @@ elif [[ -n "${OFFLINE_EVAL_SNAPSHOT:-}" ]]; then
   fi
   export FAILED_CELLS=""
 else
+  # [Claude 2026-09-07, external recommendation 22 item 9.] Here rather than beside the other
+  # preflights: this one needs torch/jax importable, and the family's dependencies are installed
+  # only at line ~960. Every earlier refusal (host profile, budget, co-schedulability, memory) is
+  # answerable from the descriptor alone and therefore runs before the bootstrap is paid for; this
+  # one cannot be, so it runs at the last moment before training instead.
+  require_accelerator "$cells"
   run_cell_list_ok=1
   # [Corrected 2026-09-05, external review: the analogous training-path bug -- a failed
   # run_cell_list (nonzero via `|| cell_status=1`) still exported the COMPLETED marker
