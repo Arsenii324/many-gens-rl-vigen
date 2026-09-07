@@ -146,9 +146,25 @@ NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 \
 SAVE_EVERY_FRAMES=50000 EVAL_EVERY_FRAMES=50000 EVAL_EPISODES=10 ENDPOINT_EVAL=1 \
 DOCKER_GPUS='"device=1"' \
 NATIVE_OUT_HOST_DIR=/data/runs/drqv2-s1 \
+CELL_TIMEOUT_SECONDS=NNNNN \
+NATIVE_RESULT_MIRROR=/mnt/other-volume/rlvigen-results \
   bash datasphere/native/run_on_production_host.sh \
     payload-vNNN-rlvigen.tgz result-drqv2-s1.tgz rlvigen-door2-90d8b8c4.tgz
 ```
+
+**`NATIVE_RESULT_MIRROR` is mandatory at 600k, and it is checked rather than trusted.** Results
+otherwise live on exactly one host volume; a soda cell alone is ~45 hours and the campaign is
+~893 GPU-hours. The script compares the filesystem id of the mirror against the result path's
+(`stat -f -c %i`) and **refuses if they match** — a copy beside the original does not survive the
+failure it exists for. It also refuses if either id cannot be read, rather than assuming.
+
+If the host genuinely has one volume, `NATIVE_ACCEPT_SAME_DEVICE=1` records the deviation
+explicitly and the run proceeds; the marker `NATIVE_RESULT_MIRROR_SAME_DEVICE` then appears in the
+log. Prefer a real second device, including a network mount.
+
+After the run, look for the `mirrored:` line. A `WARNING: NATIVE_RESULT_MIRROR copy FAILED` line
+means the primary result is intact and there is no second copy — the run does not fail for it,
+because by then the training is already done and its output is on disk.
 
 `NATIVE_PRODUCTION=1` and `NATIVE_HOST_PROFILE` are **mandatory at 600k** — `run_probe.sh` refuses
 without them, because `apply_production_settings` would otherwise apply nothing and train a full

@@ -945,6 +945,14 @@ project restored the released code's commented-out executable lines, and the nea
 positive path is inherited from the released repository. Current clone-era wording is in the
 summary table above and `notes/faithfulness-reconciliation.md`.
 
+**Where every review's position on a given parameter is reconciled:**
+`notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` resolves all 27 external review files against
+each other, per baseline and per parameter. It is framed as DISPOSITIONS (keep and disclose /
+change / demote the claim / measure first / never addressed) rather than as values, because
+several reviews' actual position is *keep the value and declare it unfaithful*, which no
+number can express. Its most useful section is the last one: the parameters no review has
+ever examined.
+
 0. **FIXED** — the invented `ctrl_coef` is gone. `pseudocode.tex:57` reads
    `L_CTRL = L_clust + L_pred`, a plain sum with no scalar, and the official repo has separate
    `update_ppo` / `update_daac` / `update_cluster` functions whose only coefficient is PPO's own

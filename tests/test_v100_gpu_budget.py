@@ -72,6 +72,12 @@ def _submit(tmp_path: Path, config: Path, state: Path, *, cloud_exit: int = 0) -
             "PATH": f"{fake_bin}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin",
             "FAKE_DATASPHERE_INVOKED": str(invoked),
             "NATIVE_V100_BUDGET_STATE": str(state),
+            # [Claude 2026-09-08] Without this, `job.sh` appends to the REPO's
+            # results/submissions.jsonl -- the production attempt record, which had 32
+            # rows and every one a fixture. `scripts/attempt_ledger.py` found it on its
+            # first run. A test that writes into the artifact it tests makes that
+            # artifact useless, quietly.
+            "SUBMISSION_LEDGER": str(tmp_path / "submissions.jsonl"),
             "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log"),
         },
         text=True,

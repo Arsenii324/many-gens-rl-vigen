@@ -938,7 +938,18 @@ GATING_AUDITS = {
     "audit_static_classes.py": "three defect classes that were findable by reading and were not",
     "audit_checkpoint_semantics.py": "what each checkpoint contains, and what it does NOT permit",
     "audit_instruments.py": "which instruments are themselves checked, and which are on trust",
+    # [Claude 2026-09-08] Added with `--strict`, which fails only when a config was submitted more
+    # than once AND a predecessor's outcome cannot be read off disk. That is the precise shape of
+    # "a rerun silently replaced a failed seed", and it is the one thing in the attempt record that
+    # must not be discovered after the results are written.
+    "audit_attempt_ledger.py": "did a rerun silently replace an attempt whose outcome is unknown",
 }
+
+#: Arguments a gating audit needs to be a pass/fail check rather than a report. Kept beside the set
+#: rather than inside its keys, because `test_every_audit_is_classified.py` matches FILENAMES and a
+#: key carrying a flag would silently drop out of that check -- which is the classification hole
+#: this whole mechanism exists to close.
+GATING_AUDIT_ARGS = {"audit_attempt_ledger.py": ("--strict",)}
 
 #: Inventories. They describe rather than decide, and several are already consumed by the gates
 #: above (`audit_comparability_seam` feeds three of them). Listed so the classification is total.
@@ -963,7 +974,7 @@ def gate_failing_capable_audits_are_consulted():
     """
     failures = []
     for script, question in sorted(GATING_AUDITS.items()):
-        code, out = _audit_exit_code(script)
+        code, out = _audit_exit_code(script, *GATING_AUDIT_ARGS.get(script, ()))
         if code == -1:
             return OWNER, f"{script} could not run: {out}"
         if code != 0:
@@ -972,7 +983,7 @@ def gate_failing_capable_audits_are_consulted():
         return FAIL, "audit(s) failing and previously unconsulted: " + "; ".join(failures)
     return PASS, (f"{len(GATING_AUDITS)} pass/fail audits consulted here rather than left "
                   "standalone: shared evaluator, static defect classes, checkpoint semantics, "
-                  "instrument trust")
+                  "instrument trust, attempt ledger")
 
 
 def gate_clone_patches_reproduce():

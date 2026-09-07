@@ -123,16 +123,16 @@ def test_reported_return_is_raw_for_all_twelve_while_three_learners_normalise():
         f"the set of reward-normalising learners changed: {normalised}")
 
 
-def test_frame_stack_now_splits_ten_two():
-    """PART2 Finding 5, called there the largest comparability gap found. C2.
+def test_the_frame_stack_seam_no_longer_splits():
+    """PART2 Finding 5, called there the largest comparability gap found. C2. Now closed.
 
-    PPG and IDAAC use the selected three-frame DMC comparator path. IBAC-SNI and CTRL retain
-    explicit one-frame released geometry.
+    Was 10/2 with `ctrl` and `ibac_sni` retaining released one-frame geometry. A40 REVISED-2
+    established that single-frame was Procgen's environment convention rather than either method's
+    decision, and authored the stack both Door paths were missing entirely.
     """
     values, _ = acs.frame_stack()
     single = {b for b, v in values.items() if str(v).startswith("1")}
-    assert single == {"ctrl", "ibac_sni"}, (
-        f"the single-frame set is no longer exactly the two retained one-frame baselines: {single}")
+    assert not single, f"the frame-stack seam reopened for: {sorted(single)}"
     assert {str(values[b]) for b in acs.NATIVES} == {"3"}, "the natives stopped stacking 3"
 
 

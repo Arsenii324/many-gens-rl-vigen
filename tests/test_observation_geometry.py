@@ -128,23 +128,36 @@ def test_render_size_matches_its_launcher(name):
 
 @pytest.mark.parametrize("name", sorted(n for n in OBSERVATION_GEOMETRY
                                         if n in PROCGEN_ORIGINS))
-def test_procgen_origin_baselines_are_declared_single_frame(name):
-    """The 8/4 split is not a preference; it follows from the reference's own input.
+def test_procgen_origin_baselines_now_stack_and_the_stack_is_in_the_patch(name):
+    """This test did its job: it demanded an argument, and A40 REVISED-2 is the argument.
 
-    Procgen serves one RGB frame and these four encoders were built for one, so stacking would be
-    a deviation in the clone. This pins the declaration to that reasoning: if someone later adds
-    a FrameStack to one of these seams, they must change this table too and will have to argue
-    for it.
+    It used to assert the opposite -- that these must be single-frame, because Procgen serves one
+    RGB frame and their encoders were built for one. The premise was right about Procgen and wrong
+    about Door. CoinRun paints velocity into the observation (`PAINT_VEL_INFO=1`; its own
+    `config.py:140` says "No frame stack is necessary if PAINT_VEL_INFO = 1"), and CTRL's
+    clustering objective works over rollout TIMESTEPS (`algo.py:90,539`), not stacked channels.
+    Neither condition survives the change of environment, so single-frame was a convention
+    inherited by silence rather than a decision either method made -- and on Door it left both
+    policies unable to observe velocity at all.
+
+    The assertion is inverted rather than deleted, and it is STRONGER inverted. The old negative
+    form ("no seam introduces a stack") could not see a stack upstream already had, as this
+    module's own docstring concedes. The positive form checks the authored code is really in the
+    exported patch -- which is what a clean clone reconstructs from.
     """
-    assert OBSERVATION_GEOMETRY[name][1] == 1, (
-        f"{name}'s reference is Procgen (single RGB frame); declaring a stack means a deviation "
-        f"was added to its clone, which must be justified in docs/RUNNABLE-ORIGINALS.md")
+    assert OBSERVATION_GEOMETRY[name][1] == 3, (
+        f"{name} is declared single-frame again; A40 REVISED-2 raised both Procgen-origin "
+        f"baselines to 3, and reverting it needs an entry in notes/DECISION-SHEET.md")
     patch = PATCHES / f"{name}.patch"
-    if patch.exists():
-        body = "\n".join(l for l in patch.read_text().splitlines()
-                         if l.startswith("+") and not l.startswith("+++"))
-        assert "FrameStack" not in body, (
-            f"{name}.patch introduces a FrameStack while OBSERVATION_GEOMETRY declares 1 frame")
+    if not patch.exists():
+        pytest.skip(f"{patch.name} not exported yet -- run scripts/deviations.py --export")
+    body = "\n".join(l for l in patch.read_text().splitlines()
+                     if l.startswith("+") and not l.startswith("+++"))
+    marker = "HWCStack" if name == "ibac_sni" else "_stackedobs"
+    assert marker in body, (
+        f"{name} is declared 3-frame but {patch.name} contains no authored stack ({marker}). "
+        f"Neither baseline had ANY stacking mechanism on the Door path, so the declaration is "
+        f"only true if the clone patch carries the code that makes it true.")
 
 
 @pytest.mark.parametrize("name", ["rad", "soda", "alda", "idaac"])
@@ -158,20 +171,20 @@ def test_stacking_baselines_really_stack(name):
         f"{patch.name} shows no FrameStack, but {name} is declared as 3-frame stacked")
 
 
-def test_the_split_is_now_ten_two():
+def test_the_frame_stack_axis_is_now_closed():
     """A bare count, so a silent drift in either direction shows up as a number, not a story.
 
-    [Claude 2026-09-06] Was 8/4 until idaac moved from single-frame to 3-stack (DECISION-SHEET
-    A35, Q55) -- named here as the one deliberate exception, not a silent drift, exactly per this
-    test's own stated purpose.
+    8/4 -> 10/2 (A35, idaac) -> 12/0 (A40 REVISED-2, ibac_sni and ctrl). This is the only one of
+    the fleet's comparability axes that has actually been CLOSED rather than declared, and closing
+    it is what took the on-policy group from 1 primary pair to 3 (`scripts/comparison_blocks.py`).
+    A baseline reappearing at 1 is a comparability regression, not a refactor.
     """
     stacked = sorted(n for n, (_s, f) in OBSERVATION_GEOMETRY.items() if f == 3)
     single = sorted(n for n, (_s, f) in OBSERVATION_GEOMETRY.items() if f == 1)
-    assert len(stacked) == 10 and len(single) == 2, (
-        f"the frame-stack split moved: {len(stacked)} stacked {stacked}, "
+    assert len(stacked) == 12 and not single, (
+        f"the frame-stack split reopened: {len(stacked)} stacked {stacked}, "
         f"{len(single)} single {single}. That is a comparability change, not a refactor -- "
         "update docs/PART2-METRIC-INVENTORY.md Finding 5 in the same commit.")
-    assert set(single) == {"ibac_sni", "ctrl"}
 
 
 def test_continuous_main_descriptors_select_three_frames():

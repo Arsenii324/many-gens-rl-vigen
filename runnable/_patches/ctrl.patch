@@ -727,10 +727,10 @@ index e18477e..dc4704c 100644
  
  
 diff --git a/vec_env.py b/vec_env.py
-index 7401df7..c58b692 100644
+index 7401df7..0d51989 100644
 --- a/vec_env.py
 +++ b/vec_env.py
-@@ -569,3 +569,128 @@ def clear_mpi_env_vars():
+@@ -569,3 +569,181 @@ def clear_mpi_env_vars():
          yield
      finally:
          os.environ.update(removed_environment)
@@ -767,7 +767,45 @@ index 7401df7..c58b692 100644
 +                for i in range(num_envs)]
 +        c, h, w = envs[0].observation_space["rgb"].shape
 +
-+        self.observation_space = Box(shape=(c, h, w), low=0, high=255)
++        # [OURS 2026-09-08, DECISION-SHEET A40 REVISED-2] FRAME STACKING, WHICH THIS PATH NEVER
++        # HAD. Nothing between the robosuite env and the policy carried more than one frame:
++        # `_SyncVecEnv`, `VecMonitor` and `VecNormalize` all preserve the observation shape, so
++        # CTRL could not observe velocity on Door at all.
++        #
++        # `frame_stack=1` is Procgen's environment convention, not CTRL's method. CTRL's
++        # clustering objective operates on temporal windows over ROLLOUT TIMESTEPS
++        # (`algo.py:90`, `algo.py:539`), never on stacked channels, so there is no methodological
++        # stake in the frame count -- the same reasoning that moved `idaac` and `ppg` to 3.
++        #
++        # Semantics are `baselines`' `VecFrameStack`, which is what this lineage uses: oldest
++        # frame first, zeroed on reset and on every `done`
++        # (`ext/baselines/.../vec_frame_stack.py:22,28`). Not repeat-the-first-frame, which is a
++        # defensible rule that is not this port's to invent.
++        try:
++            self._nstack = int(os.environ.get("RLVIGEN_FRAME_STACK", "1"))
++        except ValueError as error:
++            raise ValueError(
++                "RLVIGEN_FRAME_STACK=%r is not an integer; a stack that silently fell back to 1 "
++                "would report a three-frame configuration while running a one-frame policy"
++                % os.environ.get("RLVIGEN_FRAME_STACK")) from error
++        if self._nstack < 1:
++            raise ValueError("RLVIGEN_FRAME_STACK must be at least 1, got %d" % self._nstack)
++        self._frame_channels = c
++
++        # The INNER stack keeps the single-frame space -- `_SyncVecEnv` steps real envs and must
++        # not be told they emit stacked observations. Only what this class exposes is widened.
++        single_space = Box(shape=(c, h, w), low=0, high=255)
++        self.observation_space = (single_space if self._nstack == 1
++                                  else Box(shape=(c * self._nstack, h, w), low=0, high=255))
++        # The DECLARATION is (C, H, W) and the DATA is (H, W, C). That is the existing convention
++        # documented above, not an oversight: `buffer.py:50-52` permutes with
++        # `[shape[1], shape[2], shape[0]]`, so declaring (c*k, h, w) makes it allocate
++        # [h, w, c*k] -- correct. The buffer here therefore has to be channel-LAST, and uint8, to
++        # match what `_SyncVecEnv._obs` actually emits. Getting this backwards would have been
++        # invisible on Door, whose frames are square: (3, 64, 64) and (64, 64, 3) differ only in
++        # meaning until a stack makes one of them 9.
++        self._stackedobs = None if self._nstack == 1 else np.zeros(
++            (num_envs, h, w, c * self._nstack), dtype=np.uint8)
 +        self.action_space = envs[0].action_space
 +
 +        # [Added 2026-09-05.] Hoist the regime this stack was CONSTRUCTED with.
@@ -794,7 +832,7 @@ index 7401df7..c58b692 100644
 +        if any(getattr(e, "_mode", None) != applied_regime["mode"] for e in envs[1:]):
 +            raise RuntimeError("RL-ViGen vector members disagree about the requested regime")
 +
-+        env = _SyncVecEnv(envs, self.observation_space, self.action_space,
++        env = _SyncVecEnv(envs, single_space, self.action_space,
 +                          condition_seed=condition_seed, scene_id=scene_id)
 +        env = VecMonitor(venv=env, filename=None, keep_buf=100)
 +        if normalize_rewards:
@@ -804,11 +842,26 @@ index 7401df7..c58b692 100644
 +        self._max_episode_steps = 10_000
 +
 +    def reset(self):
-+        return self.env.reset()
++        obs = self.env.reset()
++        if self._nstack == 1:
++            return obs
++        self._stackedobs[...] = 0
++        self._stackedobs[..., -self._frame_channels:] = obs
++        return self._stackedobs.copy()
 +
 +    def step(self, action):
 +        o, r, d, info = self.env.step(np.asarray(action))
-+        return o, r, d, info
++        if self._nstack == 1:
++            return o, r, d, info
++        # `_SyncVecEnv` auto-resets on done and returns the NEW episode's first observation in
++        # place of the terminal one, so a member that is done must have its history cleared or the
++        # next episode's first stack would carry the previous episode's frames.
++        self._stackedobs = np.roll(self._stackedobs, shift=-self._frame_channels, axis=-1)
++        for index, done in enumerate(d):
++            if done:
++                self._stackedobs[index] = 0
++        self._stackedobs[..., -self._frame_channels:] = o
++        return self._stackedobs.copy(), r, d, info
 +
 +
 +class _SyncVecEnv(VecEnv):

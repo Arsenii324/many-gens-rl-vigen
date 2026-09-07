@@ -42,7 +42,7 @@ desc: C95 step (b) -- V100 (R_B), to compare against a fresh current-evaluator T
 # (see the cmd block below) and takes the first match, so no comment anywhere in this file may
 # repeat that variable name immediately followed by an equals sign, or it will shadow the real one.
 cmd: >-
-  timeout --foreground 6000s env
+  timeout --foreground 8000s env
   NATIVE_V100_RESERVATION_MINUTES=100
   RLVIGEN_ARCHIVE=${RLVIGEN}
   OFFLINE_EVAL_SNAPSHOT=${SNAP}

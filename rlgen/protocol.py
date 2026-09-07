@@ -115,8 +115,21 @@ OBSERVATION_GEOMETRY = {
                                 # implementation gap closed (A65/C98). See
                                 # `runnable/idaac/ppo_daac_idaac/envs.py::make_rlvigen_venv` and
                                 # `datasphere/native/families.json`'s `idaac` constants.
-    "ibac_sni":      (64, 1),
-    "ctrl":          (64, 1),
+    # [Claude 2026-09-08, DECISION-SHEET A40 REVISED-2] Raised from 1. `frame_stack=1` was never
+    # a decision of either method's: it is Procgen's environment convention, which reached Door
+    # because CoinRun paints velocity into the observation (`PAINT_VEL_INFO=1`, and its own
+    # `config.py:140` says "No frame stack is necessary if PAINT_VEL_INFO = 1"), and because
+    # CTRL's clustering objective works over rollout TIMESTEPS (`algo.py:90,539`), never over
+    # stacked channels. Neither condition holds here, so both were velocity-blind on Door.
+    #
+    # The implementation cost was estimated wrong twice before the path was traced. It is NOT a
+    # channel literal: NEITHER baseline had any stacking mechanism at all on the Door path --
+    # CoinRun's `VecFrameStack` is not on it, and `ibac_sni_runtime.HWCFloat` and
+    # `ctrl/vec_env.RLViGenVecEnvCustom` each presented exactly one frame. Both stacks are
+    # authored here, with `baselines`' `VecFrameStack` semantics (oldest first, zeroed on reset
+    # and on done), and both are exercised by `tests/test_{ibac_sni,ctrl}_frame_stack.py`.
+    "ibac_sni":      (64, 3),
+    "ctrl":          (64, 3),
 }
 
 # Time-limit handling, per baseline. Door and Lift have NO early termination, so every episode
@@ -144,6 +157,54 @@ TIME_LIMIT_HANDLING = {
     "idaac":        "terminal",       # runnable/idaac/ppo_daac_idaac/storage.py:58-62
     "ppg":          "terminal",       # runnable/ppg/phasic_policy_gradient/ppo.py:38
     "ibac_sni":     "terminal",       # Procgen-native, same reasoning
+}
+
+# Whether the agent OPTIMISES a normalised reward or the raw Door reward.
+#
+# [Claude 2026-09-08] Enumerated for the first time. `notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md`
+# item 3 raised idaac's case as a finding no external review had made; checking the other eleven
+# turned it into an axis. Review 2 §29 had noted generically that "several on-policy
+# Procgen-derived families normalize rewards" without ever naming which, or where, or how many.
+#
+# The split is 3 / 9 -- the same arithmetic as TIME_LIMIT_HANDLING above, and a DIFFERENT three.
+# That is worth stating plainly: a reader who has internalised "the three that differ are rad,
+# soda, alda" will get this axis exactly backwards.
+#
+# WHY THIS IS DECLARED RATHER THAN EQUALISED, which is not the same as "it is how it is":
+#
+#   - Equalising is strictly LESS faithful in both directions. All three normalisers do it in
+#     their own released code, so removing it deviates from their sources; adding it to the nine
+#     deviates from theirs. There is no configuration in which all twelve match their own paper.
+#   - Unlike frame stack (A40), the transplanted convention's CONDITION is not violated here. The
+#     frame-stack argument was that Procgen paints velocity into the observation, so Procgen
+#     authors never needed a stack -- a condition that is simply false on Door. A running-return
+#     normaliser makes no such assumption: it is scale-ADAPTIVE, and adapts to Door's reward scale
+#     as readily as to Procgen's. It does less here; it does not do something wrong here.
+#   - It does not contaminate the reported numbers. Each family's evaluator reads the RAW return:
+#     idaac through `info['episode']['r']` from the VecMonitor that sits INSIDE the normaliser
+#     (eval_grid.py:534-541, found when summing step() rewards gave 22.4 against a logged 1.55),
+#     and ctrl through an explicit `normalize_rewards=False` (eval_grid.py:1006-1024). So this is
+#     a training-objective axis, not a units axis -- the distinction that decides whether a
+#     difference must be removed or may be declared.
+#
+# What it still costs: the three normalise their advantage scale adaptively and the nine do not,
+# so an identical Door reward produces differently-scaled gradients. That belongs in the report.
+REWARD_NORMALIZATION = {
+    # baseline:     convention   where the code does it
+    "idaac":        "normalised",  # ppo_daac_idaac/envs.py:198, VecNormalize(ob=False) leaves
+                                   # ret=True, with cliprew=10 and its own internal gamma=0.99
+    "ppg":          "normalised",  # phasic_policy_gradient/ppo.py:202, PPG's own RewardNormalizer
+    "ctrl":         "normalised",  # train_ppo.py:157,162 pass normalize_rewards=True, and
+                                   # vec_env.py:43-44 then applies VecNormalize(ob=False)
+    "ibac_sni":     "raw",         # no normaliser anywhere in the torch_rl branch
+    "rad":          "raw",
+    "soda":         "raw",
+    "alda":         "raw",
+    "drqv2":        "raw",
+    "svea":         "raw",
+    "sgqn":         "raw",
+    "curl":         "raw",
+    "drq":          "raw",
 }
 # DEAD KNOB (C71 #4): declared here and NEVER CONSULTED BY THE RUNNERS. `Protocol` hashes this
 # value into the comparability record, but `runnable/_launch/*.sh` and the clones' own entry points

@@ -51,6 +51,10 @@ def _stubbed_submission(tmp_path: Path, config: Path):
     env["DATASPHERE_STUB_LOG"] = str(log)
     env["NATIVE_EVIDENCE_LOG"] = str(tmp_path / "actions.log")
     env["NATIVE_V100_BUDGET_STATE"] = str(tmp_path / "v100-budget.json")
+    # [Claude 2026-09-08] Without this, `job.sh` appends to the REPO's
+    # results/submissions.jsonl -- the production attempt record, which had 32 rows and every
+    # one a fixture. A test that writes into the artifact it tests makes it useless, quietly.
+    env["SUBMISSION_LEDGER"] = str(tmp_path / "submissions.jsonl")
     result = subprocess.run(
         ["bash", str(JOB), "submit", str(config)],
         cwd=ROOT,

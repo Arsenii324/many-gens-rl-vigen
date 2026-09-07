@@ -94,10 +94,10 @@ CONVENTIONS = {
     "ppg":      {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "none",
                  "eval_policy_mode": "sample"},
-    "ibac_sni": {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
+    "ibac_sni": {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "none",
                  "eval_policy_mode": "sample"},
-    "ctrl":     {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
+    "ctrl":     {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "continuous",
                  # mode, not sample: ctrl's RELEASED EVALUATOR is greedy
                  # (runnable/ctrl/evaluate_ppo.py:84 -> logits.argmax(1)). Corrected 2026-09-07.

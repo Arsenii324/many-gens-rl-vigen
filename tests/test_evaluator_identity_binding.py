@@ -276,7 +276,9 @@ def test_submit_rejects_current_contract_but_unbound_payload_before_cloud(tmp_pa
         cwd=ROOT,
         env={**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}",
              "FAKE_DATASPHERE_INVOKED": str(invoked),
-             "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log")},
+             "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log"),
+             # [2026-09-08] Keep `job.sh` out of the repo's real attempt record.
+             "SUBMISSION_LEDGER": str(tmp_path / "submissions.jsonl")},
         text=True, capture_output=True,
     )
     assert result.returncode != 0

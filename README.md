@@ -37,9 +37,10 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 >   tree from public pinned repositories, apply tracked adaptations, and verify source closures.
 > - **[`docs/PART2-METRIC-INVENTORY.md`](docs/PART2-METRIC-INVENTORY.md)** — Part 2: what each
 >   baseline emits and against what, with seven findings. Two of them change what the benchmark
->   measures: RL-ViGen's own runner evaluated on the *training* distribution, and frame stacking
->   splits the twelve 10/2 in a way no rescaling repairs (`ctrl` and `ibac_sni` are the
->   single-frame two; the 8/4 this line used to quote predates IDAAC's frame-stack move).
+>   measures: RL-ViGen's own runner evaluated on the *training* distribution, and frame stacking,
+>   which split the twelve 8/4, then 10/2, and is now **closed at 12/0** — `ctrl` and `ibac_sni`
+>   were raised to three frames on 2026-09-08 (DECISION-SHEET A40 REVISED-2), which took the
+>   on-policy group from 1 primary comparison pair to 3.
 >
 > Twelve baselines currently train on RL-ViGen robosuite by running their own entry points, at
 > **38 files, +1,568 / −146 (941 non-comment)** across six clones plus RL-ViGen patches P1–P21

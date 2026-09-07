@@ -303,6 +303,13 @@ def v100_schedule(frames: int, seeds: list[int]) -> dict:
                 family, frames, profile="v100"),
             "seeds": seeds,
             "runtime_constants": entry.get("constants", {}),
+            # [Claude 2026-09-08] `environment` was omitted here while `constants` was
+            # printed. The descriptor HASH already covered it -- `resolved_fleet` hashes
+            # the whole resolved entry -- so nothing was unbound. But a learning-affecting
+            # value that a reader of this schedule cannot see is a value nobody checks:
+            # `RLVIGEN_FRAME_STACK=3` is how `ctrl` and `ibac_sni` carry the A40 REVISED-2
+            # stack, because their clones take no such CLI flag.
+            "runtime_environment": entry.get("environment", {}),
             "replay_capacity": capacity,
             "maximum_retained_transitions": max_retained,
             "evicts_before_endpoint": evicts,

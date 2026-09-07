@@ -24,14 +24,26 @@ killed, and reports an error indistinguishable from a code fault -- while having
 
 The constants are deliberately conservative and are stated, not hidden:
 
-- `BOOTSTRAP_SECONDS = 700`. Derived, not guessed: `bt14het9mvpvvu8vatgo` ran 3729s wall against
-  its own `timeout 3600s`, so at most ~129s elapsed before the command started. 200 rounds up.
-- `#: Per-episode cost is FAMILY-dependent and these are measured wall-clock points, not estimates.
-#: A single flat rate produced a false FAIL on cfg-offline-eval-s2-full-v50, a config that
-#: demonstrably succeeded -- the same class of error this audit exists to prevent.
+- `BOOTSTRAP_SECONDS = 620`. Measured, and it had been wrong in two ways at once. The code used
+  200, inferred from `bt14het9mvpvvu8vatgo` running 3729s wall against its own `timeout 3600s`
+  ("at most ~129s elapsed before the command started") -- a job with a far smaller dependency
+  closure than the fleet's. This docstring simultaneously claimed 700. The two disagreed for as
+  long as both existed, and the prose number is the one that gets quoted. The soda attestation
+  canary `bt1f8b5gb39jgadqngke` settles it by arithmetic anyone can re-run: its in-cell log
+  accounts for 2993.8s of a 3600s wall, leaving 606.2s of image pull, apt/pip bootstrap and
+  payload extraction before the first training line. 620 rounds that up.
+- `PLACES365_LOAD_SECONDS = 600`, charged to `svea`, `sgqn` and `soda` only. The one-time
+  surcharge the first overlay episode pays inside `_load_places`. Measured on the same canary:
+  episode 3 took 732.9s against a 171.1s steady state, so ~561.8s.
+
+  **It is constant in dataset size, not linear**, and that distinction is the whole reason the
+  number is safe to carry. The fixture's train split is 1,000 images and `ImageFolder`'s directory
+  scan measures ~2 us/image, so the scan is at most a few seconds of the 561.8s; the rest is
+  DataLoader worker startup (`num_workers=16`) plus the first decoded batch. The production split
+  is ~1.8M images -- had this cost been per-image it would have extrapolated to roughly 7.7 hours
+  per cell, and every svea/sgqn/soda budget in the fleet would have been unrunnable.
 - `SECONDS_PER_EPISODE`. Per-family, measured from completed jobs; see the table in the code.
-SECONDS_PER_EPISODE = 90`. **And this number is the finding, not a parameter.** Two measured
-  points from completed jobs:
+  Two of the original measured points:
 
       bt1ip5f8c6mqqm7fd2bn  idaac,  40 episodes, 1022s wall  ->  ~22 s/episode
       bt1rr9hodosm5sn09t1a  drqv2, 400 episodes, 3593s wall  ->  ~8.5 s/episode
@@ -51,7 +63,14 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "datasphere" / "native"
-BOOTSTRAP_SECONDS = 200
+# Measured on bt1f8b5gb39jgadqngke: 3600s wall - 2993.8s of in-cell log = 606.2s. See the
+# docstring; the previous 200 was inferred from a job with a much smaller dependency closure.
+BOOTSTRAP_SECONDS = 620
+#: The first overlay episode's one-time `_load_places` cost, for the three Places365
+#: baselines. Measured 561.8s on the same canary, and CONSTANT in image count -- see the
+#: docstring for why that is established rather than assumed.
+PLACES365_LOAD_SECONDS = 600
+PLACES365_BASELINES = ("svea", "sgqn", "soda")
 #: Per-episode cost is FAMILY-dependent, and these are measured wall-clock points, not estimates.
 #: A single flat rate produced a false FAIL on cfg-offline-eval-s2-full-v50 -- a config that
 #: demonstrably SUCCEEDED -- which is the same class of error this audit exists to prevent.
@@ -146,11 +165,29 @@ MEASURED_TRAIN_FPS = {
     "soda": 2.9,
     # measured, job bt14gjjdtoa5j54dr2n6: 500 frames per 54.8 s
     "rad": 9.1,
+    # measured, job bt15e9v1k2ngmb71hnjn: 99,500 frames in 3659.8s of its own train.csv.
+    # This entry exists because its ABSENCE was a defect: `drqv2` fell through to
+    # TRAIN_FPS_FLOOR (soda's 2.9), costing a 10k drqv2 cell at 3448s instead of 368s and failing
+    # cfg-rlvigen-revalidate-v191/v192/v194 -- configs that had demonstrably SUCCEEDED at 3600s
+    # (external review 24 records those three jobs completing; their records were stale, not late).
+    "drqv2": 27.19,
     "ctrl": 12.0, "idaac": 24.0, "ppg": 25.0, "ibac_sni": 8.0,
     "dmc_gb": 9.0, "rlvigen": 6.0, "alda": 9.0,
 }
 # The slowest MEASURED rate, not a round number: a floor above a real baseline's throughput is an
 # optimistic budget, and an optimistic budget is what kills a cell after it has spent the money.
+#
+# But the floor is only safe for a baseline whose rate is UNKNOWN. Applied to one that is merely
+# missing from the table, it manufactures a false FAIL -- see the `drqv2` entry above. So an
+# unmeasured baseline is now NAMED in the report rather than silently costed, and the two rates
+# below are recorded even though they are not adopted, because each is faster than the table's
+# conservative entry and lowering a budget is the direction that kills cells:
+#
+#   ibac_sni  bt1cj6rgeptsu9f3v0o6  100,096 frames / 1706s = 58.7 fps  (its `procs` is not
+#             recoverable from the retained log, and the rate is roughly linear in `procs`, so
+#             this cannot be attributed to the production configuration. Table keeps 8.0.)
+#   ppg       bt1apmmvvtfvjveil6ko    4,096 frames / 55.1s = 74.3 fps  (an 8x256 run; A36 measured
+#             the adopted 1x2048 geometry at 59.44 IPS on the same tier. Table keeps 25.0.)
 TRAIN_FPS_FLOOR = 2.9
 
 
@@ -161,8 +198,12 @@ def training_seconds(text: str) -> tuple[int, str | None]:
     # direction, but still wrong, and this file exists because wrong instruments get trusted.
     if "OFFLINE_EVAL_SNAPSHOT" in text:
         return 0, None
+    # [Claude 2026-09-08] The baseline pattern EXCLUDED DIGITS, so `CELLS=drqv2:1` parsed as
+    # "drqv" -- a name in no table. Both the train rate and the per-episode rate then fell to
+    # their pessimistic defaults, and the audit failed cfg-rlvigen-revalidate-v190/191/192/194,
+    # four configs that had already run to completion at the budget it called too tight.
     frames = re.search(r"\bFRAMES=(\d+)", text)
-    cells = re.search(r"\bCELLS=([A-Za-z_]+)", text)
+    cells = re.search(r"\bCELLS=([A-Za-z_0-9]+)", text)
     if not frames:
         return 0, None
     family = cells.group(1) if cells else None
@@ -170,15 +211,30 @@ def training_seconds(text: str) -> tuple[int, str | None]:
     return int(int(frames.group(1)) / fps), family
 
 
+def _uses_places365(text: str) -> bool:
+    """Does this config actually load the overlay dataset?
+
+    Two independent signals rather than one: a config that names a Places365 asset, and a config
+    whose cells include an overlay baseline. Either alone is enough to pay the cost.
+    """
+    # NOT the presence of the asset. cfg-rlvigen-revalidate-v191/v194 both PASS a Places365
+    # archive and both run `CELLS=drqv2`, which never opens it -- the same fact
+    # notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md records as the v194 attestation lesson. Keying
+    # on the asset charged those two 600s they do not pay and failed configs that had already
+    # succeeded, which is the exact error this file's docstring says it exists to prevent.
+    cells = re.search(r"\bCELLS=(\S+)", text)
+    return bool(cells) and any(name in cells.group(1) for name in PLACES365_BASELINES)
+
+
 def family_of(text: str) -> str:
     match = re.search(r"OFFLINE_EVAL_FAMILY=(\S+)", text)
     if match:
         return match.group(1)
-    cells = re.search(r"\bCELLS=([A-Za-z_]+)", text)
+    cells = re.search(r"\bCELLS=([A-Za-z_0-9]+)", text)
     return cells.group(1) if cells else "unknown"
 
 
-def audit(seconds_per_episode: int | None = None, only_current: bool = False) -> int:
+def audit(seconds_per_episode: int | None = None) -> int:
     rows, bad, unmeasured = [], [], set()
     for path in sorted(CONFIGS.glob("cfg-*.yaml")):
         text = path.read_text()
@@ -194,8 +250,16 @@ def audit(seconds_per_episode: int | None = None, only_current: bool = False) ->
             rate = MEASURED_SECONDS_PER_EPISODE[family]
         else:
             rate, _ = UNMEASURED_DEFAULT, unmeasured.add(family)
-        train, _ = training_seconds(text)
-        need = int(BOOTSTRAP_SECONDS + (train + episodes * rate) * SAFETY)
+        train, train_baseline = training_seconds(text)
+        # An unmeasured baseline is NAMED rather than silently costed at the floor: applied to a
+        # baseline that is merely missing from the table, the floor manufactures a false FAIL.
+        if train_baseline and train_baseline not in MEASURED_TRAIN_FPS:
+            unmeasured.add(f"{train_baseline} (train rate, at the {TRAIN_FPS_FLOOR} fps floor)")
+        # cfg-dmc_gb-attest-v196 passed this audit at 3600s and then died at S: 8000 of 10000,
+        # because the model had no term for the Places365 load at all. A budget audit that omits a
+        # cost the job certainly pays is worse than none: it certifies.
+        places = PLACES365_LOAD_SECONDS if _uses_places365(text) else 0
+        need = int(BOOTSTRAP_SECONDS + places + (train + episodes * rate) * SAFETY)
         ok = have >= need
         rows.append((path.name, have, episodes, need, ok))
         if not ok:

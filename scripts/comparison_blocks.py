@@ -37,7 +37,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from rlgen.protocol import OBSERVATION_GEOMETRY, TIME_LIMIT_HANDLING  # noqa: E402
+from rlgen.protocol import (  # noqa: E402
+    OBSERVATION_GEOMETRY, REWARD_NORMALIZATION, TIME_LIMIT_HANDLING,
+)
 
 sys.path.insert(0, str(ROOT / "datasphere" / "native"))
 from evaluator_identity import (  # noqa: E402
@@ -67,12 +69,26 @@ def axes_of(baseline: str) -> dict[str, object]:
         "frame stack": frame_stack,
         "time limit": TIME_LIMIT_HANDLING[baseline],
         "render size": image_size,
+        "reward scale": REWARD_NORMALIZATION[baseline],
     }
 
 
 #: Axes on which a difference confounds the comparison with something that is not the method.
-#: `render size` is deliberately NOT here: it is declared, and unlike the other three it does not
-#: change what the agent can infer (crop policy already equalises what the network sees at 84).
+#:
+#: Two axes are deliberately NOT here, each for its own stated reason:
+#:
+#:   `render size`   declared. Unlike the three below it does not change what the agent can infer
+#:                   -- crop policy already equalises what the network sees at 84. (Re-examine
+#:                   this for the 64-render Procgen-origin group, where no crop equalises it.)
+#:   `reward scale`  declared. `rlgen/protocol.py::REWARD_NORMALIZATION` carries the argument:
+#:                   equalising is less faithful in BOTH directions, the transplanted convention's
+#:                   condition is not violated on Door (a running normaliser is scale-adaptive,
+#:                   unlike a frame stack, which assumes velocity is visible), and every family's
+#:                   evaluator reports the RAW return, so it is a training-objective difference
+#:                   rather than a units one.
+#:
+#: A reader checking the arithmetic should note that `reward scale` and `time limit` both split
+#: 3/9 over DISJOINT sets of three, so "the three that differ" is ambiguous without naming which.
 BLOCKING_AXES = ("policy mode", "frame stack", "time limit")
 
 

@@ -2365,3 +2365,457 @@ publication, not a comparability gap inside the fleet. It must be declared in th
 **What would overturn it.** Evidence that RL-ViGen's published Robosuite numbers were produced at
 `feature_dim=256` — which would make 50 a deviation from the very numbers the external-anchor gate
 compares against. Nobody has that evidence; upstream ships no robosuite launcher.
+
+---
+
+## A42 — What the first Places365 train-split cell actually measured (2026-09-08)
+
+`bt1f8b5gb39jgadqngke`, the `dmc_gb`/`soda` attestation canary, is the **first cell in this
+project's history to execute the A22 production Places365 path**. It reported ERROR. Reading the
+log rather than the status, per the standing rule for this path:
+
+    Loading train partition of places365_standard...
+    Loaded dataset from /tmp/native-work/places365-root
+    | train | E: 16 | S: 8000 | D: 172.6 s | ...
+
+**The train path worked.** The job died at `S: 8000` of 10,000 against its own `timeout 3600s` —
+the budget raise to 9000s landed *after* it was submitted. The arithmetic closes exactly: the
+in-cell log accounts for 2993.8s, leaving 606.2s of bootstrap.
+
+It also produced four measurements and exposed four defects, none of which could have been found
+without running it.
+
+### Measured, and now carried in the instruments
+
+| quantity | value | how |
+|---|---|---|
+| `soda` training throughput | **2.92 fps** | 13 steady-state episodes, 171.1s per 500 frames |
+| container bootstrap | **606.2s** | 3600s wall − 2993.8s of in-cell log |
+| Places365 first-load surcharge | **561.8s** | episode 3 at 732.9s against the 171.1s steady state |
+| `drqv2` training throughput | **27.19 fps** | `results/logs/bt15e9v1k2ngmb71hnjn__drqv2-s1__train.csv`, 99,500 frames in 3659.8s |
+
+**The Places365 surcharge is constant in dataset size, not linear, and establishing that was the
+point.** The fixture's train split is 1,000 images; `ImageFolder`'s directory scan measures ~2
+us/image, so the scan is at most a few seconds of the 561.8s. The rest is DataLoader worker startup
+(`num_workers=16`) plus the first decoded batch. Had it been per-image, the ~1.8M-image production
+split would have extrapolated to **~7.7 hours per cell**, and every svea/sgqn/soda budget in the
+fleet would have been unrunnable. It does not.
+
+### Defect 1 — the integrity check certified a split the run never opened
+
+`run_probe.sh` called `check-asset` on `$asset_dir/val/images` **unconditionally**, including under
+`NATIVE_PLACES365_SPLIT=train`. So this canary verified the count and sha256 of 36,500 val images
+while training on 1,000 train ones. The split that **is** the augmentation mechanism for
+svea/sgqn/soda was the only split never checked.
+
+This is the same defect external review 24 found in the loader-selection assertion twelve lines
+below, which was fixed then. One call earlier, in the same block, it survived — because nothing
+executed the train path.
+
+Worse at production scale: `places365standard_easyformat.tar` unpacks as
+`places365_standard/<split>/<class>/` and carries **no flat `val/images` at all**, so the first real
+svea/sgqn/soda cell would have died at this guard *after* the 21 GB upload.
+
+**Fixed**: the check now resolves the split actually consumed, in either archive layout, and
+refuses loudly when the archive lacks it. `PLACES365_EXPECTED_COUNT`/`_SHA256` in the four
+train-split configs now describe the train tree (1000,
+`c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e`) rather than the val tree.
+`tests/test_places365_checks_the_split_it_consumes.py` **executes the shipped block** against
+synthetic copies of both real layouts — which also disproves the older test module's stated premise
+that this block "runs only inside the container" and could only be read.
+
+### Defects 2-5 — `audit_job_budgets.py` certified the job that then died
+
+The budget audit passed `cfg-dmc_gb-attest-v196.yaml` at 3600s. Four separate errors:
+
+1. **No Places365 term at all.** The audit had no concept of a cost the job certainly pays.
+2. **`BOOTSTRAP_SECONDS = 200`, measured 606.2.** Its own docstring simultaneously claimed 700.
+   The two disagreed for as long as both existed, and the prose number is the one that gets
+   quoted — it is the number this session quoted before checking the code.
+3. **`CELLS=([A-Za-z_]+)` excludes digits**, so `CELLS=drqv2:1` parsed as `drqv` — a name in no
+   table. Both the train rate and the per-episode rate silently fell to their pessimistic
+   defaults.
+4. Consequently the audit **failed `cfg-rlvigen-revalidate-v190/191/192/194`**, four configs that
+   had already run to completion at the budget it called too tight. That is a false FAIL, which
+   this file's own docstring names as the error class it exists to prevent.
+
+**Fixed**, and the fix is asymmetric on purpose: `drqv2`'s measured rate was added because its
+*absence* was the defect; `ibac_sni`'s 58.7 fps and `ppg`'s 74.3 fps are **recorded but not
+adopted**, because each is faster than the table's conservative entry, their configurations are not
+recoverable from the retained logs, and lowering a budget is the direction that kills cells. An
+unmeasured baseline is now named in the report rather than silently costed at the floor.
+
+### The pattern, again
+
+Every one of these is the shape this project keeps finding: **a check that agreed with our own code
+and with nothing outside it.** The budget audit agreed with its own constants; the asset check
+agreed with the fixture it was written against; the docstring agreed with nothing at all. Each was
+found by executing the path rather than reading it, and each was invisible at every scale below the
+one that would have paid for it.
+
+**Status: operational, not ratified.** The corrections are implemented. What they change about the
+production plan is only the budgets, not the science.
+
+---
+
+## A43 — `ibac_sni` runs CoinRun's network at MiniGrid's learning rate (2026-09-08)
+
+**Raised by nobody.** `notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` lists `ibac_sni`'s `lr` under
+"parameters no review has ever addressed": all 27 external reviews examine `beta` and
+`entropy_coef` for this baseline, and none asks whether the learning rate suits the port.
+
+**The facts, from the authors' own two branches under `ext/IBAC-SNI/`:**
+
+| | `torch_rl` branch (the code we run) | `coinrun` branch (the architecture we adopted) |
+|---|---|---|
+| learning rate | `7e-4` (`scripts/train.py:45`) | `5e-4` (`coinrun/config.py:105`) |
+| lr schedule | none | linear decay, `train_agent.py:52` `lr=lambda f: f * LEARNING_RATE` |
+| cliprange | constant | linear decay, `cliprange=lambda f: f * 0.2` |
+
+Verified: `families.json`'s `ibac_sni.constants` is `{procs, frames_per_proc, model_name}` only, so
+`--lr` is never passed and the 7e-4 default stands. `runnable/ibac_sni/torch_rl/` contains **no
+decay mechanism of any kind** — no scheduler, no `lr_decay`, nothing to switch on.
+
+**Why this is a finding and not a preference.** A37 decided the CoinRun/visual lineage is this
+port's reference, and moved it onto CoinRun's IMPALA trunk precisely because the MiniGrid-style
+architecture was inappropriate for a visual task. The optimizer settings did not move with it. So
+the port runs **CoinRun's network at MiniGrid's learning rate**, and nobody chose that pairing —
+it is inherited by silence, the same mechanism as the frame stack (A40) and the Places365 split
+(A22), both of which turned out to be defects.
+
+`7e-4` is `torch_ac`'s standard default for small discrete gridworlds with an MLP. The condition
+that produced it — a tiny network on a tiny discrete task — does not hold here.
+
+**Operational default, implemented now: `lr = 5e-4`, no authored decay.**
+
+Two parts, decided separately because they cost differently:
+
+- **The rate moves to 5e-4.** It is a `families.json` constant, costs nothing to align, and
+  removes an arbitrary cross-branch artifact from the one place A37 already ruled on.
+- **The schedule does not.** Adopting CoinRun's decay means *authoring* a mechanism the branch we
+  run does not have. PPG's precedent (A36) went the other way — but PPG's own released code
+  supported decay and only the flag was missing. Here it would be new code on a path that is
+  already an authored hybrid and whose competence is still unproven (open item 1 of
+  `notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md`). **Declared as a deviation from the CoinRun
+  lineage**, alongside the 64-d latent and the single VIB sample that A37 already declares.
+
+**Sequencing: batched with A40 REVISED-2, not run separately.** `frame_stack` and `lr` are both
+`families.json` values, a `CONFIG_MEMBER`, so either alone moves every family's evaluator revision.
+`ibac_sni` needs a fresh pilot for the frame-stack change regardless — that pilot covers both, and
+running them separately buys a second GPU job for nothing.
+
+**The confound this creates, and its resolution, fixed in advance.** If that pilot shows degenerate
+learning, two changes are candidates. The disambiguation is decided now rather than after seeing
+the result: **revert the `lr` first**, because it is a one-line config revert while the frame stack
+is authored code, and re-pilot. If the failure survives the revert, it is the stack.
+
+**Status: operational, not ratified.**
+
+---
+
+## A40 REVISED-2 and A43 — IMPLEMENTED (2026-09-08)
+
+Both were recorded as decided-but-not-applied, on a sequencing argument that no longer holds: they
+were deferred because `frame_stack` lives in `families.json`, a `CONFIG_MEMBER`, and changing it
+would invalidate a running v196 wave. **There is no wave running.** The `dmc_gb` canary failed on
+its own 3600s budget (A42) and the other six were never submitted, so the config freeze does not
+bind, and landing these now costs one wave instead of two.
+
+### What the change actually was, after the cost estimate was wrong three times
+
+It was estimated as "one channel literal in `model.py`", then as "one literal plus a config value".
+Tracing the paths gave the real answer: **neither baseline had any frame-stacking mechanism at
+all.** CoinRun's `VecFrameStack` (`coinrun/main_utils.py:19-20`) is not on the Door path;
+`ibac_sni_runtime.HWCFloat` and `ctrl/vec_env.RLViGenVecEnvCustom` each presented exactly one
+frame, and nothing between the robosuite env and either policy widened it. Both stacks are
+authored.
+
+| file | change |
+|---|---|
+| `runnable/ibac_sni/torch_rl/ibac_sni_runtime.py` | `build_hwc_stack`, a channel-last stack, module level so it is testable without MuJoCo |
+| `runnable/ibac_sni/torch_rl/utils/format.py` | the RGB gate demanded `shape[2] == 3`, so a stacked observation raised `Unknown observation space` |
+| `runnable/ibac_sni/torch_rl/model.py` | the impala trunk's input width was the literal `3`; now from `obs_space["image"][2]` |
+| `runnable/ctrl/vec_env.py` | `_stackedobs` in `RLViGenVecEnvCustom.reset`/`step`, plus a widened declared space |
+| `datasphere/native/families.json` | `RLVIGEN_FRAME_STACK=3` for both; `lr=5e-4` for `ibac_sni` (A43); provenance strings |
+| `rlgen/protocol.py` | `OBSERVATION_GEOMETRY` both to `(64, 3)` |
+| `datasphere/native/normalize_curves.py` | `CONVENTIONS` frame_stack for both |
+| `scripts/eval_grid.py` | sets `RLVIGEN_FRAME_STACK` from the declaration at both eval sites |
+| `runnable/_patches/{ibac_sni,ctrl}.patch` + `setup/source-reconstruction.json` | regenerated, hashes re-derived; `verify_sources.py` passes |
+
+### Three things this surfaced that were not part of the decision
+
+1. **The eval path would not have inherited the stack.** `families.json`'s environment reaches the
+   TRAINING process; the offline evaluator is a different process. That is precisely how
+   `RLVIGEN_IMAGE_SIZE` produced "expected 100x100, observed (9, 84, 84)". `eval_grid.py` now sets
+   it from `OBSERVATION_GEOMETRY` at both sites, so training and evaluation cannot disagree.
+2. **CTRL's declared layout is inverted relative to its data, deliberately.** `observation_space`
+   is `(C, H, W)` while `_SyncVecEnv._obs` emits `(H, W, C)`, because `buffer.py:50-52` permutes
+   with `[shape[1], shape[2], shape[0]]`. Door's frames are square, so the two are
+   indistinguishable by shape alone — until a stack makes one of them 9. A buffer built on the
+   declaration would have rolled the wrong axis and produced a plausible, wrong observation with
+   no error anywhere.
+3. **The padding rule was nearly invented.** The first version repeated the first frame on reset.
+   `baselines`' `VecFrameStack` — the stack CoinRun itself applies — zero-fills
+   (`ext/baselines/.../vec_frame_stack.py:22,28`). A40's whole argument is that these ports should
+   follow their own lineage rather than a convention nobody chose; inventing a better padding rule
+   would have been the same error in the other direction. Both stacks zero-fill.
+
+### Verification
+
+`tests/test_ibac_sni_frame_stack.py` (9) and `tests/test_ctrl_frame_stack.py` (6) execute the real
+methods — ordering, zero-fill, the auto-reset seam, the preprocessor gate at 3 and 9 channels, and
+a real forward through the impala trunk at both widths. `scripts/comparison_blocks.py` moves the
+on-policy group from **1 primary pair to 3**, which is the number A40 REVISED-2 predicted in
+advance; `ctrl` remains descriptive against the other three on policy mode alone, as expected.
+
+`tests/test_observation_geometry.py`'s negative assertion was **inverted, not deleted**, and is
+stronger inverted: it now requires the authored stack to be present in the exported clone patch,
+which is what a clean clone reconstructs from. That test failed first, correctly, before the
+patches were regenerated.
+
+**Still open, and deliberately:** the pilot. Both baselines need one short cell read for
+non-degenerate learning before three production seeds are paid for, and A43 fixes the
+disambiguation in advance — revert `ibac_sni`'s `lr` first, since it is a config revert while the
+stack is authored code.
+
+---
+
+## A41 EXTENDED — SGQN's quantile and consistency weight, read from the paper (2026-09-08)
+
+A41 stated a general rule (shipped code wins unless the paper states a value FOR THIS TASK) and
+applied it to `feature_dim` and `aux_lr`. It did **not** enumerate SGQN's `sgqn_quantile` or its
+hardcoded critic-consistency weight, so their resolution was an inference from the rule rather
+than a decision. `notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` flags exactly that gap.
+
+Closing it required reading the paper rather than the reviews, and the reviews turn out to be
+wrong on both values. Source: `ext/_duplicates/baseline_resources__04_sgqn__paper_arxiv_2209.09203.pdf`
+(the vendored `ext/papers-sorted/SGQN/SGQN_openreview.pdf` is an OpenReview landing page, not the
+paper — worth knowing, because it is the copy the filename suggests you should read).
+
+### What the paper actually says
+
+**Quantile ρ, Table 3, verbatim:** *"Quantile value ρ — 0.95 (Walker walk, Walker Stand, and
+Finger Spin), 0.98 (Cartpole and Ball in cup)"*. Reviews 17, 19 and 20 all report the paper's
+value as **0.90**. It is not in the paper. The paper's values are 0.95 and 0.98, and they are
+**per-task by construction**: *"the mask threshold parameter ρ was selected after a quick visual
+search… we set ρ to 0.95 on all environments but Cartpole and Ball in Cup (for which the ratio of
+foreground/background pixels is smaller than on the others environments)."*
+
+**Consistency weight λ:** the paper defines the critic objective as `L_Q(θ) + λ L_C(θ)` and gives λ
+**no numeric value anywhere** — not in Table 3, not in Algorithm 1. Reviews 17, 18 and 20 report a
+paper value of **0.70**. The only `0.7` in the document is a performance figure in Table 6.
+
+**Also read, as a cross-check that cost nothing:** Table 3 gives frame rendering 84x84x3 and
+stacked frames 3, which is exactly `OBSERVATION_GEOMETRY["sgqn"]`. And the SGQN paper's own SAC
+learning rate is 1e-3 with a self-supervised optimizer at 3e-4 — a third value for `aux_lr`
+alongside RL-ViGen's tabled 8e-5 and the shipped 1e-4.
+
+### Resolution
+
+**KEEP the shipped `sgqn_quantile: 0.93` and the hardcoded `0.9` consistency weight** — now under
+A41's rule with a source-backed reason rather than an inference:
+
+- ρ is explicitly a **per-task** parameter the authors set by visual inspection of each
+  environment's foreground/background pixel ratio. The paper states no value for Robosuite Door,
+  and Door is not a DMC task. A41's exception clause requires a value the paper states *for this
+  task*; there is none, so the shipped value stands.
+- λ has no paper value at all, so there is nothing to prefer over the shipped one. A "deviation
+  from the paper" cannot be claimed against a number the paper does not contain.
+
+**What must be disclosed, and it is not what the reviews said.** The honest statement is *not*
+"we deviate from the paper's 0.90/0.70". It is: **SGQN's quantile is a per-task parameter its
+authors tuned per environment by inspecting the foreground/background pixel ratio, and nobody has
+tuned it for Door.** `0.93` is RL-ViGen's choice for its own benchmark, carried unexamined. That
+is a weaker claim than a deviation and a more useful one, because it names the thing that would
+actually have to be done to fix it.
+
+**What would overturn it.** A measurement of Door's foreground/background ratio placing it near
+Cartpole's regime rather than Walker's, which would argue for 0.98 over 0.93. Cheap to obtain from
+the saliency masks a single cell already produces, and deliberately not scheduled: it is a tuning
+question, and this project does not tune baselines on the task it reports.
+
+### The general point, which outlives this parameter
+
+Three reviews stated a specific numeric value for a paper's hyperparameter, agreed with each
+other, and were wrong. They are the same reviews this project has otherwise been right to trust —
+review 19 in particular has corrected itself twice on primary sources and been right both times.
+Agreement between reviews is not evidence about a paper; only the paper is. Every remaining
+"paper says X" in the review corpus should be treated as unverified until someone opens the PDF.
+
+---
+
+## A44 — PPG `aux_lr` back to 5e-4, by the project's own rule (2026-09-08)
+
+`notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` item 8 lists this as the one PPG parameter still
+DISPUTED/OPEN. Reviews 18, 19 and 20 all flag it and none resolves it; A36's tables record
+`aux_lr: 3e-4` as a "source-backed DMC comparator value", which reviews 19 and 20 explicitly
+contest. Settling it needed the supplement, not the reviews.
+
+**What the two sources actually say.**
+
+`runnable/ppg/phasic_policy_gradient/train.py:36-37` — OpenAI's released PPG has **two separate
+flags with the same default**:
+
+    aux_lr=5e-4,
+    lr=5e-4,
+
+`ext/idaac/raileanu21a-supp.pdf` §E — the IDAAC authors' DMC grid searched **"the learning rate"**,
+singular, over `[0.0001, 0.0003, 0.0007, 0.001]` and found `0.0003`. For PPG specifically it says
+only: *"we ran the same hyperparameter search as the one performed in the original paper for
+Procgen and found Nπ = 32, Eπ = 1, EV = 1, Eaux = 6, and βclone = 1 to be the best."* Five values,
+none of them a learning rate. And: *"Any other hyperparameters not mentioned here were set to the
+same values as the ones used for Procgen."*
+
+**The argument that decides it.** To run PPG at their grid's rate the authors would pass
+`--lr 3e-4`. `--aux_lr` is a *different flag*; nothing in the supplement says they searched or set
+it, so it stayed at OpenAI's `5e-4`. So `5e-4` is not merely "the shipped default we fall back to"
+— it is **what the authors' own described procedure produces**. `3e-4` is an inference that the one
+searched learning rate governed both optimizers, and the code's two-flag structure is evidence
+against it.
+
+It also violates A41, this project's own stated rule: *follow the shipped code, and declare every
+disagreement with the paper; the single exception is a value the paper states FOR THIS TASK.* The
+supplement states no auxiliary learning rate at all, so the exception cannot apply and the shipped
+value stands. We were applying the exception to a value the paper does not contain.
+
+**Changed: `families.json` `ppg.constants.aux_lr` 3e-4 -> 5e-4.** `lr` stays at `3e-4`, which the
+supplement does state.
+
+**What this costs.** Nothing yet — no PPG production seed exists. A36's rollout-geometry
+resolution is untouched.
+
+**What would overturn it.** The IDAAC authors' actual continuous-control PPG launch script or
+config, which is not in this repository and which reviews 19 and 20 both name as the only thing that
+would settle it properly. If it shows an explicit `--aux_lr`, that value wins over both.
+
+**Status: operational, not ratified.**
+
+---
+
+## A45 — CTRL's paper table, read directly (2026-09-08)
+
+Two open items needed the CTRL paper rather than the reviews:
+`notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` item 6 (the `cluster_len`/`temp`/`k` dispute, where
+review 17 says change and reviews 18-21 say keep) and its "never addressed" item 6
+(`ema_ctrl=0.95`, `myow_reg=1`, checked by nobody). A41 EXTENDED had just found three reviews
+misquoting a different paper, so neither could be settled from the corpus.
+
+Source: `ext/papers-sorted/CTRL-Cross-Trajectory-Representation-Learning/CTRL_paper_arxiv-2106.02193v2_iclr2022.pdf`,
+Table 2 ("Experiments' parameters"), transcribed in full:
+
+| paper | value | ours | agrees? |
+|---|---|---|---|
+| γ discount factor | 0.999 | 0.999 | yes |
+| λ decay | 0.95 | 0.95 (released default) | yes |
+| n_timesteps per rollout | 256 | 256 | yes |
+| **n_epochs** (RL and representation) | **1** | 3 (`epoch_ppo`, released default) | **no** |
+| n_samples per epoch | 8192 | — | — |
+| entropy bonus | 0.01 | 0.01 | yes |
+| clip range | 0.2 | 0.2 | yes |
+| **learning rate** (RL *and representation*) | **5e-4** | `lr` 5e-4, **`lr_ctrl` 1e-4** | **no**, on the representation rate |
+| **number of environments** | **32** | 16 (DataSphere) / 64 (V100) | **no** |
+| optimizer | Adam | Adam | yes |
+| **frame stack** | **✗, Procgen frames 1** | **3** | **no**, deliberately (A40 REVISED-2) |
+| E clusters | 200 | 200 | yes |
+| **k nearest neighbours** | **3** | 1 (`myow_k`) | **no** |
+| **T clustering timesteps** | **2** | 10 (`cluster_len`) | **no** |
+| **β clustering temperature** | **0.3** | 0.1 (`temp`) | **no** |
+
+### What this settles
+
+**1. Review 17 was right about the paper; reviews 19, 20 and 21 were right about what to do.**
+Review 17's list — `num_envs=32, epoch=1, lr_ctrl=5e-4, cluster_len=2, k=3, temperature=0.3` — is
+now confirmed verbatim against the table, every value. That is worth recording precisely because
+review 19 later called its own "paper table wins; switch CTRL" position *"too categorical"* and
+retracted it. The retraction was right for the reason review 19 gave (a paper↔released-code
+conflict is not resolved by preferring the paper) and **not** because its numbers were wrong. Both
+halves of that history should survive.
+
+**Unchanged, by A41's rule**: the paper's values are stated for **Procgen**, and the exception in
+A41 covers a value the paper states *for this task*. There is no Door column in Table 2. The
+released code is the only complete runnable configuration, so it stands, and every row marked "no"
+above is a **declared deviation from the publication**, now enumerated rather than gestured at.
+
+**2. `ema_ctrl` and `myow_reg` are not in the paper at all.** They appear in no row of Table 2 and
+nowhere in the text. So the "never checked" item closes as: there is nothing to check them
+against, the released defaults are the only source, and they stand on the same footing as
+`cluster_len`. Closed, not open.
+
+**3. The `lr_ctrl` row is the sharpest one and nobody had named it.** The paper gives **one**
+learning rate, explicitly "for RL and representation learning", 5e-4. The released code splits them
+— `lr=5e-4`, `lr_ctrl=1e-4` — so the code contradicts its own paper by a factor of 5 on the
+representation objective, which is CTRL's entire contribution. Reviews 17 and 18 list `lr_ctrl`
+among the disputed values without noting that the paper's number is not a *different* rate but the
+*same* rate. Keeping the released 1e-4 remains right under A41; the disclosure is now specific.
+
+**4. CTRL's frame stack is an explicit deviation, not an unstated convention.** Table 2 lists
+"Frame stack ✗ Procgen frames 1" — the paper *states* that CTRL does not stack. A40 REVISED-2's
+argument survives intact (that is what they ran on Procgen, where velocity is visible, and the row
+is a description of their Procgen experiments rather than a property of the method whose objective
+works over rollout timesteps). But the provenance string must say the stronger, truer thing: not
+"the released path carries no stack" but **"the publication states frame stacking off; this Door
+run stacks 3, deliberately"**.
+
+**No configuration changes.** Every "no" row stays as the released code has it, for the reason A41
+gives. What changes is that the deviations are now enumerated from the primary source instead of
+inferred from a review.
+
+**Status: operational, not ratified.**
+
+---
+
+## A46 — What 600,000 frames means to each of the twelve (2026-09-08)
+
+Review 18 raised, in a single voice and without follow-up, that ALDA's source horizon is 500k
+against the fleet's common 600k, and suggested predeclaring both. Checking it turned a one-baseline
+note into a fleet-wide one that nobody has enumerated. `docs/CONSTRUCTION.md` discusses RL-ViGen's
+own 1.1M in several places; no document puts all twelve side by side.
+
+| baseline | its own source horizon | source | 600k as a fraction |
+|---|---|---|---|
+| `rad`, `soda` | 500,000 | `runnable/dmc_gb/src/arguments.py:18`, `--train_steps` default `'500k'` | **120%** |
+| `alda` | 500,000 | every `ext/ALDA_Official/specs/*.yaml`, `n_train_steps: 500_000` (the trainer dataclass says 1M; the shipped specs do not) | **120%** |
+| `sgqn` | 500,000 | SGQN paper Table 3, "Number of frames 500,000" | **120%** |
+| `drqv2`, `svea`, `curl`, `drq` | 1,100,000 | `RL-ViGen-upstream/cfgs/task/easy.yaml:1`, and Door is `easy` | 55% |
+| `idaac`, `ppg` | 1,000,000 | `raileanu21a-supp.pdf` §E, "linear rate decay over 1 million environment steps" | 60% |
+| `ctrl` | 8,000,000 | CTRL paper, "8M steps we used for policy training" | 7.5% |
+| `ibac_sni` | 160,000,000 | `ext/IBAC-SNI/coinrun/coinrun/train_agent.py:28`, `total_timesteps = int(160e6)` | **0.375%** |
+
+The common budget lands between **0.375% and 120%** of each method's own horizon — a spread of
+roughly 320x. `sgqn` appears twice above by accident of sourcing: RL-ViGen sets 1.1M for it like
+the other natives, while its own paper says 500k. Both are true of different authors.
+
+### Why this is declared and not fixed
+
+A common budget is the right design: it is the only way the twelve are comparable at all, and any
+fixed budget has this property. Equalising *by source horizon* instead would mean running `ibac_sni`
+for 160M frames, which is the entire campaign several hundred times over. There is no version of
+this the compute permits, and pretending otherwise would be worse than saying it.
+
+What is not acceptable is leaving it unsaid, because "600,000 frames, all twelve" reads as
+uniformity and is not: for three baselines it is **past** where their authors stopped, and for
+`ibac_sni` it is under half a percent of it. A reader who assumes each method was given its own
+recipe's worth of training would misread every number in the table.
+
+### The one concrete consequence, which is checkable
+
+`idaac` and `ppg` decay their learning rate **linearly to zero over the literal 1,000,000
+environment steps** (A35, A36 — deliberately the paper's horizon, not rescaled to this budget).
+Training stops at 600,000. So both finish at `1 - 600000/1000000` = **40% of their initial learning
+rate**, having never annealed. That is a direct arithmetic consequence of combining the paper's
+schedule with this project's budget, and it belongs beside the numbers.
+
+The alternative — rescaling the decay to 600k so it completes — was considered and is worse: it
+invents a schedule neither source contains, and A35/A36 already chose the literal horizon for that
+reason. Keeping the literal schedule and stating that it is truncated is the honest form.
+
+### What is retained rather than reported
+
+For `rad`, `soda`, `alda` and `sgqn` the 500,000 stamp exists **for free** — the retention cadence
+is 50k, and 500k is a multiple of it. It is retained and available as a source-horizon reference
+point. It is deliberately **not** a second headline column: gate 7 fixes endpoint-as-headline with
+no selected-best column, and a per-baseline "report each at its own horizon" would be exactly the
+outcome-shopping that rule exists to prevent, since the horizons differ per baseline. Predeclared,
+retained, reportable on request, not in the headline table.
+
+**Status: operational, not ratified.**

@@ -169,6 +169,11 @@ def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_pat
         # Required at production scale since 2026-09-07: without a per-cell ceiling one stuck cell
         # burns the job and the result archive, written last, is lost for every completed cell.
         "CELL_TIMEOUT_SECONDS": "7200",
+        # [2026-09-08] Production scale now also requires a second-device mirror.
+        # tmp_path is on the same filesystem as the result here, so the deviation
+        # marker is what keeps these tests about what they are about.
+        "NATIVE_RESULT_MIRROR": str(tmp_path / "mirror"),
+        "NATIVE_ACCEPT_SAME_DEVICE": "1",
         "NATIVE_CONCURRENT": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(out_dir),
@@ -221,6 +226,11 @@ def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
         # Set so the run reaches the DISK check this test is about; the production-scale ceiling
         # refusal fires earlier and would otherwise mask it.
         "CELL_TIMEOUT_SECONDS": "7200",
+        # [2026-09-08] Production scale now also requires a second-device mirror.
+        # tmp_path is on the same filesystem as the result here, so the deviation
+        # marker is what keeps these tests about what they are about.
+        "NATIVE_RESULT_MIRROR": str(tmp_path / "mirror"),
+        "NATIVE_ACCEPT_SAME_DEVICE": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(tmp_path / "out"),
         "CELLS": "drqv2:1",

@@ -1249,11 +1249,8 @@ if cells_need_places365 "$cells"; then
   # NOT gzipped, while the val probe fixture is a .tgz. Both tar implementations auto-detect
   # compression from the stream, so one flag reads either. -xzf refused the production archive.
   tar --no-same-owner -xf "$asset_archive" -C "$asset_dir"
-  asset_images="$asset_dir/val/images"
-  python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"
   dataset_root="$work/places365-root"
   mkdir -p "$dataset_root/places365_standard"
-  ln -s "$asset_dir/val" "$dataset_root/places365_standard/val"
   # [Claude 2026-09-07, DECISION-SHEET A22 DECIDED.] The overlay split is now NAMED rather than
   # implied by running this script at all. `train` is the production value: the overlay
   # distribution IS the mechanism for svea/sgqn/soda, so drawing it from the validation partition
@@ -1277,21 +1274,64 @@ if cells_need_places365 "$cells"; then
     fi
     echo "=== NATIVE_PLACES365_DECLARED_DEVIATION split=$places_split (A22 accepted explicitly) ===" >&2
   fi
-  if [[ "$places_split" == "train" ]]; then
-    # The canonical easyformat archive unpacks as `places365_standard/train`; the small probe
-    # fixture carries a flat `train/`. Accept either rather than assuming one, and refuse loudly
-    # instead of linking a path that does not exist.
-    if [[ -d "$asset_dir/places365_standard/train" ]]; then
-      train_source="$asset_dir/places365_standard/train"
-    elif [[ -d "$asset_dir/train" ]]; then
-      train_source="$asset_dir/train"
-    else
-      echo "REFUSING: NATIVE_PLACES365_SPLIT=train but the asset archive contains no train split." >&2
-      echo "  looked for: $asset_dir/places365_standard/train and $asset_dir/train" >&2
-      exit 3
-    fi
-    ln -sfn "$train_source" "$dataset_root/places365_standard/train"
+  # [Claude 2026-09-08] `check-asset` validated "$asset_dir/val/images" UNCONDITIONALLY, even
+  # under NATIVE_PLACES365_SPLIT=train. That is the SAME defect external review 24 found in the
+  # loader-selection assertion below -- caught there, missed here, one call earlier. Two
+  # consequences, neither visible below production scale:
+  #
+  #   - the integrity check certified 36,500 VAL images while the canary
+  #     (bt1f8b5gb39jgadqngke) trained on the fixture's 1,000 TRAIN ones. The split that is the
+  #     learning mechanism for svea/sgqn/soda was the one split never checked.
+  #   - the canonical `places365standard_easyformat.tar` carries no flat `val/images` at all, so
+  #     the first real production cell would have died at this guard AFTER the 21 GB upload.
+  #
+  # Resolve the split that is actually CONSUMED, in whichever layout the archive carries: the
+  # easyformat archive nests `places365_standard/<split>/<class>/`, the probe fixtures ship a flat
+  # `<split>/`. Refuse loudly rather than link a path that does not exist.
+  places_link_source=""
+  if [[ -d "$asset_dir/places365_standard/$places_split" ]]; then
+    places_link_source="$asset_dir/places365_standard/$places_split"
+  elif [[ -d "$asset_dir/$places_split" ]]; then
+    places_link_source="$asset_dir/$places_split"
+  else
+    echo "REFUSING: NATIVE_PLACES365_SPLIT=$places_split but the archive has no such split." >&2
+    echo "  looked for: $asset_dir/places365_standard/$places_split and $asset_dir/$places_split" >&2
+    exit 3
   fi
+  # DMC-GB's val fixture nests images one level down as `val/images` with no class directories;
+  # the easyformat archive uses `<split>/<class>/`. `asset_digest` hashes paths RELATIVE to the
+  # directory it is given, so checking `val/images` rather than `val` is what keeps every
+  # previously declared val sha256 valid. The count and hash must describe the CONSUMED split.
+  if [[ -d "$places_link_source/images" ]]; then
+    asset_images="$places_link_source/images"
+  else
+    asset_images="$places_link_source"
+  fi
+  python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"
+  ln -sfn "$places_link_source" "$dataset_root/places365_standard/$places_split"
+  # Leave val linked too when the archive carries it, so nothing that assumed the previous on-disk
+  # shape changes behaviour as a side effect of this fix.
+  if [[ "$places_split" != "val" && -d "$asset_dir/val" ]]; then
+    ln -sfn "$asset_dir/val" "$dataset_root/places365_standard/val"
+  fi
+  # [Claude 2026-09-08] P19 introduced `RLVIGEN_PLACES_WORKERS` as a dial and nothing ever read it
+  # here, forwarded it, or recorded it. Its value is not cosmetic: `RandomResizedCrop` and
+  # `RandomHorizontalFlip` run INSIDE the DataLoader workers, whose RNG is seeded from
+  # `base_seed + worker_id`, so the worker count changes the actual pixels overlaid.
+  #
+  # Measured locally on the fixture at num_workers 0 vs 2, same seed: identical file list,
+  # identical order, identical sampled indices -- and a first-batch max absolute pixel difference
+  # of 0.9686 (mean 0.2052). So review 2 sec.15 was right to call P19's claim unproven, and the
+  # claim is true as far as it goes: the IMAGES and their ORDER really are unchanged. What it
+  # omits is that the crop and flip applied to them are not.
+  #
+  # This does not change the distribution -- a different random crop of the same image, drawn in
+  # the same order from the same pool, is the same draw process -- so it is not a fidelity or a
+  # comparability defect. It does mean a seed is only bit-reproducible at a FIXED worker count.
+  # Pin it and stamp it, so a rerun that differs is visible rather than silent.
+  places_workers="${RLVIGEN_PLACES_WORKERS:-8}"
+  export RLVIGEN_PLACES_WORKERS="$places_workers"
+  echo "=== NATIVE_PLACES365_LOADER split=$places_split rlvigen_workers=$places_workers dmc_gb_workers=16 ===" >&2
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split"
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split" --check
   # [Claude 2026-09-02 04:20 MSK: soda loads the overlay through dmc_gb's own copy of the same

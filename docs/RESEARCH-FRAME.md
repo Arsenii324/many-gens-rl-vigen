@@ -152,9 +152,13 @@ discount affect numerator and denominator alike.
 
 They do **not** cancel to second order, and that residue must be stated: a confound can
 **interact** with the regime shift. A single-frame method may degrade under visual perturbation
-differently from a three-frame one *for reasons about frames, not about the algorithm* — and
-frame count is exactly one of the confounds. So a retention ranking is evidence about **published
-methods as shipped**, not about algorithmic ideas.
+differently from a three-frame one *for reasons about frames, not about the algorithm*. So a
+retention ranking is evidence about **published methods as shipped**, not about algorithmic ideas.
+
+(Frame count was this paragraph's live example until 2026-09-08, when A40 REVISED-2 closed it —
+all twelve now stack three. The argument is unchanged and the example is kept, because the axes
+that remain open — policy mode, time-limit handling, reward normalisation — have exactly this
+shape. One of them being closed is the reason to state the residue, not to stop stating it.)
 
 Also blocked on [C18](CONSTRUCTION.md#c18): retention is a ratio, and a ratio over a near-zero
 denominator is unstable — `RIGOR.md:113-117`. If train-regime success is ≈ 0, retention is

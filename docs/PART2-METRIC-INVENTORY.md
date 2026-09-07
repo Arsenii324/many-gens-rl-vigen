@@ -273,8 +273,8 @@ is the owner's to make, not a default to apply silently.
 Genuinely shared: robosuite `Door`, Panda, OSC_POSE, horizon 500, action repeat 1, `scene_id 0`,
 RGB. Those are `rlgen/protocol.py` fields and `tests/test_contract.py` pins them.
 
-**Finding 5 — frame stacking splits the twelve 10/2, and this is the largest comparability gap
-found so far.** Checked per seam rather than assumed from the protocol:
+**Finding 5 — frame stacking split the twelve 10/2 and was the largest comparability gap found.
+CLOSED 2026-09-08 at 12/0.** Checked per seam rather than assumed from the protocol:
 
 **Corrected 2026-09-07:** PPG now joins IDAAC in the stacked column for the selected main path.
 Both use the IDAAC-authors' published DMC continuous-control comparator geometry, with a real
@@ -282,12 +282,24 @@ Both use the IDAAC-authors' published DMC continuous-control comparator geometry
 primary-source canonical environment; it is the authors' comparator adapted to this project.
 The released one-frame path remains available only through explicit `frame_stack=1`.
 
+**Closed 2026-09-08 (DECISION-SHEET A40 REVISED-2).** `ctrl` and `ibac_sni` now stack three too,
+so the table below has an empty right column. Single-frame was never either method's decision: it
+is Procgen's environment convention, which held because CoinRun paints velocity into the
+observation (`PAINT_VEL_INFO=1`) and because CTRL's clustering objective works over rollout
+timesteps rather than stacked channels. Neither condition survives the move to Door, where both
+policies were velocity-blind. **Neither baseline had any stacking mechanism at all on the Door
+path** — CoinRun's `VecFrameStack` is not on it — so both stacks are authored, with `baselines`'
+semantics (oldest first, zeroed on reset and on done). The effect on the reported set is the point:
+`scripts/comparison_blocks.py` goes from 1 primary on-policy pair to 3.
+
 | stacked (3 frames, 9 channels) | single frame (3 channels) |
 |---|---|
 | `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | `ibac_sni` |
 | `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `ctrl` |
 | `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | — |
 | `idaac` and `ppg` (`FrameStack` in both train/eval adapters) | — |
+| `ctrl` (authored `_stackedobs` in `RLViGenVecEnvCustom`) | — |
+| `ibac_sni` (authored `build_hwc_stack` in `ibac_sni_runtime`) | — |
 
 The split is not an attempt to equalise observations. `ibac_sni` and `ctrl` retain released
 one-frame Procgen geometry. IDAAC uses a direct source-backed continuous-control precedent.

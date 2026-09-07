@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "82f26eab814557d46b739d7c7d6c45e253c997f77219ff20b7ff24051e1e4ab7",
+  "resolved_descriptor_sha256": "db2f9d72faef7d87a424f46084b56326095269e682b386c4621aa113ab75b8dc",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
@@ -35,6 +35,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 620000,
       "maximum_retained_transitions": 601200,
       "evicts_before_endpoint": false,
@@ -72,6 +73,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 620000,
       "maximum_retained_transitions": 601200,
       "evicts_before_endpoint": false,
@@ -109,6 +111,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 620000,
       "maximum_retained_transitions": 601200,
       "evicts_before_endpoint": false,
@@ -146,6 +149,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 620000,
       "maximum_retained_transitions": 601200,
       "evicts_before_endpoint": false,
@@ -183,6 +187,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 620000,
       "maximum_retained_transitions": 601200,
       "evicts_before_endpoint": false,
@@ -220,6 +225,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 600000,
       "maximum_retained_transitions": 600000,
       "evicts_before_endpoint": false,
@@ -257,6 +263,7 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {},
       "replay_capacity": 600000,
       "maximum_retained_transitions": 600000,
       "evicts_before_endpoint": false,
@@ -294,6 +301,9 @@
         103
       ],
       "runtime_constants": {},
+      "runtime_environment": {
+        "ALDA_RESULTS": "{run_dir}"
+      },
       "replay_capacity": null,
       "maximum_retained_transitions": null,
       "evicts_before_endpoint": null,
@@ -344,6 +354,7 @@
         "order_loss_coef": "0.1",
         "frame_stack": "3"
       },
+      "runtime_environment": {},
       "replay_capacity": null,
       "maximum_retained_transitions": null,
       "evicts_before_endpoint": null,
@@ -386,11 +397,12 @@
         "frame_stack": "3",
         "gamma": ".99",
         "lr": "3e-4",
-        "aux_lr": "3e-4",
+        "aux_lr": "5e-4",
         "nminibatch": "32",
         "entcoef": "0",
         "lr_decay_env_steps": "1000000"
       },
+      "runtime_environment": {},
       "replay_capacity": null,
       "maximum_retained_transitions": null,
       "evicts_before_endpoint": null,
@@ -430,7 +442,12 @@
       "runtime_constants": {
         "procs": "16",
         "frames_per_proc": "128",
-        "model_name": "cell"
+        "model_name": "cell",
+        "lr": "0.0005"
+      },
+      "runtime_environment": {
+        "TORCH_RL_STORAGE": "{run_dir}",
+        "RLVIGEN_FRAME_STACK": "3"
       },
       "replay_capacity": null,
       "maximum_retained_transitions": null,
@@ -480,6 +497,9 @@
         "lr": "0.0005",
         "lr_ctrl": "0.0001",
         "max_grad_norm": "0.5"
+      },
+      "runtime_environment": {
+        "RLVIGEN_FRAME_STACK": "3"
       },
       "replay_capacity": null,
       "maximum_retained_transitions": null,

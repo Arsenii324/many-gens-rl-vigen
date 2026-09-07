@@ -598,7 +598,7 @@
       "frame_stack": "3",
       "gamma": ".99",
       "lr": "3e-4",
-      "aux_lr": "3e-4",
+      "aux_lr": "5e-4",
       "nminibatch": "32",
       "entcoef": "0",
       "lr_decay_env_steps": "1000000"
@@ -615,7 +615,8 @@
       "section: the smaller rollout buys more updates, which is the reason not to compensate by",
       "raising nstep.",
       "[Claude 2026-09-07, A36 REVERSED, external review 21 #7] Linear LR decay over 1e6 environment steps is now set, and the identity question that blocked it is settled by reading raileanu21a-supp.pdf SS E directly. SS E specifies the DMC continuous-control grid -- lr 3e-4, gamma .99, 32 minibatches, entropy 0, 2048 steps, 1 process, linear rate decay over 1e6 env steps -- and says 'Following this grid search, we used the best values found for all the methods'. PPG's own listed search covers only N_pi=32, E_pi=1, E_V=1, E_aux=6, beta_clone=1, and ALL FIVE equal PPG's released defaults, so nothing in PPG's search overrides the shared grid. Decisively: this port ALREADY runs lr 3e-4, gamma .99, 32 minibatches and entropy 0, every one of which DEVIATES from PPG's own release (5e-4, .999, 8, .01). We were already the comparator in every disputed value while lacking the one setting that identity requires -- which is exactly the 'sits between two identities' the review named. An earlier freeze this same day chose the other identity and was wrong; the deviation table above is the evidence that settled it.",
-      "[Claude 2026-09-07, A36 RESOLVED] num_envs 8 x nstep 256 -> 1 x 2048, adopting raileanu21a-supp.pdf SS E's stated geometry and closing the last gap between this port and the identity A36 froze it as. Decided on MEASURED cost, not preference: Codex ran both arms at 65,536 frames (one auxiliary cycle in each geometry) on the SAME tier, gt4i.1 -- 8x256 gives 78.54 IPS against 1x2048's 59.44, so the faithful geometry is 32% slower. PPG's production cost is 5.9 h/seed x 3 = 17.7 GPU-h, so 32% is about +8.3 GPU-h against a campaign near 893 -- under 1%. Paying under one percent to stop being the comparator in name while departing from it in the one place left is the whole of the decision. The two arms differ in GAE truncation and trajectory geometry, not merely in speed: eight 256-step trajectories advantage-estimated independently is not one 2048-step trajectory."
+      "[Claude 2026-09-07, A36 RESOLVED] num_envs 8 x nstep 256 -> 1 x 2048, adopting raileanu21a-supp.pdf SS E's stated geometry and closing the last gap between this port and the identity A36 froze it as. Decided on MEASURED cost, not preference: Codex ran both arms at 65,536 frames (one auxiliary cycle in each geometry) on the SAME tier, gt4i.1 -- 8x256 gives 78.54 IPS against 1x2048's 59.44, so the faithful geometry is 32% slower. PPG's production cost is 5.9 h/seed x 3 = 17.7 GPU-h, so 32% is about +8.3 GPU-h against a campaign near 893 -- under 1%. Paying under one percent to stop being the comparator in name while departing from it in the one place left is the whole of the decision. The two arms differ in GAE truncation and trajectory geometry, not merely in speed: eight 256-step trajectories advantage-estimated independently is not one 2048-step trajectory.",
+      "[Claude 2026-09-08, A44] aux_lr 3e-4 -> 5e-4. raileanu21a-supp.pdf SS E searched \"the learning rate\", SINGULAR, over [1e-4, 3e-4, 7e-4, 1e-3]; its PPG-specific search covers only N_pi/E_pi/E_V/E_aux/beta_clone and no learning rate at all. OpenAI's release has TWO flags, --lr and --aux_lr, both defaulting to 5e-4 (phasic_policy_gradient/train.py:36-37), so running the authors' recipe means passing --lr 3e-4 and leaving the auxiliary optimizer at its default. 3e-4 was an inference that one searched rate governed both optimizers, recorded as if it were a cited value; A41's rule (shipped code wins unless the paper states a value FOR THIS TASK) puts it back at 5e-4, because the paper states no auxiliary rate."
     ],
     "positional": [
       "{task}",
@@ -751,13 +752,14 @@
     "provenance": {
       "ibac_sni": {
         "source_target": "IBAC-SNI authors' released code",
-        "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations"
+        "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations; three-frame observation stack authored for Door (A40 REVISED-2), and lr 5e-4 taken from the CoinRun branch whose architecture this port adopts rather than torch_rl's 7e-4 MiniGrid default (A43), without that branch's linear decay"
       }
     },
     "constants": {
       "procs": "1",
       "frames_per_proc": "128",
-      "model_name": "cell"
+      "model_name": "cell",
+      "lr": "0.0005"
     },
     "host_profiles": {
       "v100": {
@@ -777,8 +779,9 @@
       "frames_per_proc 128 is torch_rl's own PPO default and is unchanged."
     ],
     "environment": {
-      "TORCH_RL_STORAGE": "{run_dir}"
-    },
+    "TORCH_RL_STORAGE": "{run_dir}",
+    "RLVIGEN_FRAME_STACK": "3"
+  },
     "positional": [
       "{task}",
       "{procs}",
@@ -889,8 +892,11 @@
     "provenance": {
       "ctrl": {
         "source_target": "CTRL authors' released code",
-        "source_variant": "CTRL source mechanism with declared continuous Door/window adaptation"
+        "source_variant": "CTRL source mechanism with declared continuous Door/window adaptation; released-code configuration, which deviates from the publication's Table 2 on n_epochs (3 vs 1), lr_ctrl (1e-4 vs the single 5e-4 the paper states for RL AND representation), num_envs, k (1 vs 3), cluster_len (10 vs 2) and temperature (0.1 vs 0.3) -- all declared per A41/A45; and a three-frame observation stack authored for Door (A40 REVISED-2) where that table states frame stacking off for Procgen"
       }
+    },
+    "environment": {
+      "RLVIGEN_FRAME_STACK": "3"
     },
     "constants": {
       "num_envs": "16",

@@ -726,6 +726,14 @@ def run_scene_ibac_sni(built, task, scene_id, mode, episodes, seed, policy_mode=
     seed_the_placement_rng(seed)
     os.environ["RLVIGEN_MODE"] = mode
     os.environ["RLVIGEN_SCENE_ID"] = str(scene_id)
+    # [Claude 2026-09-08, A40 REVISED-2] The stack is set HERE, from the declaration, rather than
+    # inherited from the runner's family environment. `families.json` sets `RLVIGEN_FRAME_STACK`
+    # for the TRAINING process; this offline evaluator is a different process and does not get it.
+    # That is exactly how `RLVIGEN_IMAGE_SIZE` produced "expected 100x100, observed (9, 84, 84)":
+    # a geometry the training path had and the eval path silently did not. Deriving it from
+    # OBSERVATION_GEOMETRY makes the two impossible to disagree, and the runtime assertion below
+    # then checks the tensor rather than the intention.
+    os.environ["RLVIGEN_FRAME_STACK"] = str(OBSERVATION_GEOMETRY["ibac_sni"][1])
     verify_env_request(mode, scene_id, "ibac_sni")
     import utils as ibac_utils
 
@@ -1019,6 +1027,14 @@ def run_scene_ctrl(built, task, scene_id, mode, episodes, seed, policy_mode="nat
     # ctrl's own evaluator already does exactly this: evaluate_ppo.py:38 passes False, while
     # train_ppo.py:91,99,106 pass True.  Both are byte-identical in ext/ctrl_public.
     # Found by external review 8.
+    # [Claude 2026-09-08, A40 REVISED-2] The stack is set HERE, from the declaration, rather than
+    # inherited from the runner's family environment. `families.json` sets `RLVIGEN_FRAME_STACK`
+    # for the TRAINING process; this offline evaluator is a different process and does not get it.
+    # That is exactly how `RLVIGEN_IMAGE_SIZE` produced "expected 100x100, observed (9, 84, 84)":
+    # a geometry the training path had and the eval path silently did not. Deriving it from
+    # OBSERVATION_GEOMETRY makes the two impossible to disagree, and the runtime assertion below
+    # then checks the tensor rather than the intention.
+    os.environ["RLVIGEN_FRAME_STACK"] = str(OBSERVATION_GEOMETRY["ctrl"][1])
     env = RLViGenVecEnvCustom(f"robosuite:{task}", mode=mode, num_envs=1, seed=seed,
                               scene_id=scene_id, condition_seed=seed,
                               normalize_rewards=False)

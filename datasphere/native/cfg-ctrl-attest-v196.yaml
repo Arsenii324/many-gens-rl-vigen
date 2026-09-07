@@ -1,3 +1,7 @@
+# SUPERSEDED by cfg-ctrl-attest-v197.yaml (2026-09-08). Its payload predates the
+# Places365 check-asset fix, the ctrl/ibac_sni frame stack, and the eval_grid change,
+# so a job run from it would attest a tree that no longer exists. Kept as the record
+# of what the canary bt1f8b5gb39jgadqngke actually ran under.
 # [Claude 2026-09-07] FINAL evaluator-attestation wave (v196), against the frozen tree.
 #
 # v194 is superseded: correcting ctrl's native policy mode touched eval_grid.py and

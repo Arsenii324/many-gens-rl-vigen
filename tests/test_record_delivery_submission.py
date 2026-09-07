@@ -88,6 +88,12 @@ def _submit(tmp_path: Path, config: Path) -> subprocess.CompletedProcess[str]:
             "PATH": f"{fake_bin}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin",
             "FAKE_DATASPHERE_INVOKED": str(invoked),
             "NATIVE_EVIDENCE_LOG": str(tmp_path / "actions.log"),
+            # [Claude 2026-09-08] Without this, `job.sh` appends to the REPO's
+            # results/submissions.jsonl -- the production attempt record. It had 32 rows
+            # and every one was a fixture; `scripts/attempt_ledger.py` found it on its
+            # first run. A test that writes into the artifact it is testing makes that
+            # artifact useless, quietly.
+            "SUBMISSION_LEDGER": str(tmp_path / "submissions.jsonl"),
             "NATIVE_V100_BUDGET_STATE": str(tmp_path / "v100-budget.json"),
         },
         text=True,

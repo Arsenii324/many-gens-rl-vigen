@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import sys
+import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
@@ -192,6 +193,27 @@ def payload_members(source: Path, allowed_entries: tuple[str, ...]) -> list[Path
     return members
 
 
+def _git_identity(source: Path) -> dict:
+    """The commit this payload was built from, and whether the tree was clean.
+
+    Best-effort by design: a source tree with no git (an extracted tarball, a fixture) still
+    builds a valid payload, and saying "unknown" is honest where inventing a hash would not be.
+    """
+    def _run(*args: str) -> str | None:
+        try:
+            done = subprocess.run(["git", "-C", str(source), *args],
+                                  capture_output=True, text=True, timeout=30)
+        except Exception:
+            return None
+        return done.stdout.strip() if done.returncode == 0 else None
+
+    commit = _run("rev-parse", "HEAD")
+    if commit is None:
+        return {"source_commit": "unknown", "source_dirty": "unknown"}
+    status = _run("status", "--porcelain")
+    return {"source_commit": commit, "source_dirty": status is None or bool(status)}
+
+
 def write_payload(source: Path, output: Path, command: str, families: tuple[str, ...] = DEFAULT_FAMILIES) -> None:
     reject_forbidden_source(source)
     members = payload_members(source, allowed_for(source, families))
@@ -205,6 +227,19 @@ def write_payload(source: Path, output: Path, command: str, families: tuple[str,
         "accepted_adaptations": source_lock["accepted_adaptations"],
         "nested_repository_commits": source_lock["nested_repository_commits"],
         "members": {str(path.relative_to(source)): sha256(path) for path in members},
+        # [Claude 2026-09-08] Git identity, so every RESULT carries it transitively.
+        #
+        # `results/submissions.jsonl` records commit and dirtiness at SUBMIT time, which answers
+        # "what did we launch". It does not travel with the artifact: a records file retrieved from
+        # a job, read a month later, could not say which tree produced it. The payload manifest is
+        # the one thing present in the container and referenced by every record's provenance, so it
+        # is where this belongs. It is a between-waves change because it moves payload bytes.
+        #
+        # `source_dirty` is recorded rather than refused. A dirty build is legitimate for a probe
+        # and illegitimate for a wave, and `production_gates.py::gate_source_tree_frozen` is where
+        # that judgement already lives -- duplicating it here would put the same rule in two places
+        # and let them disagree.
+        **_git_identity(source),
     }
     # A source-only test fixture may intentionally omit the pinned RL-ViGen tree. Such an archive
     # remains buildable for generic contract tests, but it is explicitly unbound and cannot pass a

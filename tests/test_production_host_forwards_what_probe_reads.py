@@ -79,3 +79,36 @@ def test_production_scale_refuses_without_a_per_cell_ceiling():
     block = block[:block.index("\nfi\n")]
     for required in ("NATIVE_PRODUCTION", "NATIVE_HOST_PROFILE", "CELL_TIMEOUT_SECONDS"):
         assert required in block, f"{required} refusal is not in the production-scale guard"
+
+
+def test_production_scale_requires_a_verified_second_device_for_results():
+    """A 45-hour cell's results must not live on exactly one volume.
+
+    Both `/tmp/native-out` and `/tmp/native-work` are already host-mounted, so checkpoints are
+    durable as written -- that half closed on 2026-09-07. This is the other half: the host volume
+    itself. The campaign is ~893 GPU-hours and a soda cell alone is ~45.
+
+    The load-bearing part is that the second device is VERIFIED to be a second device. Requiring a
+    path and trusting the operator to pick a different volume manufactures assurance without
+    evidence, which is the failure mode this project keeps finding in its own checks. So the
+    filesystem ids are compared and an unreadable id refuses rather than passes.
+    """
+    text = WRAPPER.read_text()
+    block = text[text.index('if [[ "${FRAMES:-10000}" -ge 600000 ]]; then'):]
+    block = block[:block.index("\nfi\n")]
+    assert "NATIVE_RESULT_MIRROR is unset" in block, (
+        "production scale must refuse without a second location for results")
+    assert "stat -f -c %i" in block, "the mirror must be verified to be a different filesystem"
+    assert "SAME filesystem" in block, "a same-device mirror must be refused, not warned about"
+    assert "cannot be verified and must not be assumed" in block, (
+        "an unreadable filesystem id must refuse; passing on it is the assurance-without-evidence "
+        "failure this check exists to avoid")
+
+
+def test_the_mirror_is_actually_written_and_reported():
+    """A refusal that forces a variable but never copies anything would be pure ceremony."""
+    text = WRAPPER.read_text()
+    assert 'cp "$RESULT" "$NATIVE_RESULT_MIRROR/"' in text
+    assert "mirrored:" in text, "the operator must be able to see that it happened"
+    assert "NATIVE_RESULT_MIRROR copy FAILED" in text, (
+        "a mirror that silently did not run is worse than none, because it is believed")

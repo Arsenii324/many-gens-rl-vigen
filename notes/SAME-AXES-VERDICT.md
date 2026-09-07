@@ -157,11 +157,18 @@ not run.
 
 ---
 
-## A second axis reaches the same conclusion: frame stack (A40, 2026-09-08)
+## A second axis reached the same conclusion, then was CLOSED: frame stack (A40 REVISED-2)
 
-The policy-mode split is not the only one that costs primary claims. `ctrl` and `ibac_sni` run at
-`frame_stack=1` while the other ten stack three, and **four of the on-policy group's six pairs
-straddle it**: `idaac`-`ibac_sni`, `idaac`-`ctrl`, `ppg`-`ibac_sni`, `ppg`-`ctrl`.
+> **Resolved 2026-09-08 and no longer an axis.** `ctrl` and `ibac_sni` now stack three, the split
+> is 12/0, and the four straddling pairs below are primary again — `scripts/comparison_blocks.py`
+> reports 3 primary on-policy pairs where it reported 1. The analysis below is kept because its
+> reasoning is what closed it, and because it is the template for the axes that remain open: ask
+> under what CONDITION the upstream authors chose a value, and whether that condition holds on
+> Door. Policy mode, the axis this document is actually about, remains open and declared.
+
+The policy-mode split was not the only one that cost primary claims. `ctrl` and `ibac_sni` ran at
+`frame_stack=1` while the other ten stacked three, and **four of the on-policy group's six pairs
+straddled it**: `idaac`-`ibac_sni`, `idaac`-`ctrl`, `ppg`-`ibac_sni`, `ppg`-`ctrl`.
 
 The reviews call this P2 and prescribe "keep source-faithful primary; disclose". That reads the
 single-frame setting as an authorial choice. It is not one: Procgen serves a single frame, so those

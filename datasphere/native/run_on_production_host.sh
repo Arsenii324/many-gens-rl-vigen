@@ -145,6 +145,44 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     echo "  Derive it from the host throughput measurement (runbook step 2), not from a guess:" >&2
     echo "    CELL_TIMEOUT_SECONDS ~= (FRAMES / measured_fps) * headroom_for_eval_and_saves" >&2
     exit 3; }
+  # [Claude 2026-09-08] A SECOND DEVICE for the results, verified to be a second device.
+  #
+  # Both /tmp/native-out and /tmp/native-work are already bind-mounted to host paths, so
+  # checkpoints are durable as they are written -- that half of the durability gap closed on
+  # 2026-09-07. What remains is the host disk itself: a 45-hour soda cell whose volume fails loses
+  # every seed on it, and the campaign is ~893 GPU-hours.
+  #
+  # Requiring a path and trusting the operator to pick a different volume would be worse than
+  # useless -- it manufactures assurance without evidence, which is the exact failure mode this
+  # project keeps finding. So the device id is compared, and a mirror on the same filesystem is
+  # REFUSED rather than accepted with a warning. `stat -f -c %i` is Linux (GNU coreutils); the
+  # production host is Linux by construction (docs/RUNNING-ON-PRODUCTION-HOST.md), and if the
+  # field cannot be read the check says so instead of passing.
+  [[ -n "${NATIVE_RESULT_MIRROR:-}" ]] || {
+    echo "refusing: FRAMES=$FRAMES is production scale and NATIVE_RESULT_MIRROR is unset." >&2
+    echo "  Results live on one host volume. Name a directory on a DIFFERENT device and the" >&2
+    echo "  result archive is copied there when the run completes." >&2
+    echo "    NATIVE_RESULT_MIRROR=/mnt/other-volume/rlvigen-results" >&2
+    exit 3; }
+  mkdir -p "$NATIVE_RESULT_MIRROR" || {
+    echo "refusing: NATIVE_RESULT_MIRROR=$NATIVE_RESULT_MIRROR cannot be created." >&2
+    exit 3; }
+  _dev_of() { stat -f -c %i "$1" 2>/dev/null || echo "unreadable"; }
+  _result_dev="$(_dev_of "$(dirname "$RESULT")")"
+  _mirror_dev="$(_dev_of "$NATIVE_RESULT_MIRROR")"
+  if [[ "$_result_dev" == "unreadable" || "$_mirror_dev" == "unreadable" ]]; then
+    echo "refusing: cannot read the filesystem id of the result path or the mirror," >&2
+    echo "  so 'a different device' cannot be verified and must not be assumed." >&2
+    exit 3
+  fi
+  if [[ "$_result_dev" == "$_mirror_dev" ]]; then
+    echo "refusing: NATIVE_RESULT_MIRROR is on the SAME filesystem as the result path" >&2
+    echo "  (fsid $_result_dev). A copy beside the original does not survive the failure it" >&2
+    echo "  exists for. Point it at another volume, or set NATIVE_ACCEPT_SAME_DEVICE=1 to" >&2
+    echo "  record the deviation deliberately." >&2
+    [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
+    echo "=== NATIVE_RESULT_MIRROR_SAME_DEVICE fsid=$_result_dev (accepted explicitly) ===" >&2
+  fi
 fi
 
 # Disk. A production cell needs far more than its checkpoints: the RL-ViGen five keep their replay
@@ -278,7 +316,8 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     CURVE_EVAL CURVE_EVAL_REGIMES CURVE_EVAL_SCENES CURVE_EVAL_EPISODES CURVE_EVAL_DEVICE \
     CURVE_EVAL_STRICT CURVE_EVAL_DISCARD_WEIGHTS CELL_TIMEOUT_SECONDS CELL_PYTHON \
     NATIVE_CELL_DEVICES NATIVE_ALLOW_CPU NATIVE_ONLINE_EVAL_DISABLED_SPELLING \
-    NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE OMP_NUM_THREADS MKL_NUM_THREADS; do
+    NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE RLVIGEN_PLACES_WORKERS \
+    OMP_NUM_THREADS MKL_NUM_THREADS; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
 done
@@ -320,5 +359,21 @@ if [[ -f "$WORKDIR/out/records.jsonl" ]]; then
   cp "$WORKDIR/out/records.jsonl" "$(dirname "$RESULT")/records.jsonl"
 fi
 echo "result: $RESULT" >&2
+# [Claude 2026-09-08] The second copy the production-scale guard above required. Done AFTER the
+# result exists and reported by its own line, so an operator can see whether it happened rather
+# than assume it: a mirror that silently did not run is worse than no mirror, because it is
+# believed. Failure here does not destroy the primary result, so it warns and continues -- the
+# run is finished and its output is on disk either way.
+if [[ -n "${NATIVE_RESULT_MIRROR:-}" ]]; then
+  if cp "$RESULT" "$NATIVE_RESULT_MIRROR/" 2>/dev/null; then
+    if [[ -f "$(dirname "$RESULT")/records.jsonl" ]]; then
+      cp "$(dirname "$RESULT")/records.jsonl" "$NATIVE_RESULT_MIRROR/" 2>/dev/null || true
+    fi
+    echo "mirrored: $NATIVE_RESULT_MIRROR/$(basename "$RESULT")" >&2
+  else
+    echo "WARNING: NATIVE_RESULT_MIRROR copy FAILED to $NATIVE_RESULT_MIRROR" >&2
+    echo "  The primary result at $RESULT is intact. There is no second copy." >&2
+  fi
+fi
 echo "cell output (training.log, retained artifacts): $NATIVE_OUT_HOST_DIR" >&2
 echo "live run directory (checkpoints AS WRITTEN, replay): $NATIVE_WORK_HOST_DIR" >&2

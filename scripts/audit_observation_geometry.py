@@ -78,8 +78,38 @@ def _argv_geometry(family: str, baseline: str) -> str:
     return " ".join(found)
 
 
-def _recorded() -> dict[str, set[tuple]]:
-    seen: dict[str, set[tuple]] = {}
+def _live_revisions() -> dict[str, str]:
+    """The current evaluator revision per family, computed from the tree as it stands now."""
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    from evaluator_identity import FAMILY_ALLOWED_BASELINES, evaluator_family_revision
+    revisions = {}
+    for family, baselines in FAMILY_ALLOWED_BASELINES.items():
+        try:
+            revision = evaluator_family_revision(family)
+        except Exception:  # a family whose members cannot be read is reported, not fatal
+            continue
+        for baseline in baselines:
+            revisions[baseline] = revision
+    return revisions
+
+
+def _recorded() -> tuple[dict[str, set[tuple]], dict[str, set[tuple]]]:
+    """Records split by whether they were produced under the CURRENT evaluator closure.
+
+    [Claude 2026-09-08] This used to pool them, and pooling made it say the wrong thing the moment
+    a declaration legitimately moved: raising `ctrl` and `ibac_sni` to `frame_stack=3` (A40
+    REVISED-2) turned every pre-change record into a "CONTRADICTED" verdict, when what those
+    records actually show is the geometry of a tree that no longer exists.
+
+    A record whose `evaluator_revision` is not the live one is not evidence about the live one --
+    that is already this project's rule everywhere else (`populate_evaluator_ledger.py` asserts
+    exactly this equality, and the assertion is what caught the v191 wave writing a false
+    attestation). Applying it here too means the audit can still FAIL, but only on a record the
+    current tree really produced.
+    """
+    live = _live_revisions()
+    current: dict[str, set[tuple]] = {}
+    historical: dict[str, set[tuple]] = {}
     for path in glob.glob(str(ROOT / "results" / "records" / "*.jsonl")):
         with open(path) as handle:
             for line in handle:
@@ -89,10 +119,13 @@ def _recorded() -> dict[str, set[tuple]]:
                     continue
                 scope = record.get("evaluator_scope") or {}
                 baseline = record.get("baseline")
-                if baseline and "frame_stack" in scope and "image_size" in scope:
-                    seen.setdefault(baseline, set()).add(
-                        (scope["frame_stack"], scope["image_size"]))
-    return seen
+                if not baseline or "frame_stack" not in scope or "image_size" not in scope:
+                    continue
+                pair = (scope["frame_stack"], scope["image_size"])
+                bucket = (current if record.get("evaluator_revision") == live.get(baseline)
+                          else historical)
+                bucket.setdefault(baseline, set()).add(pair)
+    return current, historical
 
 
 def main() -> int:
@@ -101,7 +134,7 @@ def main() -> int:
                         help="exit 1 if any baseline has a record contradicting its declaration")
     args = parser.parse_args()
 
-    seen = _recorded()
+    seen, historical = _recorded()
     print("OBSERVATION GEOMETRY -- declared, executed, observed\n")
     print(f"  {'baseline':10s} {'declared':>12s}  {'argv':26s} {'observed':10s} stale-records")
     contradicted, unobserved = [], []
@@ -110,7 +143,9 @@ def main() -> int:
         family = _family_of(baseline)
         argv = _argv_geometry(family, baseline) if family else "?"
         records = seen.get(baseline, set())
-        stale = sorted(r for r in records if r != declared)
+        # `stale` now means "produced by an evaluator closure that is no longer live", which is
+        # the only reading under which a record disagreeing with the declaration is not a defect.
+        stale = sorted(historical.get(baseline, set()))
         if declared in records:
             status = "yes"
         elif records:

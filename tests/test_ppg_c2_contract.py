@@ -28,7 +28,13 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
         "frame_stack": "3",
         "gamma": ".99",
         "lr": "3e-4",
-        "aux_lr": "3e-4",
+        # [A44 2026-09-08] 5e-4, not 3e-4. The supplement's grid searched "the learning rate",
+        # singular, and PPG's own search covers only N_pi/E_pi/E_V/E_aux/beta_clone -- the very
+        # reasoning the decay comment below relies on. `--lr` and `--aux_lr` are SEPARATE flags in
+        # OpenAI's release (train.py:36-37), both defaulting to 5e-4, so running the authors'
+        # recipe means passing `--lr 3e-4` and leaving the auxiliary optimizer alone. 3e-4 was an
+        # inference that one searched rate governed both, applied as if it were a cited value.
+        "aux_lr": "5e-4",
         "nminibatch": "32",
         "entcoef": "0",
         # [Claude 2026-09-07, A36 corrected] SS E's shared grid includes "linear rate decay over

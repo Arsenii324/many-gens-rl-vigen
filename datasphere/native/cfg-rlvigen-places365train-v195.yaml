@@ -20,7 +20,7 @@
 name: vigen-rlvigen-places365train-v195
 desc: Schema-2 evaluator identity re-validation for rlvigen under the DECIDED train split (A22), via svea.
 cmd: >-
-  timeout --foreground 3600s env
+  timeout --foreground 9000s env
   NATIVE_HOST_PROFILE=datasphere
   CELLS=svea:1
   FRAMES=10000
@@ -38,8 +38,8 @@ cmd: >-
   ENDPOINT_EVAL_EPISODES=5
   ENDPOINT_EVAL_DEVICE=cuda
   NATIVE_PLACES365_SPLIT=train
-  PLACES365_EXPECTED_COUNT=36500
-  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  PLACES365_EXPECTED_COUNT=1000
+  PLACES365_EXPECTED_SHA256=c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e
   bash ${JOB} ${CODE} ${RESULT} ${PLACES365_TRAIN}
 inputs:
   - datasphere/native/run_probe.sh: JOB

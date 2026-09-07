@@ -178,23 +178,37 @@ framing in the write-up is one task, deliberately, with the constants that task 
 
 ---
 
-## Frame stack, the second axis that costs primary claims (A40)
+## Frame stack — CLOSED, and the axis is gone (A40 REVISED-2, implemented 2026-09-08)
 
-**The judgement.** `ctrl` and `ibac_sni` stay at `frame_stack=1`, and the four on-policy pairs that
-straddle the split are demoted from primary to descriptive.
+**Superseded.** This section used to record the judgement that `ctrl` and `ibac_sni` stay at
+`frame_stack=1` and that the four straddling on-policy pairs are demoted to descriptive. Both
+baselines now stack 3, the split is 12/0, and `scripts/comparison_blocks.py` reports **3 primary
+on-policy pairs instead of 1**. Nothing here is an open decision any more; it is kept because the
+reasoning is the template for the axes that remain open.
 
-**Symptom that would indict it.** `ctrl` and `ibac_sni` both landing near the random floor while
-`idaac` and `ppg` separate from it — consistent with velocity-blindness rather than with anything
-about VIB or clustering. Or the reverse: either of them beating both three-frame methods, which
-would say the stack is not what limits this task and the demotion cost claims for nothing.
+**Why it moved.** Single-frame was never either method's decision. It is Procgen's environment
+convention: CoinRun paints velocity into the observation (`config.py:140` — *"No frame stack is
+necessary if PAINT_VEL_INFO = 1"*), and CTRL's clustering objective operates over rollout
+timesteps (`algo.py:90,539`), not stacked channels. Neither condition survives the move to Door,
+where both policies were simply velocity-blind.
 
-**Cheapest test.** `python3 scripts/audit_observation_geometry.py` shows the split; the four
-straddling pairs are named in A40. Settling it empirically needs one `ctrl` cell at
-`frame_stack=3`, which is NOT cheap — it needs an ImpalaCNN input change and a fresh pilot, and
-`ctrl`'s 64-env memory is still a linear extrapolation.
+**What it cost, against three wrong estimates.** Not "one channel literal", not "a literal plus a
+config value": **neither baseline had any stacking mechanism at all** on the Door path. Both stacks
+are authored, plus a preprocessor gate that demanded exactly 3 channels, plus a trunk whose input
+width was hardcoded. The estimate was only corrected by tracing the path — three times.
 
-**Cost of changing later.** Demoting pairs after seeing results is how a paper acquires a
-convenient conclusion, which is why it is decided now, before any production number exists.
+**The symptom that would still indict the new value.** `ctrl` or `ibac_sni` diverging or collapsing
+where they previously merely underperformed, or either failing the runtime geometry assertion.
+Both now run authored code on a path that has never trained with it.
+
+**Cheapest test, and it is required before three production seeds:** one short cell each, read for
+non-degenerate learning rather than a score. A43 fixes the disambiguation in advance, because
+`ibac_sni` changed twice: **revert its `lr` first** (a one-line config revert) and re-pilot; if the
+failure survives that, it is the stack.
+
+**Cost of changing back.** `families.json` and `rlgen/protocol.py` for the declaration, and the
+clone patches for the code. Cheap in code and expensive in claims: reverting returns the on-policy
+group to 1 primary pair.
 
 ## The one that is not on this list
 

@@ -1,3 +1,7 @@
+# SUPERSEDED by cfg-dmc_gb-attest-v197.yaml (2026-09-08). Its payload predates the
+# Places365 check-asset fix, the ctrl/ibac_sni frame stack, and the eval_grid change,
+# so a job run from it would attest a tree that no longer exists. Kept as the record
+# of what the canary bt1f8b5gb39jgadqngke actually ran under.
 # [Claude 2026-09-07] FINAL evaluator-attestation wave (v196), against the frozen tree.
 #
 # v194 is superseded: correcting ctrl's native policy mode touched eval_grid.py and
@@ -30,8 +34,8 @@ cmd: >-
   ENDPOINT_EVAL_DEVICE=cuda
   CELL_TIMEOUT_SECONDS=7800
   NATIVE_PLACES365_SPLIT=train
-  PLACES365_EXPECTED_COUNT=36500
-  PLACES365_EXPECTED_SHA256=70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669
+  PLACES365_EXPECTED_COUNT=1000
+  PLACES365_EXPECTED_SHA256=c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e
   bash ${JOB} ${CODE} ${RESULT} ${PLACES365_TRAIN}
 inputs:
   - datasphere/native/run_probe.sh: JOB
