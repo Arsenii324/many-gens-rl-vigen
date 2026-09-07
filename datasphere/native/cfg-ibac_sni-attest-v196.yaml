@@ -1,0 +1,42 @@
+# [Claude 2026-09-07] FINAL evaluator-attestation wave (v196), against the frozen tree.
+#
+# v194 is superseded: correcting ctrl's native policy mode touched eval_grid.py and
+# evaluator_identity.py, both shared closure members, so every family's revision moved -- including
+# the six unrelated to ctrl. The two v195 Places365 jobs were cancelled; they would have failed the
+# hardcoded val assertion since repaired.
+#
+# rlvigen is attested through svea and dmc_gb through soda, NOT through drqv2/rad: those two never
+# enter the Places365 block (family.py needs-places365 is false for them), so attesting through
+# them said nothing about the path svea/sgqn/soda actually run. P21 makes that path revision-stable.
+name: vigen-ibac_sni-attest-v196
+desc: Schema-2 evaluator identity re-validation for ibac_sni, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 3600s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ibac_sni:1
+  FRAMES=10112
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10112
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v196-ibac_sni.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1
