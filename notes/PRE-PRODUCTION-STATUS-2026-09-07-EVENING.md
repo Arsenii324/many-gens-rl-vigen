@@ -170,3 +170,46 @@ that have produced a record. Five of twelve never have:
 For those three the geometry is declared and *would* be checked, not verified. The exposure is
 bounded — a mismatch fails the cell loudly rather than producing a wrong number, which is exactly
 what happened to `rad` — but it is not proof, and it should not be described as if it were.
+
+---
+
+## The soda canary: what it proved, and the gate defect it exposed (2026-09-08)
+
+`bt1f8b5gb39jgadqngke`, `CELLS=soda:1`, 10k frames — submitted alone, before the other six,
+precisely so that a shared-core mistake would be paid for once rather than seven times.
+
+**Status ERROR, and that status is misleading.** There is no traceback and no failure marker. The
+log shows soda training normally — sixteen intervals, real `ALOSS`/`CLOSS`/`AUXLOSS`, returns
+moving — and then simply stopping at `S: 8000` of 10000. It was cut off by its own
+`timeout --foreground 3600s`.
+
+**So the canary succeeded at its actual job.** It is the first execution of the Places365 **train**
+split anywhere in this project, and it proves, together:
+
+- P21's baked-in loader hardening leaves the revision stable (svea/sgqn/soda become attestable);
+- the `RLVIGEN_IMAGE_SIZE` repair reaches the training path;
+- `NATIVE_PLACES365_SPLIT=train` configures, passes its own `--check`, and feeds a working overlay;
+- SODA's auxiliary objective runs against train-split images.
+
+**The measurement it handed us, which is worth more than the cell.**
+
+| baseline | measured | source |
+|---|---|---|
+| `rad` | **9.1 fps** (500 frames / 54.8 s) | `bt14gjjdtoa5j54dr2n6` |
+| `soda` | **2.9 fps** (500 frames / 172.6 s) | this job |
+
+**3.2x apart inside one family.** `random_overlay` decodes a fresh Places365 batch per update;
+`rad` does not overlay at all. A 6e5 soda cell is therefore ~57 h, consistent with the ~45 h figure
+the production-canary gate already carried.
+
+**The gate defect.** `audit_job_budgets.py` certified this config as `ok`. Its `MEASURED_TRAIN_FPS`
+is keyed by FAMILY, but the lookup passes whatever `CELLS=` names — a BASELINE. So `soda`, `rad`,
+`drqv2`, `svea`, `sgqn` and `curl` all missed the dict and silently took the 6.0 fps floor, roughly
+double soda's real rate. **A gate said "ok" to a job that could not finish** — the exact failure
+that audit was written to prevent, reproduced one level down. Fixed: per-baseline measured rates,
+and the floor is now the slowest measured value rather than a round number.
+
+**Not resubmitted.** The log already contains everything the cell existed to demonstrate, and the
+seven-family wave is deferred behind the frame-stack correction (A40 REVISED-2) anyway. Re-running
+it now would buy a second copy of a proof we hold, at an hour of GPU. It goes into the single wave
+that follows the config changes, with a budget derived from 2.9 fps rather than a guess.
