@@ -29,7 +29,7 @@
       },
       "svea": {
         "source_target": "RL-ViGen released code",
-        "source_variant": "SVEA source mechanism, RL-ViGen Door configuration"
+        "source_variant": "SVEA's joint-loss regularisation implemented on RL-ViGen's DrQ-v2/DDPG-style backbone (algos/svea.py:165 -- stddev_schedule/stddev_clip, no entropy term), augmented with RL-ViGen's Places365 random_overlay (algos/svea.py:12,299) rather than the paper's random_conv. Not the publication's SAC-backbone SVEA"
       },
       "drq": {
         "source_target": "RL-ViGen released code",
@@ -37,11 +37,11 @@
       },
       "sgqn": {
         "source_target": "RL-ViGen released code",
-        "source_variant": "SGQN source mechanism with explicit Door descriptor overrides"
+        "source_variant": "SGQN's saliency-guided objective on RL-ViGen's DrQ-v2 backbone (algos/sgqn.py:119, SGQNAgent(DrQV2Agent)), run at RL-ViGen's released-code Door profile with explicit descriptor overrides. Known to differ from the publication's own Door table"
       },
       "curl": {
         "source_target": "RL-ViGen released code",
-        "source_variant": "CURL source mechanism on RL-ViGen Door; preprocessing variant declared"
+        "source_variant": "RL-ViGen's one-encoder CURL variant on its DrQ-v2/DDPG backbone (algos/curl.py:54, CURLAgent(DrQV2Agent)), not the publication's SAC-based CURL; preprocessing variant declared"
       }
     },
     "host_profiles": {
