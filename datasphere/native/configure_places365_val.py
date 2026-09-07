@@ -48,14 +48,34 @@ def fail(message: str) -> None:
     raise ValueError(message)
 
 
-def configure(repo: Path, dataset_root: Path, check_only: bool, flavor: str = "rlvigen") -> None:
+def configure(repo: Path, dataset_root: Path, check_only: bool, flavor: str = "rlvigen",
+              split: str = "val") -> None:
+    """Point the overlay loader at one Places365 partition, and refuse if it is absent.
+
+    [Claude 2026-09-07, DECISION-SHEET A22 DECIDED.] `split` used to be implicit: this script's only
+    job was to rewrite `use_val=False` to `True`, so the validation partition was not a choice but a
+    property of running the script at all. It is a LEARNING-AFFECTING deviation for `svea`, `sgqn`
+    and `soda` -- the overlay distribution IS their mechanism -- and the two arguments for keeping
+    it both collapsed: the "all three share the split so ordering is unaffected" inference does not
+    follow (they consume overlays through different objectives), and the cost was priced at 105 GB
+    when the canonical DMC-GB asset is `places365standard_easyformat.tar`, 256x256 train+val, about
+    21 GB, which DMC-GB's own README instructs reproducers to download.
+
+    So the split is now named, and `train` is the decided production value. `val` stays available
+    for probes, which is why the default is not simply flipped: a probe that only needs *an* overlay
+    pool should not require a 21 GB asset.
+    """
     if flavor not in FLAVORS:
         fail(f"unknown Places365 loader flavor: {flavor}")
+    if split not in ("val", "train"):
+        fail(f"unknown Places365 split: {split}")
     entry = FLAVORS[flavor]
 
-    expected_images = dataset_root / "places365_standard" / "val" / "images"
+    # `train/` has no `images/` level; the easyformat archive lays it out as class directories.
+    expected_images = (dataset_root / "places365_standard" / "val" / "images" if split == "val"
+                       else dataset_root / "places365_standard" / "train")
     if not expected_images.is_dir():
-        fail(f"Places365 validation images are absent: {expected_images}")
+        fail(f"Places365 {split} images are absent: {expected_images}")
 
     loader_path = repo / entry["loader"]
     config_path = repo / entry["config"]
@@ -63,6 +83,10 @@ def configure(repo: Path, dataset_root: Path, check_only: bool, flavor: str = "r
         fail(f"not a {flavor} checkout: {repo}")
 
     unpatched_signature, patched_signature = signatures(entry["workers"])
+    if split == "train":
+        # Upstream's own default already selects the train partition, so the faithful configuration
+        # is the ABSENCE of this rewrite. Keep the fallback hardening, drop the split override.
+        unpatched_signature, patched_signature = patched_signature, unpatched_signature
     source = loader_path.read_text()
     changed = False
     if unpatched_signature in source:
@@ -101,9 +125,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dataset-root", type=Path, required=True)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--flavor", default="rlvigen", choices=sorted(FLAVORS))
+    parser.add_argument("--split", default="val", choices=("val", "train"),
+                        help="which Places365 partition the overlay loader draws from; "
+                             "train is the production value (A22)")
     args = parser.parse_args(argv)
     try:
-        configure(args.repo.resolve(), args.dataset_root.resolve(), args.check, args.flavor)
+        configure(args.repo.resolve(), args.dataset_root.resolve(), args.check, args.flavor,
+                  args.split)
     except ValueError as error:
         print(error, file=sys.stderr)
         return 2

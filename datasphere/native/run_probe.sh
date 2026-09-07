@@ -1231,15 +1231,41 @@ if cells_need_places365 "$cells"; then
   dataset_root="$work/places365-root"
   mkdir -p "$dataset_root/places365_standard"
   ln -s "$asset_dir/val" "$dataset_root/places365_standard/val"
-  python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root"
-  python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --check
+  # [Claude 2026-09-07, DECISION-SHEET A22 DECIDED.] The overlay split is now NAMED rather than
+  # implied by running this script at all. `train` is the production value: the overlay
+  # distribution IS the mechanism for svea/sgqn/soda, so drawing it from the validation partition
+  # is a learning-affecting deviation, and both arguments for keeping it collapsed -- the "same
+  # split so ordering is unaffected" inference does not follow, and the cost was priced at 105 GB
+  # when DMC-GB's own README points at places365standard_easyformat.tar, ~21 GB.
+  #
+  # Probes keep `val`, which is why the default is not simply flipped: a functional probe should not
+  # need a 21 GB asset. Production is refused on `val` unless the deviation is stated explicitly,
+  # so the fleet cannot inherit it by silence the way it did until today.
+  places_split="${NATIVE_PLACES365_SPLIT:-val}"
+  if [[ "${FRAMES:-10000}" -ge 600000 && "$places_split" != "train" ]]; then
+    if [[ "${NATIVE_PLACES365_ACCEPT_VAL:-0}" != "1" ]]; then
+      echo "REFUSING: production scale with Places365 split '$places_split'." >&2
+      echo "  A22 decided the upstream TRAIN split for production; the overlay distribution is the" >&2
+      echo "  mechanism for svea/sgqn/soda, so this changes what they learn." >&2
+      echo "  Provision places365standard_easyformat.tar (~21 GB) and set" >&2
+      echo "  NATIVE_PLACES365_SPLIT=train, or set NATIVE_PLACES365_ACCEPT_VAL=1 to run the" >&2
+      echo "  declared deviation deliberately." >&2
+      exit 3
+    fi
+    echo "=== NATIVE_PLACES365_DECLARED_DEVIATION split=$places_split (A22 accepted explicitly) ===" >&2
+  fi
+  if [[ "$places_split" == "train" ]]; then
+    ln -sfn "$asset_dir/train" "$dataset_root/places365_standard/train"
+  fi
+  python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split"
+  python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split" --check
   # [Claude 2026-09-02 04:20 MSK: soda loads the overlay through dmc_gb's own copy of the same
   # loader, so it needs the same val pinning or the two families would overlay from different
   # image distributions. `data` is where dmc_gb's launcher symlinks its dataset root from.]
   ln -sfn "$dataset_root" "$work/data"
   if [[ -d "$work/runnable/dmc_gb" ]]; then
-    python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb
-    python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb --check
+    python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb --split "$places_split"
+    python3 datasphere/native/configure_places365_val.py --repo runnable/dmc_gb --dataset-root "$dataset_root" --flavor dmc_gb --split "$places_split" --check
   fi
   python3 - "$dataset_root/places365_standard/val" <<'PY'
 import pathlib

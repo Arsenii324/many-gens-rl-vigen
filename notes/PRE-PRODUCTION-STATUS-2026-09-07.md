@@ -34,7 +34,13 @@ the campaign budget, which lacked the deterministic second endpoint pass and mov
 
 ## One decision has a deadline, and it is the only one that does
 
-**Places365 (A22) must be settled BEFORE the payload freeze, not with the other ratifications.**
+**Places365 (A22) is DECIDED and implemented: the upstream TRAIN split.** Production now refuses
+the validation pool unless the deviation is declared, so this can no longer be inherited by
+silence. What remains is an ASSET action, not a decision: provision
+`places365standard_easyformat.tar` (~21 GB) and set `NATIVE_PLACES365_SPLIT=train`. Do it before
+the payload freeze — after it, the same change costs a payload, a wave and nine reruns.
+
+The original framing, kept because the correction is the point:
 Every other open item changes a status; this one changes what `svea`, `sgqn` and `soda` train
 against. My own cost figure for it was wrong: I priced the upstream train split at 105 GB, and the
 canonical DMC-GB asset is `places365standard_easyformat.tar` at **~21 GB**, same 256x256 per-image

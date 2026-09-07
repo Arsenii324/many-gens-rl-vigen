@@ -841,6 +841,32 @@ SODA/SVEA numbers, which `CLAIMS-LEDGER` already forbids on other grounds.
 **Override if**: you want any claim of parity with published overlay-augmentation results, in which
 case the train split must be used and those cells re-run.
 
+### A22 DECIDED AND IMPLEMENTED, 2026-09-07 — the upstream TRAIN split is the production value
+
+Both arguments for keeping the validation split are gone (see the two entries below: the ordering
+inference withdrawn, then the 105 GB cost shown to be ~21 GB). With nothing left holding it up, and
+the deviation being learning-affecting for three baselines, the answer is the source's own split.
+
+**Implemented, not merely recommended**, and shaped so it cannot be inherited by silence:
+
+- `configure_places365_val.py` takes `--split {val,train}`. For `train` the faithful configuration
+  is the ABSENCE of the rewrite — upstream's `use_val=False` already selects it — so the script
+  keeps only its fallback hardening and drops the override.
+- `run_probe.sh` reads `NATIVE_PLACES365_SPLIT`, default `val`. **Probes are unchanged**: a
+  functional probe should not need a 21 GB asset to run.
+- **Production refuses `val`** at FRAMES >= 600000 unless `NATIVE_PLACES365_ACCEPT_VAL=1` is set,
+  which logs `NATIVE_PLACES365_DECLARED_DEVIATION`. So the fleet cannot run on the validation pool
+  the way it would have until today — by nobody deciding.
+- Both loader flavours take the same split in the same run; `soda` reads through `dmc_gb`'s own copy
+  of the loader, and splitting them would have the two families overlaying from different
+  distributions.
+
+**What the owner still has to do, and it is an asset action rather than a decision**: provision
+`places365standard_easyformat.tar` (~21 GB, 256x256 train+val, the package DMC-GB's README
+instructs reproducers to download) and set `NATIVE_PLACES365_SPLIT=train`. Until then production is
+refused rather than silently deviating. Ratification remains open in the formal sense; the
+operational default is no longer "whatever the script happened to do".
+
 ### A22 CORRECTED AGAIN, 2026-09-07 (late) — the 105 GB premise is WRONG, and it was the last leg
 
 **My own cost figure was false, and the decision rested on it.** The revision below withdrew the

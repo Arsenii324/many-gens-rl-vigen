@@ -122,7 +122,9 @@ saliency objective and drawing an extra overlay per update, which is why P19 was
 alone — so a change to the overlay distribution can move them by different amounts. A shared
 deviation is not an invariant ordering.
 
-**What is claimed instead, precisely.** These three train against a **36,500-image** overlay pool
+**DECIDED 2026-09-07: production draws overlays from the upstream TRAIN split.** `NATIVE_PLACES365_SPLIT=train` with the ~21 GB `places365standard_easyformat.tar`; production REFUSES the validation split unless the deviation is declared explicitly. The paragraphs below describe the superseded validation-pool configuration and what was claimed under it.
+
+**What was claimed under the validation pool, precisely.** These three train against a **36,500-image** overlay pool
 (Places365 validation, 100 per class) rather than the released **~1.8M-image** train split. At a
 600k-frame budget both pools repeat, but the validation pool repeats each image roughly 50x more
 often. **No claim is made that this leaves the ordering of `svea`, `sgqn` and `soda` unchanged**;
