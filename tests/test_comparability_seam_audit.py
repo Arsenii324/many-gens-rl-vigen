@@ -123,17 +123,16 @@ def test_reported_return_is_raw_for_all_twelve_while_three_learners_normalise():
         f"the set of reward-normalising learners changed: {normalised}")
 
 
-def test_frame_stack_still_splits_nine_three():
+def test_frame_stack_now_splits_ten_two():
     """PART2 Finding 5, called there the largest comparability gap found. C2.
 
-    [Claude 2026-09-06] Was the four Procgen-lineage clones until idaac moved to a declared
-    3-frame stack (DECISION-SHEET A35, Q55) -- see test_observation_geometry.py's identical,
-    already-updated split for the full reasoning.
+    PPG and IDAAC use the selected three-frame DMC comparator path. IBAC-SNI and CTRL retain
+    explicit one-frame released geometry.
     """
     values, _ = acs.frame_stack()
     single = {b for b, v in values.items() if str(v).startswith("1")}
-    assert single == {"ppg", "ctrl", "ibac_sni"}, (
-        f"the single-frame set is no longer exactly the three remaining Procgen-lineage clones: {single}")
+    assert single == {"ctrl", "ibac_sni"}, (
+        f"the single-frame set is no longer exactly the two retained one-frame baselines: {single}")
     assert {str(values[b]) for b in acs.NATIVES} == {"3"}, "the natives stopped stacking 3"
 
 

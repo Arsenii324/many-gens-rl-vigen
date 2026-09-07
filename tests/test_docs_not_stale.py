@@ -127,6 +127,33 @@ def test_eval_protocol_current_schedule_is_source_backed_and_not_contradicted_by
     assert "**10 per (regime, scene) cell**" not in grid
 
 
+def test_c2_current_docs_do_not_promote_historical_ppg_c1_wording():
+    """Current C2 claims stay distinct from the retained C1 pilot record.
+
+    The pilot prose is valuable historical evidence, but it once said that PPG's C2 path was
+    still unimplemented after the path had become the operational default. Guard only the C2
+    status blocks; do not police historical records or result-provenance labels here.
+    """
+    claims = (ROOT / "notes" / "CLAIMS-LEDGER.md").read_text()
+    claims_section = claims.split("## A35/A36 pilot arms", 1)[1]
+    current_claims = claims_section.split("**Historical pilot snapshot", 1)[0]
+    assert "Current operational default" in current_claims
+    assert "PPG's C2 geometry is" in current_claims
+    assert "frame_stack=3" in current_claims
+    assert not re.search(r"PPG.*(?:not yet implemented|still to be built)", current_claims,
+                         re.I | re.S)
+
+    matrix = (ROOT / "notes" / "PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md").read_text()
+    assert "selected IDAAC/PPG continuous-control profiles use RGB with three-frame stacks" in matrix
+    assert "selected Door PPG profile explicitly passes `frame_stack=3`" in matrix
+    assert "frame_stack=1` remains explicit for C1" in matrix
+
+    construction = (ROOT / "docs" / "CONSTRUCTION.md").read_text()
+    c2 = construction.split("### C2 —", 1)[1].split("**HISTORICAL DEFAULT", 1)[0]
+    assert "10 stacked / 2 single" in c2
+    assert "split below is now nine and three" not in c2
+
+
 def per_baseline():
     """{name: (files, insertions, deletions)} from scripts/deviations.py."""
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "deviations.py")],

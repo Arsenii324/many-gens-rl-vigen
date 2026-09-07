@@ -74,7 +74,7 @@ STATE = {
               "reusable": "yes -- runnable/_launch/ppg_eval.py builds its own venv via get_venv "
                           "and reuses Roller/VecMonitor2, the same rollout/episode accounting "
                           "training uses",
-              "anchor": "runnable/_launch/ppg_eval.py:71", "expect": "act_fn=model.act"},
+              "anchor": "runnable/_launch/ppg_eval.py:75", "expect": "frame_stack=args.frame_stack"},
     "ibac_sni": {"policy_mode": "STOCHASTIC (samples) -- evaluate.py's `--argmax` is "
                              "store_true defaulting False, so the flag that would take the "
                              "mode is off unless asked for [resolved 2026-09-03]",

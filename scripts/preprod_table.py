@@ -23,6 +23,8 @@ import sys
 import tarfile
 from pathlib import Path
 
+from datasphere.native.family import provenance_for
+
 # The two axes that decide whether two rows may be compared at all. Sources: audit_eval_state.py
 # for the estimator, CONSTRUCTION.md C2 for the stack.
 # [Claude 2026-09-04] `ctrl` moved mode -> SAMPLE, found while establishing its evaluator family.
@@ -176,6 +178,7 @@ def cells_of(job: Path, target_regime: str = "eval-easy") -> list[dict]:
         if source == "log":
             # every returned archive was produced by run_probe.sh, which exports MUJOCO_GL=egl
             platform = {"mujoco_gl": "egl"}
+        provenance = (final or {}).get("provenance") or provenance_for(baseline)
         rows.append({
             "baseline": baseline,
             "cell": cell,
@@ -188,6 +191,7 @@ def cells_of(job: Path, target_regime: str = "eval-easy") -> list[dict]:
             "job": job.name,
             "source": source,
             "regime_substituted": regime_substituted,
+            "provenance": provenance,
         })
     return rows
 
@@ -216,15 +220,17 @@ def main(argv=None) -> int:
     lines.append("")
     lines.append("# Pre-production validation table")
     lines.append("")
-    lines.append("| baseline | frames | regime | eps | return | success | estimator | stack | timelimit | render |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("| baseline | source target | source variant | frames | regime | eps | return | success | estimator | stack | timelimit | render |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for r in rows:
         at_floor = isinstance(r["mean"], (int, float)) and r["mean"] <= RANDOM_FLOOR
         mean = (f"{r['mean']:.3f}{' ⌊' if at_floor else ''}"
                 if isinstance(r["mean"], (int, float)) else "—")
         succ = f"{r['success']:.2f}" if isinstance(r["success"], (int, float)) else "—"
         lines.append(
-            f"| `{r['baseline']}`{' ⚠' if r['baseline'] == 'ctrl' else ''} | {r['frames'] or '—'} | "
+            f"| `{r['baseline']}`{' ⚠' if r['baseline'] == 'ctrl' else ''} | "
+            f"{r['provenance']['source_target']} | {r['provenance']['source_variant']} | "
+            f"{r['frames'] or '—'} | "
             f"{(str(r['regime']) + ('!' if r.get('regime_substituted') else '') + ('*' if r['baseline'] == 'alda' else '')) if r['regime'] else '—'} | "
             f"{r['episodes'] or '—'} | {mean} | {succ} | "
             f"{ESTIMATOR.get(r['baseline'], '?')} | {STACK.get(r['baseline'], '?')} | "

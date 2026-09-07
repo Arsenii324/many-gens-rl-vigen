@@ -134,8 +134,8 @@ def probe_observation(task: str = "Door", steps: int = 60) -> int:
     if rows:
         print(f"\n  A 3-frame stack at these sizes carries {min(v for _, v in rows):.4f}-"
               f"{max(v for _, v in rows):.4f} mean absolute pixel change per step.")
-        print("  ppg / idaac / ibac_sni / ctrl receive a SINGLE frame, so they receive none of\n"
-              "  it: on Door the gripper's motion is not recoverable from their observation.")
+        print("  ppg / idaac receive the selected C2 three-frame stack; ibac_sni / ctrl retain\n"
+              "  one frame. Historical C1 for ppg / idaac is explicit only: frame_stack=1.")
     return 0
 
 

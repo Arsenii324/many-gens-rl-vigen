@@ -22,12 +22,12 @@ Two rules apply to the whole table:
 | `drqv2` | DrQ-v2 (RL-ViGen) | Replay capped at 300k in a 600k run unless the host target is applied |
 | `drq` | DrQ (RL-ViGen) | lr 1e-4 vs canonical 1e-3; replay cap |
 | `curl` | **RL-ViGen's CURL** | DrQ-v2-based, *not* SAC; lr 1e-4 vs 1e-3; **paper and code disagree five ways**; replay cap |
-| `svea` | **RL-ViGen's SVEA** | **Uses SODA's `random_overlay`, not SVEA's random convolution** (`svea.py:12,298`). The loss form is SVEA's; the augmentation is not. **Places validation split** (A22); replay cap |
-| `sgqn` | **SGQN (RL-ViGen released-code profile)** | Released code differs from its own Door/Lift Table 6: attribution `aux_lr` **1e-4** vs `8e-5`, quantile **.93** vs `.90`, and an ungated critic-consistency literal **.9** vs `.7`. The released profile is the one predeclared configuration—not a silent retune. Replay cap; Places split. | Executed values are RL-ViGen's own: `aux_lr` **1e-4**, `sgqn_quantile` **.93**, `aux_beta` **.99**, consistency **.9 hard-coded**. The old "FIXED to 8.0e-5 / .9" statement describes the retired `rlgen/` path, which production does not run.
+| `svea` | **RL-ViGen's SVEA** | **Uses SODA's `random_overlay`, not SVEA's random convolution** (`svea.py:12,298`). The loss form is SVEA's; the augmentation is not. **Places validation split** (A22); replay cap; RL-ViGen publication says `feature_dim=256` for non-DrQ(v2)/CURL methods, while released config uses `50` (`docs/FAITHFULNESS.md:141`). |
+| `sgqn` | **SGQN (RL-ViGen released-code profile)** | Released code differs from its own Door/Lift Table 6: attribution `feature_dim` **50** vs publication **256**, `aux_lr` **1e-4** vs `8e-5`, quantile **.93** vs `.90`, and an ungated critic-consistency literal **.9** vs `.7`. The released profile is the one predeclared configuration—not a silent retune. Replay cap; Places split. | Executed values are RL-ViGen's own: `feature_dim` **50**, `aux_lr` **1e-4**, `sgqn_quantile` **.93**, `aux_beta` **.99**, consistency **.9 hard-coded**. The old "FIXED to 8.0e-5 / .9" statement describes the retired `rlgen/` path, which production does not run.
 | `rad` | RAD (dmc_gb) | [Corrected 2026-09-07: this row previously said `random_shift`; traced the actual call path (`RAD`'s own class is empty, pure `SAC` inheritance — the augmentation lives in the shared replay buffer's generic `sample()`, `runnable/dmc_gb/src/utils.py:187-190`) and it calls `augmentations.random_crop`, a genuinely different function from `random_shift` (used by `drq`/`svea` instead) in the same file.] `random_crop`, not the paper's crop/translate; n-step 3 vs 1; needs the 100-px render (P6) or it silently *is* SAC |
-| `soda` | SODA (dmc_gb) | aux lr follows code not paper; **Places validation split**; longest cell (~45 h) |
+| `soda` | SODA (dmc_gb) | **Effective `aux_lr=3e-4` is now explicit in the production launcher, matching the official `scripts/soda.sh`; parser default `1e-3` is not the production value.** **Places validation split**; longest cell (~45 h) |
 | `alda` | ALDA | Recorded faithful; benchmark extrapolated DMControl-GB → robosuite |
-| `ppg` | **a continuous-action port of PPG, retimed** | **32× smaller global rollout** (1×8×256 vs 4 MPI×64×256); `n_pi` unrescaled so the auxiliary phase fires ~32× more often in sample terms; **the continuous head has no reference** |
+| `ppg` | **a continuous-action port of PPG using the IDAAC-authors' DMC comparator profile** | **32× smaller global rollout** (1×8×256 vs 4 MPI×64×256); `n_pi` unrescaled so the auxiliary phase fires ~32× more often in sample terms; three-frame C2 is implemented, while the continuous head and DMC profile have no OpenAI PPG primary-source reference |
 | `idaac` | **IDAAC (DMC continuous-control profile)** [Updated 2026-09-06, A35/A65/Q55: production now runs the authors' own published DMC continuous-control recipe (`num_processes=1`, `num_steps=2048`, `ppo_epoch=10`, `frame_stack=3`, linear LR decay, etc.), not the reduced Procgen-parser adaptation this row previously described — **not** a smaller rollout any more, `num_processes=1` now matches the paper exactly. **Not yet validated by a full-length training run**, see DECISION-SHEET A35's PILOT RESULT/IMPLEMENTED notes.] | `level_seed` is episode-scoped — internally coherent but **an episode is not a Procgen level**, so the invariance construct is target-authored (unchanged by the C2 transition, a separate adaptation) |
 | `ibac_sni` | **a continuous-action adaptation of IBAC-SNI** | Impala trunk ported from its own CoinRun branch; **`entropy_coef=0` is an empirical workaround whose cause is not isolated**; 16× smaller rollout; competence on Door not yet established | **Every ibac_sni run before 2026-09-05 used `beta=1.0`** — the launcher passed no `--beta`, so the branch default applied while FAITHFULNESS recorded 1e-4; the VIB penalty was 10^4x CoinRun's. Corrected, but **no competence evidence yet exists for the corrected configuration**. Also still not CoinRun: single VIB sample against `--nr-samples 12`, and a 64-d latent against 256-d, so the honest name is **an authored hybrid of the authors' PyTorch and CoinRun implementations**
 | `ctrl` | CTRL (repaired) | Two lines restored that were commented out upstream — **without them `ctrl_public @ 7a118c8` cannot run its own algorithm**; 4× smaller rollout; MYOW draws from the *nearest* neighbouring cluster repeatedly (upstream's own quirk); **C97 records a declared paper-vs-code conflict, with the released-code profile as the operational default and no paper profile scheduled in the one-run campaign** | Online eval advances the JAX PRNG that the next `update_ppo`/`update_cluster` consumes, so the training trajectory is a function of the eval code path; **this is upstream's own structure** (`ctrl_public/train_ppo.py:193,202`) and is deliberately unpatched, so the isolation guard covers the placement stream only **Its evaluated return was in normalized units until 2026-09-05** (the common evaluator inherited `normalize_rewards=True` and summed the outermost VecNormalize reward); any ctrl evaluation number predating that fix is void, not merely incomparable
@@ -119,7 +119,17 @@ Recorded here because the qualification existed on two of the three rows and not
 because it had no decision row anywhere until A22 — the failure mode being that a per-row
 qualification is read as a detail of that row rather than as a shared property of a group.
 
-## A35/A36 pilot arms, 2026-09-06 — the running "C" arms are NOT the source-faithful continuous-control recipe
+## A35/A36 pilot arms, 2026-09-06; C2 implementation, 2026-09-07
+
+**Current operational default:** IDAAC and PPG production descriptors select `frame_stack=3`.
+Both train and shared-evaluator paths now produce nine-channel observations. Explicit
+`frame_stack=1` remains available for historical C1 checkpoint evaluation and is never inferred
+from a checkpoint. PPG's C2 geometry is the IDAAC-authors' DMC comparator adaptation, not an
+OpenAI PPG primary-source claim. Formal owner ratification remains open.
+
+**Historical pilot snapshot (written before C2 implementation):** the running "C" arms below were
+NOT the source-faithful continuous-control recipe. The current operational default is stated
+above; these paragraphs preserve what those already-launched jobs actually tested.
 
 `idaac-pilot-c` (`bt1djeamji7gilgnndft`) and `ppg-pilot-c` (`bt19878rgm9qnqrhopoj`) are running at
 **one-frame observations**, the same as `idaac-p`/`ppg-p`. This is a known, deliberate gap, not an
@@ -131,17 +141,19 @@ the authors' actual continuous-control design point.
 for both IDAAC and their PPG baseline) as the reference. This session's own primary-source check
 (`ext/idaac/raileanu21a-supp.pdf` §E) confirms it directly rather than through a review summary.
 
-**What travels with any result from these two jobs, if quoted before a C2 arm exists:**
+**What travels with any result from these two historical jobs:**
 - `idaac-pilot-c` tests `order_loss_coef 0.001→0.1` (the headline finding) and the other DECISION-
   SHEET A35 recipe changes (`num_processes`, `num_steps`, `num_mini_batch`, `gamma`, `entropy_coef`,
   `lr`, `value_freq`, `adv_loss_coef`) at frame_stack=1 and `ppo_epoch=3` — **not** the primary
   source's `ppo_epoch=10`, which A35 resolved only after this arm was already running.
-- `ppg-pilot-c` tests `gamma`/`lr`/`nminibatch`/`entcoef` at frame_stack=1 — its 3-frame wrapper/CNN
-  path is not yet implemented or verified at all (A36).
-- Neither is "IDAAC/PPG's published continuous-control configuration." Call them what A35/A36 call
-  them: a bounded, partial recipe pilot (informally, the "C1" arm), with a full-recipe **"C2"** arm
-  (frame_stack=3, `ppo_epoch=10` for IDAAC) still to be built, in the final frozen wave, not before
-  (Q47's own rule: no reactive resubmission of an already-running job).
+- `ppg-pilot-c` tested `gamma`/`lr`/`nminibatch`/`entcoef` at frame_stack=1 — its 3-frame
+  wrapper/CNN path was not implemented or verified when that job launched (A36 historical
+  record). The current 3-frame path is implemented and smoke-tested; it was not retrofitted into
+  this already-launched result.
+- Neither is "IDAAC/PPG's published continuous-control configuration." At launch, these were a
+  bounded, partial recipe pilot (informally, the "C1" arm), while the full-recipe **"C2"** arm
+  (frame_stack=3, `ppo_epoch=10` for IDAAC) was still to be built. C2 is now implemented as the
+  operational default above; no historical result is relabeled as C2.
 
 **All four jobs landed SUCCESS 2026-09-06; results read directly from `records.jsonl`, endpoint
 scope, 245760 frames, n=1 seed, 5 episodes/regime.** Numbers, not a verdict — see caveats below.
@@ -185,8 +197,8 @@ comparison, not just across families.
   count. n=1, a budget under half of production length, and a competence readout of exactly 0 or
   1 successes out of 5 episodes is the small-n regime A23 already named as too thin to trust
   (a single flipped episode moves ppg-p from "clears the bar" to "at the bar" and back).
-- Not settled, and explicitly deferred per Q47: the C1 vs C2 question for idaac (frame_stack=1 vs
-  3, ppo_epoch 3 vs 10) — this round says nothing about C2, which has not been built.
+- Not settled: C2 versus historical C1 performance at production length and seed count. C2 is now
+  implemented and selected operationally; the short C1 pilots do not validate or reject it.
 - **My reading, offered not decided**: this result does not by itself justify extending either
   pilot's budget or building C2 early — it's consistent with "too short to tell," which is exactly
   what a longer, later, single frozen-tree measurement is for. Record and move on rather than

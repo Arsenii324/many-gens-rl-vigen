@@ -126,6 +126,46 @@ def _build_ppg():
                     scene_id=0, condition_seed=1)
 
 
+@pytest.mark.parametrize("family", ["idaac", "ppg"])
+def test_continuous_main_stack_has_nine_channels_and_legacy_stack_is_explicit(family, family_paths):
+    """Both continuous-control C2 paths build 9 channels; C1 remains an explicit 1-frame path."""
+    if family == "idaac":
+        import torch
+        from ppo_daac_idaac.envs import make_rlvigen_venv
+
+        def build(stack):
+            args = types.SimpleNamespace(env_name="robosuite:Door", seed=1,
+                                         condition_seed=1, frame_stack=stack)
+            return make_rlvigen_venv(args, torch.device("cpu"), "train", 1, scene_id=0)
+    else:
+        from phasic_policy_gradient.envs import get_venv
+
+        def build(stack):
+            return get_venv(num_envs=1, env_name="robosuite:Door", mode="train", seed=1,
+                            scene_id=0, condition_seed=1, frame_stack=stack)
+
+    env3 = build(3)
+    env1 = build(1)
+    try:
+        if family == "idaac":
+            obs3 = env3.reset()
+            obs1 = env1.reset()
+            shape3 = tuple(obs3.shape)
+            shape1 = tuple(obs1.shape)
+            assert shape3[1] == 9 and shape1[1] == 3, (shape3, shape1)
+        else:
+            shape3 = tuple(env3.ob_space.shape)
+            shape1 = tuple(env1.ob_space.shape)
+            assert shape3[-1] == 9 and shape1[-1] == 3, (shape3, shape1)
+    except Exception as error:
+        _absence_or_fail(error, f"{family} frame-stack smoke failed: {type(error).__name__}: {error}")
+    finally:
+        for env in (env3, env1):
+            closer = getattr(env, "close", None)
+            if callable(closer):
+                closer()
+
+
 BUILDERS = {"ctrl": _build_ctrl, "ibac_sni": _build_ibac_sni,
             "idaac": _build_idaac, "ppg": _build_ppg}
 

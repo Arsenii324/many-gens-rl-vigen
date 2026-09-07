@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "d086e7a0b6233ba083c2181268076c988bbf6b23aa5f16a532a7d0a9888d0815",
+  "resolved_descriptor_sha256": "12a828e9d0abd0a410260cd489e12749fdadbadbd1a81ebc35e4df482a4095a1",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
@@ -382,7 +382,13 @@
       ],
       "runtime_constants": {
         "num_envs": "8",
-        "nstep": "256"
+        "nstep": "256",
+        "frame_stack": "3",
+        "gamma": ".99",
+        "lr": "3e-4",
+        "aux_lr": "3e-4",
+        "nminibatch": "32",
+        "entcoef": "0"
       },
       "replay_capacity": null,
       "maximum_retained_transitions": null,

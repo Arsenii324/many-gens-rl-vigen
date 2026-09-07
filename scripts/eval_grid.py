@@ -439,8 +439,9 @@ def _idaac_setup() -> None:
     """idaac evaluates through OUR RL-ViGen adapter and its own `act`.
 
     **The render size is part of the policy's input contract, not a preference.** idaac trains at
-    64x64 with a single frame -- its own paper's geometry, which `rlgen/protocol.py`'s
-    OBSERVATION_GEOMETRY records and patch P6 makes reachable. Building the evaluation env at
+    64x64 with the current DMC-informed three-frame C2 profile; historical C1 checkpoints use one
+    frame only through an explicit override. `rlgen/protocol.py`'s OBSERVATION_GEOMETRY records
+    this and patch P6 makes reachable. Building the evaluation env at
     RL-ViGen's default 84 instead produces a 3,872-wide flattened encoder output against a linear
     layer expecting 2,048, and the grid dies on the first action with a shape error. Every family's
     offline grid has to reproduce its own geometry; this is where idaac's is set.
@@ -471,7 +472,7 @@ def _idaac_setup() -> None:
             sys.path.insert(0, str(path))
 
 
-def run_scene_idaac(agent, task, scene_id, mode, episodes, seed):
+def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=None):
     """One (regime, scene) cell for idaac, through the VecEnv stack its own evaluator uses.
 
     **It SAMPLES.** `model.py:332` is `def act(self, inputs, deterministic=False)` and `test.py`
@@ -503,7 +504,8 @@ def run_scene_idaac(agent, task, scene_id, mode, episodes, seed):
     # not a silent mismatch, but broken either way. OBSERVATION_GEOMETRY is the same single source
     # of truth C98 already uses for this baseline's recorded evaluator_scope; read it here too
     # rather than hardcoding the value a second place.
-    args.frame_stack = OBSERVATION_GEOMETRY["idaac"][1]
+    args.frame_stack = (OBSERVATION_GEOMETRY["idaac"][1]
+                        if frame_stack is None else int(frame_stack))
     device = getattr(agent, "device", torch.device("cpu"))
     if not isinstance(device, torch.device):
         device = torch.device(device)
@@ -576,7 +578,7 @@ def _ppg_setup() -> None:
         sys.path.insert(0, str(path))
 
 
-def run_scene_ppg(agent, task, scene_id, mode, episodes, seed):
+def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None):
     """One (regime, scene) cell for ppg, through PPG's own Roller and VecMonitor2.
 
     **It SAMPLES.** `PpoModel.act` draws from the policy distribution and this repository ships no
@@ -596,7 +598,9 @@ def run_scene_ppg(agent, task, scene_id, mode, episodes, seed):
     from phasic_policy_gradient.roller import Roller
 
     venv = get_venv(num_envs=1, env_name=f"robosuite:{task}", mode=mode, seed=seed,
-                    scene_id=scene_id, condition_seed=seed)
+                    scene_id=scene_id, condition_seed=seed,
+                    frame_stack=(OBSERVATION_GEOMETRY["ppg"][1]
+                                 if frame_stack is None else int(frame_stack)))
     verify_regime(venv, mode, scene_id, "ppg", strict=True)
     action_probe = _new_action_probe(venv)
     original_venv_act = venv.act
@@ -1043,7 +1047,7 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
             print(f"  {regime:12s} scene {scene} ...", file=sys.stderr, flush=True)
             if a.family == "idaac":
                 returns, succ, flags = run_scene_idaac(agent, a.task, scene, regime, a.episodes,
-                                                a.episode_seed)
+                                                a.episode_seed, a.frame_stack)
             elif a.family == "ctrl":
                 returns, succ, flags = run_scene_ctrl(agent, a.task, scene, regime, a.episodes,
                                                a.episode_seed)
@@ -1055,7 +1059,7 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
                                                    a.episode_seed)
             elif a.family == "ppg":
                 returns, succ, flags = run_scene_ppg(agent, a.task, scene, regime, a.episodes,
-                                              a.episode_seed)
+                                              a.episode_seed, a.frame_stack)
             elif a.family == "dmc_gb":
                 returns, succ, flags = run_scene_dmc_gb(agent, a.task, scene, regime, a.episodes,
                                                  a.episode_seed, a.image_size, a.episode_length)
@@ -1203,7 +1207,9 @@ def main() -> int:
     # explicit diagnostic override, not the accidental default of the production entry point.
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--action-repeat", type=int, default=1)
-    ap.add_argument("--frame-stack", type=int, default=3)
+    ap.add_argument("--frame-stack", type=int, default=None,
+                    help="explicit observation stack; omitted uses baseline geometry (C2=3 for "
+                         "ppg/idaac, while 1 remains an explicit legacy override)")
     ap.add_argument("--out", default=None, help="JSONL destination; stdout when absent")
     ap.add_argument("--append", action="store_true",
                     help="append JSONL records instead of replacing --out")
@@ -1237,13 +1243,13 @@ def main() -> int:
     want_deterministic = os.environ.get("RLGEN_DETERMINISTIC_EVAL", "1") != "0"
     requested_deterministic_setting = effective_deterministic_setting(
         a.family, True if a.family == "ctrl" else want_deterministic)
-    # [Claude 2026-09-06, found tracing IDAAC-C2] `--image-size`/`--frame-stack` default to 100/3
+    # [Historical bug, fixed 2026-09-07] `--image-size`/`--frame-stack` defaulted to 100/3
     # (dmc_gb's own geometry) and `run_probe.sh` NEVER passes either flag for a real production
     # cell -- confirmed by grep, no cfg or script sets them. So every family but rad/soda got its
     # OWN evaluator_scope stamped with dmc_gb's geometry regardless of what it actually runs at:
     # verified directly against retained records, idaac and ppg both carry
-    # `evaluator_scope={"frame_stack": 3, "image_size": 100, ...}` while both actually run 64x64,
-    # one frame (`OBSERVATION_GEOMETRY["idaac"] == OBSERVATION_GEOMETRY["ppg"] == (64, 1)`). The
+    # `evaluator_scope={"frame_stack": 3, "image_size": 100, ...}` while older C1 checkpoints
+    # actually ran 64x64, one frame. Current main geometry is `(64, 3)` for both PPG and IDAAC. The
     # measurements themselves are unaffected -- each family's real construction path is driven by
     # its own launcher's `RLVIGEN_IMAGE_SIZE` / hardcoded wrapper, never by these two CLI flags,
     # `dmc_gb` excepted (`run_scene_dmc_gb` does take `a.image_size` as a real parameter) -- but
@@ -1255,11 +1261,14 @@ def main() -> int:
     # gets RECORDED changes. Still validated here, before family setup, same as every other
     # scope field: they remain real construction inputs for those three families, so garbage
     # CLI input for them should fail fast regardless of whether THIS baseline happens to read it.
+    declared_image_size, declared_frame_stack = OBSERVATION_GEOMETRY[a.baseline]
+    if a.frame_stack is None:
+        a.frame_stack = declared_frame_stack
     if a.frame_stack <= 0 or a.image_size <= 0:
         raise ValueError(
             "evaluator scope --frame-stack/--image-size must be positive "
             f"(got frame_stack={a.frame_stack}, image_size={a.image_size})")
-    declared_image_size, declared_frame_stack = OBSERVATION_GEOMETRY[a.baseline]
+    declared_frame_stack = a.frame_stack
     resolved_scope = canonical_evaluation_scope({
         "family": a.family, "baseline": a.baseline, "task": a.task, "frame": frame,
         "eval_scope": a.eval_scope, "regimes": a.regimes, "scenes": a.scenes,

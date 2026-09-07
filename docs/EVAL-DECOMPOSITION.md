@@ -52,7 +52,7 @@ term is identified and nobody has checked it; this is the column that matters.
 | 10 | **Placement RNG** | DECLARED — door placement comes from the **global** numpy RNG ([C69](CONSTRUCTION.md#c69)). Ours seeds per eval; **theirs does not** (`set_seed_everywhere` runs once, at `train.py:47`), so their during-train evals are not reproducible from a checkpoint. Not a bias — both sample the same distribution. | corrected 2026-09-04 |
 | 11 | **Renderer** | FORCED — `egl` in-container; a container-trained policy read 12–14× low locally ([C95](CONSTRUCTION.md#c95)). | C95 |
 | 12 | **Render size and crop** | DECLARED SPLIT — 84 / 64 / 100, **and** `rad`/`soda` see an 84 *centre crop of a 100 frame*, a different field of view rather than a different resolution. | seam audit, `crop policy` |
-| 13 | **Frame stack** | DECLARED SPLIT — 3×8, 1×4. Deliberately not equalised ([C2](CONSTRUCTION.md#c2)). | seam audit |
+| 13 | **Frame stack** | DECLARED SPLIT — 3×10, 1×2. PPG/IDAAC use the selected DMC comparator; IBAC-SNI/CTRL retain released C1. Deliberately not equalised ([C2](CONSTRUCTION.md#c2)). | seam audit |
 | 14 | **Action repeat** | UNIFORM at 1, reached four ways. | seam audit |
 | 15 | **Observation layout and scaling** | DECLARED SPLIT, 5 ways. | seam audit |
 | 16 | **Action bounds / clipping** | DECLARED SPLIT — 3 induced distributions. | seam audit, PART2 Finding 6 |

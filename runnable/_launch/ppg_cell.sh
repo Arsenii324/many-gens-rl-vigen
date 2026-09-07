@@ -24,15 +24,28 @@ REPO="$(cd "$HERE/../.." && pwd)"
 
 LOG_DIR=""
 SEED="0"
+FRAME_STACK=""
+GAMMA=""
+LR=""
+AUX_LR=""
+NMINIBATCH=""
+ENTCOEF=""
 previous=""
 for argument in "$@"; do
   case "$previous" in
     --log_dir) LOG_DIR="$argument" ;;
     --seed) SEED="$argument" ;;
+    --frame_stack) FRAME_STACK="$argument" ;;
+    --gamma) GAMMA="$argument" ;;
+    --lr) LR="$argument" ;;
+    --aux_lr) AUX_LR="$argument" ;;
+    --nminibatch) NMINIBATCH="$argument" ;;
+    --entcoef) ENTCOEF="$argument" ;;
   esac
   previous="$argument"
 done
 : "${LOG_DIR:?ppg_cell needs --log_dir so the saved model can be found}"
+: "${FRAME_STACK:?ppg_cell needs --frame_stack; use 1 only for explicit historical C1}"
 
 bash "$HERE/ppg.sh" "$TASK" "$NENV" "$@"
 
@@ -53,6 +66,7 @@ if [[ -z "$MODEL" ]]; then
   exit 1
 fi
 echo "NATIVE_PPG_TERMINAL_CHECKPOINT $MODEL" >&2
+echo "NATIVE_PPG_EFFECTIVE_CONFIG frame_stack=${FRAME_STACK} gamma=${GAMMA:-train-default} lr=${LR:-train-default} aux_lr=${AUX_LR:-train-default} nminibatch=${NMINIBATCH:-train-default} entcoef=${ENTCOEF:-train-default}" >&2
 
 PY="${PYTHON_BIN:-${PYTHON:-python3}}"
 export RLVIGEN_ROOT="$REPO/RL-ViGen-upstream"
@@ -65,6 +79,6 @@ else
   export MUJOCO_GL="${MUJOCO_GL:-egl}"
 fi
 "$PY" "$HERE/ppg_eval.py" --model "$MODEL" --task "$TASK" --mode "${RLVIGEN_EVAL_MODE:-eval-easy}" \
-  --num_envs 1 --episodes "$EPISODES" --seed "$SEED"
+  --num_envs 1 --episodes "$EPISODES" --seed "$SEED" --frame_stack "$FRAME_STACK"
 
 echo "NATIVE_FINAL_EVALUATION_COMPLETED frame=$ENDPOINT"

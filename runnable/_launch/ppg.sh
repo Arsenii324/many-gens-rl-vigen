@@ -12,9 +12,10 @@
 # correct without touching anything. The authoritative smoke is still CUDA (Kaggle / DataSphere),
 # where this same command runs with device_type='cuda' and nccl.
 #
-# 64x64 is PPG's OWN resolution: the paper is Procgen, which renders 64. RL-ViGen patch P6 makes
-# the render size settable, so PPG sees the input its ImpalaCNN was designed for. Same mechanism
-# as RAD/SODA at 100 and ALDA at 64 -- each baseline at its own paper's resolution.
+# 64x64 is PPG's encoder resolution. The selected Door main profile uses the IDAAC-authors'
+# DMC continuous-control comparator, including an explicit 3-frame stack passed by families.json;
+# `--frame_stack 1` remains an explicit historical C1 override. RL-ViGen patch P6 makes the render
+# size settable, so the ImpalaCNN receives the geometry selected by the profile.
 set -euo pipefail
 TASK="${1:-Door}"; NENV="${2:-2}"; shift 2 2>/dev/null || true
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

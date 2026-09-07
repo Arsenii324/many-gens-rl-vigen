@@ -153,13 +153,19 @@ review made each claim:
   own samplers, not by RAD's path. Fixed the row with a dated correction note; left "not the
   paper's crop/translate" unchanged since that specific comparison was not independently
   re-verified. Full trace in `01-review-17-item-by-item.md`'s RAD section.
-- RAD's DMCGB-provenance claim ("based on the official implementation") and its n-step value, and
-  SODA's own paper-vs-code auxiliary-LR ambiguity and its train-mode guard — **still zero
-  independent checks this session.** Only RAD's crop mechanism (above) was traced; SODA itself has
-  had no code read at all beyond confirming it shares RAD's crop-size branch in `arguments.py`.
-  This is not because I judged them unimportant; both reviews rate these baselines as already
-  strong, and I allocated attention to the baselines flagged as urgent instead. That allocation
-  might be wrong — "already strong per two static reviews" is not the same as "verified."
+- RAD's DMCGB-provenance claim and n-step value remain outside this pass. **SODA's blind spot is
+  now closed (2026-09-07):** primary paper Table IV and the read-only DMC-GB source were checked
+  against the active path. The official `scripts/soda.sh` passes `--aux_lr 3e-4`, while the generic
+  parser default is `1e-3`; the production launcher previously bypassed that script and therefore
+  silently used the wrong value. The launcher now supplies `3e-4` only for SODA, with later
+  diagnostic arguments still able to override it. Source and active code confirm SAC policy
+  learning uses the generic unaugmented replay sample, SODA samples raw observations, applies
+  random crop to both views and Places365 overlay to the predictor view, updates every second RL
+  update, and evaluates with the deterministic policy only. The source's `soda_predictor` typo
+  leaves the unused predictor's BatchNorm in train mode during whole-agent eval; this is inherited
+  source behavior and does not enter the policy action path. Remaining SODA uncertainty is
+  empirical: no production-length CUDA SODA run has measured its peak memory/throughput or
+  competence on Door.
 - ~~IBAC-SNI's specific architecture-gap numbers~~ — **checked after this document's first draft:
   all verified, both sides.** `ext/IBAC-SNI/coinrun/coinrun/policies.py:58-59` confirms the 256-d
   latent and `ρ-5` shift; `runnable/ibac_sni/torch_rl/bottleneck.py:34`/`model.py:207` confirm this

@@ -62,7 +62,8 @@ the sentence should be read as *one benchmark, one task, one budget, one evaluat
 ## The collinearity problem, stated plainly
 
 **Method identity is perfectly collinear with its entire configuration.** Not approximately —
-*by construction*, r = 1. Choosing `ppg` chooses a single frame, γ=0.999, lr 5e-4, an unsquashed
+*by construction*, r = 1. Choosing `ppg` selects the declared DMC-comparator main profile: three
+frames, γ=0.99, lr 3e-4, unless explicit legacy C1 overrides are used. It remains an unsquashed
 Gaussian, 64×64 input, reward normalisation, and truncation-as-termination, all at once, with no
 independent variation anywhere in the design.
 

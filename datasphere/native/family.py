@@ -82,6 +82,32 @@ def family_of(baseline: str, path: Path | None = None) -> str:
     raise AssertionError  # unreachable; fail raises
 
 
+def provenance_for(baseline: str, path: Path | None = None) -> dict[str, str]:
+    """Return the descriptor's disclosure labels for one baseline.
+
+    These labels identify the source target and the operational variant. They are deliberately
+    not inferred from a method name or from a result, and they are not a faithfulness score.
+    Keeping the lookup beside the family descriptor makes every record writer use the same source
+    of truth.
+    """
+    family = family_of(baseline, path)
+    labels = descriptor(family, path).get("provenance", {}).get(baseline)
+    if not isinstance(labels, dict) or set(labels) != {"source_target", "source_variant"}:
+        fail(f"{family}: missing or malformed provenance labels for {baseline}")
+    if not all(isinstance(value, str) and value.strip() for value in labels.values()):
+        fail(f"{family}: empty provenance label for {baseline}")
+    return dict(labels)
+
+
+def all_provenance(path: Path | None = None) -> dict[str, dict[str, str]]:
+    """Return all declared baseline disclosure labels, validating completeness."""
+    out = {}
+    for family in load(path):
+        for baseline in descriptor(family, path).get("baselines", []):
+            out[baseline] = provenance_for(baseline, path)
+    return out
+
+
 def substitutions(**fields: str) -> dict:
     return {key: str(value) for key, value in fields.items()}
 

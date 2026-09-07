@@ -22,6 +22,13 @@
   "rlvigen": {
     "repository": "RL-ViGen-upstream",
     "launcher": "runnable/_launch/rlvigen.sh",
+    "provenance": {
+      "drqv2": {"source_target": "RL-ViGen released code", "source_variant": "DrQ-v2 implementation on RL-ViGen Door with documented replay/protocol adaptation"},
+      "svea": {"source_target": "RL-ViGen released code", "source_variant": "SVEA source mechanism, RL-ViGen Door configuration"},
+      "drq": {"source_target": "RL-ViGen released code", "source_variant": "DrQ source implementation with RL-ViGen Door recipe"},
+      "sgqn": {"source_target": "RL-ViGen released code", "source_variant": "SGQN source mechanism with explicit Door descriptor overrides"},
+      "curl": {"source_target": "RL-ViGen released code", "source_variant": "CURL source mechanism on RL-ViGen Door; preprocessing variant declared"}
+    },
     "host_profiles": {
       "v100": {
         "production": {
@@ -142,6 +149,10 @@
   "dmc_gb": {
     "repository": "runnable/dmc_gb",
     "launcher": "runnable/_launch/dmc_gb.sh",
+    "provenance": {
+      "rad": {"source_target": "DMC Generalization Benchmark released code", "source_variant": "RAD source augmentation/SAC on Door, not original DMC setting"},
+      "soda": {"source_target": "DMC Generalization Benchmark released code", "source_variant": "SODA source mechanism with source-required 100 render and Door adaptation"}
+    },
     "positional": [
       "{baseline}",
       "{task}",
@@ -244,6 +255,9 @@
   "idaac": {
     "repository": "runnable/idaac",
     "launcher": "runnable/_launch/idaac.sh",
+    "provenance": {
+      "idaac": {"source_target": "IDAAC authors' DMC continuous-control profile", "source_variant": "IDAAC Door port using source-backed C2 geometry and update profile; full-length validation pending"}
+    },
     "constants": {
       "num_processes": "1",
       "num_steps": "2048",
@@ -428,6 +442,9 @@
     "minimum_tier": "gt4i.1",
     "repository": "runnable/alda",
     "launcher": "runnable/_launch/alda.sh",
+    "provenance": {
+      "alda": {"source_target": "ALDA authors' released code", "source_variant": "ALDA source algorithm with explicit robosuite Door branch"}
+    },
     "environment": {
       "ALDA_RESULTS": "{run_dir}"
     },
@@ -534,9 +551,18 @@
   "ppg": {
     "repository": "runnable/ppg",
     "launcher": "runnable/_launch/ppg_cell.sh",
+    "provenance": {
+      "ppg": {"source_target": "PPG authors' released code", "source_variant": "continuous-action port of PPG using the IDAAC-authors' DMC comparator profile"}
+    },
     "constants": {
       "num_envs": "8",
-      "nstep": "256"
+      "nstep": "256",
+      "frame_stack": "3",
+      "gamma": ".99",
+      "lr": "3e-4",
+      "aux_lr": "3e-4",
+      "nminibatch": "32",
+      "entcoef": "0"
     },
     "host_profiles": {
       "v100": {
@@ -573,7 +599,19 @@
       "--save_mode",
       "all",
       "--ic_per_save",
-      "{save_every}"
+      "{save_every}",
+      "--frame_stack",
+      "{frame_stack}",
+      "--gamma",
+      "{gamma}",
+      "--lr",
+      "{lr}",
+      "--aux_lr",
+      "{aux_lr}",
+      "--nminibatch",
+      "{nminibatch}",
+      "--entcoef",
+      "{entcoef}"
     ],
     "artifact_root": "{run_dir}",
     "required_curves": [
@@ -672,6 +710,9 @@
   "ibac_sni": {
     "repository": "runnable/ibac_sni",
     "launcher": "runnable/_launch/ibac_sni_cell.sh",
+    "provenance": {
+      "ibac_sni": {"source_target": "IBAC-SNI authors' released code", "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations"}
+    },
     "constants": {
       "procs": "1",
       "frames_per_proc": "128",
@@ -804,6 +845,9 @@
     "minimum_tier": "gt4i.1",
     "repository": "runnable/ctrl",
     "launcher": "runnable/_launch/ctrl_cell.sh",
+    "provenance": {
+      "ctrl": {"source_target": "CTRL authors' released code", "source_variant": "CTRL source mechanism with declared continuous Door/window adaptation"}
+    },
     "constants": {
       "num_envs": "16",
       "n_steps": "256",

@@ -49,6 +49,7 @@ from dataclasses import dataclass, asdict
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from scripts.metrics import wilson_interval  # noqa: E402
+from datasphere.native.family import provenance_for  # noqa: E402
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -61,6 +62,16 @@ class Record:
     episode_reward: float | None
     success_rate: float | None
     source_line: str
+    source_target: str | None = None
+    source_variant: str | None = None
+
+    def __post_init__(self):
+        try:
+            labels = provenance_for(self.baseline)
+        except ValueError:
+            return
+        self.source_target = labels["source_target"]
+        self.source_variant = labels["source_variant"]
 
 
 def _f(x):
@@ -384,7 +395,8 @@ def main() -> int:
         with a.csv.open("w", newline="") as fh:
             w = csv.DictWriter(fh, fieldnames=list(asdict(recs[0]).keys()) if recs else
                                ["baseline", "regime", "frames", "episode_reward",
-                                "success_rate", "source_line"])
+                                "success_rate", "source_line", "source_target",
+                                "source_variant"])
             w.writeheader()
             for r in recs:
                 w.writerow(asdict(r))

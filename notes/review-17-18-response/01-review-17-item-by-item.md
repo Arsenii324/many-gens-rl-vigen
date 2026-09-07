@@ -377,12 +377,15 @@ preserves the right structure (100→84, SAC base, SODA auxiliary objective, Pla
 EMA/target representation); there is a paper-vs-code ambiguity in the auxiliary LR that should be
 made explicit (declare a `SODA-code` and a `SODA-paper` profile, default to code).
 
-**TAKEN ON TRUST, ENTIRELY.** Same situation as RAD: no independent check of DMCGB's SODA source,
-the auxiliary-LR ambiguity, or the Places365 overlay mechanics this session. This project's
-`CLAIMS-LEDGER.md` independently names `aux lr follows code not paper` and the Places-validation-
-split issue (A22, a genuinely separate, already-decided question — see `02-review-18-item-by-
-item.md`), which is broadly consistent with the review, but again I did not reconcile the two
-myself or verify either against SODA's own source.
+**CLOSED 2026-09-07.** Primary SODA paper Table IV and the read-only DMC-GB source were traced
+against the active Door path. Official `scripts/soda.sh` passes `--aux_lr 3e-4`; generic
+`arguments.py` defaults to `1e-3`, but the production launcher previously bypassed that script and
+therefore used the wrong value. The launcher now supplies `3e-4` only for SODA. The source path
+was also traced: SAC receives the generic unaugmented replay sample; SODA samples raw observations,
+random-crops both views, overlays Places365 on the predictor view, updates every second RL update,
+and is not used during deterministic policy evaluation. The inherited `soda_predictor`/`predictor`
+train-mode typo is documented as latent because predictor BatchNorm is absent from policy actions.
+Places validation split remains a separate, already-decided learning-affecting deviation (A22).
 
 ---
 

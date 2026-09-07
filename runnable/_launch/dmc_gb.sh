@@ -52,5 +52,15 @@ cd "$REPO/runnable/dmc_gb"
 # place because removing it would imply the value is 4 (this tree's `arguments.py:12` default) --
 # it is 1, but by absence of a mechanism rather than by this flag. `rad` and `soda` run through
 # here. See docs/CONSTRUCTION.md#c71 and docs/INTEGRATION-DELTA.md's action-repeat audit.
+#
+# The upstream SODA launcher explicitly supplies aux_lr=3e-4; arguments.py's 1e-3 is only the
+# generic parser default. Keep that effective source value when this production launcher bypasses
+# runnable/dmc_gb/scripts/soda.sh. Extra user arguments remain last, so a deliberate diagnostic
+# override still wins.
+ALGO_ARGS=()
+if [[ "$ALGO" == "soda" ]]; then
+  ALGO_ARGS+=(--aux_lr 3e-4)
+fi
 exec "$PY" src/train.py --domain_name robosuite --task_name "$TASK" --algorithm "$ALGO" \
-  --action_repeat 1 --episode_length 500 --eval_mode eval-easy --seed "$SEED" "$@"
+  --action_repeat 1 --episode_length 500 --eval_mode eval-easy --seed "$SEED" \
+  "${ALGO_ARGS[@]}" "$@"

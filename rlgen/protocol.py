@@ -43,18 +43,18 @@ TASKS = ("Door", "Lift")
 #: build if one appears. These are RL-ViGen's own values -- but from three different files, so
 #: each line names its own source rather than inheriting one blanket claim.
 DEFAULT_IMAGE_SIZE = 84        # robo_config.yaml image_height / image_width
-DEFAULT_FRAME_STACK = 3        # robo_config.yaml + the paper's supplementary. TRUE FOR 9 OF THE
-                               # 12 BASELINES ONLY (idaac joined 2026-09-06, DECISION-SHEET A35 --
+DEFAULT_FRAME_STACK = 3        # robo_config.yaml + the paper's supplementary. TRUE FOR 10 OF THE
+                               # 12 BASELINES ONLY (ppg and idaac use the DMC comparator --
                                # was 8) -- see OBSERVATION_GEOMETRY below, which is the field that
                                # must be consulted per baseline.
 
 #: Per-baseline observation geometry, because it is NOT shared and pretending otherwise makes the
 #: protocol hash certify a value four runs do not have.
 #:
-#: `frame_stack` splits the twelve 8/4, and the split is exactly the four whose originals are
-#: PROCGEN -- which serves one RGB frame, and whose encoders were built for one. Stacking them
-#: would be a deviation in each clone; not stacking them is faithful. But a single frame on a
-#: manipulation task is VELOCITY-BLIND: the gripper's motion is unobservable. An 8-vs-4 comparison
+#: `frame_stack` currently splits the twelve 10/2. PPG and IDAAC use the IDAAC-authors' published
+#: DMC continuous-control comparator, which stacks three frames; PPG is explicitly a comparator
+#: adaptation, not OpenAI PPG's primary-source canonical configuration. A single frame on a
+#: manipulation task is VELOCITY-BLIND: the gripper's motion is unobservable. A 10-vs-2 comparison
 #: on Door is therefore across two different POMDPs, not two algorithms, and no rescaling of the
 #: y-axis repairs that. See docs/PART2-METRIC-INVENTORY.md Finding 5.
 #:
@@ -106,7 +106,8 @@ OBSERVATION_GEOMETRY = {
     "rad":           (100, 3),   # cropped to 84 by RAD's own random_crop
     "soda":          (100, 3),   # asserts x.size(-1) == 100
     "alda":          (64, 3),
-    "ppg":           (64, 1),
+    "ppg":           (64, 3),   # IDAAC-authors' DMC continuous-control comparator; the
+                                # released Procgen-origin path remains explicit C1 via frame_stack=1.
     "idaac":         (64, 3),   # [Claude 2026-09-06, DECISION-SHEET A35] Procgen-origin, but the
                                 # authors' own DMC continuous-control recipe stacks 3
                                 # (raileanu21a-supp.pdf SS E) and this project adopted it as

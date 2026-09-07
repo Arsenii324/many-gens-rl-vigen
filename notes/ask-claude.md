@@ -934,3 +934,18 @@ remote work**:
 
 Do not frame open owner ratification as a reason to leave a random current value in place: set the
 best technical default, then name the formal ratification separately.
+
+---
+
+## Q56 — reserve C2 write path; request independent acceptance review (2026-09-07)
+
+Codex has a persistent worker implementing the current main source-backed DMC paths for IDAAC and
+PPG: explicit three-frame support through launcher/environment/evaluator/identity, with C1
+one-frame pilots preserved only as historical explicit overrides.  Please do not concurrently edit
+PPG/IDAAC launch, wrapper, geometry, evaluator, or source-lock files until its report lands.
+
+When awake, please prepare an independent acceptance review rather than duplicate implementation:
+check the final diff against the authors' DMC supplement, wrapper ordering/reset semantics, channel
+geometry at train and offline evaluation, checkpoint/evaluator identity, legacy C1 isolation, and
+whether prose correctly calls PPG a DMC comparator rather than a literal primary-source PPG recipe.
+No remote work needed.  Record evidence and any blocking flaw in `claude-answers.md`.

@@ -357,9 +357,10 @@ that the study is about algorithms *under a common protocol* rather than about t
 methods — in which case harmonise to bootstrap-through-truncation, and say so loudly, because it is
 then a different experiment with a different null.
 
-### C2 — Frame stack: 3 frames for eight, 1 frame for four {#c2}
+### C2 — Frame stack: 3 frames for ten, 1 frame for two {#c2}
 
-> **CORRECTED 2026-09-06 — the split below is now nine and three, and `idaac`'s "incoherent"
+> **CORRECTED 2026-09-07 — the current split is 10 stacked / 2 single.** The intermediate
+> 2026-09-06 nine/three wording below is historical and superseded, and `idaac`'s "incoherent"
 > claim is directly contradicted by primary-source evidence this entry itself said didn't exist.**
 > This entry's own 2026-09-04 default (immediately below) argues `idaac`'s adversarial head makes
 > stacking *structurally incoherent*, and its own "Provenance" paragraph at the end honestly flags
@@ -372,17 +373,23 @@ then a different experiment with a different null.
 > source it was reasoning in the absence of (DECISION-SHEET A35, and the review it survived
 > without being caught, `notes/review-17-18-response/`). `idaac` has since moved to the stacked
 > group as this project's declared main config for that baseline (Q55) once the implementation gap
-> closed (`A65`/`C98`) — the split is **9 stacked / 3 single** (`rlgen/protocol.py::
-> OBSERVATION_GEOMETRY`, `tests/test_observation_geometry.py`), not the 8/4 the rest of this entry
-> assumes throughout. `ctrl`'s "double-counting" and `ibac_sni`'s "mis-calibration" arguments below
+> closed (`A65`/`C98`). PPG now uses the same IDAAC-authors' DMC comparator as its selected
+> continuous-control adaptation; its primary PPG source does not specify DMC. The split is
+> **10 stacked / 2 single** (`rlgen/protocol.py::
+> OBSERVATION_GEOMETRY`, `tests/test_observation_geometry.py`), not the 8/4 the historical body
+> below assumes. `ctrl`'s "double-counting" and `ibac_sni`'s "mis-calibration" arguments below
 > are **not** re-examined by this correction — they were not the ones falsified, and I have not
 > independently checked them against a primary source the way `idaac`'s was checked. `ppg`'s "no
-> mechanism-level objection found" already correctly anticipated that it, unlike `idaac`, had no
-> such block — it remains single-frame as of this writing (its own continuous-control frame-stack
-> implementation is a separate, not-yet-done task, per Codex mailbox Q54).
+> mechanism-level objection found" correctly anticipated that it has no block; its selected main
+> adapter now uses three frames, while explicit `frame_stack=1` preserves historical C1.
 
-> **DEFAULT SET, 2026-09-04 — declare, do NOT equalise, and the reason is that no single answer is
-> right.** Equalising the stack points four different ways for the four single-frame baselines:
+> **HISTORICAL DEFAULT, 2026-09-04 — superseded 2026-09-07.** The old default below declared
+> Procgen-lineage PPG and IDAAC single-frame. Current operational default uses the source-backed
+> DMC comparator for both; explicit `frame_stack=1` remains available for historical C1.
+>
+> **HISTORICAL DEFAULT SET, 2026-09-04 — superseded 2026-09-07.** It declared, do NOT equalise,
+> and the reason was that no single answer is right. Equalising the stack pointed four different
+> ways for the four single-frame baselines:
 > `idaac` is *incoherent* with stacking (its adversarial head exists to destroy the temporal signal
 > a stack supplies), `ctrl` would double-count temporal information it already encodes,
 > `ibac_sni` would be mis-calibrated against a width chosen for a single frame, and `ppg`'s single
@@ -393,8 +400,9 @@ then a different experiment with a different null.
 
 **Class** INHERITED · **Status** OPEN
 
-`rad soda alda` + the RL-ViGen five receive a 3-frame stack. `ppg idaac ibac_sni ctrl` receive a
-single frame — exactly the Procgen lineage, because Procgen serves one RGB frame.
+**Historical body, superseded 2026-09-07:** `rad soda alda` + the RL-ViGen five received a
+3-frame stack. `ppg idaac ibac_sni ctrl` received a single frame — exactly the Procgen lineage,
+because Procgen serves one RGB frame. Current operational geometry is the 10/2 split stated above.
 
 **Blast radius** A single frame on a manipulation task is **velocity-blind**: the gripper's motion
 is not recoverable from the observation. This is arguably two different POMDPs rather than two
@@ -453,7 +461,7 @@ mechanism claim. [`RESEARCH-FRAME.md`](RESEARCH-FRAME.md) settles it; this entry
 > decided *with* the claim, not separately from it — deciding it on its own merits is how one
 > decision becomes several.
 
-**DEFAULT: KEEP 3-frame and 1-frame as they are; group by it in every table; never rank across it.**
+**HISTORICAL DEFAULT (superseded): KEEP 3-frame and 1-frame as they are; group by it in every table; never rank across it.**
 The stack size is inherited from each lineage — Procgen serves one RGB frame, so the four Procgen
 descendants take one. Kept for the same reason as C1. **The declaration matters more here than in
 C1**, because a single frame on a manipulation task is *velocity-blind*: the gripper's motion is
@@ -6357,7 +6365,7 @@ The mechanism runs. What changes is what it **means**, and the change is silent.
 |---|---|---|
 | [C6](#c6) | the action-distribution family the method assumes | three different families across twelve baselines; four had **no continuous head at all** and one was authored (`AUDIT-2026-08-17.md` §3) |
 | [C61](#c61) | an entropy coefficient calibrated to a 15-way categorical (max entropy ln 15 = 2.708) | a 7-D Gaussian at σ=1, entropy 9.93 — the same coefficient now scales a term **3.67× larger** |
-| [C2](#c2) | frame stack as the unit of temporal context | 3 frames for nine baselines, 1 for three (was eight/four; `idaac` moved, corrected 2026-09-06) |
+| [C2](#c2) | frame stack as the unit of temporal context | 3 frames for ten baselines, 1 for two (PPG/IDAAC selected DMC comparator; C1 remains explicit) |
 | [C3](#c3) | an encoder sized for its source domain | the former 64×64 MiniGrid trunk made `ibac_sni` a **227×** model; production now uses the source-backed Impala repair |
 | [C5](#c5) | render resolution and field of view | three different resolutions across the twelve |
 | [C74](#c74) | a notion of *distinguishable instance* | measured absent for `idaac` ([C49](#c49)); reasoned for five others |
@@ -6433,7 +6441,7 @@ axis, per baseline, and — the part that matters — whether each fact is **DER
 | UNITS | reported estimator | uniform — a fixed-policy sample mean everywhere, differing only in N, which is precision and not quantity |
 | CONDITIONS | truncation | **SPLIT** 3 bootstrap / 9 terminal ([C1](#c1)) |
 | CONDITIONS | render resolution | **SPLIT** 100 / 84 / 64 ([C5](#c5)) |
-| CONDITIONS | frame-stack depth | **SPLIT** 8 stack 3 / 4 stack 1 ([C2](#c2)) |
+| CONDITIONS | frame-stack depth | **SPLIT** 10 stack 3 / 2 stack 1 ([C2](#c2)) |
 | CONDITIONS | action repeat | uniform in value (1), reached four ways, two through a dead knob ([C71](#c71)) |
 | CONDITIONS | induced action distribution | **SPLIT** 3 families — RECORDED, not re-derived |
 | CONDITIONS | observation layout and pixel scaling | **SPLIT** 5 ways — the one axis here neither PART2 nor FAITHFULNESS covers |

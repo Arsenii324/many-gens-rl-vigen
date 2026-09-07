@@ -91,7 +91,7 @@ CONVENTIONS = {
     "idaac":    {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "periodic-single-regime",
                  "eval_policy_mode": "sample"},
-    "ppg":      {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
+    "ppg":      {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 3,
                  "training_time_eval": "none",
                  "eval_policy_mode": "sample"},
     "ibac_sni": {"time_limit_handling": "terminal",  "render_size": 64,  "frame_stack": 1,
@@ -173,6 +173,7 @@ def record(**fields) -> dict:
         "evaluator_scope": None,
         "evaluator_scope_revision": None,
         "evaluator_measurement_revision": None,
+        "provenance": None,
         "conventions": None,
         "native": {},
     }
@@ -181,6 +182,19 @@ def record(**fields) -> dict:
     # A record that cannot state its own conventions says so, rather than carrying a default that
     # would read as a measured fact.
     base["conventions"] = CONVENTIONS.get(base.get("baseline"))
+    if base.get("baseline") is not None:
+        try:
+            # Bare sibling import, matching this file's own existing convention (see
+            # read_wandb_sink above): running as `__main__` puts this file's own directory, not
+            # the repo root, on sys.path, so `datasphere.native.family` does not resolve.
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import family as family_module
+            base["provenance"] = family_module.provenance_for(base["baseline"])
+        except (ImportError, ValueError):
+            # Unknown baselines remain representable for diagnostics, but known production
+            # baselines must be covered by the descriptor tests and never silently lose labels.
+            if base.get("baseline") in CONVENTIONS:
+                raise
     # Provenance first, caller's native blob second: a family that wants to say something about
     # `recorded_on` itself should win over the automatic stamp.
     automatic = _recorded_on()

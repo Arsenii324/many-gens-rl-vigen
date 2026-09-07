@@ -93,7 +93,7 @@ per-baseline divergence table with risk ratings, so the class **is** audited. Wh
 | **`ppg`** | **rollout 256 vs upstream 65,536**, lr 1e-4 vs 5e-4, **continuous head has no reference** | **high** |
 | **`curl`** | lr 1e-4 vs 1e-3; DrQ-v2-based rather than SAC; paper and code disagree five ways | **high** |
 | `drq` | lr 1e-4 vs 1e-3 (n-step fixed 2026-08-10) | low-medium |
-| `soda` | aux lr follows code (1e-3) not paper (3e-4) | low |
+| `soda` | official and active production launchers use aux lr 3e-4; generic parser default remains 1e-3 | low |
 
 `ppg`'s rollout being **1/32 of its reference** is the one I would put in front of a reader: it
 changes the optimisation regime, not a detail, and it compounds with the auxiliary phase first

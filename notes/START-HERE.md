@@ -101,6 +101,31 @@ simultaneously; not derivable from any single document.
   — the five external reviews, item by item, against the tree. **Historical: carries a status stamp
   of what has since been fixed. Do not read the bodies as live defect lists.**
 
+### 5b. Current exhaustive source-review inputs — **evidence to reconcile, not a replacement for the authority surfaces**
+
+- [`PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`](PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md) —
+  the 12-baseline, source-to-live-configuration matrix. It records exact matches, necessary
+  adaptations, source conflicts, and unspecified fields rather than flattening them into a single
+  "faithful" label.
+- [`review-17-triage.md`](review-17-triage.md), [`review-18-triage.md`](review-18-triage.md) —
+  current external-review findings reconciled against primary sources and the live tree. Their
+  closure classifications are inputs to `DECISION-SHEET.md`, `FAITHFULNESS.md`, and the production
+  configuration; they do not silently change any of those authorities.
+- [`review-19-response/00-review-19-triage.md`](review-19-response/00-review-19-triage.md) —
+  independent current-tree triage of external review 19. It distinguishes stale snapshot claims
+  from live unresolved fidelity and production-readiness issues.
+- [`EXTERNAL-REVIEW-ARTIFACT-BLUEPRINT.md`](EXTERNAL-REVIEW-ARTIFACT-BLUEPRINT.md) and
+  [`review-artifact-spec.md`](review-artifact-spec.md) — inclusion, provenance, and
+  privacy contract for external source review. The implemented local builder is
+  [`../scripts/build_external_review_artifact.py`](../scripts/build_external_review_artifact.py);
+  it creates a new directory only, never uploads or publishes anything, excludes generated
+  results/private coordination, records every omission, and redacts unsafe symlink targets.
+  `tests/test_external_review_artifact.py` is its narrow safety contract.
+- [`../docs/ORIGINAL_LOCATIONS.md`](../docs/ORIGINAL_LOCATIONS.md) and
+  [`PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`](PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md) —
+  source identity authority. For IBAC-SNI, the canonical paper is arXiv 1910.12911; the retained
+  1901.10902 InfoBot download is explicitly unrelated and excluded by the builder.
+
 ### 6. What the instruments cannot see — *this section is the surface*
 
 Scattered, and it should not be. Known limits: `audit_implementations.py` verdicts are

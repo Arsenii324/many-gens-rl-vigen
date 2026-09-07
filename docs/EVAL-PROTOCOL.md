@@ -18,6 +18,17 @@ offline harness (`scripts/eval_grid.py`), in the container on CUDA. The platform
 preference — a container-trained policy read 12-14x low when evaluated locally
 ([C95](CONSTRUCTION.md#c95)).
 
+### Source-target disclosure on every row
+
+Every descriptor and emitted result row carries a `provenance` object with exactly two fields:
+`source_target` (the authoritative paper/release target used for the operational path) and
+`source_variant` (the current declared Door variant). The same labels are flattened into those
+two columns by the statistics/result-table writers. They are disclosure metadata only: **not a
+faithfulness verdict**, quality score, or claim that the variant is identical to its source.
+Faithfulness and unresolved adaptations remain in `docs/FAITHFULNESS.md` and the primary-source
+reconciliation; a label must never be inferred from a score or silently rewritten to make a row
+look canonical.
+
 | | |
 |---|---|
 | **Metrics reported** | **Full matrix:** `R_train`, `R_OOD`, `Δ = R_OOD − R_train`, success rate, retention and floor-adjusted retention, per regime and scene. Success and absolute returns lead; retention is secondary and only interpreted for competent policies. |

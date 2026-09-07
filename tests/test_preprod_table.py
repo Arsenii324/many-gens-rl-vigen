@@ -41,7 +41,10 @@ def test_time_limit_dict_covers_all_twelve_with_exactly_two_values():
 
 def _fake_row(name, tl_value):
     return dict(baseline=name, frames=10_000, regime="eval-easy", regime_substituted=False,
-                episodes=10, mean=5.0, success=0.1, mujoco_gl="egl", source="record")
+                episodes=10, mean=5.0, success=0.1, mujoco_gl="egl", source="record",
+                # Real provenance_for(), not a hand-typed dict -- avoids the exact drift shape
+                # this file's own module docstring warns about for other columns.
+                provenance=pt.provenance_for(name))
 
 
 def test_header_and_separator_column_counts_match(monkeypatch, tmp_path, capsys):

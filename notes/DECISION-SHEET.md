@@ -1599,21 +1599,20 @@ Its other half — `notes/review-11-12-gemini-triage.md`'s own words, "the broad
 hyperparameter-recipe comparison (lr, entropy coef, epochs)... remains a genuine open design
 point, not touched" — had never had a concrete spec either. Sharpened by external review 15 §2.
 
-**Current Door PPG ("PPG-P"), read from `runnable/ppg/phasic_policy_gradient/train.py`'s
-`train_fn` defaults and `ppo.py`'s `compute_losses` defaults — nothing in this project's launch
-path overrides any of these except `num_envs`/`nstep`:**
+**Current operational Door PPG C2**, read from `datasphere/native/families.json`'s production
+descriptor and the reachable CLI flags in `runnable/ppg/phasic_policy_gradient/train.py`:
 
 | parameter | value | source |
 |---|---|---|
 | `num_envs` | 8 | `families.json` constant (A26: matches the continuous-control 2048-sample rollout at `nstep=256`) |
 | `nstep` | 256 | `families.json` constant |
-| `gamma` | .999 | `train_fn` default |
-| `lr` / `aux_lr` | 5e-4 | `train_fn` default |
-| `nminibatch` | 8 | `train_fn` default |
+| `gamma` | **.99** | production descriptor `--gamma`, source-backed DMC comparator value |
+| `lr` / `aux_lr` | **3e-4 / 3e-4** | production descriptor `--lr` / `--aux_lr`, source-backed DMC comparator values |
+| `nminibatch` | **32** | production descriptor `--nminibatch`, source-backed DMC comparator value |
 | `n_epoch_pi` / `n_epoch_vf` | 1 / 1 | `train_fn` default |
 | `n_pi` | 32 | `train_fn` default — already matches (A26) |
-| `entcoef` (entropy) | .01 | `ppo.py::compute_losses` default (a separate function from `train_fn`, not visible in the top-level signature) |
-| frame stack | 1 | `rlgen/protocol.py::OBSERVATION_GEOMETRY["ppg"] = (64, 1)`, same protocol-level constant as IDAAC's |
+| `entcoef` (entropy) | **0** | production descriptor `--entcoef`, source-backed DMC comparator value |
+| frame stack | 1 (historical C1) | **3 — implemented in train and evaluator adapters** | `rlgen/protocol.py::OBSERVATION_GEOMETRY["ppg"] = (64, 3)`; explicit `--frame_stack 1` evaluates legacy C1 |
 
 **A relevant fact this project already established independently, not from review 15**: C61
 (`docs/CONSTRUCTION.md#c61`) measured that `ibac_sni` — a sibling Procgen-lineage port — applies a
@@ -1624,7 +1623,7 @@ cross-references this exact concern for PPG. This is independent evidence — no
 precedent — that a Procgen-categorical-derived entropy coefficient is suspect on this port
 specifically, which strengthens rather than merely parallels review 15's ask.
 
-**Proposed PPG-C (minimally Door-adapted continuous-control design)**:
+**Historical PPG-C proposal (superseded as an active branch on 2026-09-07)**:
 
 | parameter | PPG-P (current) | PPG-C (proposed) | reasoning |
 |---|---|---|---|
@@ -1632,11 +1631,11 @@ specifically, which strengthens rather than merely parallels review 15's ask.
 | `lr` / `aux_lr` | 5e-4 | **3e-4** | Published value, same source confirmation: the DMC-wide grid search found 3e-4 best "across these environments" |
 | `nminibatch` | 8 | **32** | Published value, same confirmation (32 minibatches, DMC-wide grid-search result) |
 | `entcoef` | .01 | **0** | Published value, independently corroborated by C61's measured categorical-to-Gaussian entropy-coefficient failure on the sibling `ibac_sni` port |
-| frame stack | 1 | **1 — held for this pilot** (see note) | Published value is 3, and unlike IDAAC this is not incoherent (`docs/CONSTRUCTION.md#c2`: PPG is "lineage only," no mechanism-level objection). Held anyway for the first pilot because applying it needs real new code (wiring the shared `robosuiteVGB` frame-stack wrapper into PPG's env construction, plus verifying the CNN's input layer against a 9- vs 3-channel observation) — genuine engineering deserving its own verification pass, not something to fold into getting a first result. Declared explicitly, same treatment as A35's LR-schedule item, not silently dropped |
+| frame stack | 1 (historical C1 pilot) | **3 — implemented and smoke-tested** | IDAAC-authors' DMC comparator geometry; PPG primary source does not specify DMC, so this remains a declared adaptation. `frame_stack=1` stays explicit for C1 |
 | `num_envs` / `nstep` | 8 / 256 | **unchanged** | A26 already established this matches the continuous-control rollout cadence; do not re-litigate a closed axis inside a different pilot |
 | `n_epoch_pi`, `n_epoch_vf`, `n_aux_epochs`, `beta_clone`, `clip_param`, `kl_penalty` | upstream default | **unchanged** | Review 15 does not name continuous-control values for these; declare-don't-invent |
 
-**Pilot sizing and decision rule**: identical shape to A35's, **including the 2026-09-06 split**
+**Historical pilot sizing and decision rule**: identical shape to A35's, **including the 2026-09-06 split**
 (source-fidelity designation decided from the recipe alone, independent of any Door result; the
 empirically-gated headline-primary choice is separate and unchanged) — one seed each, bounded
 budget (~200k-300k frames). PPG-P (Procgen-parser defaults) and PPG-C (this pilot's frame_stack=1
@@ -1656,6 +1655,16 @@ waiting on anyone.
 whole pilot round (0.2 train, still under the 0.25 bar); ppg-c is 0.0 in both regimes despite a
 higher raw return (47.0 vs 33.6 train). Full numbers and reading: `notes/CLAIMS-LEDGER.md`, "A35/
 A36 pilot arms."
+
+### A36 IMPLEMENTED OPERATIONAL DEFAULT, 2026-09-07 — PPG C2 frame-stack path is live
+
+The earlier PPG-C pilot intentionally used one frame and historical Procgen-shaped parameters.
+The selected main PPG path now passes the source-backed comparator settings (`gamma=.99`,
+`lr=3e-4`, `aux_lr=3e-4`, `nminibatch=32`, `entcoef=0`, `frame_stack=3`) through
+`families.json` -> `train.py` -> `get_venv`; the shared evaluator passes the same stack into its
+PPG environment. The wrapper smoke constructs both 9-channel C2 and explicit 3-channel C1 paths.
+This is the IDAAC-authors' DMC comparator, not a claim that OpenAI PPG's primary source specifies
+DMC. Formal owner ratification remains open; no second production branch is scheduled.
 
 ### A37 OPEN, 2026-09-06 (analysis completed same entry) — IBAC-SNI's lineage: picking one, not just naming the hybrid
 

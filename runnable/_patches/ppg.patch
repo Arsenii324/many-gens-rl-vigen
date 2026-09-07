@@ -43,7 +43,7 @@ index 41c447f..b368221 100644
          raise ValueError(f"Expected ScalarType, got {type(ac_space)}")
  
 diff --git a/phasic_policy_gradient/envs.py b/phasic_policy_gradient/envs.py
-index 0292a29..958b663 100644
+index 0292a29..bc9bbc6 100644
 --- a/phasic_policy_gradient/envs.py
 +++ b/phasic_policy_gradient/envs.py
 @@ -1,6 +1,11 @@
@@ -59,14 +59,22 @@ index 0292a29..958b663 100644
  
  def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
      if rendering:
-@@ -14,7 +19,87 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
+@@ -14,7 +19,111 @@ def get_procgen_venv(*, env_id, num_envs, rendering=False, **env_kwargs):
          env = gym3.ViewerWrapper(env, info_key="rgb")
      return env
  
 +def get_robosuite_venv(*, env_id, num_envs, seed=0, scene_id=0, mode="train", **_ignored):
-+    """RL-ViGen robosuite as a gym3 venv. `_ignored` swallows procgen-only kwargs."""
++    """RL-ViGen robosuite as a gym3 venv.
++
++    ``frame_stack`` is explicit because the released Procgen path is one frame while the
++    IDAAC-authors' DMC continuous-control comparator uses three.  Default 1 preserves the
++    historical C1 path; production descriptors pass 3 for the selected C2 path.
++    """
 +    import os, sys, gym
 +    condition_seed = _ignored.get("condition_seed")
++    frame_stack = int(_ignored.get("frame_stack", 1))
++    if frame_stack < 1:
++        raise ValueError(f"frame_stack must be positive, got {frame_stack}")
 +    placement_witnesses = []
 +    _rlv = os.environ["RLVIGEN_ROOT"]
 +    for _p in (_rlv, os.path.join(_rlv, "envs", "robosuiteVGB")):
@@ -74,16 +82,25 @@ index 0292a29..958b663 100644
 +            sys.path.insert(0, _p)
 +    from robosuitevgb.utils import make_env as _robo_make_env
 +
-+    class _HWCUint8(gym.ObservationWrapper):
-+        """RL-ViGen yields {'rgb': (C,H,W) uint8} under a float64 Box it never fills.
-+        ImpalaCNN takes (H,W,C) and gym3 typechecks against the space, so fix both."""
++    class _RGBOnly(gym.ObservationWrapper):
++        """Keep only RGB as a real uint8 channel-first Box."""
 +        def __init__(self, env):
 +            super().__init__(env)
 +            c, h, w = env.observation_space["rgb"].shape
++            self.observation_space = gym.spaces.Box(0, 255, (c, h, w), dtype=np.uint8)
++
++        def observation(self, obs):
++            return np.asarray(obs["rgb"], dtype=np.uint8)
++
++    class _HWCUint8(gym.ObservationWrapper):
++        """Convert channel-first stacked RGB to Impala's channel-last uint8 layout."""
++        def __init__(self, env):
++            super().__init__(env)
++            c, h, w = env.observation_space.shape
 +            self.observation_space = gym.spaces.Box(0, 255, (h, w, c), dtype=np.uint8)
 +
 +        def observation(self, obs):
-+            return np.asarray(obs["rgb"], dtype=np.uint8).transpose(1, 2, 0)
++            return np.asarray(obs, dtype=np.uint8).transpose(1, 2, 0)
 +
 +        def seed(self, seed=None):
 +            "gym3.FromGymEnv calls this unconditionally; RL-ViGen's `seed` is an int attribute,"
@@ -130,7 +147,11 @@ index 0292a29..958b663 100644
 +        if None in applied_regime.values():
 +            raise RuntimeError("RL-ViGen did not expose its applied mode/scene at construction")
 +        applied_regimes.append(applied_regime)
-+        return gym3.FromGymEnv(_ConditionSeed(_HWCUint8(base)))
++        env = _RGBOnly(base)
++        if frame_stack > 1:
++            from robosuitevgb.secant.wrappers.frame_stack import FrameStack
++            env = FrameStack(env, k=frame_stack, mode="concat", stack_dim=0)
++        return gym3.FromGymEnv(_ConditionSeed(_HWCUint8(env)))
 +
 +    venv = gym3.ConcatEnv([_make_one(i) for i in range(num_envs)])
 +    applied_regime = applied_regimes[0]
@@ -144,6 +165,9 @@ index 0292a29..958b663 100644
 +    if env_name.startswith("robosuite:"):
 +        return get_robosuite_venv(
 +            env_id=env_name.split(":", 1)[1], num_envs=num_envs, **env_kwargs)
++    # `frame_stack` belongs to the RL-ViGen adapter. Procgen's own environment constructor does
++    # not accept it; keeping this keyword out preserves the released one-frame Procgen path.
++    env_kwargs.pop("frame_stack", None)
      venv = get_procgen_venv(num_envs=num_envs, env_id=env_name, **env_kwargs)
  
 -    return venv
@@ -322,10 +346,10 @@ index 8ad07ab..6931011 100644
  @functools.lru_cache()
  def warn_no_gradient(model, task):
 diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
-index e32b3a1..60c626d 100644
+index e32b3a1..c4ff7c7 100644
 --- a/phasic_policy_gradient/train.py
 +++ b/phasic_policy_gradient/train.py
-@@ -7,7 +7,18 @@ from . import logger
+@@ -7,7 +7,19 @@ from . import logger
  from .envs import get_venv
  
  def train_fn(env_name="coinrun",
@@ -341,10 +365,11 @@ index e32b3a1..60c626d 100644
 +    # given seed; both are the difference between a runnable schedule and one that silently
 +    # collides. PLATFORM-class.]
 +    seed=0,
++    frame_stack=1,
      arch="dual",  # 'shared', 'detach', or 'dual'
      # 'shared' = shared policy and value networks
      # 'dual' = separate policy and value networks
-@@ -20,6 +31,11 @@ def train_fn(env_name="coinrun",
+@@ -20,6 +32,11 @@ def train_fn(env_name="coinrun",
      aux_lr=5e-4,
      lr=5e-4,
      nminibatch=8,
@@ -356,7 +381,7 @@ index e32b3a1..60c626d 100644
      aux_mbsize=4,
      clip_param=.2,
      kl_penalty=0.0,
-@@ -32,13 +48,22 @@ def train_fn(env_name="coinrun",
+@@ -32,13 +49,23 @@ def train_fn(env_name="coinrun",
      if comm is None:
          comm = MPI.COMM_WORLD
      tu.setup_dist(comm=comm)
@@ -376,11 +401,12 @@ index e32b3a1..60c626d 100644
          logger.configure(comm=comm, dir=log_dir, format_strs=format_strs)
  
 -    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode)
-+    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode, seed=seed)
++    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode,
++                    seed=seed, frame_stack=frame_stack)
  
      enc_fn = lambda obtype: ImpalaEncoder(
          obtype.shape,
-@@ -66,7 +91,14 @@ def train_fn(env_name="coinrun",
+@@ -66,7 +93,14 @@ def train_fn(env_name="coinrun",
              n_epoch_pi=n_epoch_pi,
              clip_param=clip_param,
              kl_penalty=kl_penalty,
@@ -396,7 +422,7 @@ index e32b3a1..60c626d 100644
          ),
          aux_lr=aux_lr,
          aux_mbsize=aux_mbsize,
-@@ -76,6 +108,29 @@ def train_fn(env_name="coinrun",
+@@ -76,6 +110,29 @@ def train_fn(env_name="coinrun",
          comm=comm,
      )
  
@@ -426,7 +452,7 @@ index e32b3a1..60c626d 100644
  def main():
      parser = argparse.ArgumentParser(description='Process PPG training arguments.')
      parser.add_argument('--env_name', type=str, default='coinrun')
-@@ -87,6 +142,25 @@ def main():
+@@ -87,6 +144,27 @@ def main():
      parser.add_argument('--clip_param', type=float, default=0.2)
      parser.add_argument('--kl_penalty', type=float, default=0.0)
      parser.add_argument('--arch', type=str, default='dual') # 'shared', 'detach', or 'dual'
@@ -434,6 +460,8 @@ index e32b3a1..60c626d 100644
 +    parser.add_argument('--interacts_total', type=int, default=100_000_000)
 +    # [Claude 2026-09-02 07:10 MSK: see train_fn's note]
 +    parser.add_argument('--seed', type=int, default=0)
++    parser.add_argument('--frame_stack', type=int, default=1,
++                        help='RGB frames to concatenate; 1 preserves C1, production C2 uses 3')
 +    parser.add_argument('--log_dir', type=str, default='/tmp/ppg')
 +    # [OURS 2026-09-04] Checkpoint retention, defaulting to upstream's effective behaviour.
 +    parser.add_argument('--save_mode', type=str, default='last',
@@ -452,12 +480,13 @@ index e32b3a1..60c626d 100644
  
      args = parser.parse_args()
  
-@@ -100,6 +174,16 @@ def main():
+@@ -100,6 +178,17 @@ def main():
          n_aux_epochs=args.n_aux_epochs,
          n_pi=args.n_pi,
          arch=args.arch,
 +        interacts_total=args.interacts_total,
 +        seed=args.seed,
++        frame_stack=args.frame_stack,
 +        log_dir=args.log_dir,
 +        save_mode=args.save_mode,
 +        ic_per_save=args.ic_per_save,

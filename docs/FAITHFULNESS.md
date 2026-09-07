@@ -95,7 +95,7 @@ stated once. This is `PREMISES.md` Q5 and it is unresolved.
 | `curl` | `[RLV]` upstream | DrQ-v2-based, not SAC; lr 1e-4 vs 1e-3; paper/code disagree 5 ways | **high** |
 | `drq` | `[RLV]` upstream | lr 1e-4 vs 1e-3; **n-step FIXED 2026-08-10 (was 3 vs 1-step)** | low-medium |
 | `rad` | ours, on a recovered SAC | n-step 3 vs 1-step; `random_shift` not paper's crop/translate | medium |
-| `soda` | recovered from history | aux lr follows `[C]` 1e-3 not `[P]` 3e-4 | low |
+| `soda` | recovered from history | official DMC-GB launcher and active production launcher use `[P]` 3e-4; generic argparse default `[C]` is 1e-3 but is not effective in production | low |
 | `alda` | sibling port | **faithful**; benchmark extrapolated (DMControl-GB → robosuite) | low |
 | `idaac` | sibling port | per-environment rollout **256 matches `[P]`**; `num_processes=4` vs upstream 64, so **16x fewer parallel environments**; 8-sample minibatches | **high** |
 | `ppg` | ours, shared PPO core | per-environment rollout **256 matches `[P]`**; four-MPI-worker upstream run has global 65,536-sample updates, while our one-worker `num_envs=8` run has 2,048 (**32x lower effective batch**); lr 1e-4 vs 5e-4; **continuous head has no reference** | **high** |
@@ -227,14 +227,12 @@ and it should be recorded as a deviation rather than discovered later.
 > auxiliary machinery can be checked against primary sources; the action distribution cannot. That
 > should be said in any write-up rather than left implicit.
 
-**Frame stacking**: three of the four Procgen-origin methods (`ppg`, `ibac_sni`, `ctrl`) run
-**without** frame stacking — Procgen games are fully observable, and CoinRun paints velocity into
-the image rather than stacking. [Corrected 2026-09-06, DECISION-SHEET A35: `idaac` is the
-exception — its authors' own DMC continuous-control experiments stack 3 frames, directly
-contradicting the theoretical "incoherent with its adversarial head" argument this project
-previously used to keep it single-frame (`docs/CONSTRUCTION.md#c2`); `idaac` now stacks 3 as its
-declared main config.] We use a 3-frame stack `[RLV]` for the RL-ViGen-native five. Structurally
-different solution to partial observability.
+**Frame stacking**: released Procgen geometry remains one frame for `ibac_sni` and `ctrl`.
+IDAAC uses its authors' DMC continuous-control recipe with three frames. PPG uses that same
+authors' DMC comparator as its selected continuous-control adaptation; this does not claim the
+OpenAI PPG primary source specifies DMC. Both adapters preserve explicit `frame_stack=1` for
+historical C1 checkpoints. RL-ViGen-native five, RAD/SODA, and ALDA retain their native
+three-frame paths. Structurally different solution to partial observability.
 
 **Truncation vs. termination — verified from robosuite's own source, not merely repeated.** Three
 places in this repo assert "Door/Lift never terminate early" (`replay.py`'s `SacView` docstring,

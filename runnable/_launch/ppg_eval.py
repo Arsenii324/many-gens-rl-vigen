@@ -1,7 +1,7 @@
 """Evaluate a saved PPG policy in an RL-ViGen visual regime.
 
     bash runnable/_launch/ppg.sh Door 8            # train; LogSaveHelper writes /tmp/ppg/model.jd
-    python runnable/_launch/ppg_eval.py --model /tmp/ppg/model.jd --mode eval-easy
+    python runnable/_launch/ppg_eval.py --model /tmp/ppg/model.jd --mode eval-easy --frame_stack 3
 
 ## Why this file exists, and why it is HERE and not in the clone
 
@@ -32,6 +32,9 @@ higher) number.
 
 **Checkpoint selection is `--model`, i.e. yours.** `Protocol.checkpoint_selection` exists for
 this and is unset for `ppg`; nothing here decides it.
+
+**Observation geometry is explicit.** Current production C2 defaults to three RGB frames (9
+channels). Pass `--frame_stack 1` only when evaluating a historical C1 checkpoint.
 """
 from __future__ import annotations
 
@@ -59,6 +62,8 @@ def main() -> int:
     ap.add_argument("--num_envs", type=int, default=4)
     ap.add_argument("--episodes", type=int, default=10)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--frame_stack", type=int, default=3,
+                    help="RGB frames to concatenate; 3 is current C2, 1 is explicit historical C1")
     args = ap.parse_args()
 
     # weights_only=False: LogSaveHelper pickles the whole model, not a state_dict, so torch>=2.6's
@@ -67,7 +72,7 @@ def main() -> int:
     model.eval()
 
     venv = get_venv(num_envs=args.num_envs, env_name=f"robosuite:{args.task}",
-                    mode=args.mode, seed=args.seed)
+                    mode=args.mode, seed=args.seed, frame_stack=args.frame_stack)
     roller = Roller(venv=venv, act_fn=model.act,
                     initial_state=model.initial_state(args.num_envs),
                     keep_buf=max(100, args.episodes))

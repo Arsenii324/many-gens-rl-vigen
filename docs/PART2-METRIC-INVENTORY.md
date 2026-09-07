@@ -273,38 +273,35 @@ is the owner's to make, not a default to apply silently.
 Genuinely shared: robosuite `Door`, Panda, OSC_POSE, horizon 500, action repeat 1, `scene_id 0`,
 RGB. Those are `rlgen/protocol.py` fields and `tests/test_contract.py` pins them.
 
-**Finding 5 — frame stacking split the twelve 8/4, and this was the largest comparability gap
+**Finding 5 — frame stacking splits the twelve 10/2, and this is the largest comparability gap
 found so far.** Checked per seam rather than assumed from the protocol:
 
-**Corrected 2026-09-06 (DECISION-SHEET A35, reviews 17/18, `C98`): the split is now 9/3, not
-8/4.** `idaac` moved from the single-frame column to the stacked column: the project adopted the
-authors' own published DMC continuous-control recipe (which stacks 3 frames) as idaac's declared
-main config, once the implementation gap was closed (`make_rlvigen_venv` now applies a real
-`FrameStack`). See `tests/test_observation_geometry.py`'s identically-updated split and
-`rlgen/protocol.py::OBSERVATION_GEOMETRY["idaac"]`, now `(64, 3)`.
+**Corrected 2026-09-07:** PPG now joins IDAAC in the stacked column for the selected main path.
+Both use the IDAAC-authors' published DMC continuous-control comparator geometry, with a real
+9-channel train/eval path. PPG's source qualification remains explicit: this is not OpenAI PPG's
+primary-source canonical environment; it is the authors' comparator adapted to this project.
+The released one-frame path remains available only through explicit `frame_stack=1`.
 
 | stacked (3 frames, 9 channels) | single frame (3 channels) |
 |---|---|
-| `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | `ppg` |
-| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `ibac_sni` |
-| `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | `ctrl` |
-| `idaac` (`FrameStack` in `make_rlvigen_venv`, added 2026-09-06) | |
+| `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | `ibac_sni` |
+| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `ctrl` |
+| `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | — |
+| `idaac` and `ppg` (`FrameStack` in both train/eval adapters) | — |
 
-The split's origin is not arbitrary and it is not ours: the three remaining single-frame
-baselines are exactly the ones whose originals are **Procgen**, which serves a single RGB frame
-and whose encoders were built for it — stacking them would be a deviation in each clone, not
-stacking them is faithful. `idaac`'s origin is *also* Procgen, but its own publication supplies an
-explicit, source-backed continuous-control precedent that stacks 3 frames — a justified,
-documented exception (DECISION-SHEET A35), not a drift from the rule above.
+The split is not an attempt to equalise observations. `ibac_sni` and `ctrl` retain released
+one-frame Procgen geometry. IDAAC uses a direct source-backed continuous-control precedent.
+PPG uses the same DMC comparator because no primary continuous-control PPG configuration exists;
+this is a declared design-point adaptation, not a claim of canonical PPG reproduction.
 
 But the consequence is not cosmetic. On a robot manipulation task, a single frame is
 **velocity-blind** — the gripper's motion is unobservable, and the policy sees a strictly smaller
 state. Comparing a 9-channel agent with a 3-channel one on Door is comparing two different
 POMDPs, not two algorithms.
 
-**`Protocol.DEFAULT_FRAME_STACK = 3` is therefore now wrong for four of twelve baselines**, and
-the protocol hash certifies a value four runs do not have. That must be fixed before any run
-card is emitted — either as a per-baseline field or as a declared per-baseline override.
+**`Protocol.DEFAULT_FRAME_STACK = 3` remains only a fallback.** Production records use the
+per-baseline geometry and explicit evaluator override, so a C1 checkpoint cannot be evaluated
+under C2 metadata by accident.
 
 **Render resolution is a second, independent split, deliberately.** `rad`/`soda` see an 84 crop of a 100
 render, `alda`/`ppg`/`idaac`/`ibac_sni` render 64, the RL-ViGen five render 84 — each its own

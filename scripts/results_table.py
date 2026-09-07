@@ -59,6 +59,20 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.metrics import wilson_interval  # noqa: E402  -- the project's own, not re-derived
+from datasphere.native.family import all_provenance  # noqa: E402
+
+DECLARED_PROVENANCE = all_provenance()
+
+
+def display_provenance(row: dict) -> tuple[str, str]:
+    """Render metadata without making a missing label look like a valid production row."""
+    labels = row.get("provenance")
+    if not labels:
+        return "UNLABELED", "legacy/mocked row; descriptor metadata absent"
+    if set(labels) != {"source_target", "source_variant"} or not all(
+            isinstance(value, str) and value.strip() for value in labels.values()):
+        raise ValueError("malformed provenance metadata in result row")
+    return labels["source_target"], labels["source_variant"]
 # [Claude 2026-09-06] MIN_DENOM_SUCCESS was a second `= 0.25` literal beside
 # regime_retention_report.py's own -- the exact "two homes for one number" pattern Q12 and the
 # g1.1 admission-tier bug already caught elsewhere in this project. That file's comment carries the
@@ -236,7 +250,8 @@ def row(name: str, seed: int, budget: str, tag: str, floor_mean: float):
                 n_ep=n_ep, n_tr=tot_tr, n_ev=tot_ev, res_floor=res_floor,
                 md5=tr.get("snapshot_md5", "?")[:8], eps=eps,
                 over_ceiling=sum(1 for k in mtr for x in tr["scenes"][str(k)]["returns"] if x > CEILING),
-                tl=TIME_LIMIT_HANDLING.get(name, "?"))
+                tl=TIME_LIMIT_HANDLING.get(name, "?"),
+                provenance=DECLARED_PROVENANCE.get(name))
 
 
 CELLS_BY_NAME = [(n, t) for n, _, b, t in CELLS if b == "100k"]
@@ -278,15 +293,17 @@ def main(argv: list[str] | None = None) -> int:
 
     hdr = (f"  {'baseline':<8} {'seed':>4} {'budget':>7} {'scene0':>8} {'held-out':>9} "
            f"{'scene ret':>10} {'regime ret':>12} {'95% CI':>16} {'n':>5} {'SR tr>ev':>12} "
-           f"{'res floor':>10}")
+           f"{'res floor':>10}  source target / variant")
     print(hdr); print("  " + "-" * (len(hdr) - 2))
     for r in rows:
+        source_target, source_variant = display_provenance(r)
         reg = f"{r['regime']:.3f}" if r["regime"] is not None else "REFUSED"
         ci = f"[{r['ci'][0]:.3f}, {r['ci'][1]:.3f}]" if r["ci"] else "--"
         print(f"  {r['name']:<8} {r['seed']:>4} {r['budget']:>7} {r['scene0']:>8.2f} "
               f"{r['held']:>9.2f} {r['scene_ret']:>9.1%} {reg:>12} {ci:>16} "
               f"{str(r['usable'])+'/'+str(r['n_scenes']):>5} "
-              f"{r['sr_tr']:>5.1%}>{r['sr_ev']:<5.1%} {r['res_floor']:>9.1%}")
+              f"{r['sr_tr']:>5.1%}>{r['sr_ev']:<5.1%} {r['res_floor']:>9.1%}  "
+              f"{source_target} / {source_variant}")
 
     print("\n  INTERVALS. Scene retention by bootstrap over episodes; success rate by Wilson.")
     print(f"  {'cell':<14} {'scene ret':>9} {'95% CI':>16}   {'SR train':>20} {'SR eval-easy':>20}")
@@ -368,17 +385,19 @@ def main(argv: list[str] | None = None) -> int:
     print("  RL-ViGen natives, where the seam audit splits on 0 of 12 axes (RESEARCH-FRAME.md).")
 
     if a.markdown:
-        print("\n\n---\n\n| baseline | seed | budget | scene 0 | held-out | scene ret. | "
+        print("\n\n---\n\n| baseline | seed | budget | source target | source variant | scene 0 | held-out | scene ret. | "
               "regime ret. | 95% CI | usable | SR train→eval | res. floor | scene ret.* | "
               "regime ret.* |")
-        print("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+        print("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         for r in rows:
+            source_target, source_variant = display_provenance(r)
             reg = f"**{r['regime']:.3f}**" if r["regime"] is not None else "**REFUSED**"
             ci = f"[{r['ci'][0]:.3f}, {r['ci'][1]:.3f}]" if r["ci"] else "—"
             sc_fa = f"{r['scene_ret_floor_adj']:.3f}" if r["scene_ret_floor_adj"] is not None else "REFUSED"
             rg_fa = f"{r['regime_floor_adj']:.3f}" if r["regime_floor_adj"] is not None else "REFUSED"
-            print(f"| `{r['name']}` | {r['seed']} | {r['budget']} | {r['scene0']:.2f} | "
-                  f"{r['held']:.2f} | {r['scene_ret']:.1%} | {reg} | {ci} | "
+            print(f"| `{r['name']}` | {r['seed']} | {r['budget']} | "
+                  f"{source_target} | {source_variant} | "
+                  f"{r['scene0']:.2f} | {r['held']:.2f} | {r['scene_ret']:.1%} | {reg} | {ci} | "
                   f"{r['usable']}/{r['n_scenes']} | {r['sr_tr']:.1%} → {r['sr_ev']:.1%} | "
                   f"{r['res_floor']:.1%} | {sc_fa} | {rg_fa} |")
         print("\n\n\* floor-adjusted (A18): (num - floor) / (den - floor). Not directly "

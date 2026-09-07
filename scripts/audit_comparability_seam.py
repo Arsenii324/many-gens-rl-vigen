@@ -252,31 +252,34 @@ def reward_pipeline() -> tuple[dict, str]:
 def frame_stack() -> tuple[dict, str]:
     """How many frames the policy sees at once. [C2](../docs/CONSTRUCTION.md#c2)
 
-    Derived two different ways, because the two lineages express it differently and neither can be
-    read the other's way: the DMC-lineage baselines declare a `frame_stack` default, and the
-    Procgen-lineage ones have no frame-stacking wrapper anywhere on the robosuite path, which is
-    what makes their answer 1. An absence is weaker evidence than a declaration and the provenance
-    string says so.
+    Derived from the production descriptor where the main profile selects an explicit adapter
+    value, then checked against source wrappers. IDAAC and PPG keep adapter defaults of 1 for
+    historical C1, but production `families.json` selects 3 for C2. An absence is weaker evidence
+    than a declaration and the provenance string says so.
 
-    **The 8/4 split is one number and FOUR different facts** — recorded 2026-09-03 in
+    **The 10/2 split is one number and several different facts** — recorded 2026-09-07 in
     [C2](../docs/CONSTRUCTION.md#c2), and it changes what "equalise the stack" could even mean:
 
-    - `idaac` — **structural conflict.** Its auxiliary head predicts which of two observations from
-      one trajectory came first, and the encoder is adversarially trained to make that impossible.
-      A stack embeds local motion *inside a single observation*, handing the discriminator the very
-      signal the objective exists to destroy. Equalising is incoherent, not merely unfaithful.
+    - `idaac` — source-backed DMC comparator uses 3 frames with the full method.
     - `ctrl` — **double-counting.** It builds temporal structure explicitly over a sliding window of
       `cluster_len=10` single frames; a stack represents the same axis twice.
     - `ibac_sni` — **mis-calibration.** Its VIB's beta is tuned against single-frame input entropy;
       a stack adds task-relevant motion information, so the same beta under-regularises.
-    - `ppg` — **lineage only.** No mechanism-level objection found.
+    - `ppg` — source-backed DMC comparator adaptation uses 3 frames; OpenAI PPG has no primary DMC
+      configuration, so this is not called canonical PPG.
 
-    This axis therefore reports a split of 2 and means a split of 4. The count is what the seam
+    This axis therefore reports a split of 2. The count is what the seam
     needs; the reasons are what a decision about the seam needs, which is why they are here and not
     only in the register.
     """
     out = {}
+    descriptor_path = ROOT / "datasphere" / "native" / "families.json"
+    descriptors = json.loads(descriptor_path.read_text(encoding="utf-8")) if descriptor_path.exists() else {}
     for b in BASELINES:
+        selected = descriptors.get(b, {}).get("constants", {}).get("frame_stack")
+        if selected is not None:
+            out[b] = str(selected)
+            continue
         if b in NATIVES:
             cfg = ROOT / "RL-ViGen-upstream" / "cfgs" / "config.yaml"
             m = re.search(r"frame_stack:\s*(\d+)", cfg.read_text(encoding="utf-8")) if cfg.exists() else None
@@ -295,7 +298,7 @@ def frame_stack() -> tuple[dict, str]:
             continue
         stacker = _grep(SRC_ROOT[b], r"FrameStack|VecFrameStack")
         out[b] = "1 (no frame-stack wrapper on the robosuite path)" if not stacker else "?"
-    return out, "DERIVED (declaration for the DMC lineage; absence of a wrapper for the Procgen lineage)"
+    return out, "DERIVED (production descriptor plus family source wrappers)"
 
 
 def success_source() -> tuple[dict, str]:
