@@ -133,9 +133,18 @@ Review 6/Gemini's "Reward Normalization Fixed" is a different, already-fixed CTR
 >   measurement (22.4 against the run's own logged 1.55, a 14x error) and fixed. Reported idaac
 >   numbers are in raw Door units.
 >
-> So this is a **training-dynamics** disclosure item, not a units one: idaac (and ppg, by its own
-> `RewardNormalizer`) optimize a normalized reward while the eight off-policy baselines optimize the
-> raw one. Belongs on the declared-axes list beside time-limit handling.
+> So this is a **training-dynamics** disclosure item, not a units one, and that was then checked on
+> every surface a number reaches rather than inferred from the one that was already known:
+>
+> | surface | idaac | ppg | ctrl |
+> |---|---|---|---|
+> | endpoint eval | `info['episode']['r']`, monitor inside normaliser | — | explicit `normalize_rewards=False` |
+> | training curve | `test.py` appends `info['episode']['r']` | `EpRewMean` from roller stats gathered at `ppo.py:272`, **before** the normaliser touches `seg["reward"]` at `:274` | `Eprew200` averages `info['r']` from `info.get('episode')` |
+>
+> All raw. The axis is now `rlgen/protocol.py::REWARD_NORMALIZATION`, 3/9, over a set **disjoint**
+> from time-limit handling's 3/9 — so "the three that differ" is ambiguous without naming which,
+> and `tests/test_axis_tables_cover_the_same_fleet.py` asserts both sets so a change to either
+> cannot pass silently.
 
 **Disposition: MEASURE FIRST / DISCLOSE — not a units defect.**
 

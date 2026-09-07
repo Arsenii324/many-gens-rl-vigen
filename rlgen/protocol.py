@@ -180,12 +180,24 @@ TIME_LIMIT_HANDLING = {
 #     authors never needed a stack -- a condition that is simply false on Door. A running-return
 #     normaliser makes no such assumption: it is scale-ADAPTIVE, and adapts to Door's reward scale
 #     as readily as to Procgen's. It does less here; it does not do something wrong here.
-#   - It does not contaminate the reported numbers. Each family's evaluator reads the RAW return:
-#     idaac through `info['episode']['r']` from the VecMonitor that sits INSIDE the normaliser
-#     (eval_grid.py:534-541, found when summing step() rewards gave 22.4 against a logged 1.55),
-#     and ctrl through an explicit `normalize_rewards=False` (eval_grid.py:1006-1024). So this is
-#     a training-objective axis, not a units axis -- the distinction that decides whether a
-#     difference must be removed or may be declared.
+#   - It does not contaminate the reported numbers, on ANY of the three surfaces a number reaches.
+#     Checked for all three families rather than inferred from one, because this is the question
+#     that has bitten this project twice (CTRL's evaluator reporting clipped normalised returns;
+#     idaac's offline evaluator summing step() rewards for 22.4 against a logged 1.55):
+#
+#       endpoint eval   idaac reads `info['episode']['r']` from the VecMonitor that sits INSIDE
+#                       the normaliser (eval_grid.py:534-541); ctrl constructs its env with an
+#                       explicit `normalize_rewards=False` (eval_grid.py:1006-1024).
+#       training curve  idaac's own periodic eval appends `info['episode']['r']`
+#                       (runnable/idaac/test.py); ctrl's `Eprew200` averages `info['r']` taken
+#                       from `info.get('episode')` (train_ppo.py:298,382); ppg's `EpRewMean` comes
+#                       from `lsh.gather_roller_stats(roller)` at ppo.py:272, which runs BEFORE
+#                       `seg["reward"] = reward_normalizer(...)` at :274 -- the roller's returns
+#                       accumulate from the raw env reward and the normaliser only ever touches
+#                       the advantage input.
+#
+#     So this is a training-objective axis, not a units axis -- the distinction that decides
+#     whether a difference must be removed or may merely be declared.
 #
 # What it still costs: the three normalise their advantage scale adaptively and the nine do not,
 # so an identical Door reward produces differently-scaled gradients. That belongs in the report.
