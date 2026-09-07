@@ -8,6 +8,7 @@ import os
 import platform
 import subprocess
 import shutil
+import sys
 import time
 from pathlib import Path
 
@@ -181,6 +182,10 @@ def main() -> int:
     parser.add_argument("--interval-seconds", type=float, default=1.0)
     parser.add_argument("--flush-seconds", type=float, default=30.0,
                         help="rewrite the output file this often, so a killed run still has one")
+    parser.add_argument("--disk-warn-gib", type=float, default=20.0,
+                        help="announce NATIVE_DISK_LOW at or below this much free space")
+    parser.add_argument("--disk-critical-gib", type=float, default=5.0,
+                        help="announce NATIVE_DISK_CRITICAL at or below this much free space")
     parser.add_argument("--dense-seconds", type=float, default=600.0,
                         help="sample at --interval-seconds for this long, then widen")
     parser.add_argument("--coarse-interval-seconds", type=float, default=10.0,
@@ -217,8 +222,37 @@ def main() -> int:
     samples = []
     started = time.monotonic()
     last_flush = 0.0
+    # [Claude 2026-09-07, external recommendation 22 item 11] `free_disk_gib` was sampled from the
+    # first version of this file and NOTHING ever read it. safe_checkpoint.py catches ENOSPC at
+    # write time, so nothing corrupts -- but its response is to wait and then SKIP, which means a
+    # long cell can spend hours declining to save while the log says nothing, and end with no
+    # retained checkpoints to evaluate. The measurement was there; the warning was not.
+    #
+    # Announced on the runner's own marker convention so it is greppable beside NATIVE_CELL_*, and
+    # rate-limited to one line per crossing so a slow leak does not bury the log it is warning in.
+    warned_below = None
+    def _warn_on_disk(entry):
+        nonlocal warned_below
+        free = entry.get("free_disk_gib")
+        if free is None:
+            return
+        for threshold in (args.disk_critical_gib, args.disk_warn_gib):
+            if free <= threshold:
+                if warned_below is None or threshold < warned_below:
+                    severity = "CRITICAL" if threshold == args.disk_critical_gib else "LOW"
+                    print(f"=== NATIVE_DISK_{severity} free={free} GiB (threshold {threshold}) "
+                          f"-- checkpoint writes will be skipped, not failed, once space runs out "
+                          f"===", file=sys.stderr, flush=True)
+                    warned_below = threshold
+                return
+        if warned_below is not None and free > args.disk_warn_gib * 1.25:
+            print(f"=== NATIVE_DISK_RECOVERED free={free} GiB ===", file=sys.stderr, flush=True)
+            warned_below = None
+
     while is_live(args.pid):
-        samples.append(sample(args.pid))
+        entry = sample(args.pid)
+        _warn_on_disk(entry)
+        samples.append(entry)
         if args.ready_file is not None and not args.ready_file.exists():
             args.ready_file.touch()
         now = time.monotonic()
