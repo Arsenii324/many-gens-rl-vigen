@@ -120,6 +120,33 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     exit 3; }
 fi
 
+# Disk. A production cell needs far more than its checkpoints: the RL-ViGen five keep their replay
+# as episode files on disk under the run directory, capped at families.json's replay_capacity of
+# 300000 transitions x 63,504 B = about 19 GB per cell, plus 1.7-3.2 GiB of retained checkpoints
+# (families.json preserve_snapshots=100000 keeps six of a 600k run's twelve saves plus the
+# endpoint) plus the result archive. Roughly 25 GB per off-policy cell, so about 50 GB for the
+# two-cell packing MIGRATION-T4-TO-V100.md step 4 plans. The on-policy families (idaac, ppg, ctrl,
+# ibac_sni) hold no replay at all and need a small fraction of that.
+#
+# The floor below is deliberately one number rather than a per-family figure: families.json does
+# not carry a disk column today, and inventing one here would put a second, unreviewed source of
+# truth next to it. notes/PRODUCTION-HOST-RATIFICATION.md records deriving it per family as the
+# better version and why it is not done yet.
+DISK_FLOOR_GB="${NATIVE_DISK_FLOOR_GB:-60}"
+check_disk() {
+  local target="$1" free_gb
+  free_gb="$(df -Pk "$target" 2>/dev/null | awk 'NR==2 {printf "%d", $4 / 1048576}')" || return 0
+  [[ -n "$free_gb" ]] || return 0
+  echo "free disk at $target: ${free_gb} GB" >&2
+  if [[ "${FRAMES:-10000}" -ge 600000 && "$free_gb" -lt "$DISK_FLOOR_GB" ]]; then
+    echo "refusing: ${free_gb} GB free is below the ${DISK_FLOOR_GB} GB floor for a production" >&2
+    echo "  cell. An off-policy cell needs about 25 GB (19 GB replay episodes + retained" >&2
+    echo "  checkpoints + result archive); packing two needs about 50 GB. Free space, or set" >&2
+    echo "  NATIVE_DISK_FLOOR_GB if this cell is on-policy and genuinely needs less." >&2
+    exit 4
+  fi
+}
+
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 mkdir -p "$WORKDIR/out"
@@ -150,6 +177,7 @@ DOCKER_ENV_ARGS=()
 # the result archive, where the operator is already looking.
 NATIVE_OUT_HOST_DIR="${NATIVE_OUT_HOST_DIR:-$(dirname "$RESULT")/native-out-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "$NATIVE_OUT_HOST_DIR"
+check_disk "$NATIVE_OUT_HOST_DIR"
 DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work" -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out")
 i=1
 while true; do

@@ -76,6 +76,11 @@ steps) and `datasphere/native/run_on_production_host.sh` (the wrapper that build
 invocation from the same env-vars every `cfg-*.yaml` already sets). Untested end to end — no SSH
 access to the host from this session — every piece is derived from `run_probe.sh`'s own
 already-exercised contract, not invented fresh.
+[`PRODUCTION-HOST-RATIFICATION.md`](PRODUCTION-HOST-RATIFICATION.md) is its companion: why the
+wrapper is shaped this way, the four defects fixed on 2026-09-07 (the first of which would have
+killed the 600k canary after a full bootstrap), and the four decisions implemented at my best that
+are still the owner's to ratify — the single-constant disk floor, the unmeasured free disk on the
+host, no-resume-for-off-policy-cells, and the seven-point curve spacing.
 
 ### 3. Running the campaign
 

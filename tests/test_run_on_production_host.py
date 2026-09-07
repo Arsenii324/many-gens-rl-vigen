@@ -178,3 +178,37 @@ def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_pat
         "run_probe.sh writes every checkpoint to the container-local /tmp/native-out and only "
         "packages it at the very end -- without this mount a killed container loses the whole run")
     assert out_dir.is_dir()
+
+
+def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
+    """An off-policy production cell needs ~25 GB (19 GB of replay episodes alone).
+
+    Discovering that after several hours of training, when a checkpoint write fails, is the
+    failure this guard exists to prevent.
+    """
+    code = tmp_path / "payload.tgz"
+    code.write_text("payload")
+    fake_bin = tmp_path / "diskbin"
+    fake_bin.mkdir()
+    df = fake_bin / "df"
+    # 10 GB free, reported in 1K blocks in the position `df -Pk` puts it.
+    df.write_text(
+        "#!/usr/bin/env bash\n"
+        'echo "Filesystem 1024-blocks Used Available Capacity Mounted on"\n'
+        'echo "/dev/fake 100000000 89500000 10485760 90% /"\n'
+    )
+    df.chmod(df.stat().st_mode | stat.S_IEXEC)
+
+    env = {
+        "PATH": f"{fake_bin}:/usr/bin:/bin",
+        "FRAMES": "600000",
+        "NATIVE_PRODUCTION": "1",
+        "NATIVE_HOST_PROFILE": "v100",
+        "NATIVE_OUT_HOST_DIR": str(tmp_path / "out"),
+    }
+    result = subprocess.run(
+        ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
+        capture_output=True, text=True, env=env, cwd=str(ROOT),
+    )
+    assert result.returncode == 4, result.stderr
+    assert "below the 60 GB floor" in result.stderr
