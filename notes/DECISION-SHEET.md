@@ -841,6 +841,45 @@ SODA/SVEA numbers, which `CLAIMS-LEDGER` already forbids on other grounds.
 **Override if**: you want any claim of parity with published overlay-augmentation results, in which
 case the train split must be used and those cells re-run.
 
+### A22 REVISED, 2026-09-07 — the "same split for everyone" half of the reasoning is withdrawn
+
+**External review 21 #6 rejects the load-bearing sentence above, and it is right to.** The row
+argued that because svea, sgqn and soda all draw from the same split, "the cross-baseline
+comparison — the actual estimand — is unaffected." That does not follow. The three consume overlays
+through different objectives: svea inside its stabilised critic loss, soda in an auxiliary
+representation objective, sgqn combined with its saliency objective and drawing an extra overlay
+per update (which is exactly why P19 was needed for sgqn alone). A change to the overlay
+distribution can therefore move the three by different amounts, and "same image pool" implies
+nothing about invariant ordering. **That argument is withdrawn; the decision stands on the other
+two legs.**
+
+**The operational leg, quantified rather than asserted.** Places365-Standard's train split is about
+105 GB against the validation split's 477 MB (`rlgen-assets/places365-val.tgz`, the pinned asset
+this project actually ships). Every DataSphere job takes its assets as a job input, so the train
+split is not merely a "fresh multi-gigabyte download" — it is infeasible for the rehearsal path
+entirely, and feasible on the production host only as a mounted local copy. Switching only where it
+is feasible would make the augmentation distribution **platform-dependent**, which is strictly worse
+than a uniform deviation: it would confound the renderer-parity work (C95) with an augmentation
+change.
+
+**The mechanism by which it could actually matter, stated so it is falsifiable.** The val split is
+36,500 images (100 per class) against the train split's ~1.8M. A 600k-frame run draws far more
+overlay batches than either pool has images, so both repeat; the val split repeats each image
+roughly 50x more often. If overlay diversity is what makes the augmentation a regulariser, the
+smaller pool is a weaker regulariser, and the three methods would be affected in proportion to how
+central the overlay is to each — most for soda, least for svea. That is a prediction, not a
+measurement, and nothing in this project measures it.
+
+**Implemented default, unchanged: keep `use_val=True`, declared.** What changes is the honesty of
+the label. `CLAIMS-LEDGER.md` must say these three are trained against a 36,500-image overlay pool
+rather than the released 1.8M one, and that no claim of ordering-invariance under that change is
+made — not that the change is harmless.
+
+**Override cost, now that it is priced**: a 105 GB asset, a production-host-only path, and a re-run
+of nine cells (three baselines x three seeds). Worth it only if parity with published
+overlay-augmentation numbers becomes a goal, which `CLAIMS-LEDGER` currently forbids on other
+grounds anyway.
+
 ### A20 DECIDED, 2026-09-05 — 3 episodes per stamp
 
 **The blocking condition is gone.** A20 said "measure env construction first; setting the depth

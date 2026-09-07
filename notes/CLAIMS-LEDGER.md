@@ -111,9 +111,26 @@ cite the audit. It still may **not** say that across *scenes* (A21).
 `datasphere/native/configure_places365_val.py:34-35` rewrites upstream's `use_val=False` to `True`.
 
 For those three the augmentation distribution *is* the mechanism, so this is a learning-affecting
-deviation, not a platform one. All three use the SAME split, so the cross-baseline comparison this
-project actually reports is unaffected; what it forecloses is any claim of parity with **published**
+deviation, not a platform one. What it forecloses is any claim of parity with **published**
 SODA/SVEA/SGQN numbers, which this ledger already forbids on other grounds.
+
+**[Corrected 2026-09-07, external review 21 #6.]** This paragraph used to continue "All three use
+the SAME split, so the cross-baseline comparison this project actually reports is unaffected." That
+inference is withdrawn. The three consume overlays through different objectives — `svea` inside its
+stabilised critic loss, `soda` in an auxiliary representation objective, `sgqn` combined with its
+saliency objective and drawing an extra overlay per update, which is why P19 was needed for `sgqn`
+alone — so a change to the overlay distribution can move them by different amounts. A shared
+deviation is not an invariant ordering.
+
+**What is claimed instead, precisely.** These three train against a **36,500-image** overlay pool
+(Places365 validation, 100 per class) rather than the released **~1.8M-image** train split. At a
+600k-frame budget both pools repeat, but the validation pool repeats each image roughly 50x more
+often. **No claim is made that this leaves the ordering of `svea`, `sgqn` and `soda` unchanged**;
+the deviation is declared, its direction is stated (a smaller pool is the weaker regulariser, if
+overlay diversity is what makes the augmentation work), and its magnitude is unmeasured. See A22's
+2026-09-07 revision for why the alternative is not free: the train split is ~105 GB against the
+477 MB asset this project ships, which makes it infeasible on the DataSphere path and would leave
+the augmentation distribution platform-dependent if adopted only on the production host.
 
 Recorded here because the qualification existed on two of the three rows and not on `svea`'s, and
 because it had no decision row anywhere until A22 — the failure mode being that a per-row
