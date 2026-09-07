@@ -928,6 +928,53 @@ def gate_observation_geometry_is_not_contradicted():
     return PASS, "every baseline has a record carrying its declared observation geometry"
 
 
+
+#: Audits that are pass/fail checks and must therefore be CONSULTED by a gate, not merely present.
+#: Keyed to the question each answers, so a reader of the gate output knows what went unchecked if
+#: one starts failing. `tests/test_every_audit_is_classified.py` fails if a new audit appears in
+#: scripts/ and lands in neither this set nor DESCRIPTIVE_AUDITS below.
+GATING_AUDITS = {
+    "audit_shared_evaluator.py": "has the shared evaluator earned the right to report each number",
+    "audit_static_classes.py": "three defect classes that were findable by reading and were not",
+    "audit_checkpoint_semantics.py": "what each checkpoint contains, and what it does NOT permit",
+    "audit_instruments.py": "which instruments are themselves checked, and which are on trust",
+}
+
+#: Inventories. They describe rather than decide, and several are already consumed by the gates
+#: above (`audit_comparability_seam` feeds three of them). Listed so the classification is total.
+DESCRIPTIVE_AUDITS = {
+    "audit_comparability_seam.py", "audit_dead_knobs.py", "audit_eval_axis.py",
+    "audit_eval_state.py", "audit_seed_control.py", "audit_executed_hyperparameters.py",
+    "audit_implementations.py", "audit_job_budgets.py", "audit_pairing_evidence.py",
+    "audit_row_closure.py", "audit_submission_configs.py", "audit_observation_geometry.py",
+    "audit_eval_cadence.py",
+}
+
+
+def gate_failing_capable_audits_are_consulted():
+    """An audit that can fail and that nothing runs is not evidence, it is an unread opinion.
+
+    Seventeen audits exist. Ten were standalone, and two of those -- `audit_row_closure` and
+    `audit_observation_geometry` -- turned out to be exactly the checks a release needed, one of
+    which could not fail at all until it was repaired. The remaining four below can fail, carry a
+    production question each, and were consulted by nothing. Running them HERE means a reviewer's
+    one command covers them, and a regression in any of them surfaces on the same line as
+    everything else.
+    """
+    failures = []
+    for script, question in sorted(GATING_AUDITS.items()):
+        code, out = _audit_exit_code(script)
+        if code == -1:
+            return OWNER, f"{script} could not run: {out}"
+        if code != 0:
+            failures.append(f"{script} ({question})")
+    if failures:
+        return FAIL, "audit(s) failing and previously unconsulted: " + "; ".join(failures)
+    return PASS, (f"{len(GATING_AUDITS)} pass/fail audits consulted here rather than left "
+                  "standalone: shared evaluator, static defect classes, checkpoint semantics, "
+                  "instrument trust")
+
+
 def gate_clone_patches_reproduce():
     """RECOVERY-HANDOFF says the clones are reproducible from ext/ plus runnable/_patches/*.patch.
 
@@ -1255,6 +1302,7 @@ GATES = [
     ("no episode-level inference", gate_no_episode_level_inference),
     ("no row pools two closures", gate_no_row_pools_two_closures),
     ("observation geometry uncontradicted", gate_observation_geometry_is_not_contradicted),
+    ("failing-capable audits consulted", gate_failing_capable_audits_are_consulted),
 ]
 
 
