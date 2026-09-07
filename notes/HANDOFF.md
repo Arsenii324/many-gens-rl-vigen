@@ -28,6 +28,22 @@ Last updated 2026-09-07, night, by Claude. Codex is stopped for the remainder of
    are measurements. Places365 must pass `verify_datasets.py --split train` on the host ONCE before
    the first svea/sgqn/soda cell (runbook §2b).
 
+## The queued change, and what it is expected to buy
+
+**After the v196 wave attests, raise `ctrl` and `ibac_sni` to `frame_stack=3`** (A40 REVISED-2).
+Not during: `frame_stack` lives in `families.json`, a `CONFIG_MEMBER`, so it moves every family's
+evaluator revision.
+
+Expected outcome, computed rather than hoped: the on-policy group's primary pairs go from **1**
+(`idaac`-`ppg` alone) to **3** (`+ idaac`-`ibac_sni`, `ppg`-`ibac_sni`). Verify with
+`python3 scripts/comparison_blocks.py` after the change; if it does not print 3, something else
+moved and the change should be re-derived rather than accepted.
+
+Code cost is one literal — `runnable/ibac_sni/torch_rl/model.py:62`, `nn.Conv2d(3, 32, ...)` -> 9.
+`ctrl` needs no channel change (Flax infers). Each needs a pilot, because observation shape changes
+learning. `ctrl`'s 64-env memory is still an unmeasured extrapolation and a 3x stack makes
+measuring it first MORE important.
+
 ## Suspicions I have NOT proven
 
 - **The `--policy-mode mode` pass has still never executed anywhere.** Its scope canonicalises and
