@@ -118,3 +118,28 @@ def test_the_scope_rejects_keys_eval_grid_does_not_send():
             "frame_stack": 3, "image_size": 64, "episode_length": 500,
             "deterministic_setting": identity.effective_deterministic_setting("idaac", True),
             "eval_policy_mode": "sample", "eval_policy_mode_source": "not a scope field"})
+
+
+def test_the_protocol_declaration_beats_a_passed_frame_stack():
+    """A fail-closed geometry check its own caller can redefine is not fail-closed.
+
+    `declared_frame_stack = a.frame_stack` made OBSERVATION_GEOMETRY a fallback: a --frame-stack
+    disagreeing with the protocol was adopted, recorded as "declared", and hashed into the scope.
+    Flagged in the review tail as minor because production is stack 3 anyway -- true, and not the
+    point, since the check exists for the case where the caller is wrong.
+    """
+    text = (ROOT / "scripts" / "eval_grid.py").read_text()
+    # Match the ASSIGNMENT, not the string: the explanatory comment quotes the old line.
+    import re
+    assert not re.search(r"^\s*declared_frame_stack = a\.frame_stack\s*$", text, re.M), (
+        "the protocol must not be overwritten by the CLI value")
+    # And the per-family resolvers must read the protocol, not a caller-supplied fallback.
+    # CODE lines only: the comments above the fix quote the old expression on purpose, and a naive
+    # substring search matches the explanation rather than the behaviour -- which it did, twice,
+    # while this test was being written.
+    code = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+    assert not any("if frame_stack is None else int(frame_stack)" in line for line in code), (
+        "a dead alternative branch makes the geometry look caller-supplied when it is not")
+    assert "contradicts the protocol declaration for" in text
+    # The message wraps across source lines, so match a fragment that does not straddle one.
+    assert "geometry it was merely told" in text

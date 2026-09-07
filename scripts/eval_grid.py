@@ -509,8 +509,12 @@ def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=Non
     # not a silent mismatch, but broken either way. OBSERVATION_GEOMETRY is the same single source
     # of truth C98 already uses for this baseline's recorded evaluator_scope; read it here too
     # rather than hardcoding the value a second place.
-    args.frame_stack = (OBSERVATION_GEOMETRY["idaac"][1]
-                        if frame_stack is None else int(frame_stack))
+    # [Claude 2026-09-07] Reads the protocol DIRECTLY. `main()` now refuses a --frame-stack that
+    # contradicts OBSERVATION_GEOMETRY, so the old `if frame_stack is None else int(frame_stack)`
+    # branch could no longer take its second path -- it was a dead alternative that made the
+    # geometry look caller-supplied when it is protocol-supplied. The parameter is kept in the
+    # signature so the call sites stay unchanged.
+    args.frame_stack = OBSERVATION_GEOMETRY["idaac"][1]
     device = getattr(agent, "device", torch.device("cpu"))
     if not isinstance(device, torch.device):
         device = torch.device(device)
@@ -609,8 +613,7 @@ def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None,
 
     venv = get_venv(num_envs=1, env_name=f"robosuite:{task}", mode=mode, seed=seed,
                     scene_id=scene_id, condition_seed=seed,
-                    frame_stack=(OBSERVATION_GEOMETRY["ppg"][1]
-                                 if frame_stack is None else int(frame_stack)))
+                    frame_stack=OBSERVATION_GEOMETRY["ppg"][1])   # protocol, not the caller
     verify_regime(venv, mode, scene_id, "ppg", strict=True)
     initial_observation = venv.observe()
     _eval_across_scenes.verify_runtime_observation_geometry(
@@ -1329,7 +1332,22 @@ def main() -> int:
         raise ValueError(
             "evaluator scope --frame-stack/--image-size must be positive "
             f"(got frame_stack={a.frame_stack}, image_size={a.image_size})")
-    declared_frame_stack = a.frame_stack
+    # [Claude 2026-09-07] The PROTOCOL is the authority, not the caller. This line used to read
+    # `declared_frame_stack = a.frame_stack`, which made `OBSERVATION_GEOMETRY` a mere fallback:
+    # a `--frame-stack` that disagreed with the protocol was adopted, recorded as "declared", and
+    # hashed into the scope revision. A fail-closed geometry check that its own caller can redefine
+    # is not fail-closed -- it confirms whatever it was told. Flagged as a minor hardening gap in
+    # the review tail on the grounds that production is stack 3 anyway; that is true and is not the
+    # point, since the check exists precisely for the case where the caller is wrong.
+    #
+    # A mismatch is now refused rather than absorbed. Passing the protocol's own value stays legal,
+    # so every existing command line keeps working.
+    if a.frame_stack != declared_frame_stack:
+        raise ValueError(
+            f"--frame-stack {a.frame_stack} contradicts the protocol declaration for "
+            f"{a.baseline} ({declared_frame_stack}). rlgen/protocol.py's OBSERVATION_GEOMETRY is "
+            "the authority for this baseline's observation shape; the evaluator will not record a "
+            "geometry it was merely told.")
     resolved_scope = canonical_evaluation_scope({
         "family": a.family, "baseline": a.baseline, "task": a.task, "frame": frame,
         "eval_scope": a.eval_scope, "regimes": a.regimes, "scenes": a.scenes,
