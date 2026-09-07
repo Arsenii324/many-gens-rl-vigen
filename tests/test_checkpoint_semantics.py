@@ -35,8 +35,12 @@ def test_off_policy_resume_is_not_advertised_as_a_full_restart():
     by_family = {row["family"]: row for row in audit.rows()}
     for family in ("rlvigen", "dmc_gb", "alda"):
         assert "NOT a full restart" in by_family[family]["resume"]
-    for family in ("idaac", "ppg", "ctrl", "ibac_sni"):
-        assert by_family[family]["resume"] == "effectively complete"
+    assert by_family["idaac"]["resume"] == "policy + observation statistics; no optimizer/RNG state"
+    assert by_family["ppg"]["resume"] == "policy only; no optimizer/rollout state"
+    assert by_family["ibac_sni"]["resume"] == "policy only; no optimizer/rollout state"
+    assert by_family["ctrl"]["resume"] == "model + optimizer state; no environment/RNG state"
+    assert "optional save_buffer" in by_family["alda"]["buffer"]
+    assert all(audit.FAMILIES_META[family]["evidence"] for family in audit.FAMILIES_META)
     # On the v100 profile the fleet is uniform: twelve stamps plus the endpoint for everyone.
     # rlvigen's base 100000 is a DataSphere container-disk value its v100 profile overrides.
     assert by_family["rlvigen"]["curve_points"] == 13

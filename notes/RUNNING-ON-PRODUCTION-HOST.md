@@ -182,11 +182,11 @@ persists `['agent', 'timer', '_global_step', '_global_episode']` only
 |---|---|---|---|---|
 | `rlvigen` | drqv2, svea, drq, sgqn, curl | agent (networks + optimizers), timer, _global_step, _global_episode | on disk during the run, never in the checkpoint and never retained | **NOT a full restart -- empty buffer** |
 | `dmc_gb` | rad, soda | networks + optimizers | in memory only, never written | **NOT a full restart -- empty buffer** |
-| `alda` | alda | networks + optimizers (sac_*_step_*.pt) | in memory only, never written | **NOT a full restart -- empty buffer** |
-| `idaac` | idaac | [actor_critic, envs.ob_rms] | none -- on-policy | **effectively complete** |
-| `ppg` | ppg | model<N>.jd via LogSaveHelper | none -- on-policy | **effectively complete** |
-| `ctrl` | ctrl | flax to_bytes(train_state), optax optimizer state included | none -- on-policy | **effectively complete** |
-| `ibac_sni` | ibac_sni | model.pt | none -- on-policy | **effectively complete** |
+| `alda` | alda | networks + optimizers (sac_*_step_*.pt) | in memory at production default; optional save_buffer writes it | **NOT a full restart -- empty buffer** |
+| `idaac` | idaac | [actor_critic, envs.ob_rms] | none -- on-policy | **policy + observation statistics; no optimizer/RNG state** |
+| `ppg` | ppg | model<N>.jd via LogSaveHelper | none -- on-policy | **policy only; no optimizer/rollout state** |
+| `ctrl` | ctrl | flax to_bytes(train_state), optax optimizer state included | none -- on-policy | **model + optimizer state; no environment/RNG state** |
+| `ibac_sni` | ibac_sni | model.pt | none -- on-policy | **policy only; no optimizer/rollout state** |
 
 | family | saves every | retains every | curve points at 600k |
 |---|---|---|---|

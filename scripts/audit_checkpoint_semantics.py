@@ -49,8 +49,11 @@ FAMILIES_META = {
     },
     "alda": {
         "contents": "networks + optimizers (sac_*_step_*.pt)",
-        "buffer": "in memory only, never written",
-        "evidence": [],
+        "buffer": "in memory at production default; optional save_buffer writes it",
+        "evidence": [
+            ("runnable/alda/trainers/alda_trainer.py", r"save_buffer:\s*bool\s*=\s*False"),
+            ("runnable/alda/trainers/alda_trainer.py", r"self\.buffer\.save\("),
+        ],
     },
     "idaac": {
         "contents": "[actor_critic, envs.ob_rms]",
@@ -60,7 +63,8 @@ FAMILIES_META = {
     "ppg": {
         "contents": "model<N>.jd via LogSaveHelper",
         "buffer": "none -- on-policy",
-        "evidence": [],
+        "evidence": [("runnable/ppg/phasic_policy_gradient/train.py",
+                      r"_th\.save\(model,\s*_dest\)")],
     },
     "ctrl": {
         "contents": "flax to_bytes(train_state), optax optimizer state included",
@@ -70,7 +74,8 @@ FAMILIES_META = {
     "ibac_sni": {
         "contents": "model.pt",
         "buffer": "none -- on-policy",
-        "evidence": [],
+        "evidence": [("runnable/ibac_sni/torch_rl/utils/save.py",
+                      r"return safe_torch_save\(model, path")],
     },
 }
 OFF_POLICY = {"rlvigen", "dmc_gb", "alda"}
@@ -123,8 +128,12 @@ def rows(profile: str | None = "v100") -> list[dict]:
             "baselines": baselines,
             "contents": meta["contents"],
             "buffer": meta["buffer"],
-            "resume": "NOT a full restart -- empty buffer" if family in OFF_POLICY
-                      else "effectively complete",
+            "resume": "NOT a full restart -- empty buffer" if family in OFF_POLICY else {
+                "idaac": "policy + observation statistics; no optimizer/RNG state",
+                "ppg": "policy only; no optimizer/rollout state",
+                "ctrl": "model + optimizer state; no environment/RNG state",
+                "ibac_sni": "policy only; no optimizer/rollout state",
+            }[family],
             "save_every": save_every,
             "preserve": preserve,
             "curve_points": kept + 1,   # retained stamps plus the endpoint
