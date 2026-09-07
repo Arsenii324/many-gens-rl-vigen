@@ -210,7 +210,18 @@ def canonical_evaluation_scope(values: Mapping[str, object]) -> dict[str, object
     if baseline not in FAMILY_ALLOWED_BASELINES[family]:
         raise ValueError(f"evaluator scope baseline {baseline!r} is not valid for family {family!r}")
     policy_mode = str(values["eval_policy_mode"])
-    if policy_mode != family_eval_policy_mode(family):
+    # [Claude 2026-09-07, DECISION-SHEET A25 addendum] Two scopes are resolvable, not one. The
+    # family's own rule is the headline path and stays the default. `"mode"` is the deterministic
+    # override `eval_grid.py --policy-mode mode` produces, which exists because the sampling /
+    # deterministic divide is the fleet's only UNITS-class comparability split and two of A25's
+    # fixed cross-group pairs straddle it.
+    #
+    # It is admitted HERE rather than waved through, because a scope that cannot be canonicalised
+    # cannot be attested, and an un-attestable second pass would be evidence nothing could certify.
+    # Note the asymmetry: `"mode"` is always resolvable because taking the mode is well defined for
+    # every family, while a family whose native rule IS `mode` gains nothing from the override --
+    # `family.py` therefore requests the second pass only for the four sampling families.
+    if policy_mode not in (family_eval_policy_mode(family), "mode"):
         raise ValueError(f"evaluator scope eval_policy_mode is unresolved for {family}/{baseline}")
     deterministic = values["deterministic_setting"]
     expected_backend = "jax" if family == "ctrl" else "torch"

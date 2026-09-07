@@ -57,4 +57,64 @@ def test_the_record_reports_the_mode_that_actually_ran():
     window = text[index:index + 400]
     assert 'a.policy_mode == "mode"' in window, (
         "the stamped mode must be conditioned on the override, not on the family alone")
-    assert "eval_policy_mode_source" in window, "and it must say which of the two it was"
+    # [Claude 2026-09-07] This used to also require an `eval_policy_mode_source` key IN THE SCOPE.
+    # That key is not in SCOPE_FIELDS, so canonical_evaluation_scope would have raised "evaluator
+    # scope has unknown fields" on every eval_grid run -- and this test, which reads the file as
+    # text, asserted the presence of the very thing that broke it. The provenance is recoverable
+    # without a new field: a scope whose eval_policy_mode is "mode" for a family whose native rule
+    # is "sample" was forced, and one that matches the native rule was not.
+    assert "eval_policy_mode_source" not in window, (
+        "the scope must carry only SCOPE_FIELDS; provenance is derivable from the mode itself")
+
+
+def test_both_scopes_canonicalise_and_get_distinct_revisions():
+    """The check my source-parsing tests could not make, and that would have caught a crash.
+
+    `canonical_evaluation_scope` validates the scope dict against SCOPE_FIELDS and enforces the
+    family's policy mode. The first version of this feature put an `eval_policy_mode_source` key
+    INTO the scope -- which would have raised "evaluator scope has unknown fields" on EVERY
+    eval_grid run, native included -- and set `eval_policy_mode: "mode"`, which the identity check
+    rejected as unresolved. Neither showed up in tests that read the file as text.
+    """
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    import evaluator_identity as identity
+
+    base = {
+        "family": "idaac", "baseline": "idaac", "task": "Door", "frame": 8192,
+        "eval_scope": "endpoint", "regimes": ("train", "eval-easy"), "scenes": (0,),
+        "episodes": 5, "episode_seed": 20260903, "seed": 1, "device": "cuda",
+        "action_repeat": 1, "frame_stack": 3, "image_size": 64, "episode_length": 500,
+        "deterministic_setting": identity.effective_deterministic_setting("idaac", True),
+        "eval_policy_mode": identity.family_eval_policy_mode("idaac"),
+    }
+    native = identity.canonical_evaluation_scope(dict(base))
+    forced = identity.canonical_evaluation_scope({**base, "eval_policy_mode": "mode"})
+
+    native_revision = identity.scope_revision(native)
+    forced_revision = identity.scope_revision(forced)
+    assert native_revision != forced_revision, (
+        "the two passes must be distinguishable in the ledger and in every record")
+
+    # A family that already takes the mode gains nothing from the override, but the scope must
+    # still resolve -- otherwise a stray flag turns into an unexplained crash.
+    rlvigen = identity.canonical_evaluation_scope({
+        **base, "family": "rlvigen", "baseline": "drqv2",
+        "deterministic_setting": identity.effective_deterministic_setting("rlvigen", True),
+        "eval_policy_mode": "mode"})
+    assert rlvigen["eval_policy_mode"] == "mode"
+
+
+def test_the_scope_rejects_keys_eval_grid_does_not_send():
+    """The guard that caught the bug stays a guard."""
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    import evaluator_identity as identity
+
+    import pytest
+    with pytest.raises(ValueError, match="unknown fields"):
+        identity.canonical_evaluation_scope({
+            "family": "idaac", "baseline": "idaac", "task": "Door", "frame": 8192,
+            "eval_scope": "endpoint", "regimes": ("train",), "scenes": (0,), "episodes": 5,
+            "episode_seed": 1, "seed": 1, "device": "cuda", "action_repeat": 1,
+            "frame_stack": 3, "image_size": 64, "episode_length": 500,
+            "deterministic_setting": identity.effective_deterministic_setting("idaac", True),
+            "eval_policy_mode": "sample", "eval_policy_mode_source": "not a scope field"})

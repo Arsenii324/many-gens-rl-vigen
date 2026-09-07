@@ -1316,8 +1316,6 @@ def main() -> int:
         # thing it exists to certify -- which action rule produced these returns.
         "eval_policy_mode": ("mode" if a.policy_mode == "mode"
                              else family_eval_policy_mode(a.family)),
-        "eval_policy_mode_source": ("forced by --policy-mode mode" if a.policy_mode == "mode"
-                                    else "the family's own reporting path"),
     })
     EVALUATOR_SCOPE = resolved_scope
     EVALUATOR_SCOPE_REVISION = scope_revision(resolved_scope)
