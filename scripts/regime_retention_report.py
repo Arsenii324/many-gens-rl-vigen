@@ -56,6 +56,15 @@ RESULTS_PRE = ROOT / "results" / "regime-retention"
 RESULTS = RESULTS_C69 if any(RESULTS_C69.glob("*__train.json")) else RESULTS_PRE
 BOOT = 10_000
 MODES = ("train", "eval-easy")
+# [Claude 2026-09-07, A31] Deliberately NOT `rlvigen_reference.DOOR_RANDOM_FLOOR` (the declared
+# single home, Q12; scripts/results_table.py switched to it the same day this comment was
+# written -- see that file). This report's floor is measured through the exact same pipeline
+# (`run_regime_retention.sh` -> `eval_across_scenes.py --random-policy`, the RESULTS grid above)
+# as its own reported cells, and it additionally needs the full per-episode distribution (sd,
+# per-scene success counts) that DOOR_RANDOM_FLOOR does not expose -- only its scalar mean. A
+# canonical-constant swap here would either lose that same-harness guarantee or lose the
+# distribution data; neither is a clean win the way it was for results_table.py's simpler mean-only
+# use. Declared, not silently diverged: option 2 of A31, not option 1.
 FLOOR_TAG = "random-floor"
 # A denominator has to represent COMPETENCE, not just a non-zero success count. The guard below
 # originally fired only at exactly 0 successes, and an adversarial re-check found the hole: a

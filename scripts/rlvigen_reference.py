@@ -94,6 +94,12 @@ RANDOM_EPISODES = {"door": 200, "lift": 25}
 #: single home rather than five edits. Raised by Codex as Q12.
 DOOR_RANDOM_FLOOR = OUR_RANDOM["door"][0]
 DOOR_RANDOM_FLOOR_EPISODES = RANDOM_EPISODES["door"]
+#: [Claude 2026-09-07, A31] The measurement this constant comes from (`probe_floor.py --episodes
+#: 200`, comment above) is separately documented as "0/200 successes and the flag never fired".
+#: Exposed as its own constant, not re-derived from a different grid, so a caller wanting the
+#: success count alongside the canonical mean has one home for both rather than pairing this
+#: float with a locally-measured count from an unrelated pipeline.
+DOOR_RANDOM_FLOOR_SUCCESSES = 0
 
 
 def read(sheet: str = "Robosuite") -> dict:

@@ -108,7 +108,23 @@ TIME_LIMIT_HANDLING = _time_limit_handling()
 GRIDS = ROOT / "results" / "regime-retention-c69"
 
 CEILING = 250.0        # C62: max return with the door never opening, over horizon 500
-FLOOR = "random-floor"
+
+
+# [Claude 2026-09-07, A31] Was `FLOOR = "random-floor"`, loaded from this file's own
+# results/regime-retention-c69 grid -- a second, locally-measured floor that had drifted from
+# the declared single home (`rlvigen_reference.DOOR_RANDOM_FLOOR`, Q12) without any stated reason.
+# This file is explicitly LEGACY EXPLORATORY (see --legacy-exploratory below) with no claim to
+# exact-harness matching that would justify a second measurement, unlike
+# regime_retention_report.py -- see that file's own comment for why it keeps its local one.
+def _door_random_floor() -> tuple[float, int, int]:
+    import importlib.util as _u
+    import pathlib as _p
+    _spec = _u.spec_from_file_location(
+        "_rlvigen_reference", _p.Path(__file__).resolve().parent / "rlvigen_reference.py")
+    _module = _u.module_from_spec(_spec)
+    _spec.loader.exec_module(_module)
+    return (float(_module.DOOR_RANDOM_FLOOR), int(_module.DOOR_RANDOM_FLOOR_SUCCESSES),
+            int(_module.DOOR_RANDOM_FLOOR_EPISODES))
 
 #: Cells produced by the 105k protocol (C77) with verified provenance. Older tags in the same
 #: directory are earlier or contaminated runs and are deliberately not tabulated; they remain on
@@ -274,19 +290,13 @@ def main(argv: list[str] | None = None) -> int:
               "is the training seed. Use the production reporting path for headline numbers.")
         return 2
 
-    fl = load(FLOOR, "train")
-    if fl is None:
-        print("NO RANDOM-POLICY FLOOR MEASURED. Every return below would be unreadable and every")
-        print("retention would divide by a denominator not shown to differ from chance. Refusing.")
-        return 1
-    floor_mean = st.mean([x for s in fl["scenes"].values() for x in s["returns"]])
-    floor_succ = sum(s.get("n_success", 0) for s in fl["scenes"].values())
+    floor_mean, floor_succ, floor_episodes = _door_random_floor()
 
     rows = [r for c in CELLS if (r := row(*c, floor_mean))]
 
     print("LEGACY EXPLORATORY RETENTION ON ROBOSUITE DOOR — not a production headline\n")
     print(f"  Random-policy floor (train regime): mean {floor_mean:.2f}, "
-          f"successes {floor_succ}/200. Every return reads against this.")
+          f"successes {floor_succ}/{floor_episodes}. Every return reads against this.")
     print(f"  Shaping ceiling {CEILING:.0f}: a return above it proves the door opened (C62).")
     print(f"  Denominator rule: a scene counts only if it clears the floor AND succeeds "
           f"in >= {MIN_DENOM_SUCCESS:.0%} of episodes (C47/C55).\n")

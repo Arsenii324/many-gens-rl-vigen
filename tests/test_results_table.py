@@ -7,7 +7,8 @@ point of presentation rather than in a document nobody reading the table will op
 - a **refused** cell must print REFUSED, never a number and never a blank;
 - rows pooled over **different scene sets** must expose the count, because two averages over
   different scenes are not the same statistic;
-- the **random-policy floor** must be present or nothing may be printed at all (C17);
+- the **random-policy floor** must be the one declared canonical value (C17/A31), not a second
+  local measurement that can silently drift from it;
 - **absent** baselines must be listed as absent, which is a different claim from poor.
 """
 from __future__ import annotations
@@ -66,6 +67,24 @@ def test_a_refused_cell_prints_REFUSED_and_never_a_number(capsys):
             assert "REFUSED" in line, f"svea@50k rendered without its refusal: {line}"
 
 
+def test_floor_is_the_declared_canonical_value_not_a_second_measurement():
+    """A31/Q12: one home for the number. `_door_random_floor()` must return exactly what
+    `rlvigen_reference.DOOR_RANDOM_FLOOR` says, not a locally re-measured mean that can drift."""
+    import importlib.util as _u
+    _spec = _u.spec_from_file_location("_rlvigen_reference", ROOT / "scripts" / "rlvigen_reference.py")
+    reference = _u.module_from_spec(_spec)
+    _spec.loader.exec_module(reference)
+
+    floor_mean, floor_succ, floor_episodes = rt._door_random_floor()
+
+    assert floor_mean == reference.DOOR_RANDOM_FLOOR
+    assert floor_succ == reference.DOOR_RANDOM_FLOOR_SUCCESSES
+    assert floor_episodes == reference.DOOR_RANDOM_FLOOR_EPISODES
+    assert not hasattr(rt, "FLOOR"), (
+        "a module-level FLOOR tag would mean the table is back to loading a second, "
+        "locally-measured grid instead of importing the canonical constant")
+
+
 @needs_results
 def test_every_row_exposes_how_many_scenes_it_pooled(capsys):
     """Legacy display keeps the count but cannot select a different scene set per row."""
@@ -74,17 +93,6 @@ def test_every_row_exposes_how_many_scenes_it_pooled(capsys):
     assert "/10" in out, "the usable-scene count is not on the rows"
     assert "no baseline-specific scene filter" in out, (
         "the legacy table may not pool a performance-selected scene set")
-
-
-def test_without_a_measured_floor_the_table_refuses_to_print(monkeypatch, capsys):
-    """C17: a return without its floor is unreadable, and Door pays up to 0.5/step for nothing."""
-    monkeypatch.setattr(rt, "FLOOR", "no-such-floor-tag")
-    code = rt.main(["--legacy-exploratory"])
-    out = capsys.readouterr().out
-    assert code == 1 and "NO RANDOM-POLICY FLOOR" in out, (
-        "with no floor measured the table still printed returns; every one of them would be "
-        "unreadable and every retention would divide by an unchecked denominator")
-    assert "baseline" not in out.split("Refusing")[0].split("NO RANDOM")[0][-200:] or True
 
 
 @needs_results

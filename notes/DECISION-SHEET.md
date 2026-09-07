@@ -1313,6 +1313,31 @@ obvious reason to use a different, less-measured (20 vs 200 episodes, per the sh
 flag) floor than the table meant to supersede them. But this changes a competence-gate input in
 comparison-bearing tables, so it is yours to decide, not mine to silently pick.
 
+### A31 IMPLEMENTED OPERATIONAL DEFAULT, 2026-09-07 — differentiated per file, not one option for both
+
+Re-checked both files' actual code before picking, rather than trusting "my reading" above at face
+value — and that reading turns out right for one file, wrong for the other:
+
+- **`results_table.py`: option 1.** Now imports `DOOR_RANDOM_FLOOR`/`DOOR_RANDOM_FLOOR_EPISODES`
+  (plus a new `DOOR_RANDOM_FLOOR_SUCCESSES = 0` constant added to `rlvigen_reference.py` for the
+  same reason) via the identical helper `preprod_table.py` already used, and no longer loads its
+  own `random-floor` grid at all — confirmed no other use of that grid remained in the file.
+  `tests/test_results_table.py`'s old "missing floor → refuse" test tested a failure mode that no
+  longer exists (an imported literal cannot be "missing" the way a grid file could) — replaced with
+  a test that the floor value is exactly the canonical constant, not a second measurement.
+- **`regime_retention_report.py`: option 2, not option 1.** This file's floor is measured through
+  the *exact same* harness (`eval_across_scenes.py --random-policy`) as its own reported cells, and
+  it needs the full per-episode distribution (sd, per-scene success counts) for its own output —
+  `DOOR_RANDOM_FLOOR` exposes only a scalar mean. A canonical-constant swap here would cost either
+  the same-harness guarantee or the distribution data; neither loss is the clean win it was for
+  `results_table.py`'s simpler mean-only use. Declared explicitly in a code comment at
+  `FLOOR_TAG`'s definition — this *is* the real, code-level reason for (2) that "my reading" above
+  called unlikely to exist, not a restatement of the original guess.
+
+**Status stays OPEN, not RESOLVED** — per this project's own two-layer convention (see also
+A17/A18/A35/A36): the operational default is now implemented and defensible per-file, but which
+file gets which treatment is still a judgment call, ratification-pending like before.
+
 ### A32 DECIDED, 2026-09-06 — the statistical-inference framework §1.1-1.4 propose
 
 `notes/proposal-inference-and-checkpoint-selection.md` was drafted 2026-09-04, corrected by a
