@@ -130,11 +130,28 @@ def episodes_of(text: str) -> int | None:
 #: certified V100 number, the production host is not reachable from here. Sampled wall-clock from
 #: resources.json (1828.98s covering training + the endpoint eval) minus the endpoint eval's own
 #: measured 162s = 1666.98s training-only for 40960 frames = 24.57 FPS, rounded down.
+# [Claude 2026-09-08] Keyed by whatever `CELLS=` names, which is a BASELINE -- so the family keys
+# below were only ever hit for the families whose name IS a baseline (ctrl, idaac, ppg, ibac_sni).
+# `soda`, `rad`, `drqv2`, `svea`, `sgqn`, `curl` all missed the dict and silently took the floor.
+#
+# That is not academic: it certified cfg-dmc_gb-attest-v196 (CELLS=soda:1, 10k frames) as fitting a
+# 3600s timeout, and job bt1f8b5gb39jgadqngke was cut off mid-training at S:8000 with no error --
+# a gate saying "ok" to a job that cannot finish, which is the failure this file was written for.
+#
+# soda is 3.2x slower than rad IN THE SAME FAMILY: the Places365 random_overlay draws and decodes a
+# fresh image batch per update, and rad does not overlay at all. A family-level rate cannot express
+# that, so the measured numbers are per baseline where they differ.
 MEASURED_TRAIN_FPS = {
+    # measured, job bt1f8b5gb39jgadqngke: 500 frames per 172.6 s
+    "soda": 2.9,
+    # measured, job bt14gjjdtoa5j54dr2n6: 500 frames per 54.8 s
+    "rad": 9.1,
     "ctrl": 12.0, "idaac": 24.0, "ppg": 25.0, "ibac_sni": 8.0,
     "dmc_gb": 9.0, "rlvigen": 6.0, "alda": 9.0,
 }
-TRAIN_FPS_FLOOR = 6.0  # slowest measured; used for a family with no training number
+# The slowest MEASURED rate, not a round number: a floor above a real baseline's throughput is an
+# optimistic budget, and an optimistic budget is what kills a cell after it has spent the money.
+TRAIN_FPS_FLOOR = 2.9
 
 
 def training_seconds(text: str) -> tuple[int, str | None]:

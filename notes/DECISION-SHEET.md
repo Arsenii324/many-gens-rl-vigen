@@ -2314,3 +2314,54 @@ sample), which is a separate and correctly identified split, not this one.
 every evaluator revision. After the v196 wave, not during: change both, pilot both, re-attest.
 `ctrl`'s 64-env memory is still an unmeasured extrapolation and a 3x observation stack makes
 measuring it first more important, not less.
+
+### A41 (new), 2026-09-08 — the rule when upstream's paper and upstream's code disagree
+
+`docs/CONSTRUCTION.md` (C64 area) already identified this and correctly refused to answer it for one
+baseline only: *"for `action_repeat` we follow the paper, and for `feature_dim` and `aux_lr` we
+follow the shipped code — opposite answers to the same question, in one file, neither recorded as a
+rule."* External reviews 19 and 20 raise the `feature_dim` half independently. Verified against the
+primary source today — RL-ViGen's supplement, Table 2 (Common hyper-parameters):
+
+> Feature dim — **DrQ(v2), CURL: 50, otherwise: 256**
+> Action repeat — **Robosuite: 1**, otherwise: 2
+> Input size 84 x 84; Frame stack 3
+
+and every shipped config hard-codes `feature_dim: 50` (`svea_config.yaml`, `sgqn_config.yaml`,
+`curl_config.yaml`, `drq_config.yaml`, all at 50). So `svea` and `sgqn` run a 5x narrower
+encoder-to-head bottleneck than the benchmark's own table specifies.
+
+**THE RULE (operational default, not ratified): follow the SHIPPED CODE, and declare every
+disagreement with the paper. The single exception is a value the paper states FOR THIS TASK where
+the code's value is a generic default written for another one.**
+
+Applying it:
+
+| value | paper | code | we run | why |
+|---|---|---|---|---|
+| `action_repeat` | Robosuite: **1** | 2 | **1** (paper) | the paper's value is *task-specific to Robosuite*; the code's 2 is the DMC default and is wrong here by upstream's own table |
+| `feature_dim` (svea, sgqn) | 256 | 50 | **50** (code) | not task-specific; the shipped configs are the only complete runnable configuration, and are what plausibly produced their published Robosuite numbers |
+| `aux_lr` (sgqn) | Table 6 value | shipped | **shipped** (code) | same |
+
+**Why code-by-default rather than paper-by-default.** The project's null is "the original
+repository, cloned, running its own `train.py`". A paper table is a partial specification: adopting
+two of Table 6's values while leaving `feature_dim` at the shipped 50 reproduces *neither*
+configuration, which is the trap `CONSTRUCTION.md` already names. The shipped defaults are the only
+internally consistent, complete, executable configuration, and upstream ships **no robosuite launch
+script at all**, so the CLI overrides that produced their published Robosuite table are not in the
+repository and cannot be recovered.
+
+**Why the exception is not special pleading.** `action_repeat=2` is not upstream's Robosuite
+choice; it is upstream's DMC choice reaching Robosuite because no robosuite script exists to
+override it. The paper's own table distinguishes the two tasks and says 1. Following the code there
+would mean running a value upstream never intended for this task — the same "environment convention
+transplanted where its condition does not hold" error as A40's frame stack.
+
+**What this costs, stated rather than hidden.** `svea` and `sgqn` deviate from the benchmark's
+published `feature_dim`. It is uniform across the four RL-ViGen baselines that carry it (all 50), so
+it does **not** split the off-policy augmentation group — it is a fidelity gap against the
+publication, not a comparability gap inside the fleet. It must be declared in the results as such.
+
+**What would overturn it.** Evidence that RL-ViGen's published Robosuite numbers were produced at
+`feature_dim=256` — which would make 50 a deviation from the very numbers the external-anchor gate
+compares against. Nobody has that evidence; upstream ships no robosuite launcher.
