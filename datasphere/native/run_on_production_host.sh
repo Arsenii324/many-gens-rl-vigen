@@ -132,17 +132,31 @@ fi
 # not carry a disk column today, and inventing one here would put a second, unreviewed source of
 # truth next to it. notes/PRODUCTION-HOST-RATIFICATION.md records deriving it per family as the
 # better version and why it is not done yet.
-DISK_FLOOR_GB="${NATIVE_DISK_FLOOR_GB:-60}"
+# [Claude 2026-09-07] Was a single 60 GB constant, which is about right for one off-policy cell
+# and roughly thirty times too strict for an on-policy one -- idaac holds no replay and retains
+# 0.06 GiB of checkpoints, so its real need is ~5 GB. A floor that is wrong for half the fleet gets
+# overridden as a matter of routine, and a routinely-overridden guard is not a guard. Derived per
+# cell now, from the same replay model check_memory uses plus plan_production's MEASURED checkpoint
+# bytes: 43 GiB for one drqv2 cell, 81 for two packed, 5 for idaac, 24 for rad.
 check_disk() {
-  local target="$1" free_gb
+  local target="$1" free_gb required
   free_gb="$(df -Pk "$target" 2>/dev/null | awk 'NR==2 {printf "%d", $4 / 1048576}')" || return 0
   [[ -n "$free_gb" ]] || return 0
-  echo "free disk at $target: ${free_gb} GB" >&2
-  if [[ "${FRAMES:-10000}" -ge 600000 && "$free_gb" -lt "$DISK_FLOOR_GB" ]]; then
-    echo "refusing: ${free_gb} GB free is below the ${DISK_FLOOR_GB} GB floor for a production" >&2
-    echo "  cell. An off-policy cell needs about 25 GB (19 GB replay episodes + retained" >&2
-    echo "  checkpoints + result archive); packing two needs about 50 GB. Free space, or set" >&2
-    echo "  NATIVE_DISK_FLOOR_GB if this cell is on-policy and genuinely needs less." >&2
+  if [[ -n "${NATIVE_DISK_FLOOR_GB:-}" ]]; then
+    required="$NATIVE_DISK_FLOOR_GB"
+  else
+    required="$(python3 datasphere/native/family.py disk-requirement \
+        --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" 2>/dev/null \
+        | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["required_gib"] + 0.999))' \
+        2>/dev/null)" || required=""
+    [[ -n "$required" ]] || required=60
+  fi
+  echo "free disk at $target: ${free_gb} GB (this job needs ~${required} GB)" >&2
+  if [[ "$free_gb" -lt "$required" ]]; then
+    echo "refusing: ${free_gb} GB free at $target, below the ${required} GB this job needs." >&2
+    echo "  Breakdown: python3 datasphere/native/family.py disk-requirement --cells ${CELLS:-drqv2:1} --frames ${FRAMES:-10000}" >&2
+    echo "  Replay episode files dominate for off-policy cells; on-policy cells need a fraction." >&2
+    echo "  Free space, or set NATIVE_DISK_FLOOR_GB to override with a number you have justified." >&2
     exit 4
   fi
 }
@@ -238,7 +252,16 @@ echo "verify this matches datasphere/native/source-lock.json before trusting the
 echo "platform-only comparison (C95) -- a mismatched image confounds container with host." >&2
 
 INNER_ARGS="${CONTAINER_ARGS[*]}"
-docker run --rm --gpus "${DOCKER_GPUS:-all}" \
+# Named deterministically so an operator can reach the running cell:
+#   docker exec -it <name> bash            -- a shell beside the training process
+#   docker logs -f <name>                  -- the stream this script's stdout also carries
+#   docker stats <name>                    -- live memory against the model in families.json
+# Without a name Docker assigns a random one, and finding it during an incident means parsing
+# `docker ps` against an image every cell shares.
+CONTAINER_NAME="${NATIVE_CONTAINER_NAME:-rlvigen-$(basename "${RESULT%.tgz}")-$STAMP}"
+echo "container: $CONTAINER_NAME  (docker exec -it $CONTAINER_NAME bash)" >&2
+
+docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS:-all}" \
   "${DOCKER_MOUNT_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive -e TZ=Etc/UTC \
   -e MUJOCO_GL=egl \

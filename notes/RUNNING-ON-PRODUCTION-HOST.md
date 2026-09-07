@@ -152,26 +152,39 @@ Two constraints:
 
 ## 5. Disk
 
-Per off-policy cell, roughly **25 GB**:
+**Derived per cell, not a constant.** `python3 datasphere/native/family.py disk-requirement --cells
+<cells> --frames <frames>` prints the breakdown; the runner refuses a job whose target filesystem
+has less (`NATIVE_DISK_FLOOR_GB` overrides with a number you have justified).
 
-| what | size | where |
-|---|---|---|
-| replay episode files | ~19 GB (`replay_capacity` 300000 x 63,504 B per transition) | container-local run dir, never retained |
-| retained checkpoints | 1.32 GiB (`rlvigen`, 13 stamps) down to 0.06 (`idaac`/`ppg`) — see the generated table in §6 | `NATIVE_OUT_HOST_DIR` |
-| result archive | comparable to the retained set | wherever `$2` points |
+| cells at 600k | needs |
+|---|---|
+| `drqv2:1` (any RL-ViGen five) | **44 GiB** |
+| `drqv2:1,drqv2:2` packed | **84 GiB** |
+| `rad:1` / `soda:1` | 26 GiB |
+| `alda:1` | 9 GiB — its buffer is in RAM (15.3 GiB working set), not on disk |
+| `idaac:1`, `ppg:1` | 5 GiB |
+| `ctrl:1` | 7 GiB |
+| `ibac_sni:1` | 6 GiB |
 
-On the DataSphere base profile, `preserve_snapshots=100000` keeps six of the twelve saves a 600k
-run makes, plus the endpoint. The resolved v100 production profile overrides this to `50000`, so
-the production host keeps all twelve stamps plus the endpoint. `families.json`'s own prose put six
-rlvigen stamps at "about 1.7 GiB"; that figure is ~2.7x too high against the 104.1 MB per stamp
-measured from `retained.json`, and is corrected in place there. Checkpoints are a small term here —
-the replay episode files are the large one.
-On-policy families (`idaac`, `ppg`, `ctrl`, `ibac_sni`) hold no replay and need a small fraction of
-this. The script refuses a production-scale cell below **60 GB free** on `NATIVE_OUT_HOST_DIR`'s
-filesystem (`NATIVE_DISK_FLOOR_GB` overrides); it reports free space on every run.
+Three terms, each from a measurement this project holds rather than an estimate:
 
-The host's actual free disk has never been measured — `remote-infra.txt` records RAM and GPUs, not
-`df`. Check it before scheduling anything, not after.
+1. **Replay episode files** dominate for the eight off-policy baselines — 35.5 GiB for an
+   RL-ViGen cell at the v100 620k cap, 16.8 for `rad`/`soda`, zero for the four on-policy families.
+   Written under the live run directory, never retained, gone when the run ends.
+2. **Checkpoints, counted THREE times.** The trainer writes them under `{run_dir}`; `family.py
+   retain` **copies** (`shutil.copy2`, not move) the retained set into the cell output; the closing
+   `tar -czf` writes a third, compressed copy into `result.tgz` while both others are still on
+   disk. 1.32 GiB per RL-ViGen cell each, so ~4 GiB of the 44.
+3. **5 GiB of margin** for the payload, the pip wheels, the apt packages and the extracted
+   RL-ViGen tree.
+
+**Disk pressure mid-run is loud and survivable, by design.** `runnable/_shim/safe_checkpoint.py`
+checks free space before every write, prints `SAFE_CHECKPOINT_WAITING label=... free=... needed=...`
+on each poll while it waits (up to `SAFE_CHECKPOINT_MAX_WAIT_SECONDS`, default 1800), and only then
+prints `SAFE_CHECKPOINT_SKIPPED` and continues without that stamp. **That wait is the window in
+which you can free space and lose nothing** — the run keeps training throughout. Writes are atomic
+(`os.replace`), so a full disk cannot leave a truncated checkpoint. The terminal checkpoint fails
+closed instead of skipping, because a cell without one is not a usable cell.
 
 ## 6. What survives an interruption — and what a checkpoint actually is
 
@@ -251,6 +264,34 @@ is upstream's own save format; curve evaluation reads only the policy from them.
 format is a fidelity choice, and the disk cost it implies is already handled by the preserve
 cadence and by `CURVE_EVAL_DISCARD_WEIGHTS=1`, which deletes each intermediate once evaluated and
 leaves the terminal `snapshot.pt` untouched.
+
+## 7b. Watching a live cell, and what runs where
+
+**Everything below is possible only because the live run directory is mounted** (§6). Before that
+the training process was sealed inside the container.
+
+| you want | run this, on the HOST |
+|---|---|
+| a shell beside the training process | `docker exec -it <container> bash` — the container is named, and the name is printed at startup (`NATIVE_CONTAINER_NAME` overrides) |
+| the run's own stdout | `docker logs -f <container>`, or `tail -f` the `nohup` log |
+| live memory against `families.json`'s model | `docker stats <container>` |
+| **divergence watch** | `python scripts/watch_divergence.py --run $NATIVE_WORK_HOST_DIR/runs/<cell>` — it reads `train.csv`, which the RL-ViGen five write in their run directory. C57's NaN run is what this exists for; it needs no container access |
+| checkpoints as they appear | `ls -la $NATIVE_WORK_HOST_DIR/runs/<cell>/` |
+| what the cell has retained so far | `$NATIVE_OUT_HOST_DIR/cells/<cell>/` — `training.log` from the first second, everything else after `retain` |
+
+**`plan_production.py` is not part of a run.** It is the planner: it reads `families.json`, resolves
+the host profile, and writes `production-schedule-v100.json`. Run it **before** the campaign, and
+again whenever a measurement changes a descriptor — the `v100 schedule matches descriptor` gate
+fails if the file and the descriptors disagree. It never touches a running job and never evaluates a
+checkpoint.
+
+**Nothing evaluates during training.** Online (training-time) evaluation is disabled for every
+family that has it, and as of CORRECTIONS #99 that disable is real rather than a large cadence.
+Evaluation happens after training within the same cell, in this order: `retain` → `check-finite` →
+curve grid over the retained stamps → endpoint grid. So the GPU time an evaluation costs is
+sequential with training, never concurrent with it, and the curve grid's cost is the one in
+`PRODUCTION-CALENDAR.md` — for the fast families it can exceed their training time, which is why
+the six unmeasured per-episode rates matter.
 
 ## 8. Retrieve and process
 

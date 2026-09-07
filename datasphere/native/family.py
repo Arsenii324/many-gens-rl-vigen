@@ -449,9 +449,13 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         preserve = settings.get("preserve_snapshots")
         stamps = ((frames // preserve) if preserve else (frames // save_every if save_every else 0)) + 1
         checkpoints = stamps * plan.CHECKPOINT_MB.get(family, 0.0) / 1024.0
-        cell_total = replay + 2 * checkpoints          # retained set plus the archive copy
+        # THREE copies coexist at peak, not two: the originals the trainer wrote under {run_dir},
+        # the set `retain` COPIES (shutil.copy2, not move) into the cell output, and the compressed
+        # copy inside result.tgz. The archive is written while both others are still on disk.
+        cell_total = replay + 3 * checkpoints
         rows[cell] = {"family": family, "replay_gib": round(replay, 2),
-                      "checkpoints_gib": round(checkpoints, 2),
+                      "checkpoints_written_gib": round(checkpoints, 2),
+                      "checkpoints_retained_copy_gib": round(checkpoints, 2),
                       "archive_gib": round(checkpoints, 2), "total_gib": round(cell_total, 2)}
         total += cell_total
     margin = 5.0   # payload, pip wheels, apt packages and the extracted RL-ViGen tree
@@ -1168,6 +1172,10 @@ def main(argv: list[str] | None = None) -> int:
     tier = commands.add_parser("check-tier")
     tier.add_argument("--cells", required=True)
     tier.add_argument("--tier", required=True)
+    disk = commands.add_parser("disk-requirement")
+    disk.add_argument("--cells", required=True)
+    disk.add_argument("--frames", type=int, required=True)
+    disk.add_argument("--profile")
     memory = commands.add_parser("check-memory")
     memory.add_argument("--cells", required=True)
     memory.add_argument("--tier", required=True)
@@ -1245,6 +1253,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check-budget":
             check_budget(args.cells, args.frames)
             print(f"budget ok: {args.frames} frames")
+            return 0
+        if args.command == "disk-requirement":
+            import json as _json
+            print(_json.dumps(disk_requirement_gib(
+                args.cells, args.frames, profile=args.profile or os.environ.get("NATIVE_HOST_PROFILE")),
+                indent=2, sort_keys=True))
             return 0
         if args.command == "check-memory":
             check_memory(args.cells, args.tier, allow_unmeasured=args.allow_unmeasured)

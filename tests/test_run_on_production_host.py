@@ -12,6 +12,7 @@ from __future__ import annotations
 import pathlib
 import stat
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "datasphere" / "native" / "run_on_production_host.sh"
@@ -160,6 +161,9 @@ def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_pat
         "NATIVE_CONCURRENT": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(out_dir),
+        # This test is about env forwarding and mounts, not disk: two packed drqv2 cells need
+        # 81 GiB and no CI machine is guaranteed to have it.
+        "NATIVE_DISK_FLOOR_GB": "1",
         "DOCKER_GPUS": '"device=1"',
     }
     result = subprocess.run(
@@ -205,13 +209,16 @@ def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
         "NATIVE_PRODUCTION": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(tmp_path / "out"),
+        "CELLS": "drqv2:1",
     }
     result = subprocess.run(
         ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
         capture_output=True, text=True, env=env, cwd=str(ROOT),
     )
     assert result.returncode == 4, result.stderr
-    assert "below the 60 GB floor" in result.stderr
+    assert "below the" in result.stderr and "GB this job needs" in result.stderr
+    assert "disk-requirement --cells" in result.stderr, (
+        "the refusal must name the command that explains the number")
 
 
 def test_the_live_run_directory_is_mounted_not_just_the_cell_output(tmp_path):
@@ -233,7 +240,7 @@ def test_the_live_run_directory_is_mounted_not_just_the_cell_output(tmp_path):
     result = subprocess.run(
         ["bash", str(SCRIPT), str(code), str(result_out)],
         capture_output=True, text=True, cwd=str(ROOT),
-        env={"PATH": f"{fake_bin}:/usr/bin:/bin",
+        env={"PATH": f"{fake_bin}:/usr/bin:/bin", "NATIVE_DISK_FLOOR_GB": "1",
              "NATIVE_OUT_HOST_DIR": str(out_dir), "NATIVE_WORK_HOST_DIR": str(work_dir)},
     )
     assert result.returncode == 0, result.stderr
@@ -242,3 +249,23 @@ def test_the_live_run_directory_is_mounted_not_just_the_cell_output(tmp_path):
     assert f"{work_dir}:/tmp/native-work" in argv, (
         "the live run directory holds the checkpoints as they are written")
     assert work_dir.is_dir()
+
+
+def test_the_disk_floor_is_per_family_not_one_constant():
+    """A single 60 GB floor is right for one off-policy cell and 30x too strict for idaac.
+
+    A guard that is wrong for half the fleet gets overridden as a matter of routine, and a
+    routinely-overridden guard is not a guard.
+    """
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    import family
+
+    off_policy = family.disk_requirement_gib("drqv2:1", 600_000, profile="v100")["required_gib"]
+    on_policy = family.disk_requirement_gib("idaac:1", 600_000, profile="v100")["required_gib"]
+    packed = family.disk_requirement_gib("drqv2:1,drqv2:2", 600_000, profile="v100")["required_gib"]
+
+    assert 40 < off_policy < 50, off_policy
+    assert on_policy < 10, on_policy
+    assert packed > off_policy * 1.8, "packing two cells roughly doubles the requirement"
+    probe = family.disk_requirement_gib("drqv2:1", 10_000, profile="v100")["required_gib"]
+    assert probe < 10, "a 10k probe must not be sized against a 600k replay buffer"
