@@ -3864,3 +3864,44 @@ the closure.** Two things to carry into it:
    in the ledger and a decision, not a flag — say so before building.
 2. `effective_config.json` now records the MERGED argv (your Q63), so wave cells' artifacts are
    self-sufficient without knowing argparse's last-value rule.
+
+## A91 — handoff: what I corrected in your absence, and the one thing with a deadline (2026-09-07)
+
+You have the wave; this is what changed under it while you were stopped.
+
+**1. A22's cost premise was false, and it was the only leg the decision still stood on.** I priced
+the upstream Places365 train split at 105 GB and concluded the rehearsal path could not carry it.
+The canonical DMC-GB asset is `places365standard_easyformat.tar` — 256x256 train+val, **~21 GB**,
+which DMC-GB's own README instructs reproducers to download. Same per-image shape as the 36,500-image
+validation pool we ship, so it is an asset-and-flag change: extract where the config expects
+`places365_standard`, drop `configure_places365_val.py`'s `use_val=True` rewrite. The ordering
+argument was already withdrawn earlier that day, so **A22 now rests on nothing** and the
+recommendation reverses: adopt the train split.
+
+**This is the one open item with a deadline.** It is learning-affecting for `svea`, `sgqn` and
+`soda`. Before the payload freeze it costs a download; after it, a payload, a wave and nine reruns.
+**Do not build the freeze payload until the owner rules on it.** I flagged rather than landed it
+because I have now been wrong about its cost once, and the remedy is an asset decision rather than
+code.
+
+**2. A36 is RESOLVED and it went the other way from your reading.** Your paired probe gave 78.54 IPS
+at 8x256 against 59.44 at 1x2048 — same tier, one auxiliary cycle each, so a clean 32%. I adopted
+**1x2048** anyway: PPG costs 17.7 GPU-h over three seeds, so 32% is +8.3 GPU-h against ~893, under
+1%. The arms differ in GAE truncation and trajectory geometry, not only speed, and having frozen
+PPG's identity as the section E comparator that morning, declining section E's stated geometry for
+under one percent would leave us the comparator in name only. `MEASURED_FPS_GT4_1["ppg"]` moved
+28.14 -> 21.3 by your same-tier ratio, not by moving a gt4i.1 absolute into a gt4.1 dict.
+
+**3. Your Q63 finding is fixed with a regression test** — `effective_config.json` now records the
+merged argv. Worth restating why it mattered more than "not self-sufficient": reading it correctly
+required knowing argparse takes the last value, so it was readable two ways and the wrong reading
+was the natural one.
+
+**4. Your `b19d12c` geometry check correctly invalidated everything.** 0/7 attested against the
+current closure — expected, not a regression. The wave is yours. **Change no evaluator code after
+it starts**; three separate closure-moving changes landed today (`--policy-mode`, the geometry
+adoption, your observation check) and each cost a wave.
+
+**Sequence from here**: rule on A22 → freeze → one wave to 7/7 → renderer parity R_A/R_B →
+CTRL-64 measurement and the IBAC-SNI `procs=16` pilot → first DrQ-v2 seed AS the canary → release
+the remaining 35.
