@@ -464,7 +464,7 @@ def main() -> int:
         data["throughput_basis"] = dict(sorted(FPS_BASIS.items()))
         data["estimated_baselines"] = [b for b, basis in sorted(FPS_BASIS.items())
                                        if basis != "measured"]
-        schedule.write_text(_json.dumps(data, indent=1, ensure_ascii=False) + "\n")
+        schedule.write_text(_json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         print(f"synced {schedule.name}: {len(MEASURED_FPS_GT4_1)} baselines, "
               f"{len(data['estimated_baselines'])} not directly measured")
         return 0
