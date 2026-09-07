@@ -409,6 +409,55 @@ def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float
         return max(frames - measured_at, 0) * plan.DMC_GB_BYTES_PER_FRAME / plan.GIB
     return 0.0
 
+
+def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
+                         profile: str | None = None) -> dict:
+    """Host disk one job of these cells needs, derived per family rather than assumed.
+
+    [Claude 2026-09-07] `run_on_production_host.sh` refused a production cell below a single
+    60 GB constant, which is right for an off-policy cell and roughly thirty times too strict for
+    an on-policy one -- `idaac` holds no replay and retains 0.06 GiB of checkpoints. A constant
+    that is wrong for half the fleet gets overridden as a matter of routine, and an override that
+    is routine is not a guard.
+
+    Three terms, each from a measurement this project already holds:
+      * replay episode files, from the same model check_memory uses;
+      * retained checkpoints, stamps x plan_production.CHECKPOINT_MB;
+      * the result archive, which holds a compressed copy of those same checkpoints -- counted at
+        full size rather than discounted, because compressing already-compressed tensors saves
+        little and the failure this guards is running out of room while writing it.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_plan_production_for_disk", Path(__file__).resolve().with_name("plan_production.py"))
+    plan = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(plan)
+
+    rows = {}
+    total = 0.0
+    for cell in cells.split(","):
+        cell = cell.strip()
+        if not cell:
+            continue
+        baseline = cell.split(":")[0]
+        family = family_of(baseline, path) if "family_of" in globals() else None
+        family = family or families_of_cells(cell, path)[0]
+        settings = (resolved_descriptor(family, path, profile=profile).get("production") or {})
+        replay = _replay_gib(family, settings, frames=frames)
+        save_every = settings.get("save_every")
+        preserve = settings.get("preserve_snapshots")
+        stamps = ((frames // preserve) if preserve else (frames // save_every if save_every else 0)) + 1
+        checkpoints = stamps * plan.CHECKPOINT_MB.get(family, 0.0) / 1024.0
+        cell_total = replay + 2 * checkpoints          # retained set plus the archive copy
+        rows[cell] = {"family": family, "replay_gib": round(replay, 2),
+                      "checkpoints_gib": round(checkpoints, 2),
+                      "archive_gib": round(checkpoints, 2), "total_gib": round(cell_total, 2)}
+        total += cell_total
+    margin = 5.0   # payload, pip wheels, apt packages and the extracted RL-ViGen tree
+    return {"cells": rows, "margin_gib": margin, "required_gib": round(total + margin, 2)}
+
+
 def production_env(cells: str, path: Path | None = None) -> dict:
     """Production settings for these cells, as environment the runner can apply.
 

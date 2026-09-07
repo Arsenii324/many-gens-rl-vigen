@@ -1151,6 +1151,39 @@ cannot finish inside the fleet's time envelope. That measurement does not exist 
 also restore the cadence arithmetically, and is the one move I would argue against in all cases —
 it changes PPG's defining constant to compensate for a host setting.
 
+### A27 — the utd=0.25 arm is CANCELLED as uninformative, 2026-09-07
+
+**I resubmitted it and then cancelled it an hour later, and the reasoning is worth keeping because
+the mistake is a common one: running the arm that completes the design rather than the arm that
+changes a decision.**
+
+What happened: external review 21 #8 asks for the bounded utd stability check before committing
+three 600k ALDA seeds. Checking whether it had run found ALDA-P (`utd=1.0`, source-faithful) at
+SUCCESS and ALDA-C (`utd=0.25`) at ERROR — killed in seconds by a stale payload predating `utd`'s
+arrival in `AldaConfig`. I rebuilt the payload and resubmitted (`bt1gbubmmh61itfnvm5t`, ~4.8 h).
+
+**Then asked whether it was actually needed, and it is not.** Trace what each arm decides:
+
+- **ALDA-P at 150k already succeeded**, so `utd=1.0` does not diverge on Door within a quarter of
+  the production budget. That is the only arm the production decision turns on, and it has run.
+- **ALDA-C would tell us whether `0.25` also works** — but we are not running `0.25`. Under this
+  project's fidelity-first rule, `utd=1.0` is the author's own setting and stands. Even in the
+  branch where `1.0` diverged, the finding would be *reported*, not repaired by silently switching
+  to a value no ALDA paper specifies; C57 already establishes that a diverged run is detected at
+  retention rather than hidden.
+- **The residual worry — divergence appearing after 150k — is not addressed by the C arm either.**
+  Only a longer P run would speak to that, and the production seed IS that run, with
+  `check-finite` at retention and `watch_divergence.py` available live.
+
+So the C arm cost ~5 GPU-hours to produce information that changes no action. Cancelled at
+`EXECUTING`. **A27's status is unchanged**: the update-to-data ratio remains a declared
+comparability axis (`updates_per_env_frame` in `audit_comparability_seam.py`), production runs
+`utd=1.0`, and the historical Lift instability stays recorded as what it is — a measurement on the
+retired `rlgen` port at a different task, not evidence about `runnable/alda` on Door.
+
+**What would make the C arm worth running after all**: a production ALDA seed diverging. At that
+point `0.25` becomes a candidate repair and the comparison has a decision attached to it.
+
 ### A27 OPEN, 2026-09-05 — the off-policy update-to-data ratio, and `alda` in particular
 
 **The measurement** (full derivation and evidence: [`FINDING-update-to-data-ratio.md`](FINDING-update-to-data-ratio.md)):

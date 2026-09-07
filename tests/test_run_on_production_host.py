@@ -212,3 +212,33 @@ def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
     )
     assert result.returncode == 4, result.stderr
     assert "below the 60 GB floor" in result.stderr
+
+
+def test_the_live_run_directory_is_mounted_not_just_the_cell_output(tmp_path):
+    """Checkpoints are written under {run_dir} = /tmp/native-work, not /tmp/native-out.
+
+    families.json's artifact_root is `{run_dir}` for five of seven families and a subdirectory of
+    it for the other two, and `family.py retain` copies into the cell output only AFTER training
+    finishes. Mounting the cell output alone made training.log durable and nothing else, so a
+    container killed at hour 20 of a 27-hour cell lost every checkpoint it had written.
+    """
+    code = tmp_path / "payload.tgz"
+    code.write_text("payload")
+    result_out = tmp_path / "result.tgz"
+    log_path = tmp_path / "docker-argv.txt"
+    fake_bin = _stub_docker(tmp_path, log_path)
+    out_dir = tmp_path / "out"
+    work_dir = tmp_path / "work"
+
+    result = subprocess.run(
+        ["bash", str(SCRIPT), str(code), str(result_out)],
+        capture_output=True, text=True, cwd=str(ROOT),
+        env={"PATH": f"{fake_bin}:/usr/bin:/bin",
+             "NATIVE_OUT_HOST_DIR": str(out_dir), "NATIVE_WORK_HOST_DIR": str(work_dir)},
+    )
+    assert result.returncode == 0, result.stderr
+    argv = log_path.read_text().splitlines()
+    assert f"{out_dir}:/tmp/native-out" in argv
+    assert f"{work_dir}:/tmp/native-work" in argv, (
+        "the live run directory holds the checkpoints as they are written")
+    assert work_dir.is_dir()

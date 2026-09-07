@@ -175,10 +175,25 @@ DOCKER_ENV_ARGS=()
 # Deliberately NOT under $WORKDIR: the EXIT trap removes that, and it fires on a crash too --
 # which would delete exactly the partial run this mount exists to save. Default lands next to
 # the result archive, where the operator is already looking.
-NATIVE_OUT_HOST_DIR="${NATIVE_OUT_HOST_DIR:-$(dirname "$RESULT")/native-out-$(date +%Y%m%d-%H%M%S)}"
-mkdir -p "$NATIVE_OUT_HOST_DIR"
-check_disk "$NATIVE_OUT_HOST_DIR"
-DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work" -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out")
+STAMP="$(date +%Y%m%d-%H%M%S)"
+NATIVE_OUT_HOST_DIR="${NATIVE_OUT_HOST_DIR:-$(dirname "$RESULT")/native-out-$STAMP}"
+# [Claude 2026-09-07] Mounting /tmp/native-out alone was NOT enough, and the first version of this
+# script claimed durability it did not have. Every family writes its checkpoints under the cell's
+# RUN directory, `$work_root/runs/<cell>` = /tmp/native-work -- families.json's `artifact_root` is
+# `{run_dir}` for five of seven and a subdirectory of it for the other two -- and they reach
+# /tmp/native-out only when `family.py retain` copies them, which happens AFTER training completes.
+# So a container killed at hour 20 of a 27-hour drqv2 cell lost every checkpoint; only training.log
+# was durable, because run_measured writes that straight into the cell output.
+#
+# This is also where the replay episode files live (~19 GB for an off-policy cell), so mounting it
+# moves that traffic from Docker's own overlay directory onto a path the operator chose. Same disk
+# in the ordinary case, but now visible, and the free-space check below applies to it.
+NATIVE_WORK_HOST_DIR="${NATIVE_WORK_HOST_DIR:-$(dirname "$RESULT")/native-work-$STAMP}"
+mkdir -p "$NATIVE_OUT_HOST_DIR" "$NATIVE_WORK_HOST_DIR"
+check_disk "$NATIVE_WORK_HOST_DIR"
+DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
+                   -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"
+                   -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work")
 i=1
 while true; do
   var="EXTRA_MOUNT_$i"
@@ -243,4 +258,5 @@ if [[ -f "$WORKDIR/out/records.jsonl" ]]; then
   cp "$WORKDIR/out/records.jsonl" "$(dirname "$RESULT")/records.jsonl"
 fi
 echo "result: $RESULT" >&2
-echo "run directory (checkpoints, training.log): $NATIVE_OUT_HOST_DIR" >&2
+echo "cell output (training.log, retained artifacts): $NATIVE_OUT_HOST_DIR" >&2
+echo "live run directory (checkpoints AS WRITTEN, replay): $NATIVE_WORK_HOST_DIR" >&2
