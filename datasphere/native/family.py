@@ -362,6 +362,21 @@ def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float
     Budget-dependent, so it reads FRAMES the same way the runner does: rlvigen's buffer grows to
     its cap or to the budget, whichever is smaller, and dmc_gb allocates `train_steps` up front at
     construction with no cap available.
+
+    The growth term is not a guess. `plan_production`'s endurance-job note records tree RSS moving
+    10.6 -> 15.8 GiB monotonically over 100k frames, and this model predicts 5.91 GiB of growth for
+    that interval against the 5.2 GiB observed -- the right size, slightly conservative.
+
+    TWO THINGS THIS MODEL DOES NOT COVER, stated rather than implied:
+
+    * The floor comes from a 10k cell. A transient that first appears later -- the allocator's
+      high-water mark after a 50k checkpoint serialisation, say -- is not in it. That is what
+      `memory_margin_gib` is for, and 2.0 GiB is a judgement, not a measurement of such a
+      transient.
+    * GPU memory is not checked here at all; this is host RAM. `plan_production.ENVELOPE` carries
+      per-baseline `vram_mib` (sgqn's 7142 is the largest) against a 32 GiB V100, so nothing is
+      close to that ceiling solo -- but a packing decision that starts from this function is
+      reasoning about the wrong resource if VRAM ever becomes the binding one.
     """
     import importlib.util
 
@@ -375,14 +390,23 @@ def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float
     # is the runner's own path; the default is the production budget, the conservative direction.
     if frames is None:
         frames = int(os.environ.get("FRAMES", 600_000) or 600_000)
+    # The measured peak is not replay-free: the cell it came from already held whatever replay its
+    # own budget had produced, so charging the full buffer on top double-counts that part. The
+    # correction needs the measurement's budget, and `fixed_peak_measured_at_frames` is where a
+    # descriptor declares it. rlvigen's does NOT: `memory_note` names job bt1anj1cm0ni7p20ted3 but
+    # not its frame count, and no config or retained record for that job survives in this tree. So
+    # nothing is subtracted there -- an assumed 10k would be invented provenance for the sake of
+    # 0.59 GiB, and the error runs in the safe direction.
+    measured_at = settings.get("fixed_peak_measured_at_frames") or 0
     if family == "rlvigen":
         capacity = settings.get("replay_capacity")
         retained = min(int(capacity), frames) if capacity else frames
-        return retained * plan.BYTES_PER_TRANSITION / plan.GIB
+        already = min(int(capacity), measured_at) if capacity else measured_at
+        return max(retained - already, 0) * plan.BYTES_PER_TRANSITION / plan.GIB
     if family == "dmc_gb":
         # utils.ReplayBuffer takes capacity=args.train_steps and prefill_memory touches every slot
         # at construction, so the BUDGET sets the resident size and no cap is reachable.
-        return frames * plan.DMC_GB_BYTES_PER_FRAME / plan.GIB
+        return max(frames - measured_at, 0) * plan.DMC_GB_BYTES_PER_FRAME / plan.GIB
     return 0.0
 
 def production_env(cells: str, path: Path | None = None) -> dict:

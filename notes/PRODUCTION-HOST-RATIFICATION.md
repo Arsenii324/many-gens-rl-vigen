@@ -117,6 +117,26 @@ silently did nothing. `family.py retain` now thins the retained grid by position
 so the field means the same thing everywhere. On the current fleet settings it is a no-op
 (preserve equals save_every on v100), which is the correct behaviour, not an absence of one.
 
+**The memory model's two uncovered terms, named rather than implied.** `check_memory` now sizes a
+cell as `fixed_peak_gib + memory_margin_gib + replay`, and the replay term agrees with
+`plan_production`'s schedule exactly (dmc_gb: 2.58 floor + 16.76 replay = 19.34, the planner's own
+`rad` row; rlvigen: 3.33 + 35.49 = 38.82 against the schedule's 38.78). The growth constant is
+empirically confirmed — the endurance job's tree RSS moved 10.6 to 15.8 GiB over 100k frames and
+the model predicts 5.91 GiB of growth against the 5.2 observed. What it does not cover:
+
+* **The floor is a probe-scale measurement.** rlvigen's 3.33 GiB comes from job
+  `bt1anj1cm0ni7p20ted3`, whose own frame budget is not recorded anywhere in this tree — no config
+  and no retained record survives — so the double-count of that job's own replay cannot be
+  subtracted without inventing provenance, and is not. More importantly a transient that first
+  appears later than the probe (the allocator's high-water mark after a checkpoint serialisation,
+  say) is not in the floor at all. `memory_margin_gib = 2.0` is what covers that, and it is a
+  judgement rather than a measurement of any such transient. `fixed_peak_measured_at_frames` is
+  the descriptor field a future measurement should declare.
+* **GPU memory is not checked.** `check_memory` is host RAM only. `plan_production.ENVELOPE`
+  carries per-baseline `vram_mib` — sgqn's 7142 is the largest, against a 32 GiB V100 — so nothing
+  is near that ceiling solo, but a packing decision taken from this function alone is reasoning
+  about one resource and not the other.
+
 **No `--memory`/`--cpus` caps.** Deliberate, and I recommend keeping it until step 2 measures peak
 RAM/CPU: a cgroup cap guessed before the measurement converts an honest overcommit into an
 OOM-kill mid-run. Add them once real numbers exist.
