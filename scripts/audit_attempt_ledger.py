@@ -55,9 +55,46 @@ def _live_revisions() -> dict[str, str]:
     return out
 
 
-def _outcome(job_id: str, live: dict[str, str]) -> tuple[str, str]:
+OUTCOMES = ROOT / "results" / "attempt-outcomes.json"
+
+#: The states an operator may record for an attempt that produced no artifacts. Deliberately
+#: small: this file exists for the one case artifacts CANNOT express, not as a general override.
+RECORDABLE = {"FAILED-TRAIN", "FAILED-EVAL", "CANCELLED", "SUPERSEDED-BEFORE-RUN"}
+
+
+def _recorded_outcomes() -> dict[str, dict]:
+    """Operator-recorded terminal states for attempts that emitted nothing.
+
+    Everything else in this file is derived, on the stated principle that a ledger the runner must
+    remember to update will be wrong in the direction of looking complete. This is the exception,
+    and it is a narrow one: a job that failed before writing records leaves NO artifact saying so,
+    so `--strict` would refuse a legitimate resubmission forever and the gate would be permanently
+    red with no way to clear it. A rule that cannot be satisfied is not a safeguard; people route
+    around it, and then it protects nothing.
+
+    So the escape exists, and it is deliberately made expensive to misuse: it accepts only terminal
+    FAILURE states (never ELIGIBLE -- a result must still come from records), it demands a reason
+    string, and every entry is printed in full on every run, so using it is visible rather than
+    quiet.
+
+        {"bt1abc...": {"state": "FAILED-TRAIN", "reason": "OOM at 40k, log line 812"}}
+    """
+    if not OUTCOMES.is_file():
+        return {}
+    try:
+        data = json.loads(OUTCOMES.read_text())
+    except json.JSONDecodeError:
+        return {}
+    return {job: entry for job, entry in data.items()
+            if isinstance(entry, dict) and entry.get("state") in RECORDABLE and entry.get("reason")}
+
+
+def _outcome(job_id: str, live: dict[str, str], recorded: dict[str, dict]) -> tuple[str, str]:
     path = RECORDS / f"{job_id}__records.jsonl"
     if not path.is_file():
+        if job_id in recorded:
+            entry = recorded[job_id]
+            return entry["state"], f"operator-recorded: {entry['reason']}"
         return "NO-OUTCOME", "no records file; RUNNING and FAILED are indistinguishable from disk"
     rows = []
     for line in path.read_text().splitlines():
@@ -98,6 +135,7 @@ def main() -> int:
         except json.JSONDecodeError:
             continue
     live = _live_revisions()
+    recorded = _recorded_outcomes()
 
     print("ATTEMPT LEDGER -- every submission and what the artifacts say became of it\n")
     print(f"  {'job':22} {'config':38} {'state':12} detail")
@@ -106,7 +144,7 @@ def main() -> int:
     for attempt in attempts:
         job = attempt.get("job_id") or "-"
         config = pathlib.Path(str(attempt.get("config") or "-")).name
-        state, detail = _outcome(job, live)
+        state, detail = _outcome(job, live, recorded)
         dirty = attempt.get("source_dirty")
         if dirty is True:
             detail += "  [submitted from a DIRTY tree]"
@@ -122,17 +160,32 @@ def main() -> int:
         for config, rows in sorted(repeats.items()):
             states = ", ".join(f"{job}={state}" for job, state in rows)
             print(f"    {config}: {states}")
+        # All attempts EXCEPT the most recent. The ledger is append-ordered, so the last row for
+        # a config is the attempt that may legitimately still be running -- flagging that would
+        # make the gate red for the entire duration of every wave, which is how a safeguard gets
+        # routed around. What must never be unknown is a PREDECESSOR: that is the one whose result
+        # a rerun could silently replace.
         unresolved = {c: r for c, r in repeats.items()
-                      if any(state == "NO-OUTCOME" for _job, state in r)}
+                      if any(state == "NO-OUTCOME" for _job, state in r[:-1])}
         if unresolved:
             print()
             print(f"  {len(unresolved)} of those has an attempt with NO recorded outcome, so which")
             print("  attempt the results came from cannot be read off disk. Resolve with")
-            print("  `bash datasphere/native/job.sh status <id>` and record it.")
+            print("  `bash datasphere/native/job.sh status <id>`, then record the terminal state in")
+            print(f"  {OUTCOMES.relative_to(ROOT)} as {{\"<job>\": {{\"state\": ..., \"reason\": ...}}}}")
+            print(f"  with state one of {sorted(RECORDABLE)}. A job that failed before writing")
+            print("  records leaves no artifact saying so, and that is the only case this file is for.")
             if args.strict:
                 return 1
     else:
         print("  no config was submitted twice.")
+
+    if recorded:
+        print(f"  {len(recorded)} attempt(s) carry an operator-recorded outcome, listed in full so")
+        print("  that using the escape is visible rather than quiet:")
+        for job, entry in sorted(recorded.items()):
+            print(f"    {job}  {entry['state']}  {entry['reason']}")
+        print()
 
     counts = collections.Counter(state for rows in by_config.values() for _job, state in rows)
     print()

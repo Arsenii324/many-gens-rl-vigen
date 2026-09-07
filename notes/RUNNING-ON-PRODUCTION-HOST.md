@@ -414,3 +414,32 @@ glfw here). Records travel; weights do not.
   checks are how you find out, and they have not been run.
 - **Free disk on the host is unknown**, so §5's floor has never been checked against reality.
 - **Concurrent use of the host is the owner's to arbitrate.** This script reserves nothing.
+
+## Recording an attempt that failed before it wrote anything
+
+`scripts/audit_attempt_ledger.py --strict` is a gating audit (`production_gates.py`). It refuses
+exactly one situation: a config submitted more than once where an **earlier** attempt's outcome
+cannot be read off disk. That is the shape of "a rerun silently replaced a failed seed", and it is
+the thing that must not be discovered after the results are written.
+
+Everything it reports is derived from artifacts — the records filename carries the job id, and
+`evaluator_revision`, `record_delivery` and `execution_kind` carry the rest. Nothing is maintained
+by hand, because a ledger the runner must remember to update will be wrong in the direction of
+looking complete.
+
+The one exception is a job that **failed before writing records**: it leaves no artifact saying so,
+so nothing can derive its state, and without an escape the gate would stay red with no way to clear
+it. Record it explicitly:
+
+```json
+// results/attempt-outcomes.json
+{"bt1abc...": {"state": "FAILED-TRAIN", "reason": "OOM at 40k, log line 812"}}
+```
+
+`state` must be one of `FAILED-TRAIN`, `FAILED-EVAL`, `CANCELLED`, `SUPERSEDED-BEFORE-RUN`, and a
+`reason` is required. **`ELIGIBLE` is deliberately not accepted** — a reported number must come from
+records, never from an assertion. Every recorded entry is printed in full on every run, so using
+the escape is visible rather than quiet.
+
+The attempt that is *currently running* is never flagged; only a predecessor's unknown outcome
+blocks. Otherwise the gate would be red for the whole duration of every wave.
