@@ -396,6 +396,25 @@ Pre-registration of the primary comparison set and the missing-run policy are al
 (A25, A24); placement-hash pairing provenance is already implemented and gate-verified
 ("placement provenance" in `production_gates.py`).
 
+**The operational consequence of A24, stated here because A24 states the policy and not what to do
+at 3am** (external recommendation 22, item 3). A crashed production cell is **rerun from frame 0
+under the same seed**, not resumed from its last checkpoint — for the nine OFF-POLICY baselines
+this is not a preference but a correctness requirement:
+
+- No baseline persists its replay buffer. RL-ViGen hardcodes `_save_snapshot = False`
+  (`replay_buffer.py:94`) and saves `['agent', 'timer', '_global_step', '_global_episode']`;
+  `dmc_gb`'s and `alda`'s buffers are in-memory structures never written out.
+- So resuming a 400k checkpoint restarts the agent against an EMPTY buffer. That is a different
+  experiment from an uninterrupted run, and nothing in this project can verify it is comparable.
+- The four on-policy families (`idaac`, `ppg`, `ctrl`, `ibac_sni`) hold no replay at all, so their
+  checkpoints are effectively complete — `idaac` even carries `envs.ob_rms`. Resume is admissible
+  there, and `alda` alone has an optional `save_buffer` flag (default `False`) that would make it
+  complete if ever enabled.
+- The generated per-family table in `notes/RUNNING-ON-PRODUCTION-HOST.md` §6 is the authority on
+  which family is which; it is derived from each save site's own source rather than typed.
+
+A longer rerun is preferable to quietly changing the second half of an experiment.
+
 ---
 
 ## 5. On-policy vs off-policy on frames seen

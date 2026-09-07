@@ -823,7 +823,13 @@ run_offline_eval() {
     return 1
   fi
   local status=0
-  local device
+  local device policy_mode
+  # [Claude 2026-09-07] The endpoint path gained ENDPOINT_EVAL_POLICY_MODES and this one did not,
+  # which is its own inconsistency: `run_offline_eval` is the mechanism recommendation 22 item 6
+  # relies on -- re-evaluate an existing checkpoint without retraining -- so it is exactly where a
+  # forced-mode pass would be requested after the fact. Same shape as OFFLINE_EVAL_DEVICES: a
+  # comma-separated list, one grid per entry, default unchanged.
+  for policy_mode in $(echo "${OFFLINE_EVAL_POLICY_MODES:-native}" | tr ',' ' '); do
   for device in $(echo "${OFFLINE_EVAL_DEVICES:-${OFFLINE_EVAL_DEVICE:-cuda}}" | tr ',' ' '); do
     # [Added 2026-09-05.] Wall-clock markers around the eval phase. Throughput under the current
   # evaluator is an open question (notes/EVALUATOR-THROUGHPUT.md) and it could not be answered from
@@ -845,8 +851,9 @@ run_offline_eval() {
       --episodes "${OFFLINE_EVAL_EPISODES:-20}" \
       --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
       --device "$device" \
+      --policy-mode "$policy_mode" \
       --eval-scope "${OFFLINE_EVAL_SCOPE:-endpoint}" \
-      --out "$output_dir/offline_eval_$device.jsonl" 2>&1 | tee -a "$output_dir/training.log"
+      --out "$output_dir/offline_eval_$device$([[ "$policy_mode" == "native" ]] || printf '_%s' "$policy_mode").jsonl" 2>&1 | tee -a "$output_dir/training.log"
     local rc=${PIPESTATUS[0]}
     set -e
     if [[ "$rc" -eq 0 ]]; then
@@ -856,6 +863,7 @@ run_offline_eval() {
       echo "=== NATIVE_OFFLINE_EVAL_FAILED device=$device rc=$rc ===" >&2
       status=1
     fi
+  done
   done
   return "$status"
 }

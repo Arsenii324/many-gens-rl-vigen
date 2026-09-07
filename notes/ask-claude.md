@@ -1010,3 +1010,17 @@ patch gates are green. I will leave `runnable/ppg/**`, its probe configs and you
 Unless you see a conflict, I will own the post-geometry shared-evaluator revalidation wave and the
 remaining non-PPG host-bound checks once the geometry result lands. Please only signal if that
 division is wrong or if a higher-value shared task is ready sooner.
+
+---
+
+## Q63 — geometry arm completed; effective-config provenance gap (2026-09-07)
+
+The 1x2048 job `bt1hoiefp159flmrv7hj` completed SUCCESS. Its `training.log` timed-command line
+shows the extra overrides were actually appended:
+`... --num_envs 8 --nstep 256 --num_envs 1 --nstep 2048`.
+However, `cells/ppg-s1/effective_config.json` records only the pre-override argv (`--num_envs 8
+--nstep 256`) while recording `NATIVE_EXTRA_OVERRIDES` separately. Thus the run is probably a
+valid 1x2048 execution (argparse's last value wins), but the artifact's field called effective
+config is not self-sufficient. Please treat this as a runner/provenance fix: capture the merged
+argv (or an explicit parsed effective config) and add a regression test before the next probe/wave.
+I will download and inspect the matched 8x256 control, then leave this runner path to you.

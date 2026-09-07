@@ -4,17 +4,18 @@ Written 2026-09-05, replacing the envelope in [`CORRECTIONS.md`](CORRECTIONS.md)
 already corrected twice; **one of its terms is now measured and was wrong by 8x to 50x**, and the
 evaluation half has changed shape since it was written (A20's trajectory grid did not exist).
 
-## The four terms
+## The five terms
 
 | term | GPU-hours | basis |
 |---|---|---|
 | **training** | **601** | the schedule's per-baseline `solo_hours_per_seed_gt4_1`, x3 seeds. **Measured** for ten of twelve; alda and ctrl converted from gt4i.1 at x1.14 |
-| **endpoint evaluation** | **96** | 36 cells x 800 episodes at 12 s/episode (measured, `bt1e81rq286p23d3l4l9`) |
+| **endpoint evaluation** | **96** | 36 cells x 800 episodes at 12 s/episode (measured, `bt1e81rq286p23d3l4l9`). [Note 2026-09-07: this single flat rate predates the per-family measurements now in `audit_job_budgets.MEASURED_SECONDS_PER_EPISODE`, which span 9-12 s on the gt4.1 basis. 12 is at the top of that range, so this term is a slight over-estimate rather than a stale one, and is left as the conservative figure] |
 | **trajectory evaluation** | **165** | **A20 DECIDED at 3 episodes/stamp, 2026-09-05.** [Recomputed 2026-09-07 by `plan_production.curve_eval_hours`, which now reads the resolved v100 descriptor and MEASURED per-episode wall-clock instead of a flat 12 s.] 325 is the upper bound: six of twelve baselines have no measured evaluation rate and carry `audit_job_budgets.UNMEASURED_DEFAULT = 30 s/episode`. Measured rates are 9 (`rlvigen`) and 25 (`idaac`). If the six unmeasured evaluate like `rlvigen`, the term is ~160. |
+| **deterministic second endpoint pass** | **28.7** | [Added 2026-09-07, A25 addendum.] The four SAMPLING families (`idaac`, `ppg`, `ibac_sni`, `ctrl`) evaluate their endpoint twice: once at their own action rule, once at the mode. Without the second pass a cross-group contrast confounds the mechanism with the evaluation rule, since the sampling/deterministic divide is the fleet's only UNITS-class split. 800 episodes x 3 seeds x 4 baselines at each family's measured s/episode. `family.py` requests it via `ENDPOINT_EVAL_POLICY_MODES`; the eight deterministic families are NOT given one, which would re-run an identical grid |
 | **env construction** | **3.4** | 20,160 constructions at **0.6 s measured**, not the 28–168 h previously budgeted |
-| **total** | **~876 GPU-h** | **37 days sequential on one GPU** |
+| **total** | **~893 GPU-h** | **38 days sequential on one GPU** — [recomputed 2026-09-07: 601 training + 165 trajectory + 96 endpoint + 28.7 second pass + 3.4 construction] |
 
-With two-way packing where RAM allows: **~21 days**.
+With two-way packing where RAM allows: **~21 days** (the packing factor is unchanged; the second endpoint pass is 3% of the total and does not move it).
 
 ## Three caveats, none of which I will paper over
 
