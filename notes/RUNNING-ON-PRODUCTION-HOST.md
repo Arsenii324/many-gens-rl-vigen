@@ -9,8 +9,55 @@ same digest-pinned container image a DataSphere job uses.
 
 Rationale, defect history and the decisions still awaiting the owner:
 [`PRODUCTION-HOST-RATIFICATION.md`](PRODUCTION-HOST-RATIFICATION.md). Sequencing — what to run in
-what order — stays in [`MIGRATION-T4-TO-V100.md`](MIGRATION-T4-TO-V100.md) steps 1-8 and
-[`PRODUCTION-RUNBOOK.md`](PRODUCTION-RUNBOOK.md). This file is only the mechanism.
+what order — is summarized in the arrival sequence below and derived in
+[`MIGRATION-T4-TO-V100.md`](MIGRATION-T4-TO-V100.md) steps 1-8 and
+[`PRODUCTION-RUNBOOK.md`](PRODUCTION-RUNBOOK.md). The companion carries the reasoning; this file
+carries the executable mechanism and the host-arrival sequence.
+
+## 0. When the production host becomes available — do this in order
+
+This is the entry sequence for the first real host session. It is deliberately short: details of
+each command are in the numbered sections below, and scientific rationale remains in the companion
+surface. **Do not release the fleet until steps 1-6 pass.** Use the operational defaults already
+recorded in `DECISION-SHEET.md`; an owner-ratification item is not a reason to improvise a new value
+on the host, and a later change requires a new payload and a new run.
+
+1. **Freeze and identify the inputs.** Run `production_gates.py`; require a clean tree, current
+   source lock, and a freshly built payload. Verify both payload identity and evaluator binding.
+   Never reuse a payload made before the last source commit. Transfer the payload, the RL-ViGen
+   asset, and any explicitly mounted checkpoint; record their hashes.
+2. **Prove the host boundary.** SSH to `cds2`, inspect `nvidia-smi` for a currently free GPU,
+   verify `docker run --gpus ... <pinned-image> nvidia-smi`, check free disk against the 60-GB
+   floor, and check for competing users/processes. Stop on any mismatch. A DataSphere `g1.1`
+   diagnostic is not evidence that this production host is configured correctly.
+3. **Prove renderer parity before training.** Use the source-locked image and `MUJOCO_GL=egl`.
+   Evaluate one known checkpoint with the current evaluator on the already validated side to get
+   \(R_A\), then the identical checkpoint/evaluator/container on `cds2` to get \(R_B\). Compare raw
+   rendered-observation witnesses as well as returns. A container, renderer, GPU attachment, or
+   evaluator mismatch stops the fleet; do not explain it away as algorithm variance.
+4. **Measure the V100 resource shape.** Run the prepared CTRL 64-environment memory smoke and
+   retain its `resources.json`; the current 54.28-GiB CTRL value is only an extrapolation. Measure
+   enough throughput/resource data to set timeouts and decide whether any same-family packing is
+   safe. Until this exists, run one cell per container and do not add `--memory`/`--cpus` caps.
+5. **Run the exact IBAC-SNI competence pilot.** Use the intended production settings (`procs=16`,
+   Impala trunk, `beta=1e-4`, entropy `0`) and predeclared internal health/learning criteria.
+   Process startup and finite loss are necessary but not sufficient. Do not tune it by comparing
+   its return with another baseline after seeing results.
+6. **Run one staged production canary.** Prefer one DrQ-v2 seed at the full budget. Detach the
+   whole wrapper with `nohup`/`tmux`; use one container; keep the host output mount. Require the
+   complete chain: training, intermediate/terminal checkpoints, fresh-process reload, full
+   offline grid, normalized records, and the planned statistics. Inspect disk, memory, logs,
+   checkpoint hashes, and the live evaluator revision before proceeding.
+7. **Recompute and release.** Update the V100 schedule with measured throughput/RAM, rerun gates,
+   check the DrQ-v2 external anchor, and archive the canary manifest. Only then schedule the
+   remaining fixed three-seed Door fleet. Pack cells only where the measured headroom and the
+   co-scheduling rule permit it; otherwise keep one cell per container.
+
+**Hard stop conditions:** missing or stale payload binding; unpinned/mismatched image; failed GPU
+container check; insufficient disk; renderer witness mismatch; CTRL memory beyond the host margin;
+IBAC failure of the predeclared competence criteria; missing checkpoint/reload/grid/records output;
+or a changed source/config after the canary payload was built. Preserve the partial host output and
+rerun a failed off-policy seed from zero rather than resuming it against an empty replay buffer.
 
 ## 1. Preconditions, checked on the host every time
 
