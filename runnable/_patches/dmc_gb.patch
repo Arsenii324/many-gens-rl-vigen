@@ -59,6 +59,24 @@ index e9a5be8..f663fb6 100644
  	assert args.seed is not None, 'must provide seed for experiment'
  	assert args.log_dir is not None, 'must provide a log directory for experiment'
  
+diff --git a/src/augmentations.py b/src/augmentations.py
+index 74fcaab..c4d124b 100644
+--- a/src/augmentations.py
++++ b/src/augmentations.py
+@@ -19,9 +19,10 @@ def _load_places(batch_size=256, image_size=84, num_workers=16, use_val=False):
+ 	for data_dir in utils.load_config('datasets'):
+ 		if os.path.exists(data_dir):
+ 			fp = os.path.join(data_dir, 'places365_standard', partition)
+-			if not os.path.exists(fp):
+-				print(f'Warning: path {fp} does not exist, falling back to {data_dir}')
+-				fp = data_dir
++			if not os.path.isdir(fp):
++				raise FileNotFoundError(
++					f'required Places365 {partition} split is absent at {fp}; fallback disabled'
++				)
+ 			places_dataloader = torch.utils.data.DataLoader(
+ 				datasets.ImageFolder(fp, TF.Compose([
+ 					TF.RandomResizedCrop(image_size),
 diff --git a/src/env/wrappers.py b/src/env/wrappers.py
 index 96a9d25..7df4aef 100644
 --- a/src/env/wrappers.py

@@ -138,6 +138,13 @@ def permitting_entry(relative: str, allowed: tuple[str, ...]) -> str | None:
 def forbidden_remainder(relative: str, allowed: tuple[str, ...]) -> str | None:
     entry = permitting_entry(relative, allowed)
     remainder = relative[len(entry) + 1:] if entry and relative != entry else relative
+    # [Claude 2026-09-07] A `.gitignore` that upstream ships INSIDE an otherwise-forbidden
+    # directory is source, not output. IBAC-SNI commits `toy-classification/results/.gitignore`,
+    # and the source manifest requires it present -- so `verify_sources.py` demanded the file and
+    # this builder refused it, two checkers disagreeing about one upstream placeholder. Narrow on
+    # purpose: only this exact filename, which cannot carry result data.
+    if Path(relative).name == ".gitignore":
+        return None
     if Path(relative).name in FORBIDDEN_NAMES:
         return Path(relative).name
     for part in Path(remainder).parts:

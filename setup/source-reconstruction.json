@@ -8,7 +8,7 @@
       "destination": "RL-ViGen-upstream",
       "patch_kind": "apply_patches_registry",
       "patch_file": "setup/apply_patches.py",
-      "expected_tree_hash": "e908a33eefe5da87a09b0161c628ff79d01accb5c52905ec9cb61d19a393aa75",
+      "expected_tree_hash": "8a05a45457466c93db710231cc057e8eff97234946dfc5ffcc3cbff58b7b2f32",
       "requires_case_sensitive_fs": true,
       "exclude": [
         "envs/DMCVGB",
@@ -31,8 +31,8 @@
       "destination": "runnable/dmc_gb",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/dmc_gb.patch",
-      "patch_sha256": "dab94c3ce68588156ac30c17359f173a301514e893af455aabe95f559942341a",
-      "expected_tree_hash": "47d5b947875335b49bd91607d957f5fb87f2bf196b8d4c01adb1bea224778a58",
+      "patch_sha256": "bee51e5d836fdb78c74415b7381d960647a2c862ee785a4c86c3340e82e2a25e",
+      "expected_tree_hash": "1cc5640c4f65f632fced6c2129175634f1c6b9374eba41113e16034d93ddf6a1",
       "exclude": [
         "src/env/data",
         "data",

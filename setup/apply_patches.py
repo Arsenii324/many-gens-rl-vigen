@@ -909,6 +909,35 @@ P18_REPL = """    def save_snapshot(self):
 # PLATFORM-class: it changes how images are fetched, never which images or in what order --
 # `shuffle=True` draws from the same generator whatever the worker count, and the seeding is
 # unchanged. A run at 0 workers and a run at 8 differ in scheduling, not in data.
+# [Claude 2026-09-07] P21 bakes in the fallback hardening that
+# `datasphere/native/configure_places365_val.py` had been applying AT RUNTIME, inside the
+# container, on every Places365 cell.
+#
+# Applying it at runtime rewrote `RL-ViGen-upstream/utils.py`, which is a HASHED member of the
+# rlvigen evaluator closure, BEFORE `eval_grid.py` stamps the revision (its line ~1412 computes
+# `evaluator_family_code_revision` live from the unpacked tree). So every svea/sgqn record carried
+# a revision that could never equal the one `production_gates.py` computes from our own tree --
+# measured, not inferred: the same experiment on the dmc_gb flavour moved the family code revision
+# from 6243bd9e903cd8bb to df01becb3f36a7d4. Three of the twelve baselines were therefore
+# unattestable by construction, and the gate meant to certify them would have rejected them
+# mid-campaign.
+#
+# Baking it in also fixes a provenance problem in its own right: the committed source did not
+# describe what actually ran. With this applied, `configure_places365_val.py` finds the loader
+# already hardened, changes nothing, and the revision is stable across the Places365 path.
+#
+# The guard itself: upstream silently falls back to the DATASET ROOT when the requested partition
+# directory is missing, so a misprovisioned host would overlay from whatever images happened to be
+# one level up instead of failing. For svea/sgqn/soda the overlay distribution IS the mechanism,
+# so that silent substitution is a learning-affecting fault that looks like a successful run.
+P21_FIND = """			if not os.path.exists(fp):
+				print(f'Warning: path {fp} does not exist, falling back to {data_dir}')
+				fp = data_dir"""
+P21_REPL = """			if not os.path.isdir(fp):
+				raise FileNotFoundError(
+					f'required Places365 {partition} split is absent at {fp}; fallback disabled'
+				)"""
+
 P19_FIND = """				batch_size=batch_size, shuffle=True,
 				num_workers=num_workers, pin_memory=True)"""
 P19_REPL = """				batch_size=batch_size, shuffle=True,
@@ -969,6 +998,8 @@ PATCHES = [
     ("P17 drq actor entropy crash", os.path.join(UPSTREAM, "algos", "drq.py"), P17_FIND, P17_REPL),
     ("P18 keep intermediate snapshots", os.path.join(UPSTREAM, "train.py"), P18_FIND, P18_REPL),
     ("P19 places loader worker dial", os.path.join(UPSTREAM, "utils.py"), P19_FIND, P19_REPL),
+    ("P21 places partition fallback refuses", os.path.join(UPSTREAM, "utils.py"),
+     P21_FIND, P21_REPL),
 ]
 
 # --- what kind of change each patch is -------------------------------------------------------
@@ -1025,6 +1056,7 @@ PATCH_CLASS = {
     # missing from it is invisible to the id checker, which is how P19 shipped while four documents
     # still said the registry topped out at P18.]
     "P19": "PLATFORM",
+    "P21": "RESTORES",
     "P20": "PLATFORM",   # records post-reset pose; it does not alter the environment trajectory
 }
 
