@@ -126,6 +126,12 @@ Asked whether the frame-stack values can be trusted or whether something overrid
 end to end rather than read off the table, because the chain used to be long and one link of it
 was silently wrong until today.
 
+**One command answers this now** -- `python3 scripts/audit_observation_geometry.py` prints
+declared / executed / observed per baseline, names the stale pre-fix records so none is read
+as a measurement, and lists the baselines the runtime assertion has never run for. It exists
+because the answer used to take the five-step trace below, and every one of those steps has
+been wrong at some point.
+
 **The chain, as it now stands:**
 
 1. **Declared once.** `rlgen/protocol.py::OBSERVATION_GEOMETRY`, `(image_size, frame_stack)` per

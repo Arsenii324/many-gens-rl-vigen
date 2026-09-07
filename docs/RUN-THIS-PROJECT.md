@@ -165,6 +165,7 @@ python3 scripts/requirements.py # whether the research requirements are met, and
 | What is claimed, and how strongly? | `docs/RESEARCH-FRAME.md`, `notes/CLAIMS-LEDGER.md` |
 | Why is this baseline configured this way? | `notes/DECISION-SHEET.md` |
 | Are the twelve actually comparable? | `notes/SAME-AXES-VERDICT.md`, `scripts/audit_comparability_seam.py` |
+| What geometry does each baseline run at, and is it verified? | `python3 scripts/audit_observation_geometry.py` |
 | How do I run on a bare host? | `notes/RUNNING-ON-PRODUCTION-HOST.md` |
 | What did we change in each upstream, and why? | `runnable/_patches/*.patch`, `scripts/deviations.py` |
 | What is still unproven? | `notes/HANDOFF.md` |
