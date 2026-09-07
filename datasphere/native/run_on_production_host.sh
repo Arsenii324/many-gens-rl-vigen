@@ -96,13 +96,24 @@ set -euo pipefail
 
 IMAGE="$(python3 -c "import json,pathlib; print(json.loads(pathlib.Path('datasphere/native/source-lock.json').read_text())['container_image'])")"
 
-CODE="${1:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz]}"
-RESULT="${2:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz]}"
+CODE="${1:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz] [PLACES365.tgz]}"
+RESULT="${2:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz] [PLACES365.tgz]}"
 RLVIGEN_ARCHIVE_HOST="${3:-}"
+# [Claude 2026-09-07, external review 25 thread] run_probe.sh's THIRD positional is the Places365
+# asset, not the RL-ViGen archive -- RL-ViGen arrives through the RLVIGEN_ARCHIVE environment
+# variable (every cfg-*.yaml sets `RLVIGEN_ARCHIVE=${RLVIGEN}` and passes Places365 positionally).
+# This script had the two swapped and set RLVIGEN_ARCHIVE not at all, so on the production host
+# svea/sgqn/soda would hand the RL-ViGen tarball to `contract.py check-asset` and fail its count
+# and hash, while RL-ViGen itself fell back to a network clone instead of the pinned archive.
+# Invisible for every other baseline, because `cells_need_places365` is false for them and the
+# third argument is then never read.
+PLACES365_ARCHIVE_HOST="${4:-}"
 
 [[ -f "$CODE" ]] || { echo "no such payload archive: $CODE" >&2; exit 2; }
 [[ -z "$RLVIGEN_ARCHIVE_HOST" || -f "$RLVIGEN_ARCHIVE_HOST" ]] || {
   echo "no such RL-ViGen archive: $RLVIGEN_ARCHIVE_HOST" >&2; exit 2; }
+[[ -z "$PLACES365_ARCHIVE_HOST" || -f "$PLACES365_ARCHIVE_HOST" ]] || {
+  echo "no such Places365 archive: $PLACES365_ARCHIVE_HOST" >&2; exit 2; }
 
 # Mirror run_probe.sh's own production refusals HERE, on the host, before a container bootstrap is
 # paid for. run_probe.sh raises both of these itself (its lines ~391 and ~404); catching them at
@@ -168,7 +179,10 @@ cp "$CODE" "$WORKDIR/code.tgz"
 CONTAINER_ARGS=(/work/code.tgz /work/out/result.tgz)
 if [[ -n "$RLVIGEN_ARCHIVE_HOST" ]]; then
   cp "$RLVIGEN_ARCHIVE_HOST" "$WORKDIR/rlvigen.tgz"
-  CONTAINER_ARGS+=(/work/rlvigen.tgz)
+fi
+if [[ -n "$PLACES365_ARCHIVE_HOST" ]]; then
+  cp "$PLACES365_ARCHIVE_HOST" "$WORKDIR/places365.tgz"
+  CONTAINER_ARGS+=(/work/places365.tgz)
 fi
 
 # Extra file mounts (checkpoints, etc.) declared as HOST_PATH:CONTAINER_PATH:ENV_VAR_NAME triples
@@ -176,6 +190,8 @@ fi
 # three standard ones above (e.g. `datasphere/native/s2-snapshot-100000.pt: SNAP` becomes
 # `EXTRA_MOUNT_1=datasphere/native/s2-snapshot-100000.pt:/work/snap.pt:OFFLINE_EVAL_SNAPSHOT`).
 DOCKER_ENV_ARGS=()
+# RL-ViGen travels by environment, not position -- see the note at the argument list.
+[[ -n "$RLVIGEN_ARCHIVE_HOST" ]] && DOCKER_ENV_ARGS+=(-e "RLVIGEN_ARCHIVE=/work/rlvigen.tgz")
 # [Claude 2026-09-07] run_probe.sh keeps its whole working state -- every SAVE_EVERY_FRAMES
 # checkpoint, training.log, the per-cell run dirs -- in `out=/tmp/native-out` and `work=
 # /tmp/native-work`, both container-local, and copies NOTHING to the mounted result path until its
@@ -239,7 +255,14 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     OFFLINE_EVAL_FRAME OFFLINE_EVAL_DEVICES OFFLINE_EVAL_REGIMES OFFLINE_EVAL_SCENES \
     OFFLINE_EVAL_EPISODES NATIVE_HOST_PROFILE NATIVE_DISABLE_ONLINE_EVAL CUDA_ROOT \
     NATIVE_PRODUCTION NATIVE_PRODUCTION_STRICT NATIVE_CONCURRENT NATIVE_LAUNCHER \
-    NATIVE_EXTRA_OVERRIDES NATIVE_NO_TIME_WRAPPER NATIVE_FAMILY; do
+    NATIVE_EXTRA_OVERRIDES NATIVE_NO_TIME_WRAPPER NATIVE_FAMILY \
+    NATIVE_PLACES365_SPLIT NATIVE_PLACES365_ACCEPT_VAL PLACES365_EXPECTED_COUNT \
+    PLACES365_EXPECTED_SHA256 ENDPOINT_EVAL_POLICY_MODES OFFLINE_EVAL_POLICY_MODES \
+    OFFLINE_EVAL_DEVICE OFFLINE_EVAL_EPISODE_SEED OFFLINE_EVAL_SCOPE OFFLINE_EVAL_SNAPSHOT \
+    CURVE_EVAL CURVE_EVAL_REGIMES CURVE_EVAL_SCENES CURVE_EVAL_EPISODES CURVE_EVAL_DEVICE \
+    CURVE_EVAL_STRICT CURVE_EVAL_DISCARD_WEIGHTS CELL_TIMEOUT_SECONDS CELL_PYTHON \
+    NATIVE_CELL_DEVICES NATIVE_ALLOW_CPU NATIVE_ONLINE_EVAL_DISABLED_SPELLING \
+    NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE OMP_NUM_THREADS MKL_NUM_THREADS; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
 done

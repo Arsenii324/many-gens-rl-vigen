@@ -99,10 +99,14 @@ def audit() -> int:
                     continue
                 if name in (entry.get("places365_baselines") or []):
                     needs_places.add(name)
-        if needs_places and "PLACES365_VAL" not in text:
+        # Any Places365 asset input counts, not one filename. A22 decided the production overlay
+        # is the TRAIN split, so the production config declares a different archive than the
+        # val-split probes do -- and this check, keyed to `PLACES365_VAL` alone, would have
+        # rejected the correct production config as malformed.
+        if needs_places and not re.search(r"PLACES365[A-Z_]*\b", text):
             problems.append((path.name, f"{', '.join(sorted(needs_places))} require the Places365 "
-                                        f"overlay set, but no `places365-val.tgz: PLACES365_VAL` "
-                                        f"input is declared"))
+                                        f"overlay set, but no Places365 archive input "
+                                        f"(`<archive>.tgz: PLACES365_*`) is declared"))
         try:
             for fam in family_tool.families_of_cells(spec):
                 if (family_tool.production(fam) or {}).get("fixed_peak_gib") is None:

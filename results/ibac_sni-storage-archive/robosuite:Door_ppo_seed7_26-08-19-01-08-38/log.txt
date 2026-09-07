@@ -1,0 +1,56 @@
+scripts/train.py --algo ppo --env robosuite:Door --procs 1 --use_bottleneck --sni_type vib --frames 1300 --frames-per-proc 64 --batch-size 32 --epochs 1 --seed 7
+
+Namespace(algo='ppo', env='robosuite:Door', model=None, seed=7, procs=1, frames=1300, log_interval=1, save_interval=0, tb=False, frames_per_proc=64, discount=0.99, lr=0.0007, gae_lambda=0.95, entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, optim_eps=1e-05, optim_alpha=0.99, clip_eps=0.2, epochs=1, batch_size=32, recurrence=1, text=False, fullObs=False, POfullObs=False, model_type='default', use_bottleneck=True, use_l2a=False, use_l2w=False, use_bn=False, use_dropout=0, beta=1.0, sni_type='vib')
+
+No private macro file found!
+It is recommended to use a private macro file
+To setup, run: python /Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Model successfully created
+
+ACModel(
+  (image_conv): Sequential(
+    (0): Conv2d(3, 16, kernel_size=(2, 2), stride=(1, 1))
+    (1): ReLU()
+    (2): MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0, dilation=1, ceil_mode=False)
+    (3): Conv2d(16, 32, kernel_size=(2, 2), stride=(1, 1))
+    (4): ReLU()
+    (5): Conv2d(32, 64, kernel_size=(2, 2), stride=(1, 1))
+    (6): ReLU()
+  )
+  (reg_layer): Bottleneck(
+    (encode): Linear(in_features=53824, out_features=128, bias=True)
+  )
+  (dropout_layer): Dropout(p=0, inplace=False)
+  (actor): Sequential(
+    (0): Tanh()
+    (1): Linear(in_features=64, out_features=7, bias=True)
+  )
+  (critic): Sequential(
+    (0): Tanh()
+    (1): Linear(in_features=64, out_features=1, bias=True)
+  )
+)
+
+CUDA available: False
+
+U 1 | F 000064 | FPS 0073 | D 0 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.934 | V 0.146 | pL -0.037 | vL 0.020 | ∇ 101.451 | kl 9.180 | SR 0.000
+U 2 | F 000128 | FPS 0071 | D 1 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.941 | V 0.190 | pL -0.007 | vL 0.012 | ∇ 296.052 | kl 13.038 | SR 0.000
+U 3 | F 000192 | FPS 0072 | D 2 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.946 | V -0.047 | pL -0.011 | vL 0.006 | ∇ 322.027 | kl 12.108 | SR 0.000
+U 4 | F 000256 | FPS 0075 | D 3 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.950 | V -0.146 | pL -0.026 | vL 0.002 | ∇ 174.019 | kl 4.598 | SR 0.000
+U 5 | F 000320 | FPS 0071 | D 4 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.954 | V -0.095 | pL -0.026 | vL 0.001 | ∇ 29.161 | kl 0.527 | SR 0.000
+U 6 | F 000384 | FPS 0074 | D 5 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.960 | V 0.022 | pL -0.020 | vL 0.001 | ∇ 35.580 | kl 0.550 | SR 0.000
+U 7 | F 000448 | FPS 0073 | D 6 | rR:μσmM 0.00 0.00 0.00 0.00 | F:μσmM 0.0 0.0 0 0 | H 9.966 | V 0.086 | pL -0.012 | vL 0.000 | ∇ 26.082 | kl 0.736 | SR 0.000
+U 8 | F 000512 | FPS 0072 | D 7 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 9.973 | V 0.059 | pL 0.019 | vL 0.002 | ∇ 12.922 | kl 0.232 | SR 0.000
+U 9 | F 000576 | FPS 0073 | D 7 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 9.981 | V -0.020 | pL -0.006 | vL 0.001 | ∇ 47.372 | kl 0.551 | SR 0.000
+U 10 | F 000640 | FPS 0069 | D 8 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 9.989 | V -0.062 | pL -0.014 | vL 0.001 | ∇ 56.346 | kl 1.010 | SR 0.000
+U 11 | F 000704 | FPS 0074 | D 9 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 9.995 | V -0.052 | pL -0.104 | vL 0.018 | ∇ 24.883 | kl 0.697 | SR 0.000
+U 12 | F 000768 | FPS 0074 | D 10 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.002 | V 0.025 | pL -0.077 | vL 0.008 | ∇ 19.612 | kl 0.324 | SR 0.000
+U 13 | F 000832 | FPS 0077 | D 11 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.008 | V 0.079 | pL -0.048 | vL 0.004 | ∇ 26.507 | kl 0.176 | SR 0.000
+U 14 | F 000896 | FPS 0073 | D 12 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.014 | V 0.114 | pL -0.033 | vL 0.002 | ∇ 10.983 | kl 0.176 | SR 0.000
+U 15 | F 000960 | FPS 0076 | D 13 | rR:μσmM 1.20 0.00 1.20 1.20 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.021 | V 0.093 | pL -0.021 | vL 0.002 | ∇ 25.019 | kl 0.206 | SR 0.000
+U 16 | F 001024 | FPS 0071 | D 14 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.028 | V 0.065 | pL 0.007 | vL 0.001 | ∇ 16.227 | kl 0.107 | SR 0.000
+U 17 | F 001088 | FPS 0075 | D 14 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.036 | V 0.036 | pL -0.003 | vL 0.000 | ∇ 12.485 | kl 0.044 | SR 0.000
+U 18 | F 001152 | FPS 0071 | D 15 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.045 | V 0.009 | pL -0.006 | vL 0.000 | ∇ 9.032 | kl 0.053 | SR 0.000
+U 19 | F 001216 | FPS 0073 | D 16 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.054 | V -0.006 | pL -0.010 | vL 0.000 | ∇ 16.239 | kl 0.065 | SR 0.000
+U 20 | F 001280 | FPS 0078 | D 17 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.063 | V -0.006 | pL -0.017 | vL 0.000 | ∇ 12.150 | kl 0.045 | SR 0.000
+U 21 | F 001344 | FPS 0076 | D 18 | rR:μσmM 2.25 0.00 2.25 2.25 | F:μσmM 500.0 0.0 500.0 500.0 | H 10.073 | V 0.022 | pL -0.015 | vL 0.000 | ∇ 11.609 | kl 0.035 | SR 0.000

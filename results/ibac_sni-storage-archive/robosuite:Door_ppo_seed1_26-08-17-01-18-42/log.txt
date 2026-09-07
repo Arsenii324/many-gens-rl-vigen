@@ -1,0 +1,35 @@
+scripts/train.py --algo ppo --env robosuite:Door --procs 2 --use_bottleneck --sni_type vib --frames 600 --frames-per-proc 32 --batch-size 32 --epochs 1
+
+Namespace(algo='ppo', env='robosuite:Door', model=None, seed=1, procs=2, frames=600, log_interval=1, save_interval=0, tb=False, frames_per_proc=32, discount=0.99, lr=0.0007, gae_lambda=0.95, entropy_coef=0.01, value_loss_coef=0.5, max_grad_norm=0.5, optim_eps=1e-05, optim_alpha=0.99, clip_eps=0.2, epochs=1, batch_size=32, recurrence=1, text=False, fullObs=False, POfullObs=False, model_type='default', use_bottleneck=True, use_l2a=False, use_l2w=False, use_bn=False, use_dropout=0, beta=1.0, sni_type='vib')
+
+No private macro file found!
+It is recommended to use a private macro file
+To setup, run: python /Users/a2mogus/build-projs/ccm-intro/projects/many-gens-rl-vigen/RL-ViGen-upstream/third_party/robosuite/robosuite/scripts/setup_macros.py
+Model successfully created
+
+ACModel(
+  (image_conv): Sequential(
+    (0): Conv2d(3, 16, kernel_size=(2, 2), stride=(1, 1))
+    (1): ReLU()
+    (2): MaxPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0, dilation=1, ceil_mode=False)
+    (3): Conv2d(16, 32, kernel_size=(2, 2), stride=(1, 1))
+    (4): ReLU()
+    (5): Conv2d(32, 64, kernel_size=(2, 2), stride=(1, 1))
+    (6): ReLU()
+  )
+  (reg_layer): Bottleneck(
+    (encode): Linear(in_features=53824, out_features=128, bias=True)
+  )
+  (dropout_layer): Dropout(p=0, inplace=False)
+  (actor): Sequential(
+    (0): Tanh()
+    (1): Linear(in_features=64, out_features=7, bias=True)
+  )
+  (critic): Sequential(
+    (0): Tanh()
+    (1): Linear(in_features=64, out_features=1, bias=True)
+  )
+)
+
+CUDA available: False
+

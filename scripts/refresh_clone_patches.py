@@ -61,6 +61,9 @@ def patched_files(patch: pathlib.Path) -> list[str]:
 IGNORED_UNTRACKED_PARTS = {
     "door.xml", "__pycache__", "logs", "models", "results", "exp_local", "data",
     ".egg-info",
+    # Finder litter. A clone browsed in Finder otherwise reports a path-coverage mismatch that
+    # has nothing to do with the clone delta the snapshot exists to record.
+    ".DS_Store",
 }
 
 
@@ -89,7 +92,11 @@ def clone_changed_files(clone: pathlib.Path) -> set[str]:
     )
     if changed.returncode != 0:
         raise RuntimeError(f"cannot list clone changes for {clone}: {changed.stderr.strip()[:200]}")
-    paths = {line for line in changed.stdout.splitlines() if line}
+    # Some upstreams (ALDA) actually commit .DS_Store, so Finder touching a working copy shows up
+    # here as an authored clone delta. Filtered from the TRACKED diff too, not only the untracked
+    # scan below -- narrowly, by basename, so no other ignored name changes tracked-diff behaviour.
+    paths = {line for line in changed.stdout.splitlines()
+             if line and pathlib.PurePosixPath(line).name != ".DS_Store"}
 
     untracked = subprocess.run(
         ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],

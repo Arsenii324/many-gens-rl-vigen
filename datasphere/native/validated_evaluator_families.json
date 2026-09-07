@@ -95,11 +95,12 @@
   "dmc_gb": {
     "baseline": "rad",
     "code_revision": null,
+    "diagnostics_basis": "4 rows carry the required fields",
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/validation/evaluator-revalidation-v185-dmc.jsonl",
-    "evaluation_records_sha256": "5d864bdf561516de1ca8a7e040f765352f1388c937c224dce2ca1632e0160467",
-    "evaluator_measurement_revision": "9f4f69955b039d4661cb6e338687bb8866a21cc334e72a182f73dd12161106bd",
-    "evaluator_revision": "5b6b1aa5bdf03e0bdde7fefd98878ab5743c06ba8af8a4e93cf9feab5a8cbed1",
+    "evaluation_records_path": "results/records/bt14gjjdtoa5j54dr2n6__records.jsonl",
+    "evaluation_records_sha256": "20b16e290d325437c68bd7f203c3239465b9644c0b6889e93cd84a5da6c3cbd2",
+    "evaluator_measurement_revision": "ae594145eab1b1aa5c5b6fdae0c46f09e624d9bf37e18bfdaab0af64460c8f5e",
+    "evaluator_revision": "48290f27af56a27d63806f5b6c1bdbec29ed1255723fc7a203b6fbe70675b558",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "rad",
@@ -129,10 +130,11 @@
       "task": "Door"
     },
     "evaluator_scope_revision": "62866cd0eda6186382a76250ff9a2ab338b60c953244b061877ec0f91cb5d734",
-    "family_code_revision": "af68895168c1620079d012c9a17f361e81873e8983a96b08bdc1835d0c3ae676",
+    "family_code_revision": "48e15ad2bf7f2574a1a5456d4ec80e8ee8f218ffa6e5ee6676bc5a7e045c9575",
     "family_config_revision": "c041fb7a5ba3c33b95d79514a8e43387c35687a3b42a1b426800f63e3dc315a0",
-    "job": "bt1e7djg1osnvihrvmt7",
+    "job": "bt14gjjdtoa5j54dr2n6",
     "paired": true,
+    "paired_basis": "2 regimes share one placement sequence",
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
   },

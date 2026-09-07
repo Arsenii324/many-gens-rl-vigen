@@ -95,7 +95,15 @@ def test_builds_correct_docker_invocation_with_extra_mount(tmp_path):
         "DataSphere-output-binding placeholder")
     assert "NOT_ON_THE_ALLOW_LIST" not in joined and "should-not-appear" not in joined, (
         "only allow-listed env vars may reach the container")
-    assert "run_probe.sh /work/code.tgz /work/out/result.tgz /work/rlvigen.tgz" in joined
+    # run_probe.sh's third positional is the PLACES365 asset (`asset_archive`, its line ~600), and
+    # every cfg-*.yaml that passes a third argument passes Places365 there -- 15 of them -- while
+    # RL-ViGen always arrives as `RLVIGEN_ARCHIVE=${RLVIGEN}`. This assertion previously demanded
+    # the opposite and so pinned the defect in place.
+    assert "run_probe.sh /work/code.tgz /work/out/result.tgz" in joined
+    assert "/work/rlvigen.tgz" not in joined.split("run_probe.sh")[1], (
+        "the RL-ViGen archive must not be passed positionally; run_probe.sh would treat it as "
+        "the Places365 asset")
+    assert "RLVIGEN_ARCHIVE=/work/rlvigen.tgz" in argv
 
     assert result_out.read_text() == "fake-result\n"
 
