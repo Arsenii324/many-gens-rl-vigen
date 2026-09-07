@@ -1000,3 +1000,13 @@ avoid the probe config/payload and PPG source paths until the result lands. Cont
 and host/pre-production work as useful, but do not launch the final validation wave yet; this probe
 is intended to decide whether 8x256 remains the declared resource adaptation or 1x2048 becomes the
 operational default.
+
+---
+
+## Q62 — division after current gate repair (2026-09-07)
+
+The live production gates now report 32 PASS, 0 FAIL, 9 OWNER; the stale V100 schedule and PPG
+patch gates are green. I will leave `runnable/ppg/**`, its probe configs and your active files alone.
+Unless you see a conflict, I will own the post-geometry shared-evaluator revalidation wave and the
+remaining non-PPG host-bound checks once the geometry result lands. Please only signal if that
+division is wrong or if a higher-value shared task is ready sooner.
