@@ -434,7 +434,7 @@
       "min_frames_reason": "[Updated 2026-09-06 for IDAAC-C2: num_processes 1 x num_steps 2048 = 2048, was 4x256=1024.] one update is num_processes x num_steps frames; below one update nothing is logged and no checkpoint is written.",
       "fixed_peak_gib": 3.17,
       "memory_margin_gib": 2.0,
-      "memory_note": "Measured from idaac100k: peak RSS 3.17 GiB. clean exit.",
+      "memory_note": "Measured from idaac100k: peak RSS 3.17 GiB. clean exit. [Claude 2026-09-07] C2 re-measurement, g1.1 rehearsal bt1596tjbdu1rv5senim, 40960 frames (20 C2 update cycles), n=1: peak host RSS 2.63 GiB, peak GPU 2.23 GiB of 32 GiB available -- LOWER than the pre-C2 100k-frame figure despite the larger 2048-step rollout, most likely because num_processes dropped 4->1. Kept 3.17 as the ceiling rather than lowering it: a 40960-frame rollout-buffer reading is a reasonable proxy (PPO's rollout storage does not grow with wall-clock the way a replay buffer would) but is not itself a 600k-frame certification, and the old figure already has memory_margin_gib=2.0 headroom this new number does not need to spend.",
       "curve_eval_episodes_reason": "A20 DECIDED 2026-09-05: 3 episodes/stamp, not 5. This field silently overrode the decision at the actual production_env() emission point -- found via Codex (mailbox Q19) after DECISION-SHEET.md and run_probe.sh both correctly said 3 while this descriptor field, which family.py.production_env() actually reads via a curve_eval_{axis} lookup, still said 5. Two homes for one number; this is now the home that matters, corrected."
     }
   },

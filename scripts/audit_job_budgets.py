@@ -90,8 +90,15 @@ def episodes_of(text: str) -> int | None:
 #: Measured training throughput, frames/second, from completed jobs. A train-then-eval config pays
 #: for BOTH phases out of one timeout, and costing only the evaluation understates it badly: at
 #: 10k frames the training phase dominates for every family.
+#: [Claude 2026-09-07] idaac's old 30.0 was the PRE-C2 recipe (4 processes, 256-step rollout, 1 PPO
+#: epoch, 8 minibatches). C2's compute pattern is heavier per environment step (10 epochs, 32
+#: minibatches, one 2048-step rollout), so this is a real re-measurement, not noise: bounded g1.1
+#: rehearsal (job bt1596tjbdu1rv5senim, 40960 frames, 20 C2 update cycles), n=1, real -- not a
+#: certified V100 number, the production host is not reachable from here. Sampled wall-clock from
+#: resources.json (1828.98s covering training + the endpoint eval) minus the endpoint eval's own
+#: measured 162s = 1666.98s training-only for 40960 frames = 24.57 FPS, rounded down.
 MEASURED_TRAIN_FPS = {
-    "ctrl": 12.0, "idaac": 30.0, "ppg": 25.0, "ibac_sni": 8.0,
+    "ctrl": 12.0, "idaac": 24.0, "ppg": 25.0, "ibac_sni": 8.0,
     "dmc_gb": 9.0, "rlvigen": 6.0, "alda": 9.0,
 }
 TRAIN_FPS_FLOOR = 6.0  # slowest measured; used for a family with no training number

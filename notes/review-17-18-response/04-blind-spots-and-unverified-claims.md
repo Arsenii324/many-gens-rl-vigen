@@ -74,40 +74,36 @@ now recorded in `docs/CONSTRUCTION.md#c97` and `01-review-17-item-by-item.md`'s 
 This is the clearest demonstration in this whole response set that "named as a blind spot" and
 "left as a blind spot" are different things, and that closing one is often cheap once named.
 
-## Operational risk I introduced and did not fully think through: IDAAC-C2's throughput/memory profile
+## CLOSED after this document's first draft: IDAAC-C2's throughput/memory profile, real remote evidence
 
-Making IDAAC-C2 the production default changed the per-update compute pattern substantially: 10
-PPO epochs instead of 1, 32 minibatches instead of 8, one 2048-step rollout instead of sixteen or
-four 256-step rollouts. `scripts/audit_job_budgets.py`'s `MEASURED_TRAIN_FPS["idaac"] = 30` is a
-number measured under the *old* recipe. I never re-measured or even estimated the new recipe's
-actual frames-per-second, because no new idaac job config has been built or submitted under the
-new recipe yet — only the descriptor (`families.json`) changed, and every idaac config
-`audit_job_budgets.py` currently checks is a historical, already-superseded artifact whose "ok"
-status says nothing about a config that does not exist yet. **The first real submission under this
-new recipe should not trust the old throughput number for its timeout**, and I did not flag this
-loudly enough anywhere else before writing this document. Related, same root cause (nothing has
-actually run the new recipe remotely yet):
+**Update 2026-09-07**: closed with a real bounded g1.1 rehearsal (job `bt1596tjbdu1rv5senim`,
+40960 frames, 20 full C2 update cycles), not more guessing. Real numbers, not estimates:
 
-- `fixed_peak_gib: 3.17` (idaac's memory ceiling in `families.json`) was measured at
-  `num_processes=4`. The new recipe uses `num_processes=1` (probably less memory from that alone)
-  but `num_steps=2048` and correspondingly larger rollout-storage tensors, plus a 32-minibatch
-  gradient step and 10 epochs of it. I have not reasoned through whether 3.17 GiB is still a safe
-  ceiling; I only asserted, in a commit message, that it's "likely a safe overestimate" without
-  actually computing or measuring anything. That assertion should be treated as a guess, not a
-  verified fact.
-- `cells_per_job: 2` (packing two idaac cells per DataSphere job) — unexamined against the new
-  memory/compute profile.
-- `tier: "gt4.1"` — unexamined against whether the new recipe's compute pattern is still
-  well-suited to that GPU tier.
-- The entire remote pipeline — the actual bash-to-python argv threading through `idaac.sh`, the
-  CUDA-specific code path (`IDAACRolloutStorage` hardcodes `self.device = 'cuda'`, a fact this
-  project's own `idaac.sh` comments already name as a reason a green local run "proves the env
-  integration, NOT the CUDA path"), real multi-hour training stability, actual checkpoint
-  save/load round-tripping with the new 9-channel network shape — **none of this has been run.**
-  Every verification I did this session was local, on CPU (or MPS pretending to be CUDA via this
-  project's own shim), covering construction, a forward pass, and a five-step rollout. That is
-  real evidence the wiring is not obviously broken; it is not evidence the new recipe trains, or
-  even runs to completion, on the actual target platform.
+- **Throughput**: 24.57 FPS (40960 frames over 1666.98s training-only wall-clock, the sampled
+  resources.json window minus the endpoint eval's own measured 162s), rounded down to 24.0 and
+  landed in `scripts/audit_job_budgets.py::MEASURED_TRAIN_FPS["idaac"]` (was 30.0, the old
+  4-process/256-step recipe's number). Real, but n=1 and a g1.1 rehearsal, not a certified V100
+  measurement — the actual production host is not reachable from here.
+- **Memory**: peak host RSS 2.63 GiB, peak GPU 2.23 GiB of 32 GiB available — *lower* than the old
+  100k-frame pre-C2 measurement (3.17 GiB), most likely because `num_processes` dropped 4→1 more
+  than the larger 2048-step rollout storage adds back. `families.json`'s `fixed_peak_gib` was left
+  at 3.17 (not lowered) with this new measurement recorded alongside it: a 40960-frame reading is a
+  reasonable proxy for a PPO rollout buffer's peak (it doesn't grow with wall-clock the way a
+  replay buffer would), but it is still a 20-update, n=1 sample, not a 600k-frame certification.
+- **`cells_per_job: 2` and `tier: "gt4.1"`**: not independently re-examined, but the new, lower
+  peak-memory reading only makes the existing packing/tier choice *more* conservative than it was
+  when set against the higher 3.17 GiB figure — no reason to revisit either from this evidence.
+- **The remote pipeline itself**: now genuinely run, not just locally simulated. The job trained to
+  completion on real CUDA hardware (not the CPU/MPS shim), saved five checkpoints
+  (8192/16384/24576/32768/40960 frames), and the terminal checkpoint's first conv layer was loaded
+  locally afterward and confirmed `(16, 9, 3, 3)` — 9 input channels, the correct C2 shape — closing
+  the "actual checkpoint save/load round-tripping with the new 9-channel network shape" gap named
+  below. The checkpoint also passed through the real, remote offline evaluator (`NATIVE_ENDPOINT_
+  EVAL_COMPLETED`, non_finite=0) — the whole pipeline this section originally worried was untested.
+
+**What this does not establish**: competence. `success_rate=0.0` at 40960 frames is expected and
+uninformative this early — this was a throughput/memory probe, not a competence pilot, and no
+claim about whether IDAAC-C2 learns Door should be drawn from it.
 
 ## A related, smaller operational rough edge: old checkpoints under the new code
 
