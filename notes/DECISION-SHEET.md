@@ -2197,3 +2197,65 @@ equalising to 3 becomes worth its pilot cost.
 code, so this changes what is CLAIMED, not what is computed. The demotion is the substantive part
 and it costs no compute — which is why it should happen before results exist rather than after
 someone reads a cross-stack ranking.
+
+
+### A40 REVISED, 2026-09-08 — the source evidence reverses half of it: `ibac_sni` should stack 3, `ctrl` should not
+
+**A40 above is superseded in its conclusion and in its costing.** Both corrections came from being
+pushed on it: the owner questioned the stated cost, and `notes/ai-help-26-external.md` supplied
+source evidence I did not have. What follows is checked against our own vendored tree.
+
+**Correction 1 — the cost was overstated.** A40 said equalising needs "an ImpalaCNN input change
+for both". Wrong:
+
+- `ppg` already runs `frame_stack=3` on an ImpalaCNN whose input channels are shape-derived
+  (`phasic_policy_gradient/impala_cnn.py`, `curshape[0]`). A frame-stacked ImpalaCNN is not
+  hypothetical here; it is already running.
+- `ctrl` uses Flax `nn.Conv` (`runnable/ctrl/models.py:35,61`), which infers input channels. **No
+  channel change at all.**
+- `ibac_sni` is the only one with a hardcoded literal: `torch_rl/model.py:62`,
+  `nn.Conv2d(3, 32, (2, 2))` -> 9. **One number.**
+
+**Correction 2 — and it reverses the decision for `ibac_sni`.** A40 argued single-frame was
+"inherited by omission". For `ibac_sni` the truth is stronger and points the other way: its authors
+made single-frame *conditional on something Door does not provide*.
+`runnable/ibac_sni/coinrun/coinrun/config.py:140`, directly above `frame_stack` defaulting to 1:
+
+> "No frame stack is necessary if PAINT_VEL_INFO = 1"
+
+and `config.py:110` smart-defaults `PAINT_VEL_INFO` to 1 for `GAME_TYPE == 'standard'` (CoinRun,
+their benchmark, `config.py:77`), with no override in their run scripts. **CoinRun paints the
+agent's velocity into the pixels.** Door does not paint anything. So running `ibac_sni` at
+`frame_stack=1` on Door does not preserve their design — it removes the velocity channel their
+design explicitly relies on, and then reads the resulting handicap as a property of VIB+SNI.
+
+**`ctrl` is NOT the same case, and `ai-help-26` gets this one wrong.** It groups both as
+"deliberately one frame, with velocity painted". `ctrl`'s wrapper *default* is
+`paint_vel_info=True` (`runnable/ctrl/vec_env.py:23`) — but its own trainer overrides it:
+`runnable/ctrl/train_ppo.py:160` passes `paint_vel_info=False`. CTRL therefore trained
+single-frame **without** painted velocity. Velocity-blindness was its actual operating condition,
+so keeping `frame_stack=1` for `ctrl` is faithful, and changing it would be our deviation.
+
+**DECISION (operational default, not ratified):**
+
+| baseline | frame stack | why |
+|---|---|---|
+| `ibac_sni` | **1 -> 3** | its authors' stated precondition for 1 (painted velocity) is unmet on Door; 3 restores what they assumed, and is the faithful port |
+| `ctrl` | **1, unchanged** | trained at 1 with `paint_vel_info=False`; 1 is its real condition |
+
+**What this buys.** `ibac_sni` at 3 becomes block-compatible with `idaac` and `ppg` (same stack,
+same `sample` policy mode, same terminal time-limit handling), so the on-policy group's primary
+pairs go from **1** (`idaac`-`ppg` alone) to **3**. That is a real gain in claimable science for
+one changed literal plus a pilot. `ctrl` remains a singleton block and is honestly reported as
+having no primary comparison.
+
+**Sequencing — this does NOT happen now.** `frame_stack` lives in `families.json`, a
+`CONFIG_MEMBER`, so changing it moves every family's evaluator revision and would invalidate the
+v196 wave that is running as this is written. It also changes learning, so it needs its own pilot,
+and `ctrl`'s 64-env memory is still an unmeasured extrapolation. Order: finish the wave, then the
+`ibac_sni` change plus a pilot, then re-attest `ibac_sni` only.
+
+**What would overturn it.** Evidence that Door's observation already carries velocity (it does
+not — no painting exists in robosuite), or a decision that `ibac_sni`'s published CoinRun numbers
+must remain comparable to ours, which they are not in any case (different task, different action
+space, authored Gaussian head).
