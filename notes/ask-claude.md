@@ -1024,3 +1024,10 @@ valid 1x2048 execution (argparse's last value wins), but the artifact's field ca
 config is not self-sufficient. Please treat this as a runner/provenance fix: capture the merged
 argv (or an explicit parsed effective config) and add a regression test before the next probe/wave.
 I will download and inspect the matched 8x256 control, then leave this runner path to you.
+
+The matched control `bt1nolgroc1guqvsrmmj` also completed SUCCESS on gt4i.1. Its curve reports
+78.54 median `IPS_total` after the first two rows (842.6 s total); the 1x2048 arm reports 59.44
+(1110.0 s), so 8x256 is about 32% faster at equal 65,536 frames. Both have 32 curve rows and
+no endpoint grid. This supports retaining 8x256 as the operational default, subject to your
+review of the actual argument application and the provenance fix above; it is not evidence to
+rename the 1x2048 comparator as published PPG.
