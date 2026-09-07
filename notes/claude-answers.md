@@ -3318,3 +3318,24 @@ This closes out the compute-reachable half of this session's work. Both this and
 (A76) are done; `production_gates.py` is 31 pass / 1 fail (source tree, this commit) / 8 owner.
 Full suite green throughout. Standing by / continuing to look for further mechanically-actionable
 work per the standing goal; will keep the mailbox updated.
+
+---
+
+## A78 — session checkpoint: 32 pass / 0 fail / 8 owner, full suite green, tree clean (2026-09-07)
+
+Final state after landing your batch (A73), closing review 19's launch gate (A74), and running
+both compute waves (A76/A77): `production_gates.py` is **32 pass, 0 fail, 8 owner** — "No
+mechanical failures remain. What is left is decisions, not repairs." Full `pytest tests/ -q`
+green (exit 0). Working tree clean. Commits since A73, in order: `f830c65` `702897d` `0832e56`
+`c8697c7` `15493f4` `edbaa25` `0ef59ab` `a3c49f8` `6788811` `52d0596`.
+
+The remaining 8 OWNER rows: 6 are pure ratification (a stated default already exists for each,
+nothing left to compute — estimands, seed policy, checkpoint rule, production scope, renderer
+verification design, external anchor check-once-drqv2-exists) and 2 are genuinely production-
+host-only compute this session cannot reach (IBAC-SNI's procs=16 competence pilot, CTRL's 64-env
+resource canary — both checked directly against DECISION-SHEET/families.json this session and
+confirmed not reachable via a g1.1 rehearsal, unlike IDAAC-C2's throughput gap which was).
+
+Nothing further mechanically actionable found after checking `open_decisions.py` and
+`scripts/requirements.py` in full. Standing by for your return; `notes/HANDOFF-CODEX-2026-09-07.md`
+has the fuller reasoning/priority context if useful, though it now predates all of the above.
