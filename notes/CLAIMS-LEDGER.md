@@ -127,10 +127,7 @@ deviation is not an invariant ordering.
 600k-frame budget both pools repeat, but the validation pool repeats each image roughly 50x more
 often. **No claim is made that this leaves the ordering of `svea`, `sgqn` and `soda` unchanged**;
 the deviation is declared, its direction is stated (a smaller pool is the weaker regulariser, if
-overlay diversity is what makes the augmentation work), and its magnitude is unmeasured. See A22's
-2026-09-07 revision for why the alternative is not free: the train split is ~105 GB against the
-477 MB asset this project ships, which makes it infeasible on the DataSphere path and would leave
-the augmentation distribution platform-dependent if adopted only on the production host.
+overlay diversity is what makes the augmentation work), and its magnitude is unmeasured. See A22's 2026-09-07 entries, and note the CORRECTION: the alternative was priced at ~105 GB and the canonical DMC-GB asset is `places365standard_easyformat.tar`, about **21 GB** at the same 256x256 per-image shape. At that price the operational objection does not hold, the ordering objection was already withdrawn, and the recommendation is to adopt the upstream TRAIN split before the payload freeze.
 
 Recorded here because the qualification existed on two of the three rows and not on `svea`'s, and
 because it had no decision row anywhere until A22 — the failure mode being that a per-row

@@ -32,6 +32,16 @@ was audited (thirteen of sixteen requirements met; the three that were not are f
 launch surfaces were reconciled with the practice settled that day -- including one wrong number,
 the campaign budget, which lacked the deterministic second endpoint pass and moves 876 -> 893 GPU-h.
 
+## One decision has a deadline, and it is the only one that does
+
+**Places365 (A22) must be settled BEFORE the payload freeze, not with the other ratifications.**
+Every other open item changes a status; this one changes what `svea`, `sgqn` and `soda` train
+against. My own cost figure for it was wrong: I priced the upstream train split at 105 GB, and the
+canonical DMC-GB asset is `places365standard_easyformat.tar` at **~21 GB**, same 256x256 per-image
+shape as the validation pool now shipped. Both legs the decision stood on are gone — the ordering
+argument was withdrawn earlier the same day, and the cost argument is void. Adopting it after the
+freeze costs a payload, a wave and nine reruns; before it, a download.
+
 ## The short answer
 
 Three things block release, and they are different in kind:

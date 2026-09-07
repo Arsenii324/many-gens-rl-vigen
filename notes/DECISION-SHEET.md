@@ -841,6 +841,40 @@ SODA/SVEA numbers, which `CLAIMS-LEDGER` already forbids on other grounds.
 **Override if**: you want any claim of parity with published overlay-augmentation results, in which
 case the train split must be used and those cells re-run.
 
+### A22 CORRECTED AGAIN, 2026-09-07 (late) — the 105 GB premise is WRONG, and it was the last leg
+
+**My own cost figure was false, and the decision rested on it.** The revision below withdrew the
+"same split so ordering is unaffected" argument and said explicitly that the decision then stood on
+the operational leg: 105 GB against a 477 MB asset, "infeasible for the rehearsal path entirely".
+
+**The canonical asset is not the 105 GB high-resolution archive.** DMC-GB's own README instructs
+reproducers to download **`places365standard_easyformat.tar`**, which the official Places365 page
+describes as **256x256 train+val, easy directory structure, about 21 GB** — the same per-image
+shape as the 36,500-image validation pool this project ships, so switching changes the sampling
+population and nothing else. The high-resolution archive is irrelevant here because the loader
+applies `RandomResizedCrop(image_size)` down to 84x84 immediately.
+
+So the real choice was never "477 MB vs 105 GB". It is **477 MB vs ~21 GB**, and at that price the
+"infeasible" leg collapses. With the ordering leg already withdrawn, **A22 now rests on nothing**.
+
+**Recommendation, reversed: adopt the upstream train split before the payload freeze.**
+
+- It is a **learning-affecting** deviation for `svea`, `sgqn` and `soda` — the augmentation
+  distribution IS their mechanism — and this project's stated claim is twelve published
+  implementations at their authors' own settings.
+- The change is asset-and-flag only: extract `places365standard_easyformat.tar` where the config
+  expects `places365_standard`, and restore `use_val=False` by dropping
+  `configure_places365_val.py`'s rewrite. No model or augmentation-shape change; the loader already
+  expects exactly that directory layout.
+- **The window is now.** After the freeze it costs a new payload, a new evaluator wave, and re-running
+  nine cells (three baselines x three seeds). Before it, it costs a download.
+
+**Why this is the owner's call and not mine to land unilaterally**: it changes what three baselines
+train against, and the 21 GB has to reach both the DataSphere path (as a job input) and the
+production host. I have implemented every other open item at my best; this one I am flagging
+instead of doing, because I have now been wrong about its cost once and the remedy is a decision
+about assets rather than about code.
+
 ### A22 REVISED, 2026-09-07 — the "same split for everyone" half of the reasoning is withdrawn
 
 **External review 21 #6 rejects the load-bearing sentence above, and it is right to.** The row
