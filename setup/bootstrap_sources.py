@@ -251,6 +251,11 @@ def _prepare_auxiliary(entry: dict, temporary: Path, root: Path = ROOT) -> tuple
 
 def _verify_destination(root: Path, entry: dict) -> None:
     destination = root / entry["destination"]
+    # Refuse, rather than crashing with FileNotFoundError from the hash walk below. A missing
+    # destination is the ordinary "you have not bootstrapped this yet" case -- notably IDAAC's
+    # auxiliary OpenAI Baselines tree, which no family-level check would otherwise name.
+    if not destination.is_dir():
+        raise BootstrapError(f"source tree is absent: {destination}")
     # `git -C` walks UP to an enclosing repository when the destination carries no `.git` of its
     # own, so a destination materialized without git metadata was being checked against THIS
     # project's HEAD. Verify git identity only where there is git identity to verify; the closure

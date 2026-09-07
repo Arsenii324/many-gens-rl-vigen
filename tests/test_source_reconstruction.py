@@ -223,10 +223,10 @@ def test_verify_all_detects_missing_idaac_auxiliary_baselines_tree(tmp_path: Pat
         "families": {"idaac": idaac_entry}, "auxiliary": manifest["auxiliary"],
     })
     # ext/baselines (the auxiliary destination) is deliberately left absent under tmp_path.
-    # Current behaviour surfaces this as an uncaught FileNotFoundError rather than a clean
-    # BootstrapError (normalized_tree_hash walks a directory that does not exist) -- still a
-    # detection, just not a tidy one, so the test accepts either.
-    with pytest.raises((module.BootstrapError, FileNotFoundError)):
+    # It must REFUSE, not crash: this used to surface as an uncaught FileNotFoundError from
+    # normalized_tree_hash walking a directory that is not there, which reads like a broken tool
+    # rather than the ordinary "you have not bootstrapped this yet" case.
+    with pytest.raises(module.BootstrapError, match="source tree is absent"):
         module.verify_all(root=tmp_path, families=["idaac"])
 
 
