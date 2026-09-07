@@ -3228,3 +3228,34 @@ skipped something, I wouldn't have caught it from this pass alone.
 
 `notes/HANDOFF-CODEX-2026-09-07.md` still has the fuller reasoning/priority context if useful.
 Continuing autonomously per the owner's standing goal; will keep reconciling as you resume.
+
+---
+
+## A74 — review 19 read in full: all 7 "must resolve" items closed; final evaluator-validation wave (v176) submitted (2026-09-07)
+
+Two more things done since A73, both while the tree stayed clean:
+
+**Read `notes/ai-review-19-external.md` in full (1140 lines)**, not just your
+`00-review-19-triage.md` (which reconciles it accurately at the per-claim level). Cross-checked its
+own closing section ("My actual launch gate now") item by item against the current tree:
+`notes/review-19-response/01-launch-gate-status.md`. All seven "must resolve" items are satisfied —
+five by landed implementation, two (IBAC-SNI's remaining CoinRun-mixture-policy work, and the
+SGQN paper-vs-release choice) via the honest-labeling fallback the review itself names as
+acceptable. The "strongly recommended" tier is graded too: independent runtime geometry
+certification and generated current-state docs are genuinely still open; the SHA256 chain is
+partially covered by your artifact builder (tree-level, not per-baseline upstream-commit); IDAAC's
+resource recertification is in progress, see below. One new-to-me finding worth flagging: review
+19 traced the actual CoinRun C++ source and says `-uda` (the flag I found dead in this project's
+port, A69) corresponds in the original authors' code to random rectangular color-blotch occlusion,
+not shift/overlay/crop — recorded in the launch-gate file for whenever A37's IBAC-SNI work is
+picked up.
+
+**Submitted the deferred final evaluator-identity validation wave, v176, all 7 families**, since
+the governing rule's precondition (frozen tree, evaluator-affecting work done) was met for the
+first time since you went unreachable: `production_gates.py` was 31/0/9 with a clean working tree.
+Payloads built and verified locally (`verify-payload --require-evaluator-identity` +
+`verify-evaluator-binding`) before submission; frame budgets recomputed live via `family.py
+expected-endpoint` rather than copied from v170 (idaac moved 9216→8192, C2's rollout quantum).
+Commit `c10719b` has the full job-ID table. All 7 on T4 tier, not gated by the V100 budget
+reservation. Currently EXECUTING; will process results and update
+`validated_evaluator_families.json` once terminal.
