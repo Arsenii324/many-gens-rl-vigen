@@ -242,7 +242,7 @@ file is appended to, never rewritten — but from here the accounting lives in t
 - `python scripts/deviations.py` — the exhaustive per-clone change set, since every clone carries
   a `PRISTINE:` first commit and `git diff` against it *is* the statement. Currently
   **34 files, +917 / −125 (602 non-comment)** across six clones.
-- `setup/apply_patches.py` — the RL-ViGen patch registry, now P1–P20 (no P16; ids are not
+- `setup/apply_patches.py` — the RL-ViGen patch registry, now P1–P21 (no P16; ids are not
   contiguous), pinned by
   `Protocol.env_patches` and two contract tests.
 
@@ -676,7 +676,7 @@ RL-ViGen five days earlier. `apt` and `pip` still worked in the failing jobs, wh
 policy allowing the platform's mirrors and not the general internet. **Until this change, no
 baseline could run at all.**
 
-**Why pristine matters here.** The runner applies P1–P20 to whatever tree it is given. The vendored
+**Why pristine matters here.** The runner applies P1–P21 to whatever tree it is given. The vendored
 working copy already has them applied — `git status` on it shows 15 modified files — so shipping
 *that* would patch a patched tree and every FIND anchor would either miss or double-apply. The
 archive is therefore built from a fresh clone, not from the tree we work in.

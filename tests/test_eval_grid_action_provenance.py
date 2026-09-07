@@ -52,7 +52,14 @@ def test_every_real_grid_adapter_observes_before_its_env_boundary_and_finishes_p
         node = _function_node(source, function)
         setup = _call_lines(node, lambda call: isinstance(call.func, ast.Name)
                             and call.func.id == setup_name)
-        observe = _call_lines(node, lambda call: _attribute_call(call, "observe"))
+        # `action_probe.observe(...)`, not any `.observe()`. ppg's adapter calls the ENV's own
+        # `venv.observe()` to fetch the first observation, which this matched as if it were the
+        # probe -- so the probe's construction looked like it came after its first use, and the
+        # order assertion failed on a name collision rather than on anything about the adapter.
+        observe = _call_lines(node, lambda call: (
+            _attribute_call(call, "observe")
+            and isinstance(call.func.value, ast.Name)
+            and call.func.value.id == "action_probe"))
         finish = _call_lines(
             node,
             lambda call: ((isinstance(call.func, ast.Name) and call.func.id == finish_name)
@@ -113,7 +120,7 @@ def test_grid_emits_pre_env_action_diagnostic_on_scene_rows(monkeypatch):
         "controller_clipping_observed": False,
     }
 
-    def fake_run_scene(*_args):
+    def fake_run_scene(*_args, **_kwargs):  # _run_grid passes image_size= from the protocol
         grid._eval_across_scenes.LAST_PLACEMENT_WITNESSES = ["w0", "w1"]
         grid._eval_across_scenes.LAST_EPISODE_DIAGNOSTICS = [
             {"diagnostics_available": True}, {"diagnostics_available": True}
@@ -125,6 +132,10 @@ def test_grid_emits_pre_env_action_diagnostic_on_scene_rows(monkeypatch):
     args = SimpleNamespace(
         append=False, out=None, family="rlvigen", task="Door", episodes=2,
         episode_seed=7, action_repeat=1, frame_stack=3,
+        # `baseline` is required: _run_grid reads OBSERVATION_GEOMETRY[a.baseline] directly, which
+        # is the fix for the NameError that failed every rlvigen cell in two waves. A fixture
+        # missing it makes this test fail on its own incompleteness.
+        baseline="drqv2",
     )
     rows = []
 

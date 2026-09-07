@@ -1022,7 +1022,11 @@ def test_failed_cell_manifest_has_no_completion_marker_and_keeps_failure_state(t
 def test_runner_sets_completion_only_on_success_and_records_failure_marker(tmp_path):
     runner = RUNNER.read_text()
     offline = runner.split('elif [[ -n "${OFFLINE_EVAL_SNAPSHOT:-}" ]]', 1)[1].split("\nelse", 1)[0]
-    training = runner.split("\nelse\n  run_cell_list", 1)[1].split("\nfi\n# [Claude", 1)[0]
+    # Located structurally, not by the else-branch's first line: that line stopped being
+    # `run_cell_list` when require_accelerator was inserted ahead of it, and this slice then
+    # raised IndexError -- a broken test that reads like a broken runner.
+    _call = runner.index('run_cell_list "$cells"')
+    training = runner[runner.rindex("\nelse\n", 0, _call):runner.index("\nfi\n", _call)]
 
     assert 'if run_offline_eval "$out"; then' in offline
     assert 'FINAL_EVALUATION_MARKER="NATIVE_OFFLINE_EVAL_COMPLETED"' in offline

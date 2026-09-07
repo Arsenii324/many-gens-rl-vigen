@@ -54,8 +54,12 @@ def test_the_writer_produces_valid_json_when_run():
     The inline Python is extracted and run directly, rather than slicing the surrounding shell:
     slicing shell was brittle and tested the slicing more than the writer.
     """
-    marker = "printf '%s\\0' \"${argv[@]}\" | env"
+    # Anchored on the printf and the pipe separately: the argv list gained
+    # `${extra_overrides[@]}` (Codex Q63, so the captured argv is the EXECUTED one), and a marker
+    # spelling the whole line broke on a change that was not about this writer at all.
+    marker = "printf '%s\\0' \"${argv[@]}\""
     assert marker in RUNNER, "the effective-config writer is no longer a piped inline python"
+    assert "| env" in RUNNER[RUNNER.index(marker):RUNNER.index(marker) + 400]
     body = RUNNER[RUNNER.index(marker):]
     body = body[body.index("python3 -c '") + len("python3 -c '"):]
     body = body[:body.index("\n'")]

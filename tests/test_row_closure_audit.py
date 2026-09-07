@@ -17,7 +17,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 AUDIT = ROOT / "scripts" / "audit_row_closure.py"
 
 
-def _record(seed, payload, kind="production", **overrides):
+# `training_production`, not `production`: the latter is not in contract.py's
+# RECORD_EXECUTION_KINDS and no record has ever carried it. This fixture used it, and so did the
+# audit, so the two agreed with each other while both disagreed with reality -- the audit's
+# production branch was unreachable and this file could not have noticed.
+def _record(seed, payload, kind="training_production", **overrides):
     record = {
         "baseline": "drqv2", "regime": "train", "frame": 600000.0, "seed": seed,
         "evaluator_revision": "rev", "evaluator_scope_revision": "scope",

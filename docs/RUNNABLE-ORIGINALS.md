@@ -39,9 +39,9 @@ stopping point below 100M interacts.
 
 | baseline | clone | runs on RL-ViGen robosuite | deviation |
 |---|---|---|---|
-| `svea` | *none, by design* | **yes** — RL-ViGen's own `train.py`, exit 0; Places365 overlay live | 0 files; P1–P20 only |
-| `drqv2`, `drq`, `sgqn` | *none, by design* | **yes** — each smoke-run individually, exit 0, training | 0 files; P1–P20 only |
-| `curl` | *none, by design* | **yes on CPU** (exit 0, training); **fails on MPS**, see below | 0 files; P1–P20 only |
+| `svea` | *none, by design* | **yes** — RL-ViGen's own `train.py`, exit 0; Places365 overlay live | 0 files; P1–P21 only |
+| `drqv2`, `drq`, `sgqn` | *none, by design* | **yes** — each smoke-run individually, exit 0, training | 0 files; P1–P21 only |
+| `curl` | *none, by design* | **yes on CPU** (exit 0, training); **fails on MPS**, see below | 0 files; P1–P21 only |
 
 All five re-verified under P12 on 2026-08-17: exit 0 each, and each now constructs **two
 different** envs — the logs read `Now the mode is train` then `Now the mode is eval-easy`, where
@@ -120,7 +120,7 @@ unreachable import would land on every environment this baseline ever runs in.
 
 ## Deviations, per clone
 
-### `dmc_gb` (covers `rad`, `soda`, and the SAC they share) — 7 files, +141 / −11
+### `dmc_gb` (covers `rad`, `soda`, and the SAC they share) — 8 files, +145 / −14
 
 | file | change | why |
 |---|---|---|

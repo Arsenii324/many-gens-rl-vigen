@@ -16,7 +16,7 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 > bash runnable/_launch/smoke_all.sh        # all twelve baselines, one table   (12/12, 66 min)
 > bash runnable/_launch/dmc_gb.sh rad Door  # one baseline, its OWN train.py
 > python scripts/deviations.py              # every line this project changed in an original
-> python setup/apply_patches.py --check     # the vendored RL-ViGen tree, P1-P20
+> python setup/apply_patches.py --check     # the vendored RL-ViGen tree, P1-P21
 > python scripts/collect_metrics.py <dir>   # all twelve baselines' metrics on one set of axes
 > ```
 >
@@ -41,7 +41,7 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 >   splits the twelve 8/4 in a way no rescaling repairs.
 >
 > Twelve baselines currently train on RL-ViGen robosuite by running their own entry points, at
-> **38 files, +1,568 / −146 (941 non-comment)** across six clones plus RL-ViGen patches P1–P20
+> **38 files, +1,568 / −146 (941 non-comment)** across six clones plus RL-ViGen patches P1–P21
 > (no P16 — the ids are not contiguous). The file/line totals are the complete-tree count quoted
 > by `docs/RUNNABLE-ORIGINALS.md`; the current checkout is intentionally slim, so
 > `python scripts/deviations.py` reports per-clone PARTIAL counts and no total here.

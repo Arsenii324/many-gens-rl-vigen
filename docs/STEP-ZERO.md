@@ -612,7 +612,7 @@
 >
 > **Where things stand.** All twelve baselines train on RL-ViGen robosuite by running their own
 > entry points. 34 files, +917/−125 (602 non-comment) across six clones, plus RL-ViGen patches
-> P1–P20 (no P16 — the ids are not contiguous). Part 2 (metrics on the same axes) is open, with an inventory and six findings in
+> P1–P21 (no P16 — the ids are not contiguous). Part 2 (metrics on the same axes) is open, with an inventory and six findings in
 > `docs/PART2-METRIC-INVENTORY.md`; success rate is delivered for all twelve.
 >
 > **The section below is the 2026-08-16 handoff, kept as-is.** It describes the port-era state and

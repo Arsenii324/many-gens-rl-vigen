@@ -33,9 +33,14 @@ def test_the_gate_passes_on_the_real_runner():
 def test_the_gate_would_fail_without_the_guard(monkeypatch):
     """Remove the refusal from what the gate reads; the gate must notice."""
     gates = _gates()
-    stripped = re.sub(r'if \[\[ "\$\{FRAMES:-10000\}" -ge 600000.*?\n  fi\n', "",
-                      RUNNER.read_text(), flags=re.DOTALL)
-    assert "-ge 600000" not in stripped, "the fixture failed to remove the guard; test is inert"
+    # Remove the property the gate actually requires -- that the refusal keys on the caller
+    # having NAMED a host -- rather than every occurrence of the frame threshold. Several
+    # unrelated guards test `-ge 600000` (the accelerator refusal, NATIVE_PRODUCTION, the A22
+    # Places365 split), so a global absence check made this fixture inert as soon as any of them
+    # was added, and asserted its own inertness rather than the gate's behaviour.
+    stripped = RUNNER.read_text().replace("NATIVE_HOST_PROFILE_EXPLICIT", "SOMETHING_ELSE")
+    assert "NATIVE_HOST_PROFILE_EXPLICIT" not in stripped, (
+        "the fixture failed to remove the guard; test is inert")
     monkeypatch.setattr(gates, "_read", lambda path: stripped)
     verdict, reason = gates.gate_production_names_its_host()
     assert verdict == gates.FAIL and "inherit" in reason

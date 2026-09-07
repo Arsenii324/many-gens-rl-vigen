@@ -35,12 +35,23 @@ def test_the_flag_exists_and_defaults_to_native():
 
 
 def test_every_sampling_family_honours_it():
-    """All four sampling call sites, not three -- ppg goes through a Roller and is easy to miss."""
+    """The THREE sampling call sites -- ppg goes through a Roller and is easy to miss.
+
+    ctrl was the fourth until 2026-09-07, when its native rule was corrected to the mode: its
+    released evaluator is greedy (`runnable/ctrl/evaluate_ppo.py:84`). Its two policy modes now
+    coincide, so it takes `sample=False` unconditionally and has nothing to honour. The dispatch
+    site still FORWARDS the flag -- that is asserted below -- because the scope must still
+    canonicalise for a forced-mode pass.
+    """
     text = GRID.read_text()
     assert 'agent.act(obs, deterministic=(policy_mode == "mode"))' in text, "idaac"
-    assert 'sample=(policy_mode != "mode")' in text, "ctrl"
     assert 'policy_mode == "mode", 1,' in text, "ibac_sni's argmax positional"
     assert "act_fn = agent.act" in text and "pd.mean" in text, "ppg's Roller wrapper"
+
+    assert 'sample=(policy_mode != "mode")' not in text, (
+        "ctrl must not branch on policy_mode: its native rule IS the mode, so branching would "
+        "reintroduce the sampling estimator this correction removed")
+    assert "key, sample=False)" in text, "ctrl takes the mode unconditionally"
 
     assert text.count("policy_mode=a.policy_mode") == 4, (
         "all four dispatch sites must forward it; a missed one silently reports the native mode")

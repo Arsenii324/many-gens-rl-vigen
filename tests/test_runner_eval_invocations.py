@@ -38,8 +38,14 @@ def invocations() -> dict[str, list[str]]:
     found = {}
     for match in re.finditer(r"python3 scripts/eval_grid\.py((?:[^\n]*\\\n)*[^\n]*)", RUNNER):
         block = match.group(1)
-        start = RUNNER.rfind("run_", 0, match.start())
-        name = RUNNER[start:RUNNER.index("(", start)] if start != -1 else f"at{match.start()}"
+        # Attribute the call to its ENCLOSING FUNCTION, found by its definition line. This used
+        # to scan backwards for the literal "run_", so any comment mentioning another function by
+        # name stole the attribution -- which is exactly what happened when run_curve_eval gained
+        # a comment referring to run_endpoint_eval, and this file then reported "no curve
+        # invocation found" for a curve invocation that was right there.
+        defs = [m for m in re.finditer(r"^([a-z_][a-z0-9_]*)\(\) \{", RUNNER, re.M)
+                if m.start() < match.start()]
+        name = defs[-1].group(1) if defs else f"at{match.start()}"
         found[name] = re.findall(r"--([a-z][a-z0-9-]*)", block)
     return found
 

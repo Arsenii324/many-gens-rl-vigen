@@ -275,10 +275,11 @@ def main(argv=None) -> int:
             print(f"    {group:<8} {', '.join(names)}")
         print("    These are different estimands, not the same estimand measured differently, so")
         print("    returns are NOT rankable across the two groups. eval_grid.py reproduces each")
-        print("    family's own action rule deliberately (evaluator_identity.FAMILY_EVAL_POLICY_MODE);")
-        print("    DECISION-SHEET A25's addendum carries the resolution -- evaluate the four")
-        print("    sampling families in both modes and use the mode-taking pass for cross-group")
-        print("    contrasts. Until that runs, a cross-mode comparison here is descriptive only.")
+        print("    family's own action rule deliberately (evaluator_identity.FAMILY_EVAL_POLICY_MODE),")
+        print("    taken from each one's released EVALUATOR. The owner has ruled the split")
+        print("    acceptable rather than absent (notes/SAME-AXES-VERDICT.md), and no secondary")
+        print("    deterministic pass is scheduled, so a cross-group comparison here is")
+        print("    DESCRIPTIVE ONLY: rank within a group, never across.")
 
     absent = sorted(set(ESTIMATOR) - have)
 
@@ -289,11 +290,15 @@ def main(argv=None) -> int:
         lines.append(f"**No eval number for**: {', '.join(missing)} — the cell ran but its "
                      "evaluation did not land, which is an R7 break, not a low score.")
     lines.append("")
-    lines.append("**This table may not be sorted by return.** Four baselines report a SAMPLED "
-                 "return (`idaac`, `ibac_sni`, `ppg`, `ctrl`) and eight report a mode return; the two are "
-                 "different quantities. Four receive a single frame and eight receive three, which "
-                 "on a manipulation task makes them velocity-blind — a different POMDP, not a "
-                 "weaker algorithm (C2). Rows are grouped by stack for that reason.")
+    # Counted from ESTIMATOR, not typed: this sentence said "four ... and eight" and went wrong
+    # the moment ctrl was corrected from SAMPLE to mode (its released evaluator is greedy).
+    _sampled = sorted(b for b, e in ESTIMATOR.items() if e == "SAMPLE")
+    _moded = sorted(b for b, e in ESTIMATOR.items() if e != "SAMPLE")
+    lines.append(f"**This table may not be sorted by return.** {len(_sampled)} baselines report a "
+                 f"SAMPLED return ({', '.join('`' + b + '`' for b in _sampled)}) and {len(_moded)} "
+                 "report a mode return; the two are different quantities. Rows are also grouped by "
+                 "frame stack, because a single-frame baseline on a manipulation task is "
+                 "velocity-blind — a different POMDP, not a weaker algorithm (C2).")
     lines.append("")
     lines.append("**Budgets are equal by intent, not exactly** (R4): `ppg` floors to a 2048 "
                  "quantum and `ctrl` to a multiple of `num_envs`, so their frame counts differ "
@@ -321,7 +326,9 @@ def main(argv=None) -> int:
                  "neighbours, not the same condition.")
     lines.append("")
     lines.append("**`ctrl`'s native training metrics remain separate from its offline row.** "
-                 "The offline evaluator now drives `algo.select_action(..., sample=True)` on a "
+                 "The offline evaluator drives `algo.select_action(..., sample=False)` -- ctrl's "
+                 "released evaluator is greedy (`evaluate_ppo.py:84`), so the mode is its native "
+                 "rule -- on a "
                  "continuous 7-DoF environment and records a fixed-policy episode mean, so it is "
                  "the same *kind* of measurement as the other offline rows. Its native "
                  "`Eprew200`/`Eprew0` values are still successive-policy trailing-window metrics and "
