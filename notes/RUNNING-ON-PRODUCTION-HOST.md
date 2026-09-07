@@ -102,6 +102,39 @@ The payload is source only — the allowlist in `contract.py` (`BASE_ALLOWED` pl
 Everything third-party — apt packages, the pip environment, RL-ViGen upstream — is fetched inside
 the container at run time by `run_probe.sh`, so **the host needs outbound network access**.
 
+## 2b. Places365 — required by `svea`, `sgqn` and `soda`, by nothing else
+
+These three overlay Places365 images as their augmentation, so the dataset is a
+**learning-affecting input**, not a fixture. A22 decided the upstream **train** split.
+
+On the host, once:
+
+```bash
+bash setup/fetch_overlay_dataset.sh /data/places365 train    # ~24 GB
+PLACES365_ROOT=/data/places365 python3 setup/verify_datasets.py --split train
+```
+
+Require `dataset usable: PASS` with `class directories: 365` **before the first svea/sgqn/soda
+cell**, and do it ONCE for the host rather than per cell — a million-image integrity scan on every
+cell is the kind of check people switch off.
+
+Then pass the archive as the FOURTH positional argument and name the split:
+
+```bash
+NATIVE_PLACES365_SPLIT=train PLACES365_EXPECTED_COUNT=<n> PLACES365_EXPECTED_SHA256=<sha>   bash datasphere/native/run_on_production_host.sh     payload.tgz result.tgz rlvigen-door2-90d8b8c4.tgz places365.tgz
+```
+
+Three things that were wrong here until 2026-09-07, so verify rather than assume if you are on an
+older checkout: the wrapper passed the RL-ViGen archive in the Places365 argument slot and never
+set `RLVIGEN_ARCHIVE`; `NATIVE_PLACES365_SPLIT` was not in the forwarding list, so `train` could
+not be selected on the host at all; and the runner asserted the loader root equalled a hardcoded
+`.../val` after configuring it for `$places_split`, so the decided production split failed its own
+check.
+
+**`places365-train-attest.tgz` is not this asset.** It is a 1000-image/20-class loader-path
+attestation fixture used by the v196 wave to prove the train branch executes. It certifies the
+code path, not the dataset.
+
 ## 3. Run one cell
 
 Copy the environment block verbatim from whichever `cfg-*.yaml` is the template for this cell; the
