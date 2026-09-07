@@ -587,7 +587,7 @@
     "provenance": {
       "ppg": {
         "source_target": "PPG authors' released code",
-        "source_variant": "OpenAI PPG's released code adapted to continuous-action Door, borrowing selected continuous-control values from IDAAC's DMC supplement (gamma .99, lr 3e-4, 32 minibatches, entropy 0, frame_stack 3). NOT the IDAAC authors' DMC PPG comparator: that recipe also specifies linear LR decay over 1e6 environment steps, which this port does not implement, and a 1x2048 rollout where this runs 8x256 -- same 2048 samples per update and same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry"
+        "source_variant": "the IDAAC authors' DMC continuous-control PPG comparator, ported to Door: PPG's released code run at raileanu21a-supp.pdf SS E's shared grid (lr 3e-4, gamma .99, 32 minibatches, entropy 0, linear LR decay over 1e6 env steps) with PPG's own searched values (N_pi 32, E_pi 1, E_V 1, E_aux 6, beta_clone 1, all equal to its released defaults). One documented departure from SS E: the rollout is 8x256 rather than 1x2048 -- same 2048 samples per update and same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry (A36)"
       }
     },
     "constants": {
@@ -598,7 +598,8 @@
       "lr": "3e-4",
       "aux_lr": "3e-4",
       "nminibatch": "32",
-      "entcoef": "0"
+      "entcoef": "0",
+      "lr_decay_env_steps": "1000000"
     },
     "host_profiles": {
       "v100": {
@@ -617,7 +618,8 @@
       "batch while retaining the exact per-environment rollout length. With nminibatch 8 that is",
       "256 per minibatch against the released global 8,192. See the production report's on-policy",
       "section: the smaller rollout buys more updates, which is the reason not to compensate by",
-      "raising nstep."
+      "raising nstep.",
+      "[Claude 2026-09-07, A36 REVERSED, external review 21 #7] Linear LR decay over 1e6 environment steps is now set, and the identity question that blocked it is settled by reading raileanu21a-supp.pdf SS E directly. SS E specifies the DMC continuous-control grid -- lr 3e-4, gamma .99, 32 minibatches, entropy 0, 2048 steps, 1 process, linear rate decay over 1e6 env steps -- and says 'Following this grid search, we used the best values found for all the methods'. PPG's own listed search covers only N_pi=32, E_pi=1, E_V=1, E_aux=6, beta_clone=1, and ALL FIVE equal PPG's released defaults, so nothing in PPG's search overrides the shared grid. Decisively: this port ALREADY runs lr 3e-4, gamma .99, 32 minibatches and entropy 0, every one of which DEVIATES from PPG's own release (5e-4, .999, 8, .01). We were already the comparator in every disputed value while lacking the one setting that identity requires -- which is exactly the 'sits between two identities' the review named. An earlier freeze this same day chose the other identity and was wrong; the deviation table above is the evidence that settled it."
     ],
     "positional": [
       "{task}",
@@ -647,7 +649,9 @@
       "--nminibatch",
       "{nminibatch}",
       "--entcoef",
-      "{entcoef}"
+      "{entcoef}",
+      "--lr_decay_env_steps",
+      "{lr_decay_env_steps}"
     ],
     "artifact_root": "{run_dir}",
     "required_curves": [

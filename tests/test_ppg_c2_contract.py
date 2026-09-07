@@ -29,6 +29,12 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
         "aux_lr": "3e-4",
         "nminibatch": "32",
         "entcoef": "0",
+        # [Claude 2026-09-07, A36 corrected] SS E's shared grid includes "linear rate decay over
+        # 1 million environment steps", and its PPG-specific search covers only
+        # N_pi/E_pi/E_V/E_aux/beta_clone -- all of which equal PPG's released defaults, so nothing
+        # overrides the shared grid for PPG. idaac already runs the same literal horizon from the
+        # same sentence.
+        "lr_decay_env_steps": "1000000",
     }
     options = ppg["options"]
     pairs = list(zip(options[::2], options[1::2]))
@@ -42,6 +48,7 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
         "--gamma": "{gamma}",
         "--lr": "{lr}",
         "--aux_lr": "{aux_lr}",
+        "--lr_decay_env_steps": "{lr_decay_env_steps}",
         "--nminibatch": "{nminibatch}",
         "--entcoef": "{entcoef}",
     }

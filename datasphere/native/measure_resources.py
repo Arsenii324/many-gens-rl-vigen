@@ -155,6 +155,12 @@ def main() -> int:
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--interval-seconds", type=float, default=1.0)
+    parser.add_argument("--flush-seconds", type=float, default=30.0,
+                        help="rewrite the output file this often, so a killed run still has one")
+    parser.add_argument("--dense-seconds", type=float, default=600.0,
+                        help="sample at --interval-seconds for this long, then widen")
+    parser.add_argument("--coarse-interval-seconds", type=float, default=10.0,
+                        help="sampling interval after --dense-seconds")
     parser.add_argument(
         "--ready-file",
         type=Path,
@@ -163,13 +169,47 @@ def main() -> int:
     args = parser.parse_args()
     if args.interval_seconds <= 0:
         parser.error("--interval-seconds must be positive")
+
+    # [Claude 2026-09-07] This wrote `resources.json` ONCE, after the measured process exited. Three
+    # consequences, none visible at the 10k probe scale every existing measurement came from, all of
+    # them biting at production length:
+    #
+    #   1. There was NO resources file while a cell ran. A 27-hour drqv2 cell was unobservable in
+    #      the one artifact that records its memory, right where `MIGRATION-T4-TO-V100.md` step 4
+    #      wants to watch RAM before deciding whether to pack a second cell beside it.
+    #   2. A killed container lost the whole record. The case where memory evidence matters most --
+    #      an OOM kill -- was precisely the case that produced none.
+    #   3. Samples accumulated in this process's own memory: one per second for 27 hours is ~97,000
+    #      entries, each holding a per-process list and the GPU table.
+    #
+    # Fixed by flushing atomically on a cadence and by widening the interval once the interesting
+    # part is over. The schema is unchanged, so every existing reader keeps working.
+    def _write(entries):
+        payload = {"host": topology(), "root_pid": args.pid, "samples": entries}
+        temporary = args.output.with_suffix(args.output.suffix + ".partial")
+        temporary.write_text(json.dumps(payload, sort_keys=True))
+        temporary.replace(args.output)   # atomic: a reader never sees a half-written file
+
     samples = []
+    started = time.monotonic()
+    last_flush = 0.0
     while is_live(args.pid):
         samples.append(sample(args.pid))
         if args.ready_file is not None and not args.ready_file.exists():
             args.ready_file.touch()
-        time.sleep(args.interval_seconds)
-    args.output.write_text(json.dumps({"host": topology(), "root_pid": args.pid, "samples": samples}, sort_keys=True))
+        now = time.monotonic()
+        if now - last_flush >= args.flush_seconds:
+            _write(samples)
+            last_flush = now
+        # Startup is where the interesting transients are -- process spawn, the first CUDA context,
+        # the replay buffer's first allocations. After that the curve is slow and a coarser interval
+        # costs nothing but keeps both the file and this process bounded on a multi-day run.
+        elapsed = now - started
+        interval = args.interval_seconds
+        if elapsed > args.dense_seconds:
+            interval = max(interval, args.coarse_interval_seconds)
+        time.sleep(interval)
+    _write(samples)
     return 0
 
 

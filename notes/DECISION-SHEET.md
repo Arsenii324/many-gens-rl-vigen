@@ -1728,7 +1728,65 @@ the PILOT RESULT above, which tested part of this recipe at a short budget and i
 this direction, not proof of it. Verified locally: env construction, forward pass through the real
 network, multi-step rollout, multi-env parallel construction, and the LR-schedule's exact math.
 
-### A36 IDENTITY FROZEN, 2026-09-07 — PPG is OpenAI PPG with borrowed values, not the IDAAC comparator
+### A36 IDENTITY FROZEN — CORRECTED, 2026-09-07 (second pass, same day) — PPG **is** the IDAAC DMC comparator
+
+**The freeze below is WRONG and is kept because the correction is the useful part.** It reasoned
+from the identities as described in review 21 rather than from the supplement itself. Reading
+`ext/idaac/raileanu21a-supp.pdf` §E directly settles it in the other direction:
+
+> "To find the best hyperparameters, we ran a grid search over the learning rate ... We found 10
+> ppo epochs, 0.0 entropy coefficient, 0.0003 learning rate, and 32 minibatches to work best ... We
+> use γ = 0.99, λ = 0.95 ..., 2048 steps, 1 process, value loss coefficient 0.5, and **linear rate
+> decay over 1 million environment steps. Following this grid search, we used the best values found
+> for all the methods.** ... **For PPG**, we ran the same hyperparameter search as the one performed
+> in the original paper for Procgen and found Nπ = 32, Eπ = 1, EV = 1, Eaux = 6, and βclone = 1 to
+> be the best."
+
+Two facts follow, and together they are decisive:
+
+1. **PPG's own listed search covers only Nπ, Eπ, EV, Eaux, βclone — and all five equal PPG's
+   released defaults** (`train.py:29,30,43,44,45`: `n_epoch_pi=1`, `n_epoch_vf=1`, `n_aux_epochs=6`,
+   `n_pi=32`, `beta_clone=1.0`). So nothing in PPG's search overrides the shared grid, and the
+   shared grid includes the decay.
+2. **This port already runs the shared grid and already contradicts PPG's own release in every
+   value the two identities dispute**:
+
+| value | PPG's release | §E's shared grid | what we run |
+|---|---|---|---|
+| `lr` | 5e-4 | **3e-4** | **3e-4** |
+| `aux_lr` | 5e-4 | (the same searched rate) | **3e-4** |
+| `gamma` | .999 | **.99** | **.99** |
+| `nminibatch` | 8 | **32** | **32** |
+| `entcoef` | .01 | **0** | **0** |
+| linear decay | none | **1e6 env steps** | **none → NOW SET** |
+| geometry | 64 envs x 4 MPI ranks | **1 process x 2048 steps** | 8 x 256 |
+
+We were the comparator in every disputed value while missing the one setting that identity
+requires. That is precisely the "sits between two identities" review 21 #7 named, and the earlier
+freeze resolved it by *asserting* the other identity rather than by checking which one the
+configuration already was.
+
+**Implemented**: `--lr_decay_env_steps` added to PPG's `train.py`/`ppg.py`/`ppo.py`, decaying the
+policy, value AND auxiliary optimizers linearly on environment steps, and set to 1000000 in the
+descriptor — the same literal horizon `idaac` uses, from the same sentence, so both members of that
+comparison group now share the schedule instead of splitting on it. Default `None` leaves PPG's
+released constant-rate behaviour byte-identical for anything that does not ask for the DMC recipe.
+
+**Still open, and now the ONLY gap to this identity: the rollout geometry.** §E says 1 process x
+2048 steps; this port runs 8 x 256. Both give 2048 samples per update and the same
+65,536-interaction auxiliary cadence, but not the same GAE truncation or trajectory geometry —
+eight 256-step trajectories advantage-estimated independently is not one 2048-step trajectory.
+`idaac` already runs the §E geometry exactly (`num_processes=1`, `num_steps=2048`). My
+recommendation is to match it, and the reason it is not simply done here is measurable rather than
+doctrinal: one environment instead of eight changes throughput by an unmeasured factor, and
+`plan_production`'s ppg row is already flagged `UNMEASURED_ON_V100`. **This belongs in the step-2
+throughput calibration on the production host: measure 1x2048, then adopt it.** Recorded as the
+last remaining item of A36 rather than left implied.
+
+**Consequence**: `runnable/ppg` is in ppg's hashed runtime closure, so ppg's evaluator attestation
+is now superseded along with alda's. Both belong in the single final validation wave (Q47).
+
+### A36 IDENTITY FROZEN — SUPERSEDED BY THE ENTRY ABOVE, 2026-09-07 — PPG is OpenAI PPG with borrowed values, not the IDAAC comparator
 
 **External review 21 #7 asks for exactly one thing: stop sitting between two identities.** It is
 right that the wording did, and the provenance string was the worse half of it — it read

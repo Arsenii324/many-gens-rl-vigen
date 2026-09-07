@@ -210,7 +210,7 @@ index af09fe3..ad1474a 100644
  
      def _nanmean(self, xs):
 diff --git a/phasic_policy_gradient/ppg.py b/phasic_policy_gradient/ppg.py
-index 69e951c..ad6b40f 100644
+index 69e951c..c921682 100644
 --- a/phasic_policy_gradient/ppg.py
 +++ b/phasic_policy_gradient/ppg.py
 @@ -6,6 +6,7 @@ import itertools
@@ -259,8 +259,50 @@ index 69e951c..ad6b40f 100644
          name2loss.update(model.compute_aux_loss(aux, mb))
          assert set(name2coef.keys()).issubset(name2loss.keys())
          loss = 0
+@@ -226,6 +242,7 @@ def learn(
+     kl_ewma_decay=None,
+     interacts_total=float("inf"),
+     name2coef=None,
++    lr_decay_env_steps=None,
+     comm=None,
+ ):
+     """
+@@ -237,6 +254,11 @@ def learn(
+ 
+     ppo_state = None
+     aux_state = th.optim.Adam(model.parameters(), lr=aux_lr)
++    # [Claude 2026-09-07, A36] The auxiliary optimizer decays on the same schedule as the policy
++    # and value ones. SS E's sentence is about the run's learning rate, not one phase of it, and
++    # leaving the aux phase at a constant rate while the policy phase decays would invent a
++    # third recipe belonging to neither source.
++    _aux_initial_lr = aux_lr
+     name2coef = name2coef or {}
+ 
+     while True:
+@@ -252,6 +274,7 @@ def learn(
+             ],
+             interacts_total=interacts_total,
+             store_segs=store_segs,
++            lr_decay_env_steps=lr_decay_env_steps,
+             comm=comm,
+             **ppo_hps,
+         )
+@@ -259,6 +282,13 @@ def learn(
+         if ppo_state["curr_interact_count"] >= interacts_total:
+             break
+ 
++        if lr_decay_env_steps:
++            _aux_decayed = max(
++                _aux_initial_lr
++                * (1.0 - ppo_state["curr_interact_count"] / float(lr_decay_env_steps)), 0.0)
++            for _group in aux_state.param_groups:
++                _group["lr"] = _aux_decayed
++
+         if n_aux_epochs > 0:
+             segs = ppo_state["seg_buf"]
+             compute_presleep_outputs(model=model, segs=segs, mbsize=aux_mbsize)
 diff --git a/phasic_policy_gradient/ppo.py b/phasic_policy_gradient/ppo.py
-index 807c681..3d5f482 100644
+index 807c681..e1d7722 100644
 --- a/phasic_policy_gradient/ppo.py
 +++ b/phasic_policy_gradient/ppo.py
 @@ -15,6 +15,18 @@ from .reward_normalizer import RewardNormalizer
@@ -326,6 +368,36 @@ index 807c681..3d5f482 100644
  
      return losses, diags
  
+@@ -117,6 +159,7 @@ def learn(
+     venv: "(VecEnv) vectorized environment",
+     model: "(ppo.PpoModel)",
+     interacts_total: "(float) total timesteps of interaction" = float("inf"),
++    lr_decay_env_steps: "(float) linearly decay lr to 0 over this many env steps; None = constant" = None,
+     nstep: "(int) number of serial timesteps" = 256,
+     γ: "(float) discount" = 0.99,
+     λ: "(float) GAE parameter" = 0.95,
+@@ -210,6 +253,21 @@ def learn(
+     seg_buf = learn_state.get("seg_buf") or []
+ 
+     while curr_interact_count < interacts_total and not callback_exit:
++        # [Claude 2026-09-07, DECISION-SHEET A36] Linear LR decay on ENVIRONMENT STEPS, matching
++        # idaac's implementation of the same sentence from the same source. raileanu21a-supp.pdf
++        # SS E specifies, for the DMC continuous-control experiments whose grid this port already
++        # follows in every other value (lr 3e-4, gamma .99, 32 minibatches, entropy 0), "linear
++        # rate decay over 1 million environment steps", and says the searched values were used
++        # "for all the methods" -- PPG included, since its own listed search covers only
++        # N_pi/E_pi/E_V/E_aux/beta_clone, all of which equal PPG's released defaults.
++        #
++        # Absent by default: `lr_decay_env_steps=None` leaves the released constant-rate behaviour
++        # byte-identical, so nothing that does not ask for the DMC recipe changes.
++        if lr_decay_env_steps:
++            _decayed = max(lr * (1.0 - curr_interact_count / float(lr_decay_env_steps)), 0.0)
++            for _opt in opts.values():
++                for _group in _opt.param_groups:
++                    _group["lr"] = _decayed
+         seg = roller.multi_step(nstep)
+         lsh.gather_roller_stats(roller)
+         if rnorm:
 diff --git a/phasic_policy_gradient/torch_util.py b/phasic_policy_gradient/torch_util.py
 index 8ad07ab..6931011 100644
 --- a/phasic_policy_gradient/torch_util.py
@@ -346,7 +418,7 @@ index 8ad07ab..6931011 100644
  @functools.lru_cache()
  def warn_no_gradient(model, task):
 diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
-index e32b3a1..c4ff7c7 100644
+index e32b3a1..bf09173 100644
 --- a/phasic_policy_gradient/train.py
 +++ b/phasic_policy_gradient/train.py
 @@ -7,7 +7,19 @@ from . import logger
@@ -369,7 +441,7 @@ index e32b3a1..c4ff7c7 100644
      arch="dual",  # 'shared', 'detach', or 'dual'
      # 'shared' = shared policy and value networks
      # 'dual' = separate policy and value networks
-@@ -20,6 +32,11 @@ def train_fn(env_name="coinrun",
+@@ -20,11 +32,17 @@ def train_fn(env_name="coinrun",
      aux_lr=5e-4,
      lr=5e-4,
      nminibatch=8,
@@ -381,7 +453,13 @@ index e32b3a1..c4ff7c7 100644
      aux_mbsize=4,
      clip_param=.2,
      kl_penalty=0.0,
-@@ -32,13 +49,23 @@ def train_fn(env_name="coinrun",
+     n_aux_epochs=6,
+     n_pi=32,
++    lr_decay_env_steps=None,
+     beta_clone=1.0,
+     vf_true_weight=1.0,
+     log_dir='/tmp/ppg',
+@@ -32,13 +50,23 @@ def train_fn(env_name="coinrun",
      if comm is None:
          comm = MPI.COMM_WORLD
      tu.setup_dist(comm=comm)
@@ -406,7 +484,7 @@ index e32b3a1..c4ff7c7 100644
  
      enc_fn = lambda obtype: ImpalaEncoder(
          obtype.shape,
-@@ -66,7 +93,14 @@ def train_fn(env_name="coinrun",
+@@ -66,16 +94,47 @@ def train_fn(env_name="coinrun",
              n_epoch_pi=n_epoch_pi,
              clip_param=clip_param,
              kl_penalty=kl_penalty,
@@ -422,7 +500,10 @@ index e32b3a1..c4ff7c7 100644
          ),
          aux_lr=aux_lr,
          aux_mbsize=aux_mbsize,
-@@ -76,6 +110,29 @@ def train_fn(env_name="coinrun",
+         n_aux_epochs=n_aux_epochs,
+         n_pi=n_pi,
++        lr_decay_env_steps=lr_decay_env_steps,
+         name2coef=name2coef,
          comm=comm,
      )
  
@@ -452,7 +533,14 @@ index e32b3a1..c4ff7c7 100644
  def main():
      parser = argparse.ArgumentParser(description='Process PPG training arguments.')
      parser.add_argument('--env_name', type=str, default='coinrun')
-@@ -87,6 +144,27 @@ def main():
+@@ -84,9 +143,34 @@ def main():
+     parser.add_argument('--n_epoch_vf', type=int, default=1)
+     parser.add_argument('--n_aux_epochs', type=int, default=6)
+     parser.add_argument('--n_pi', type=int, default=32)
++    # [Claude 2026-09-07, A36] raileanu21a-supp.pdf SS E: 'linear rate decay over 1
++    # million environment steps', the same sentence idaac implements. Default None
++    # keeps PPG's released constant-rate behaviour exactly.
++    parser.add_argument('--lr_decay_env_steps', type=float, default=None)
      parser.add_argument('--clip_param', type=float, default=0.2)
      parser.add_argument('--kl_penalty', type=float, default=0.0)
      parser.add_argument('--arch', type=str, default='dual') # 'shared', 'detach', or 'dual'
@@ -480,9 +568,11 @@ index e32b3a1..c4ff7c7 100644
  
      args = parser.parse_args()
  
-@@ -100,6 +178,17 @@ def main():
+@@ -99,7 +183,19 @@ def main():
+         n_epoch_vf=args.n_epoch_vf,
          n_aux_epochs=args.n_aux_epochs,
          n_pi=args.n_pi,
++        lr_decay_env_steps=args.lr_decay_env_steps,
          arch=args.arch,
 +        interacts_total=args.interacts_total,
 +        seed=args.seed,

@@ -194,3 +194,33 @@ def test_device_pinning_is_opt_in_and_round_robins():
     pinned = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
                             env={"PATH": "/usr/bin:/bin", "NATIVE_CELL_DEVICES": "0,1"})
     assert pinned.stdout.split() == ["0", "1", "0", "1"]
+
+
+def test_resources_json_exists_while_the_run_is_still_alive(tmp_path):
+    """It used to be written only after the measured process exited.
+
+    So a 27-hour cell had no memory record while it ran -- the artifact MIGRATION-T4-TO-V100.md
+    step 4 wants in order to decide whether a second cell fits beside it -- and a killed container
+    lost the record entirely, which is the case where it matters most.
+    """
+    import json
+    import time
+
+    out = tmp_path / "resources.json"
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(6)"])
+    sampler = subprocess.Popen(
+        [sys.executable, str(ROOT / "datasphere" / "native" / "measure_resources.py"),
+         "--pid", str(child.pid), "--output", str(out),
+         "--interval-seconds", "0.2", "--flush-seconds", "1"])
+    try:
+        time.sleep(3)
+        assert out.exists(), "no resource record exists while the process is alive"
+        during = json.loads(out.read_text())
+        assert during["samples"], "flushed file must carry the samples taken so far"
+        assert sorted(during) == ["host", "root_pid", "samples"], "schema must not change"
+    finally:
+        child.wait(timeout=30)
+        sampler.wait(timeout=30)
+
+    after = json.loads(out.read_text())
+    assert len(after["samples"]) >= len(during["samples"])
