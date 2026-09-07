@@ -36,7 +36,9 @@ def test_endpoint_and_curve_eval_guard_dmc_gb_image_size():
             f"{func} no longer guards dmc_gb's render size -- rad/soda's crop would silently "
             "degrade to the identity again")
         assert 'RLVIGEN_IMAGE_SIZE=' in body
-        assert re.search(r'env "\$\{image_size_env\[@\]\}" python3 scripts/eval_grid\.py', body), (
+        assert re.search(
+            r'env \$\{image_size_env\[@\]\+"\$\{image_size_env\[@\]\}"\} python3 '
+            r'scripts/eval_grid\.py', body), (
             f"{func} must pass image_size_env into the eval_grid.py invocation it guards")
 
 
@@ -45,4 +47,8 @@ def test_offline_eval_guards_dmc_gb_image_size():
     body = _function_body(text, "run_offline_eval")
     assert '"${OFFLINE_EVAL_FAMILY:-rlvigen}" == "dmc_gb"' in body
     assert 'RLVIGEN_IMAGE_SIZE=' in body
-    assert re.search(r'env "\$\{image_size_env\[@\]\}" python3 scripts/eval_grid\.py', body)
+    # The `${arr[@]+"${arr[@]}"}` form, not `"${arr[@]}"`: the latter is an unbound-variable
+    # error under `set -u` on bash 3.2 when the array is empty.
+    assert re.search(
+        r'env \$\{image_size_env\[@\]\+"\$\{image_size_env\[@\]\}"\} python3 scripts/eval_grid\.py',
+        body)
