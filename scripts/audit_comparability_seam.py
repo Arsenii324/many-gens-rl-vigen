@@ -812,6 +812,40 @@ def updates_per_env_frame() -> tuple[dict, str]:
     return out, "DERIVED from each training loop and its effective action_repeat"
 
 
+def evaluation_policy_mode() -> tuple[dict, str]:
+    """Whether the reported number comes from the policy's MODE or from SAMPLING it.
+
+    [Claude 2026-09-07.] Not previously an axis, and it is a UNITS one: it changes what the number
+    means, not merely what was measured. E[return | a = argmax pi] and E[return | a ~ pi] are
+    different quantities, and for a Gaussian continuous-action head the second is both lower in
+    expectation and higher in variance whenever the mean action is better than its neighbourhood --
+    which is what a converged policy is.
+
+    The split is 8 deterministic against 4 stochastic (`ctrl`, `ibac_sni`, `idaac`, `ppg` -- the
+    on-policy Procgen lineage), and it is faithful in both directions: each is what its own
+    evaluation entry point does. `scripts/audit_eval_state.py` has measured this per REPORTING PATH
+    since 2026-09-04, and every emitted record carries `conventions.eval_policy_mode`. What did not
+    exist until now is its presence HERE, where the axes a reader is told about live -- the same
+    shape as the crop-policy axis that sat documented in AUDIT-2026-08-17.md for eighteen days
+    while this script listed only render resolution.
+
+    Imported from `audit_eval_state.STATE` rather than restated, so the two cannot drift.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_audit_eval_state_for_seam", ROOT / "scripts" / "audit_eval_state.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    out = {}
+    for baseline, entry in module.STATE.items():
+        mode = entry["policy_mode"]
+        out[baseline] = ("STOCHASTIC | " if mode.startswith("STOCHASTIC") else "deterministic | ") + mode
+    return out, ("DERIVED from audit_eval_state.STATE, which reads each family's own reporting "
+                 "path rather than its API surface -- the distinction that caught ctrl")
+
+
 def learning_rate_schedule() -> tuple[dict, str]:
     """Whether the learning rate is constant or decays, and on what clock.
 
@@ -901,6 +935,7 @@ AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("observation layout and pixel scaling", CONDITIONS, observation_layout),
         ("regimes reachable in one run", CONDITIONS, regimes_in_one_run),
         ("updates per env frame", CONDITIONS, updates_per_env_frame),
+        ("evaluation policy mode", UNITS, evaluation_policy_mode),
         ("learning-rate schedule", CONDITIONS, learning_rate_schedule),
         ("warmup length before first update", CONDITIONS, warmup_length)]
 
@@ -1020,7 +1055,23 @@ def main(argv: list[str] | None = None) -> int:
         print("  No axis on the named list is left underived. Add the next one to NOT_COVERED as")
         print("  soon as it is identified -- a named gap gets closed, an unnamed one does not")
         print("  exist to be closed. The two this list held longest were the reported estimator")
-        print("  and the evaluation scene set, and the second is the only UNITS split found.")
+        # [Claude 2026-09-07] Was "the second is the only UNITS split found", which stopped being
+        # true the moment `evaluation policy mode` was added -- a line describing the axis list
+        # from inside the axis list is exactly the thing that goes stale when the list grows.
+        # Counted now instead of asserted.
+        # Count the way the report itself decides UNIFORM vs SPLIT -- through VALUE_OF, which is
+        # what separates "the same number reached two ways" from "two different numbers". A first
+        # version of this line counted distinct raw strings and reported 5 splits where the report
+        # above shows 1, which is worse than the stale sentence it replaced.
+        splits = []
+        for name, kind, fn in AXES:
+            if kind is not UNITS:
+                continue
+            key = VALUE_OF.get(name, lambda v: v)
+            if len({key(str(v)) for v in fn()[0].values()}) > 1:
+                splits.append(name)
+        print(f"  and the evaluation scene set. UNITS axes that SPLIT: {len(splits)} "
+              f"({', '.join(splits) if splits else 'none'}).")
         return 0
     print("  Axes NOT covered here and known to matter -- absence from this list is not evidence")
     print("  of agreement, it is evidence nobody has derived it yet:")

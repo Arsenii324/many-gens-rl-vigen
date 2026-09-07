@@ -1025,6 +1025,51 @@ honestly flagged as weak. Redone by algorithmic mechanism instead:
 
 **25 named primary comparisons** (6+15+1+3), down from 66; full matrix published as supplementary.
 
+### A25 ADDENDUM, 2026-09-07 (later the same day) — the fixed cross-group pairs cross the fleet's only UNITS split
+
+**Found by adding `evaluation policy mode` to `audit_comparability_seam.py`, which had never carried
+it, and then checking what the addition implies for the contrast I froze this morning.**
+
+`scripts/eval_grid.py` — the evaluator that produces every reported number — deliberately
+reproduces each family's OWN action rule (`evaluator_identity.FAMILY_EVAL_POLICY_MODE`): `mode` for
+the eight RL-ViGen/dmc_gb/alda baselines, `sample` for the four Procgen-lineage on-policy ones
+(`idaac`, `ppg`, `ibac_sni`, `ctrl`). That is faithful, and the records carry
+`conventions.eval_policy_mode` precisely "so no table pools the two".
+
+**But it is a UNITS split** — E[return | a = argmax π] and E[return | a ~ π] are different
+estimands, and for a converged Gaussian head the second is lower in expectation and higher in
+variance. By `audit_comparability_seam.py`'s own rule a UNITS split "has to be removed or converted
+before the numbers can be compared at all", unlike a CONDITIONS split which can be declared and
+quantified. **It is now the fleet's only UNITS split**, the evaluation-scene-set one having been
+closed earlier.
+
+**And this morning's A25 revision walked straight into it.** Two of the three fixed cross-group
+pairs I froze — `idaac` vs `svea`, and `idaac` vs `curl` — put a sampling reporter against a
+mode-taking one. Any difference between them confounds the mechanism the pair exists to isolate
+with the evaluation rule. The winner-versus-winner problem I fixed this morning was a statistical
+one; this is a measurement one, and it is worse, because no amount of care in the analysis removes
+it.
+
+**Implemented default: evaluate the four stochastic families in BOTH modes at the endpoint, report
+their native mode as the headline, and use the mode-taking pass for any cross-group contrast.**
+
+- **Cost, priced rather than waved at**: four baselines x three seeds = twelve cells, each an extra
+  800-episode endpoint grid at ~11 s/episode = 2.4 h, so **~29 GPU-h against a campaign total near
+  865** — about 3%. That converts an incommensurability into a measured quantity, and it also
+  answers a question worth having: how much of any on-policy-versus-off-policy gap is the
+  evaluation rule rather than the method.
+- **Why not standardise on `mode` outright**: it would silently replace each family's own reporting
+  path with ours, which is the deviation `EVALUATOR-DELTA.md` exists to prevent, and it would make
+  every number non-comparable with the family's own published values.
+- **Why not just declare it**: a declaration is the right treatment for a CONDITIONS split. This one
+  changes what the number IS, and the primary contrasts cross it.
+
+**Requires a small change to `eval_grid.py`**, which currently hardcodes each family's mode with no
+override: a `--policy-mode` argument defaulting to the family's native rule. Not implemented in this
+entry — it moves the evaluator closure and therefore every family's attestation, so it belongs in
+the same freeze as A36's geometry decision, immediately before the single final validation wave
+(Q47). Recorded here so the sequencing is explicit rather than discovered later.
+
 ### A25 REVISED, 2026-09-07 — the cross-group contrast is no longer winner-versus-winner
 
 **External review 21 #10, and it is right.** The "cross-group, best-in-group" row above selects the
