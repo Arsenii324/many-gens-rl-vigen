@@ -235,7 +235,7 @@ Fixed since the triage was written (verified, not assumed):
 
 | item | now |
 |---|---|
-| #7 result metadata (`eval_policy_mode` lie) | **FIXED** — all twelve pairs read correctly; `idaac`/`ppg`/`ibac_sni`/`ctrl` say `sample` |
+| #7 result metadata (`eval_policy_mode` lie) | **FIXED** — all twelve pairs read correctly; `idaac`/`ppg`/`ibac_sni` say `sample` (`ctrl` said `sample` here too; corrected to `mode` 2026-09-07, see `notes/SAME-AXES-VERDICT.md`) |
 | #8 checkpoint provenance | **FIXED** — SHA-256 stamped into records |
 | #20 fail-open verification | **FIXED** — `strict=True` on production call sites |
 | #21 / 2-1 pairing | **FIXED** — `placement_condition_seed(eval_seed, scene, episode_index)` per episode |

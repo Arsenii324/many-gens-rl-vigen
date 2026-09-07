@@ -400,16 +400,21 @@ Resolved 2026-09-03 by reading the two cells `scripts/audit_eval_state.py` had l
 | estimator | baselines | how it is fixed |
 |---|---|---|
 | **mode** (deterministic) | drqv2, svea, drq, sgqn, curl (`dist.mean`); rad, soda, alda (`mu`); ctrl (`pi.mode()` via `algo.select_action`) | 9 |
-| **sample** (stochastic) | **idaac** (`act(inputs, deterministic=False)`, and `test.py` omits the flag); **ibac_sni** (`evaluate.py --argmax` is `store_true`, default **False**); **ppg** (no deterministic path exists in the repository at all); **ctrl** (corrected 2026-09-04 — see below) | **4** |
+| **sample** (stochastic) | **idaac** (`act(inputs, deterministic=False)`, and `test.py` omits the flag); **ibac_sni** (`evaluate.py --argmax` is `store_true`, default **False**); **ppg** (no deterministic path exists in the repository at all) | **3** |
 
-**`ctrl` moved from the mode column to the sample column on 2026-09-04, and the reason generalises.**
-`audit_eval_state` had it as *"deterministic (`pi.mode()`) via `algo.select_action`"*, which is true
-of the helper: `select_action(..., sample=False)` returns `pi.mode()`. But the calls that produce the
-numbers a `ctrl` cell actually reports — `train_ppo.py:244` and `:253`, the ID and OOD test-env steps
-behind `Eprew200`/`Eprew0` — **both pass `sample=True`**. **A capability is not a usage**, and an
-axis must record what the reporting path does, not what the API permits. Found while establishing
-`ctrl`'s evaluator family, which is the argument for doing that work before reporting its numbers
-rather than after.
+**`ctrl` moved from the mode column to the sample column on 2026-09-04, and back to the mode column
+on 2026-09-07 — the second move is the one that stands.** `audit_eval_state` had it as
+*"deterministic (`pi.mode()`) via `algo.select_action`"*, which is true of the helper:
+`select_action(..., sample=False)` returns `pi.mode()`. The 2026-09-04 entry read the calls that
+produce the numbers a `ctrl` cell actually reports as `train_ppo.py:244` and `:253` — the ID and OOD
+test-env steps behind `Eprew200`/`Eprew0`, which **both pass `sample=True`** — and moved `ctrl` to
+`sample` on that basis. **That was the wrong call site**: those are TRAINING-time calls, not
+`ctrl`'s EVALUATION-time rule. Its released evaluator, `evaluate_ppo.py:84`, calls
+`select_action(..., greedy=True)`, whose greedy branch is `logits.argmax(1)` — deterministic. Found
+by external review 24 and confirmed against the pinned upstream 2026-09-07; corrected in
+`evaluator_identity.py`, `eval_grid.py`, `normalize_curves.py` and `audit_eval_state.py` in one
+batch. **A capability is not a usage** still holds as the lesson — it just took a second pass to
+apply it to the right call site. Full account: `notes/SAME-AXES-VERDICT.md`.
 
 **Why this is an axis and not a footnote.** A sampled return and a mode return are different
 quantities. The sampled one is usually lower, and by an amount that depends on the policy's entropy

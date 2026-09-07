@@ -536,10 +536,15 @@ extracted selectively to avoid unpacking four checkpoints I did not need.
   state is part of what was serialised. A wrong flag there produces a differently-shaped model
   rather than an error, which is why `CTRL_DEFAULTS` names each one against `train_ppo.py`.
 
-  Establishing it also produced the estimator correction: `select_action(..., sample=False)` takes
-  `pi.mode()`, but `train_ppo.py:244`/`:253` pass `sample=True`, so **ctrl samples** and the
-  estimator axis is 4/8 rather than 3/9. That is the argument for building a family *before*
-  reporting a baseline's numbers rather than after.
+  Establishing it also produced an estimator correction — twice. The 2026-09-04 entry read
+  `select_action(..., sample=False)` as taking `pi.mode()`, but `train_ppo.py:244`/`:253` pass
+  `sample=True`, and concluded **ctrl samples**, putting the estimator axis at 4/8 rather than
+  3/9. **Corrected 2026-09-07**: those are TRAINING calls, not `ctrl`'s evaluation-time rule. Its
+  released evaluator, `evaluate_ppo.py:84`, calls `select_action(..., greedy=True)`, whose greedy
+  branch is `logits.argmax(1)` — deterministic. `ctrl` takes the mode; the axis is 9 deterministic
+  / 3 sampling (`idaac`, `ppg`, `ibac_sni`) — see `notes/SAME-AXES-VERDICT.md`. That is the
+  argument for building a family *before* reporting a baseline's numbers rather than after — even
+  a family built carefully can read the wrong call site.
 
   **`alda` also widens its own grid.** It ships three regimes — `train`, `eval-easy` (`color_env`),
   `eval-hard` (`distract_env`) — and no `eval-medium`. Its `_build` chain takes the mode as an
