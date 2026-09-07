@@ -20,6 +20,7 @@ set -euo pipefail
 
 PROJECT="${DATASPHERE_PROJECT:-bt12q57tmrs03pnt8drc}"
 EVIDENCE="${NATIVE_EVIDENCE_LOG:-/tmp/ccm-intro-datasphere-recovery-2026-08-31.2KXKs5/datasphere-job-actions.log}"
+SUBMISSION_LEDGER="${SUBMISSION_LEDGER:-results/submissions.jsonl}"
 # [Claude 2026-09-06] Raised 120 -> 240 minutes: owner explicitly extended the V100 allowance
 # ("if you're not sure in e.g. the time limits, extend 2h to 4h") once this session's probes
 # needed more than the original 2h across the renderer-parity re-run, the CTRL memory
@@ -684,6 +685,62 @@ submit)
     "$(date '+%Y-%m-%d %H:%M MSK')" "$id" "$name" \
     "$SUBMISSION_ADMITTED_PROFILE" "$tier" "$SUBMISSION_PROFILE_BINDING" "$cfg" \
     >> "$EVIDENCE" 2>/dev/null || true
+  # [Claude 2026-09-07, external review 20 #24 / recommendation 22] A record pins the exact BYTES
+  # that ran -- payload_sha256, manifest_sha256, container_image -- and nothing maps those bytes
+  # back to a commit anyone can check out. This writes that mapping at the one moment both are
+  # known, so a result is traceable to a tree without trusting anybody's memory of which commit
+  # was current. Machine-readable on purpose: it is also the first column of the attempt ledger
+  # the recommendation asks for (job id -> cfg -> commit -> inputs).
+  #
+  # Never fatal: a submission that succeeded must not be reported as failed because a log write
+  # did not.
+  python3 - "$id" "$name" "$cfg" "$tier" >> "$SUBMISSION_LEDGER" 2>/dev/null <<'LEDGER' || true
+import hashlib, json, pathlib, re, subprocess, sys, datetime
+
+job_id, name, cfg, tier = sys.argv[1:5]
+root = pathlib.Path(__file__).resolve().parent if False else pathlib.Path(".").resolve()
+
+def git(*args):
+    try:
+        return subprocess.run(["git", *args], capture_output=True, text=True,
+                              timeout=30).stdout.strip()
+    except Exception:
+        return ""
+
+def sha256(path):
+    try:
+        digest = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for block in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(block)
+        return digest.hexdigest()
+    except OSError:
+        return None
+
+inputs = {}
+try:
+    text = pathlib.Path(cfg).read_text()
+    block = text.split("inputs:", 1)[1].split("\noutputs:", 1)[0]
+    for line in block.splitlines():
+        match = re.match(r"\s*-\s*([^:]+):", line)
+        if match:
+            relative = match.group(1).strip()
+            inputs[relative] = sha256(relative)
+except Exception:
+    pass
+
+print(json.dumps({
+    "submitted_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    "job_id": job_id,
+    "name": name,
+    "config": cfg,
+    "tier": tier,
+    "source_commit": git("rev-parse", "HEAD"),
+    # A dirty tree at submit time means the commit does NOT describe what was uploaded.
+    "source_dirty": bool(git("status", "--porcelain")),
+    "inputs_sha256": inputs,
+}, sort_keys=True))
+LEDGER
   ;;
 verify-image)
   cfg="${2:?config path}"

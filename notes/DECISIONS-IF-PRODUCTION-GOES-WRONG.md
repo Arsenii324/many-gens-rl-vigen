@@ -178,6 +178,24 @@ framing in the write-up is one task, deliberately, with the constants that task 
 
 ---
 
+## Frame stack, the second axis that costs primary claims (A40)
+
+**The judgement.** `ctrl` and `ibac_sni` stay at `frame_stack=1`, and the four on-policy pairs that
+straddle the split are demoted from primary to descriptive.
+
+**Symptom that would indict it.** `ctrl` and `ibac_sni` both landing near the random floor while
+`idaac` and `ppg` separate from it — consistent with velocity-blindness rather than with anything
+about VIB or clustering. Or the reverse: either of them beating both three-frame methods, which
+would say the stack is not what limits this task and the demotion cost claims for nothing.
+
+**Cheapest test.** `python3 scripts/audit_observation_geometry.py` shows the split; the four
+straddling pairs are named in A40. Settling it empirically needs one `ctrl` cell at
+`frame_stack=3`, which is NOT cheap — it needs an ImpalaCNN input change and a fresh pilot, and
+`ctrl`'s 64-env memory is still a linear extrapolation.
+
+**Cost of changing later.** Demoting pairs after seeing results is how a paper acquires a
+convenient conclusion, which is why it is decided now, before any production number exists.
+
 ## The one that is not on this list
 
 **R3, `metrics on the same axes`, reads NOT MET and is not an OWNER gate — it is a stated research

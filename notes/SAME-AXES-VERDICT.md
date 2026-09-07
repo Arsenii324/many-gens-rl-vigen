@@ -153,3 +153,27 @@ The fallback stated on this page is now the operative plan, not the contingency:
 remains implemented and reachable for the three Block B families, so the check remains available
 at 3% of campaign cost if a cross-block claim ever becomes necessary. It is not removed, and it is
 not run.
+
+
+---
+
+## A second axis reaches the same conclusion: frame stack (A40, 2026-09-08)
+
+The policy-mode split is not the only one that costs primary claims. `ctrl` and `ibac_sni` run at
+`frame_stack=1` while the other ten stack three, and **four of the on-policy group's six pairs
+straddle it**: `idaac`-`ibac_sni`, `idaac`-`ctrl`, `ppg`-`ibac_sni`, `ppg`-`ctrl`.
+
+The reviews call this P2 and prescribe "keep source-faithful primary; disclose". That reads the
+single-frame setting as an authorial choice. It is not one: Procgen serves a single frame, so those
+authors never faced the decision, while `idaac` and `ppg` sit at three because IDAAC's paper ships
+a continuous-control profile that specifies it. And this project has already authored a
+continuous-control adaptation for the same two baselines — `runnable/ctrl/models.py:172`,
+"MultivariateNormalDiag is the added path" — so refusing to decide the observation side is not
+fidelity, it is inheriting an absence.
+
+**Same resolution as the policy-mode axis: rank within a block, never across it.** The on-policy
+group's primary pairs become `idaac`-`ppg` and `ibac_sni`-`ctrl`. The four cross-stack pairs are
+descriptive, and the caption says why.
+
+Full reasoning, the equalise-to-3 alternative and its price, and what would overturn it:
+`notes/DECISION-SHEET.md` A40.

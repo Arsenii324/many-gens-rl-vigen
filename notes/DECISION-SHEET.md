@@ -2137,3 +2137,63 @@ forced pass load-bearing, and a load-bearing measurement must be attested like a
 **Status: OPERATIONAL DEFAULT, not ratified.** No gate reads this, nothing is removed, and
 `--policy-mode mode` stays implemented and reachable. The dormancy is the decision; the capability
 is retained precisely so the decision is reversible.
+
+### A40 (new) — frame stack is inherited by OMISSION for `ctrl` and `ibac_sni`, and four of the six on-policy pairs straddle it
+
+**Raised by the owner, 2026-09-08**, pushing back on the reviews' own disposition. The reviews are
+right on the facts and I think the DECISION they reach is too weak. Review 2: *"The frame-stack
+difference is more serious than the resolution difference... method identity is perfectly
+confounded with observation information."* Review 20 rates it P2 and prescribes *"Keep
+source-faithful primary; disclose."* That prescription assumes there is a source position to be
+faithful to. **For these two baselines on this axis, there is not.**
+
+**The state.** 10 of 12 stack three frames. `ctrl` and `ibac_sni` use one, because Procgen serves
+one RGB frame and their authors never faced a task where the choice arises. `idaac` and `ppg` are
+also Procgen-origin — they are at three because IDAAC's own paper ships a continuous-control (DMC)
+profile that specifies it, and PPG is that paper's comparator (A36). So within the on-policy
+group, two baselines got a published continuous-control recipe and two did not.
+
+**Why "source-faithful" does not describe what we are doing here.** This project has ALREADY
+authored a continuous-control adaptation for both: `runnable/ctrl/models.py:172` says it outright
+— *"Categorical is upstream's exact expression; MultivariateNormalDiag is the added path."* We gave
+them a Gaussian head for a 7-DoF action space their authors never targeted, because the port
+demanded a decision the originals never made. Frame stack is the same class of decision on the
+observation side. Keeping 1 does not preserve an authorial choice; it imports the ABSENCE of one,
+and then lets the resulting velocity-blindness be read as a property of the method.
+
+The project already recognises this exact pattern on a third axis and calls it a defect, not a
+condition: `rlgen/protocol.py`'s time-limit note — nine baselines treat the limit as terminal,
+*"which is right for Procgen, where episodes genuinely terminate, and wrong"* here (C1, rated the
+largest comparability defect found). Three structurally identical situations, three different
+treatments: action space **adapted**, time limit **declared as a defect**, frame stack **declared
+as a condition**.
+
+**What it costs, concretely.** Of the on-policy group's 6 pairs, **4 straddle the frame-stack
+split**: `idaac`–`ibac_sni`, `idaac`–`ctrl`, `ppg`–`ibac_sni`, `ppg`–`ctrl`. Only `idaac`–`ppg`
+(both 3) and `ibac_sni`–`ctrl` (both 1) are clean. A reader comparing `ctrl` against `idaac` cannot
+separate the regulariser from the observability.
+
+**DECISION (operational default, not ratified): keep frame_stack=1 for those two, and demote the
+four straddling pairs from PRIMARY to DESCRIPTIVE.**
+
+Same treatment the policy-mode split already gets: rank within a block, not across it. The
+on-policy group's primary claims become `idaac`–`ppg` and `ibac_sni`–`ctrl`; the four cross-stack
+pairs are reported with the confound named in the caption, not in an appendix.
+
+**Why not equalise to 3 instead** — the alternative I considered and rejected, with its price:
+it would need a Procgen ImpalaCNN input change for both (9 channels, the same change `idaac` and
+`ppg` received), a fresh pilot for each, and it would push `ctrl`'s memory further into territory
+that is *already* only a linear extrapolation (54.28 GiB at `num_envs=64`, never measured — see
+`families.json`, and `family.py` already refuses to pack against an estimate). Tripling the
+observation stack before that figure is measured is the wrong order of operations. Equalising is
+also itself a deviation, so it does not buy fidelity — it buys comparability at the price of both
+compute and a second unproven configuration.
+
+**What would overturn this.** A measured `ctrl` 64-env memory figure with headroom, plus a decision
+that the on-policy group's cross-stack comparisons are load-bearing for the paper's claim. Then
+equalising to 3 becomes worth its pilot cost.
+
+**Status: OPERATIONAL DEFAULT.** No gate reads this, and A25's primary set is prose rather than
+code, so this changes what is CLAIMED, not what is computed. The demotion is the substantive part
+and it costs no compute — which is why it should happen before results exist rather than after
+someone reads a cross-stack ranking.
