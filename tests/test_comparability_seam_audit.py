@@ -227,7 +227,18 @@ def test_observation_layout_splits_five_ways_and_none_of_it_is_a_defect():
 #: The only axis deciding what a number MEANS on which the twelve disagree — C72, expressed as a
 #: comparability axis. Named rather than counted, so that a SECOND one appearing is a regression
 #: with a name attached rather than a tally going from 1 to 2.
-KNOWN_UNITS_SPLIT = set()
+#: The one UNITS axis that splits, and the owner has ruled it acceptable rather than absent.
+#:
+#: 9 baselines report E[return | a = mode pi], 3 report E[return | a ~ pi] (idaac, ppg, ibac_sni),
+#: because each reproduces its own published EVALUATION path -- verified per family against the
+#: vendored upstream in tests/test_native_policy_mode_provenance.py. The ruling, its evidence, the
+#: one family where that evidence is weakest (ppg ships no evaluator), and what gets reported as a
+#: consequence (rank within a block, never across) are all in notes/SAME-AXES-VERDICT.md.
+#:
+#: Listed here rather than removed from the audit: `scripts/requirements.py` still reads R3 NOT
+#: MET, deliberately, because an accepted split is not an absent one. This set exists so a NEW
+#: split still fails loudly.
+KNOWN_UNITS_SPLIT = {"evaluation policy mode"}
 
 
 def test_the_reported_units_are_uniform_and_training_time_splits_are_conditions():
@@ -247,7 +258,11 @@ def test_the_reported_units_are_uniform_and_training_time_splits_are_conditions(
     assert not new, (
         f"a NEW axis deciding what a number MEANS went non-uniform: {sorted(new)}. Two baselines' "
         "numbers may no longer be the same quantity — this is not a 'declare and quantify' case.")
-    assert not split, f"reported offline measurement has a UNITS split: {sorted(split)}"
+    # Not `assert not split`: the known split above is ruled on, not repaired. Asserted as an
+    # EQUALITY so that the known split disappearing is noticed too -- if the fleet ever becomes
+    # genuinely uniform on this axis, SAME-AXES-VERDICT.md and R3 both need rewriting.
+    assert split == KNOWN_UNITS_SPLIT, (
+        f"UNITS splits are {sorted(split)}, expected exactly {sorted(KNOWN_UNITS_SPLIT)}")
 
 
 def test_the_reported_scene_set_is_common():

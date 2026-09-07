@@ -598,6 +598,11 @@ VALUE_OF = {"effective action repeat": lambda v: v.split(" ", 1)[0],
             "success definition and who computes it": lambda v: v.split(" | ", 1)[0],
             "reported estimator": lambda v: v.split(" | ", 1)[0],
             "evaluation scene set": lambda v: v.split(" | ", 1)[0],
+            # Without this the axis compared each baseline's full PROSE description, so it counted
+            # six "different" values where there are two. It reported SPLIT for the right reason by
+            # accident, and no edit to a description could ever have been distinguished from a real
+            # change of estimator.
+            "evaluation policy mode": lambda v: v.split(" | ", 1)[0],
             "replay capacity and eviction at 6e5": lambda v: v.split(" | ", 1)[0],
             "x-axis accounting": lambda v: v.split(" | ", 1)[0]}
 
