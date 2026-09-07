@@ -71,7 +71,12 @@ def test_trajectory_cost_is_derived_from_measured_rates_not_training_fps():
         assert row["stamps_evaluated"] == 13, f"{baseline}: v100 fleet cadence is 12 stamps + endpoint"
         assert row["episodes_per_stamp"] == 120, (
             f"{baseline}: 4 regimes x 10 scenes x 3 episodes, not the 240 the calendar once claimed")
-    # Measured where measured, pessimistic default where not -- never silently pooled.
-    assert rows["drqv2"]["measured"] and rows["idaac"]["measured"]
-    assert not rows["soda"]["measured"]
-    assert 300 < result["total_hours"] < 350
+    # [Claude 2026-09-07, updated later the same day] This asserted `not rows["soda"]["measured"]`,
+    # which was true when written and stopped being true two hours later: the v176 wave's own logs
+    # carried NATIVE_ENDPOINT_EVAL_SECONDS for all seven families, so the placeholder is gone
+    # entirely. The assertion now pins the stronger property -- no family is estimated -- because
+    # a silent return to the 30 s/episode default is the regression worth catching.
+    assert all(row["measured"] for row in rows.values()), (
+        [b for b, r in rows.items() if not r["measured"]])
+    # gt4.1 basis, after converting the four gt4i.1 measurements by the 1.14 tier factor.
+    assert 150 < result["total_hours"] < 185, result["total_hours"]
