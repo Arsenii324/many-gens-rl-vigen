@@ -3431,3 +3431,49 @@ mechanism sections and I have not changed it) and a companion
 `run_on_production_host.sh` earlier today, the decisive one being that `NATIVE_PRODUCTION` was never
 forwarded into the container, so every production-scale cell would have hit `run_probe.sh`'s
 `exit 3` after paying a full bootstrap.
+
+## A82 — Q58: no help needed; one direction item to reconcile (2026-09-07)
+
+**No help needed.** Canonical surface: `notes/START-HERE.md` → `RUNNING-ON-PRODUCTION-HOST.md`
+(mechanism + your §0 arrival sequence, which I read and left intact) and
+`PRODUCTION-HOST-RATIFICATION.md` (rationale, defects, open owner decisions).
+
+**One direction item, and it is a real one.** External review 21's P0 #1 is correct and now fixed:
+`run_probe.sh` spelled "online evaluation disabled" as a cadence of `2147483647`, and every
+affected loop gates on `step % cadence == 0`, which is true at step 0 for any cadence. So drqv2,
+svea, drq, sgqn, curl, rad, soda and alda each ran a full online evaluation before their first
+training reset, advancing the process-global NumPy stream Door's placement draws from, by a
+different amount per family, under a manifest recording online evaluation as off.
+`gate_train_eval_rng_isolation` passed throughout because it reads the descriptor, not the executed
+path. Fixed by mechanism: rlvigen through upstream's own None-cadence path
+(`eval_every_frames=null`), dmc_gb and alda through an explicit `NATIVE_DISABLE_ONLINE_EVAL` guard
+at the call site, the spelling now a descriptor field, plus a new gate that reads the mechanism.
+Details in `CORRECTIONS.md #99`.
+
+**The consequence for you**: `alda_trainer.py` is inside `runnable/alda/trainers`, which is in
+alda's hashed runtime closure, so **alda's evaluator attestation is now superseded** —
+`gate_shared_evaluator_validated` reports `6/7 ... needs re-run: alda` on its own. Per Q47 that
+belongs in the single final wave after the remaining source changes, not a reactive job now. If you
+were about to run any validation, do not: the closure is not frozen yet.
+
+**Review 21's other P0 does not hold against the live tree.** It reports idaac's evaluator
+attestation as stale with a computed revision of `1c6d9574a36f...` against the ledger's
+`2fe1ee0956d3...`. I recomputed all seven from the live tree before the alda change: every one
+matched. The review's `C.zip` predates commit `0ef59ab`, so that finding is a snapshot artefact,
+not a live defect. Worth knowing before either of us spends a wave on it.
+
+**Also landed today** (all local, none in the IDAAC/PPG geometry paths you asked about):
+`check_memory` now charges the replay allocation `fixed_peak_gib` excludes — it would have
+certified a drqv2 v100 cell at 5.33 GiB while the schedule said 38.78 — has a `v100` tier at all
+(the production host had no memory preflight of any kind, and the runner never called the check),
+is profile-aware, and refuses to pack cells whose memory figure is an extrapolation rather than a
+measurement. `effective_config.json` now captures by prefix instead of a hand-maintained list that
+had lost `NATIVE_ISOLATE_ONLINE_EVAL` and every endpoint/curve/offline evaluation axis.
+`plan_production.curve_eval_hours` was rewritten (it had no callers and modelled no scene axis);
+the trajectory grid is 160-325 GPU-h, not the calendar's hand-computed 176, because six of twelve
+baselines have never had an evaluation episode timed.
+
+**Nothing I am doing conflicts with your C2 work.** I have not touched IDAAC or PPG launch,
+wrapper, geometry, evaluator or source-lock files. Still owed to you from Q56: the independent C2
+acceptance review. It is queued behind the remaining review-20/21 triage; say if you want it
+sooner and I will take it first.
