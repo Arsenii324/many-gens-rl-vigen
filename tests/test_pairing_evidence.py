@@ -58,3 +58,26 @@ def test_current_unwitnessed_pair_remains_a_real_missing_evidence_failure(tmp_pa
     output = capsys.readouterr().out
     assert "1 lacking physical evidence" in output
     assert "0 legacy/ineligible groups excluded" in output
+
+
+def _aggregate_row(regime: str, revision: str) -> dict:
+    # A genuinely multi-scene aggregate: distinct scene_set from any per-scene row, and no
+    # per-episode diagnostics by design (it is a pooled summary, not new evidence). Found for
+    # real by the C95 R_A re-measurement (v178, ten scenes) -- it does not share a scene_set with
+    # any single-scene row, so the existing "prefer the rich row" dedup never sees it.
+    return {
+        "phase": "offline-eval", "regime": regime, "baseline": "drqv2", "seed": 2,
+        "scene_set": "0,1,2,3,4,5,6,7,8,9", "evaluator_revision": revision,
+        "native": {"aggregate_over_scenes": list(range(10))},
+    }
+
+
+def test_multiscene_aggregate_is_pooled_not_counted_as_missing_evidence(tmp_path, capsys):
+    path = _write(tmp_path, _aggregate_row("train", "b" * 64), _aggregate_row("eval-easy", "b" * 64))
+
+    assert PAIRING.audit([str(path)]) == 0
+    output = capsys.readouterr().out
+    assert "0 eligible cross-regime comparisons" in output
+    assert "0 lacking physical evidence" in output
+    assert "1 pooled/ineligible groups excluded" in output
+    assert "NOT a pass" in output

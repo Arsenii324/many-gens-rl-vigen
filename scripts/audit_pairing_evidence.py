@@ -72,12 +72,26 @@ def audit(paths: list[str]) -> int:
     rows = [r for r in load(paths) if r.get("phase") == "offline-eval" and r.get("regime")]
     groups: dict[tuple, dict[str, dict]] = collections.defaultdict(dict)
     legacy: dict[tuple, set[str]] = collections.defaultdict(set)
+    pooled: dict[tuple, set[str]] = collections.defaultdict(set)
     # Each cell emits TWO rows with the same scene_set: the per-scene record, which carries the
     # per-episode `native` arrays, and the pooled aggregate, which does not. Keeping whichever
     # arrived last kept the aggregate and made every comparison report "no physical evidence" --
     # the audit's own first run said exactly that about records I had already read placements out
     # of by hand. Prefer the row that actually carries diagnostics.
+    #
+    # [Claude 2026-09-07] That dedup only fires when both rows SHARE a scene_set string, which is
+    # only true for a single-scene cell ("aggregate over {0}" == "0"). A genuinely multi-scene
+    # aggregate (scene_set "0,1,...,9") gets its OWN key, distinct from each per-scene "0".."9"
+    # key, and never carries placements by design -- it is a pooled summary of rows that are
+    # already checked individually below, not a second piece of evidence to demand. Found by the
+    # C95 R_A re-measurement (v178, ten scenes): it made this a real FAIL, not a hypothetical.
+    # Excluded the same way as `legacy`, not counted as unprovable.
     for row in rows:
+        aggregate_scenes = (row.get("native") or {}).get("aggregate_over_scenes")
+        if isinstance(aggregate_scenes, list) and len(aggregate_scenes) > 1:
+            pooled[(row.get("baseline"), row.get("seed"), str(row.get("scene_set")))].add(
+                str(row.get("regime")))
+            continue
         # `None` was emitted before evaluator provenance existed.  Do not delete or rewrite that
         # historical evidence, but do not let it answer a current-evaluator question either.
         if not row.get("evaluator_revision"):
@@ -95,6 +109,10 @@ def audit(paths: list[str]) -> int:
     for key in sorted(legacy_cross_regime, key=str):
         print(f"  {key[0]} s{key[1]} scene {key[2]}: LEGACY/INELIGIBLE "
               "(no evaluator_revision) -- retained raw evidence cannot establish current pairing")
+    for key in sorted(pooled, key=str):
+        print(f"  {key[0]} s{key[1]} scenes {key[2]}: POOLED/INELIGIBLE "
+              "(multi-scene aggregate, no per-episode diagnostics by design) -- its constituent "
+              "per-scene rows are the evidence, checked individually below")
     for key, by_regime in sorted(groups.items(), key=lambda kv: str(kv[0])):
         if len(by_regime) < 2:
             continue
@@ -128,10 +146,12 @@ def audit(paths: list[str]) -> int:
                 print(f"  {key[0]} s{key[1]} scene {key[2]} rev {key[3]}: "
                       f"{regimes[0]} vs {regime} -- NOT PAIRED, episodes {[i for i, s in enumerate(same) if not s]}")
 
+    pooled_cross_regime = [key for key, regimes in pooled.items() if len(regimes) > 1]
     print()
     print(f"  {checked} eligible cross-regime comparisons; {mismatched} not paired; "
           f"{unprovable} lacking physical evidence; {len(legacy_cross_regime)} "
-          "legacy/ineligible groups excluded")
+          f"legacy/ineligible groups excluded; {len(pooled_cross_regime)} pooled/ineligible "
+          "groups excluded")
     if not checked and not unprovable:
         print("  no current, provenanced (baseline, seed, scene) appears under two regimes, so "
               "nothing could be checked. That is NOT a pass.")
