@@ -6,32 +6,43 @@ left open, and constraints I am carrying that no gate encodes. Those are the thi
 when a conversation is compacted, and a file like this makes their survival *closer* to true, not
 true. Read it as a colleague's notes, not as a specification.
 
-Last updated 2026-09-07, late, by Claude. Codex is stopped for the remainder of the project.
+Last updated 2026-09-07, night, by Claude. Codex is stopped for the remainder of the project.
+
+> **This file was substantially rewritten on the night of 2026-09-07.** The version before it
+> described the v194 wave as the thing to finish. v194 is now a diagnostic: correcting `ctrl`'s
+> native policy mode moved every family's evaluator revision. What follows replaces that plan.
 
 ## What I would do next, and why that order
 
-1. **Finish the wave to 7/7.** Not because the gate is red — because every later step's evidence is
-   only interpretable against an attested closure. Four families are SUCCESS; `alda` and `rlvigen`
-   are running; `dmc_gb` was resubmitted after a fix.
-2. **Do not touch `eval_grid.py`, `eval_across_scenes.py`, `families.json`, `evaluator_identity.py`
-   or `normalize_curves.py` until the wave is attested.** Each is a shared closure member and each
-   edit costs a full seven-family wave. I have paid that four times today.
-3. **Then the host sequence**, in the runbook's §0 order. Nothing there is a decision; all four are
-   measurements.
+1. **One job, then six.** The v196 configs are built and their payloads verified, but the wave is
+   deliberately not submitted as seven. Submit `cfg-dmc_gb-attest-v196.yaml` (soda) FIRST: that one
+   cell exercises the Places365 train path end to end, P21's revision stability and the
+   `RLVIGEN_IMAGE_SIZE` repair — the three pieces of machinery that have never run. Submit the
+   other six only if it lands. A shared-core mistake submitted seven times is paid for seven times,
+   and shared-core mistakes are what this session kept finding.
+2. **Do not touch the hashed members** — `eval_grid.py`, `eval_across_scenes.py`,
+   `eval_provenance.py`, `metrics.py`, `evaluator_identity.py`, `normalize_curves.py`,
+   `rlvigen-source.json`, `families.json`, or anything under `runnable/` and `RL-ViGen-upstream/` —
+   from the moment the wave starts until it is attested. Comment bytes count.
+3. **Then the host sequence**, in the runbook's §0 order. Nothing there is a decision; all of them
+   are measurements. Places365 must pass `verify_datasets.py --split train` on the host ONCE before
+   the first svea/sgqn/soda cell (runbook §2b).
 
 ## Suspicions I have NOT proven
 
-- **The remaining wave failures may share one cause.** `b19d12c` added a runtime geometry check and
-  has now produced two distinct failures — a `NameError` in `_run_grid` (rlvigen) and an
-  unnormalised observation (dmc_gb). Both were *the check being wired into paths whose values it
-  assumed*. **If `alda` or the resubmitted `rlvigen` fails, look there first**, not at the family.
-- **`rlvigen`'s resubmission may fail for a second, different reason.** It has never completed a
-  wave cell since `b19d12c`; the `NameError` masked whatever comes after it. I fixed one error and
-  have not seen the path run to completion.
-- **The `--policy-mode mode` pass has never executed anywhere.** Its scope canonicalisation is
-  tested, but no job has produced a `mode` record. It will first run in production unless someone
-  exercises it. I judged a dedicated probe not worth the compute; that judgement is worth
-  revisiting if anything about the four sampling families looks odd.
+- **The `--policy-mode mode` pass has still never executed anywhere.** Its scope canonicalises and
+  it is unit-tested, but no job has produced a `mode` record. The owner has ruled no secondary pass
+  is scheduled, so this is now a dormant capability rather than a planned step — but it means the
+  path would first execute during any future cross-block analysis. Note `ctrl` no longer needs it:
+  its native rule IS the mode.
+- **`ppg` is the weakest link in the "each family's own evaluator" claim.** OpenAI ships no
+  evaluation runner at all, so its native sampling rests on `PpoModel.act()`, a rollout convention.
+  Every other family's rule was verified against a released evaluator. If a reviewer attacks the
+  estimand story, this is where it gives.
+- **The full suite had never completed in this tree before tonight**, and the first complete run
+  found 14 failures, about half of them pre-existing checks that could not fail for the right
+  reason. I fixed those. I do not believe I have found the last one of that species — the pattern
+  (a check anchored only against our own files) is not exhausted by the instances found.
 
 ## Constraints I am carrying that no gate encodes
 
@@ -64,6 +75,16 @@ Last updated 2026-09-07, late, by Claude. Codex is stopped for the remainder of 
 ## What I am least sure about
 
 **Whether the fleet's numbers will be comparable in the way the frame claims.** The mechanics are
-now sound and the axes are declared, but the evaluation-policy-mode split is a genuine UNITS
-difference and the second pass that resolves it has never run. If one thing in this project turns
-out to be wrong at publication time, my guess is that.
+sound and the axes are declared, and the estimand question is now much better anchored than it was
+— each family's rule is verified against its own released evaluator, `ctrl` was corrected, and the
+owner has ruled the residual 9/3 split acceptable with the reporting consequence fixed in advance
+(rank within a block, never across; `notes/SAME-AXES-VERDICT.md`).
+
+What still worries me is narrower and more specific than before: **`ppg`**, whose native rule has
+no evaluator behind it, and the fact that **three of the twelve baselines have still never produced
+a single attested record** — svea, sgqn and soda could not, by construction, until P21 tonight. The
+first soda job is the real test of that repair, and it has not run yet.
+
+If one thing in this project turns out to be wrong at publication time, my guess is no longer the
+policy-mode axis. It is something in the Places365 path for those three baselines, because that
+path has had three separate defects in one day and has never once run end to end.
