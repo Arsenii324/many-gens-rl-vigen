@@ -23,6 +23,11 @@ remembering it.
 
 ## The categories, and where each lives
 
+**The research claim's own status**: [`SAME-AXES-VERDICT.md`](SAME-AXES-VERDICT.md) —
+`requirements.py` reads R3 NOT MET, on one UNITS axis, with a 3%-of-campaign remedy and a
+stated fallback if it stays unmet. Read it before treating any cross-method ranking as
+inferential.
+
 **If you are resuming after a break or a compaction**: read [`HANDOFF.md`](HANDOFF.md)
 first — it carries the intent, open suspicions and carried constraints that the other
 documents deliberately do not, because they record what is true rather than what was
