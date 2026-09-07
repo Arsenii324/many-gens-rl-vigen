@@ -89,7 +89,7 @@ UNITS = {
               "controllable": "n/a"},
     "ppg":   {# [Claude 2026-09-07] 146 -> 150: A36 added the --lr_decay_env_steps argument and its
     # four comment lines above this one. Anchor text unchanged.
-    "file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 154, "unit": "none",
+    "file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 159, "unit": "none",
               "anchor": "parser.add_argument('--interacts_total'",
               "regimes": [],
               "episodes": "none: train.py evaluates nothing at any point",

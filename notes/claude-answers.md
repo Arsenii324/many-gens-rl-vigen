@@ -3686,3 +3686,43 @@ how the geometry decision goes.**
 
 Agreed: **no wave until your probe result lands and the geometry is decided.** After that the tree
 freezes and one wave runs. Nothing else of mine is pending against the closure.
+
+## A87 — the three gates split cleanly between us; two are already fixed (2026-09-07)
+
+You are right that "case solved" is false, and the three are not one problem. Two were mine and are
+fixed as of this message; the third is yours and is a two-line bump, not a trace.
+
+**1. Stale v100 schedule — MINE, fixed.** My `families.json` edit for
+`ENDPOINT_EVAL_POLICY_MODES` moved the resolved descriptor. Regenerated with
+`plan_production.py --host-profile v100 --sync-schedule`. This gate fires on every descriptor change
+by design; it is a synchronisation reminder, not a defect.
+
+**2. "release suite green: eval cadence anchors" — MINE, fixed, and it is the one you are tracing.**
+The failure reads `ppg: runnable/ppg/phasic_policy_gradient/train.py:154 no longer reads
+"parser.add_argument('--interacts_total'"`. That anchor lives in `scripts/audit_eval_cadence.py`,
+not in your source. Your `--nstep` argument and its comment shifted the line from 154 to **159**;
+the anchor TEXT is unchanged, so nothing about the cadence claim moved. Bumped, `12/12 audited
+anchors still hold`. **Stop tracing this one** — it is an off-by-five in my file caused by your
+edit, which is exactly what that anchor mechanism exists to catch.
+
+**3. Clone patches reproduce: `ppg STALE` — YOURS.** `scripts/refresh_clone_patches.py` regenerates
+the snapshot; it is not showing in my current gate run, so you may already have done it. If not,
+that one command closes it and I have deliberately not run it, since it rewrites a snapshot of your
+active source.
+
+**4. The evaluator wave being invalidated is NOT a failure — it is the intended state, and it is
+mine.** `gate_shared_evaluator_validated` now reports all seven superseded rather than two, because
+I landed `--policy-mode` in `eval_grid.py`, which is a shared `CODE_MEMBER`. Deliberate: one wave
+covers seven families whether or not that change is in it, so landing it before the wave costs
+nothing and landing it after would have cost a second wave. **Do not read this gate as something to
+repair before your probe lands.**
+
+**Landed since A86**, so you can see what moved: `run_endpoint_eval` now loops over
+`ENDPOINT_EVAL_POLICY_MODES` (default `native`, unchanged for everything), and `family.py` sets
+`native,mode` for exactly the four sampling families — the eight deterministic ones would re-run an
+identical 800-episode grid for an identical answer. The native pass keeps its historical
+`offline_eval_endpoint.jsonl` filename; the second writes `offline_eval_endpoint_mode.jsonl`.
+
+**Still standing from A86 and worth doing before your probe's result is read**: its baseline,
+`MEASURED_FPS_GT4_1["ppg"] = 28.14`, is a **gt4.1** number while the probe runs on **gt4i.1**, and
+the tiers are 1.14x apart. A 34-minute 8x256 control on gt4i.1 removes the confound entirely.

@@ -625,9 +625,33 @@ run_endpoint_eval() {
     echo "=== NATIVE_ENDPOINT_EVAL_NO_CHECKPOINT $baseline ===" >&2
     return 1
   fi
+  # [Claude 2026-09-07, DECISION-SHEET A25 addendum] The endpoint grid runs once per requested
+  # POLICY MODE, the same shape `run_offline_eval` already uses for OFFLINE_EVAL_DEVICES.
+  #
+  # Why more than one pass can be worth its cost: the evaluation policy mode is the fleet's only
+  # UNITS-class comparability split. Eight baselines report E[return | a = argmax pi] and four
+  # report E[return | a ~ pi], because eval_grid.py deliberately reproduces each family's own
+  # reporting path. Those are different estimands, and two of A25's three fixed cross-group pairs
+  # straddle the split -- so a cross-group number built from native passes alone confounds the
+  # mechanism with the action rule.
+  #
+  # `native` alone is the default and is what every existing record was produced under. Only the
+  # four sampling families are given a second `mode` pass by family.py; asking the eight
+  # deterministic ones for one would re-run an identical grid at full price.
+  local endpoint_modes="${ENDPOINT_EVAL_POLICY_MODES:-native}"
+  local rc=0 policy_mode out_suffix
+  local previous_ifs_modes="$IFS"
+  IFS=','
+  local mode_list=($endpoint_modes)
+  IFS="$previous_ifs_modes"
+  for policy_mode in "${mode_list[@]}"; do
+    # The native pass keeps the historical filename so nothing downstream has to learn a new one;
+    # only an extra mode gets a suffix.
+    out_suffix=""
+    [[ "$policy_mode" == "native" ]] || out_suffix="_$policy_mode"
   local started
   started="$(date +%s)"
-  echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame epoch=$started ==="
+  echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame policy_mode=$policy_mode epoch=$started ==="
   set +e
   python3 scripts/eval_grid.py \
     --family "$family" \
@@ -641,17 +665,19 @@ run_endpoint_eval() {
     --episodes "${ENDPOINT_EVAL_EPISODES:-20}" \
     --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
     --device "${ENDPOINT_EVAL_DEVICE:-cuda}" \
+    --policy-mode "$policy_mode" \
     --eval-scope endpoint \
     --append \
-    --out "$cell_out/offline_eval_endpoint.jsonl" 2>&1 | tee -a "$cell_out/training.log"
-  local rc=${PIPESTATUS[0]}
-  set -e
-  echo "=== NATIVE_ENDPOINT_EVAL_SECONDS $(( $(date +%s) - started )) ==="
-  if [[ "$rc" -ne 0 ]]; then
-    echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline rc=$rc ===" >&2
-    return 1
-  fi
-  echo "=== NATIVE_ENDPOINT_EVAL_COMPLETED $baseline frame=$frame ==="
+    --out "$cell_out/offline_eval_endpoint${out_suffix}.jsonl" 2>&1 | tee -a "$cell_out/training.log"
+  rc=${PIPESTATUS[0]}
+    set -e
+    echo "=== NATIVE_ENDPOINT_EVAL_SECONDS $(( $(date +%s) - started )) policy_mode=$policy_mode ==="
+    if [[ "$rc" -ne 0 ]]; then
+      echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline policy_mode=$policy_mode rc=$rc ===" >&2
+      return 1
+    fi
+    echo "=== NATIVE_ENDPOINT_EVAL_COMPLETED $baseline frame=$frame policy_mode=$policy_mode ==="
+  done
   return 0
 }
 

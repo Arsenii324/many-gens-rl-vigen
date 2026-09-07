@@ -508,6 +508,22 @@ def production_env(cells: str, path: Path | None = None) -> dict:
     # retaining the same certified regimes and scenes.
     out["ENDPOINT_EVAL"] = "1"
     out["CURVE_EVAL"] = "1"
+    # [Claude 2026-09-07, DECISION-SHEET A25 addendum] A second endpoint pass at the deterministic
+    # action, for the four families whose native reporting path SAMPLES. Their native pass stays the
+    # headline; the `mode` pass is what makes a cross-group contrast comparable, since E[return |
+    # a = argmax pi] and E[return | a ~ pi] are different estimands and two of A25's three fixed
+    # cross-group pairs straddle that split.
+    #
+    # Only these four. Asking a family that already takes the mode for a second `mode` pass would
+    # re-run an identical 800-episode grid at full price for an identical answer. Cost as scoped:
+    # four baselines x three seeds x ~2.4 h = ~29 GPU-h against a campaign near 865.
+    import importlib.util as _il
+    _spec = _il.spec_from_file_location(
+        "_evaluator_identity_for_modes", Path(__file__).resolve().with_name("evaluator_identity.py"))
+    _identity = _il.module_from_spec(_spec)
+    _spec.loader.exec_module(_identity)
+    if _identity.FAMILY_EVAL_POLICY_MODE.get(family) == "sample":
+        out["ENDPOINT_EVAL_POLICY_MODES"] = "native,mode"
     for axis in ("regimes", "scenes", "episodes"):
         endpoint_key = f"offline_eval_{axis}"
         endpoint_value = settings.get(endpoint_key)
