@@ -40,6 +40,7 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
     pairs = list(zip(options[::2], options[1::2]))
     assert dict(pairs) == {
         "--interacts_total": "{frames}",
+        "--nstep": "{nstep}",
         "--seed": "{seed}",
         "--log_dir": "{run_dir}",
         "--save_mode": "all",
@@ -74,6 +75,15 @@ def test_ppg_cell_and_evaluator_propagate_the_descriptor_contract():
     assert 'bash "$HERE/ppg.sh" "$TASK" "$NENV" "$@"' in cell
     assert 'ap.add_argument("--frame_stack", type=int, default=3' in evaluator
     assert "frame_stack=args.frame_stack" in evaluator
+
+
+def test_ppg_rollout_length_override_reaches_ppo(tmp_path):
+    """The geometry probe's --nstep must be a real CLI-to-rollout setting, not dead text."""
+    del tmp_path
+    train = (ROOT / "runnable" / "ppg" / "phasic_policy_gradient" / "train.py").read_text()
+    assert "nstep=256" in train
+    assert "parser.add_argument('--nstep', type=int, default=256)" in train
+    assert "nstep=nstep" in train
 
 
 def test_ppg_eval_loads_and_runs_a_real_nine_channel_c2_checkpoint(tmp_path, monkeypatch):

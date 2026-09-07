@@ -472,7 +472,7 @@ def _idaac_setup() -> None:
             sys.path.insert(0, str(path))
 
 
-def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=None):
+def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=None, policy_mode="native"):
     """One (regime, scene) cell for idaac, through the VecEnv stack its own evaluator uses.
 
     **It SAMPLES.** `model.py:332` is `def act(self, inputs, deterministic=False)` and `test.py`
@@ -538,7 +538,9 @@ def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=Non
     succeeded = False
     while len(returns) < episodes:
         with torch.no_grad():
-            out = agent.act(obs)
+            # A25 addendum: `deterministic` defaults False in model.py:332, which is
+            # what test.py relies on; `mode` asks for the other branch explicitly.
+            out = agent.act(obs, deterministic=(policy_mode == "mode"))
         action = out[1] if len(out) == 3 else out[2]
         obs, _, _, infos = envs.step(action)
         for info in (infos or []):
@@ -578,7 +580,7 @@ def _ppg_setup() -> None:
         sys.path.insert(0, str(path))
 
 
-def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None):
+def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None, policy_mode="native"):
     """One (regime, scene) cell for ppg, through PPG's own Roller and VecMonitor2.
 
     **It SAMPLES.** `PpoModel.act` draws from the policy distribution and this repository ships no
@@ -613,7 +615,24 @@ def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None)
     # callback signature and avoids moving a CUDA tensor to CPU solely for diagnostics.
     venv.act = _observed_venv_act
     try:
-        roller = Roller(venv=venv, act_fn=agent.act, initial_state=agent.initial_state(1),
+        # [Claude 2026-09-07, A25 addendum] PpoModel.act draws `pd.sample()` and this repo ships no
+        # deterministic path to call instead, so `mode` is implemented HERE, in our harness, rather
+        # than by editing runnable/ppg -- the same principle as every other evaluator delta. The
+        # continuous head is torch.distributions.Normal (distr_builder.py:28), whose mode is its
+        # mean; `pd.mean` rather than `pd.mode()` because the latter is not in every torch version
+        # this project pins.
+        act_fn = agent.act
+        if policy_mode == "mode":
+            def act_fn(ob, first, state_in, _model=agent):
+                from phasic_policy_gradient import tree_util as _tu
+                pd, _vpred, _aux, state_out = _model(
+                    ob=_tu.tree_map(lambda x: x[:, None], ob), first=first[:, None],
+                    state_in=state_in)
+                deterministic = pd.mean
+                return (_tu.tree_map(lambda x: x[:, 0], deterministic), state_out,
+                        dict(vpred=_vpred[:, 0], logp=_vpred[:, 0] * 0.0))
+
+        roller = Roller(venv=venv, act_fn=act_fn, initial_state=agent.initial_state(1),
                         keep_buf=max(100, episodes))
         while roller.episode_count < episodes:
             roller.multi_step(32)
@@ -666,7 +685,7 @@ def _ibac_sni_setup() -> None:
             sys.path.insert(0, str(path))
 
 
-def run_scene_ibac_sni(built, task, scene_id, mode, episodes, seed):
+def run_scene_ibac_sni(built, task, scene_id, mode, episodes, seed, policy_mode="native"):
     """One (regime, scene) cell for ibac_sni, through its own `Agent` and `get_actions`.
 
     **It SAMPLES.** `Agent.__init__` takes `argmax=False` by default and `scripts/evaluate.py`
@@ -691,7 +710,10 @@ def run_scene_ibac_sni(built, task, scene_id, mode, episodes, seed):
     model_dir, device = built
     env_id = f"robosuite:{task}"
     env = ibac_utils.make_rlvigen_env(env_id, seed)
-    agent = ibac_utils.Agent(env_id, env.observation_space, str(model_dir), False, 1,
+    # The fourth positional is `argmax`: False samples (evaluate.py's own default),
+    # True takes the mode.
+    agent = ibac_utils.Agent(env_id, env.observation_space, str(model_dir),
+                             policy_mode == "mode", 1,
                              device=device)
     verify_regime(env, mode, scene_id, "ibac_sni", strict=True)
     action_probe = _new_action_probe(env)
@@ -922,7 +944,7 @@ def _ctrl_train_state(snapshot, n_actions: int = 7):
     return train_state, model
 
 
-def run_scene_ctrl(built, task, scene_id, mode, episodes, seed):
+def run_scene_ctrl(built, task, scene_id, mode, episodes, seed, policy_mode="native"):
     """One (regime, scene) cell for ctrl, through its own vec env and `algo.select_action`.
 
     **It SAMPLES**, and that is the correction of 2026-09-04: `select_action(..., sample=False)`
@@ -989,7 +1011,7 @@ def run_scene_ctrl(built, task, scene_id, mode, episodes, seed):
         while not done:
             action, _, _, key = select_action(train_state.params, train_state.apply_fn, model.ac,
                                               jnp.asarray(state).astype(jnp.float32) / 255.,
-                                              key, sample=True)
+                                              key, sample=(policy_mode != "mode"))
             action_for_env = np.asarray(action)
             action_probe.observe(action_for_env)
             state, reward, done_arr, infos = env.step(action_for_env)
@@ -1047,19 +1069,19 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
             print(f"  {regime:12s} scene {scene} ...", file=sys.stderr, flush=True)
             if a.family == "idaac":
                 returns, succ, flags = run_scene_idaac(agent, a.task, scene, regime, a.episodes,
-                                                a.episode_seed, a.frame_stack)
+                                                a.episode_seed, a.frame_stack, policy_mode=a.policy_mode)
             elif a.family == "ctrl":
                 returns, succ, flags = run_scene_ctrl(agent, a.task, scene, regime, a.episodes,
-                                               a.episode_seed)
+                                               a.episode_seed, policy_mode=a.policy_mode)
             elif a.family == "alda":
                 returns, succ, flags = run_scene_alda(agent, a.task, scene, regime, a.episodes,
                                                a.episode_seed)
             elif a.family == "ibac_sni":
                 returns, succ, flags = run_scene_ibac_sni(agent, a.task, scene, regime, a.episodes,
-                                                   a.episode_seed)
+                                                   a.episode_seed, policy_mode=a.policy_mode)
             elif a.family == "ppg":
                 returns, succ, flags = run_scene_ppg(agent, a.task, scene, regime, a.episodes,
-                                              a.episode_seed, a.frame_stack)
+                                              a.episode_seed, a.frame_stack, policy_mode=a.policy_mode)
             elif a.family == "dmc_gb":
                 returns, succ, flags = run_scene_dmc_gb(agent, a.task, scene, regime, a.episodes,
                                                  a.episode_seed, a.image_size, a.episode_length)
@@ -1217,6 +1239,19 @@ def main() -> int:
     # and different DEPTH -- the endpoint is 4 regimes x 10 scenes x 20 episodes, an intermediate
     # stamp is deliberately shallower. Pooling them would silently mix a headline number with a
     # descriptive one, and nothing in the record distinguished them.
+    # [Claude 2026-09-07, DECISION-SHEET A25 addendum] The evaluation policy mode is the fleet's
+    # ONLY UNITS-class comparability split (audit_comparability_seam.py): eight baselines report
+    # E[return | a = argmax pi] and four report E[return | a ~ pi], because this evaluator
+    # deliberately reproduces each family's own action rule. Those are different estimands, and two
+    # of A25's three fixed cross-group pairs straddle the split.
+    #
+    # `native` is the default and changes nothing: each family acts exactly as its own reporting
+    # path does, which is the fidelity property EVALUATOR-DELTA.md exists to protect. `mode` takes
+    # the deterministic action everywhere, producing a second pass that IS comparable across all
+    # twelve. The intended use is both -- native for the headline, mode for cross-group contrasts.
+    ap.add_argument("--policy-mode", default="native", choices=("native", "mode"),
+                    help="native: each family's own action rule. mode: deterministic everywhere, "
+                         "for comparisons that cross the sampling/deterministic split")
     ap.add_argument("--eval-scope", default="endpoint", choices=("endpoint", "curve"),
                     help="what this grid is FOR: the reported endpoint, or a trajectory stamp")
     a = ap.parse_args()
@@ -1276,7 +1311,13 @@ def main() -> int:
         "device": a.device, "action_repeat": a.action_repeat, "frame_stack": declared_frame_stack,
         "image_size": declared_image_size, "episode_length": a.episode_length,
         "deterministic_setting": requested_deterministic_setting,
-        "eval_policy_mode": family_eval_policy_mode(a.family),
+        # [Claude 2026-09-07] MUST reflect what ran, not what the family natively does. Stamping the
+        # native rule while `--policy-mode mode` was in force would make the record assert the one
+        # thing it exists to certify -- which action rule produced these returns.
+        "eval_policy_mode": ("mode" if a.policy_mode == "mode"
+                             else family_eval_policy_mode(a.family)),
+        "eval_policy_mode_source": ("forced by --policy-mode mode" if a.policy_mode == "mode"
+                                    else "the family's own reporting path"),
     })
     EVALUATOR_SCOPE = resolved_scope
     EVALUATOR_SCOPE_REVISION = scope_revision(resolved_scope)

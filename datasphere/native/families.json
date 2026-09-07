@@ -632,6 +632,8 @@
     "options": [
       "--interacts_total",
       "{frames}",
+      "--nstep",
+      "{nstep}",
       "--seed",
       "{seed}",
       "--log_dir",

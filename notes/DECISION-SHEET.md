@@ -1064,11 +1064,21 @@ their native mode as the headline, and use the mode-taking pass for any cross-gr
 - **Why not just declare it**: a declaration is the right treatment for a CONDITIONS split. This one
   changes what the number IS, and the primary contrasts cross it.
 
-**Requires a small change to `eval_grid.py`**, which currently hardcodes each family's mode with no
-override: a `--policy-mode` argument defaulting to the family's native rule. Not implemented in this
-entry — it moves the evaluator closure and therefore every family's attestation, so it belongs in
-the same freeze as A36's geometry decision, immediately before the single final validation wave
-(Q47). Recorded here so the sequencing is explicit rather than discovered later.
+**IMPLEMENTED the same day.** `eval_grid.py` now takes `--policy-mode {native,mode}`, defaulting to
+`native` so every existing record's production path is unchanged. All four sampling families honour
+it: `idaac` through `act(..., deterministic=True)`, `ctrl` through `select_action(..., sample=False)`,
+`ibac_sni` through its `Agent`'s `argmax` positional, and `ppg` through a wrapper in OUR harness
+rather than an edit to `runnable/ppg` — its `PpoModel.act` calls `pd.sample()` and the repo ships no
+deterministic path, so the wrapper takes `pd.mean` (the mode of the `torch.distributions.Normal`
+its continuous head builds). The record stamps the mode that ACTUALLY ran, plus an
+`eval_policy_mode_source` saying which of the two it was: stamping the native rule while the
+override was in force would make the record assert the one thing it exists to certify.
+`tests/test_policy_mode_override.py` pins all four call sites and the record stamp.
+
+**This moved all seven attestations**, as predicted — `eval_grid.py` is a shared `CODE_MEMBER`. That
+is the argument for having done it BEFORE the wave rather than after: one wave covers seven families
+whether or not this change is in it, so landing it first costs nothing and landing it later costs a
+second wave. The freeze now waits only on A36's geometry answer.
 
 ### A25 REVISED, 2026-09-07 — the cross-group contrast is no longer winner-versus-winner
 

@@ -11,9 +11,11 @@ page exists beside it.
 
 Three things block release, and they are different in kind:
 
-1. **Two source decisions must close before the evaluator closure can be frozen.** Both were opened
-   today, both by finding something rather than by deciding to look. Until they close, a validation
-   wave would have to be re-run, so no wave should be run.
+1. **One source decision must close before the evaluator closure can be frozen** — down from two:
+   the policy-mode override landed the same day it was found. Until A36's geometry answer arrives, a
+   validation wave would have to be re-run, so no wave should be run. **All seven attestations are
+   now superseded**, not two, because the policy-mode change touches the shared evaluator; that does
+   not change the plan, since one wave covers seven families either way.
 2. **Four things need the production host**, which no agent here can reach. They are ordered and
    commanded in `RUNNING-ON-PRODUCTION-HOST.md` §0 and `MIGRATION-T4-TO-V100.md`.
 3. **Seven decisions need the owner's ratification.** Each already has an implemented default that
@@ -24,7 +26,7 @@ Three things block release, and they are different in kind:
 | item | what is open | why it blocks the freeze |
 |---|---|---|
 | **A36 — PPG rollout geometry** | `raileanu21a-supp.pdf` §E specifies `1 process x 2048 steps`; this port runs `8 x 256`. Same 2048 samples per update and the same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry. | Changing it edits `runnable/ppg`, which is in ppg's hashed runtime closure. Handed to Codex (A83/A85) as one bounded gt4i.1 probe against the known 8x256 rate. |
-| **A25 addendum — evaluation policy mode** | The fleet's ONLY UNITS-class comparability split: `eval_grid.py` reproduces each family's own action rule, `mode` for eight baselines and `sample` for `idaac`/`ppg`/`ibac_sni`/`ctrl`. Two of the three fixed cross-group pairs cross it. | The resolution — evaluate the four sampling families in both modes, ~29 GPU-h of a campaign near 865 — needs a `--policy-mode` argument in `eval_grid.py`, which is in EVERY family's closure. |
+| ~~**A25 addendum — evaluation policy mode**~~ **CLOSED same day** | Was: the fleet's only UNITS-class split, with two of three fixed cross-group pairs crossing it. | `eval_grid.py` now takes `--policy-mode {native,mode}`, default `native`. All four sampling families honour it and the record stamps the mode that actually ran. It moved all seven attestations, which is why it had to land BEFORE the wave rather than after. |
 
 **Consequence, and it is the sequencing rule (Q47)**: `alda` and `ppg` attestations are already
 superseded by today's step-0 guard and LR-decay changes. One wave, after both blockers close, against

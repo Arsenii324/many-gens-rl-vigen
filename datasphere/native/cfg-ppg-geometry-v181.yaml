@@ -1,0 +1,39 @@
+# A36 bounded geometry measurement, not a production result.
+#
+# Compare the current PPG C2 Door port (8 environments x 256 serial steps) with the
+# IDAAC-authors' continuous-control comparator geometry (1 environment x 2048 serial steps).
+# Both collect 2,048 interactions per PPO update and both reach one n_pi=32 auxiliary boundary
+# at 65,536 interactions. The only intended geometry change is the final CLI override below;
+# stack, hyperparameters, seed, image, and source payload stay the same.
+#
+# This is a throughput/operability probe. It deliberately does not run the expensive endpoint
+# grid, so its output must not enter the headline results table.
+name: vigen-ppg-geometry-v181
+desc: "A36 bounded PPG geometry probe: 1x2048 against the current 8x256 port, one seed, 65536 frames."
+cmd: >-
+  timeout --foreground 18000s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ppg:1
+  FRAMES=65536
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=65536
+  ENDPOINT_EVAL=0
+  NATIVE_EXTRA_OVERRIDES="--num_envs 1 --nstep 2048"
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v181-ppg-geometry.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
