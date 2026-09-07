@@ -24,6 +24,10 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 >   decisions are still the owner's to make, the host-migration order, and how to run the campaign.
 >   Start there rather than here if the question is "what is still open" or "how do I run this on
 >   the production host"; this README describes what the repo *is*, not what is left to do in it.
+>   Running a cell on the production V100 box is
+>   [`notes/RUNNING-ON-PRODUCTION-HOST.md`](notes/RUNNING-ON-PRODUCTION-HOST.md), with its
+>   rationale and open decisions in
+>   [`notes/PRODUCTION-HOST-RATIFICATION.md`](notes/PRODUCTION-HOST-RATIFICATION.md).
 > - **[`docs/RUNNABLE-ORIGINALS.md`](docs/RUNNABLE-ORIGINALS.md)** — Part 1: what runs, what was
 >   changed to make it run, and what the T4 has and has not proved.
 > - **[`docs/PART2-METRIC-INVENTORY.md`](docs/PART2-METRIC-INVENTORY.md)** — Part 2: what each
