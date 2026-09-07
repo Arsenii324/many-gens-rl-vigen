@@ -63,14 +63,24 @@ rerun a failed off-policy seed from zero rather than resuming it against an empt
 
 ```bash
 ssh varaksin_as@cds2
-nvidia-smi                  # which GPU is free NOW; remote-infra.txt's snapshot is stale by design
-df -h /path/for/the/run     # see §5 for how much is needed
-docker run --rm --gpus all nvidia/cuda:12.2.2-runtime-ubuntu22.04 nvidia-smi
+cd <the repo, or wherever the payload and this script are>
+bash datasphere/native/preflight_production_host.sh --cells drqv2:1 --frames 600000
 ```
 
-The last one is the real check: `nvidia-smi` working on the host does **not** prove
-`docker run --gpus` works — that needs `nvidia-container-toolkit` installed and the Docker daemon
-configured for it. If the SSH user is not in the `docker` group, every command below needs `sudo`.
+**One command, eight checks, exit 0 only if all pass.** It was a hand-run checklist until
+2026-09-07, which is the wrong shape for something whose failure modes are a cell dying six hours
+in — or worse, succeeding while measuring something else. It checks: the Docker daemon is reachable
+*as this user* (being in the group is not the same as the daemon running); `source-lock.json` pins
+an image; `docker run --gpus all <pinned image> nvidia-smi` actually reaches the GPUs (host
+`nvidia-smi` working does **not** prove this — it needs `nvidia-container-toolkit`); how many GPUs
+there are and whether they are busy; that the container has outbound network, since `run_probe.sh`
+bootstraps its whole environment per run; free disk against the **derived** requirement for those
+exact cells; the memory model on the `v100` tier; and that the host really has the RAM that tier
+assumes.
+
+It deliberately does **not** check renderer parity. That is C95's R_A/R_B comparison against a real
+checkpoint (`MIGRATION-T4-TO-V100.md` step 2) and it is a separate gate — the preflight says so on
+success rather than letting a green be mistaken for one.
 
 ## 2. Build and transfer the payload
 

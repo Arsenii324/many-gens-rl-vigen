@@ -269,3 +269,26 @@ def test_the_disk_floor_is_per_family_not_one_constant():
     assert packed > off_policy * 1.8, "packing two cells roughly doubles the requirement"
     probe = family.disk_requirement_gib("drqv2:1", 10_000, profile="v100")["required_gib"]
     assert probe < 10, "a 10k probe must not be sized against a 600k replay buffer"
+
+
+def test_preflight_script_is_valid_and_fails_closed(tmp_path):
+    """Eight checks, exit 0 only if all pass -- and it must FAIL where it cannot verify.
+
+    Run here it cannot reach a Docker daemon or a GPU, and the right behaviour is to say so and
+    refuse, not to pass by default. A preflight that greens on a machine it cannot inspect is worse
+    than no preflight.
+    """
+    script = ROOT / "datasphere" / "native" / "preflight_production_host.sh"
+    syntax = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+    assert syntax.returncode == 0, syntax.stderr
+
+    result = subprocess.run(["bash", str(script), "--cells", "idaac:1", "--frames", "600000"],
+                            capture_output=True, text=True, cwd=str(ROOT))
+    assert result.returncode != 0, "must refuse when it cannot verify the host"
+    assert "Do not start a production cell" in result.stdout
+    # The checks that ARE decidable from any machine must still be made rather than skipped.
+    assert "source-lock pins an image" in result.stdout
+    assert "disk:" in result.stdout
+    assert "memory model" in result.stdout
+    assert "renderer parity" in result.stdout, (
+        "a green preflight must not be mistakable for a renderer-parity pass")
