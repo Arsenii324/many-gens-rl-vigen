@@ -17,6 +17,15 @@ evaluation half has changed shape since it was written (A20's trajectory grid di
 
 With two-way packing where RAM allows: **~21 days** (the packing factor is unchanged; the second endpoint pass is 3% of the total and does not move it).
 
+**Superseded later the same day.** Correcting `ctrl`'s native evaluation policy mode moved it from
+the sampling side to the deterministic side (`SAME-AXES-VERDICT.md`), so the deterministic-second-
+endpoint-pass row above is for **three** sampling families (`idaac`, `ppg`, `ibac_sni`), not four,
+against **nine** deterministic families, not eight. The owner then ruled that no secondary pass is
+scheduled at all ("no secondaries"; `SAME-AXES-VERDICT.md`). The 28.7 GPU-h above is therefore a
+dormant reference cost — `--policy-mode mode` remains implemented and reachable for the three
+sampling families, and is not run — not a committed line item; the committed total is the other
+four terms, ~864.3 GPU-h.
+
 ## Three caveats, none of which I will paper over
 
 1. **These are T4-class (gt4.1) throughputs.** The production host is a V100, which is faster for

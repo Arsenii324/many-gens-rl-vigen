@@ -114,6 +114,10 @@ Three things block release, and they are different in kind:
 | **A36 — PPG rollout geometry** | `raileanu21a-supp.pdf` §E specifies `1 process x 2048 steps`; this port runs `8 x 256`. Same 2048 samples per update and the same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry. | Changing it edits `runnable/ppg`, which is in ppg's hashed runtime closure. Handed to Codex (A83/A85) as one bounded gt4i.1 probe against the known 8x256 rate. |
 | ~~**A25 addendum — evaluation policy mode**~~ **CLOSED same day** | Was: the fleet's only UNITS-class split, with two of three fixed cross-group pairs crossing it. | `eval_grid.py` now takes `--policy-mode {native,mode}`, default `native`. All four sampling families honour it and the record stamps the mode that actually ran. It moved all seven attestations, which is why it had to land BEFORE the wave rather than after. |
 
+**Note added 2026-09-07, later:** `ctrl`'s own rule was subsequently corrected to `mode` (its
+released evaluator is greedy), so "four sampling families" above is now three
+(`idaac`, `ppg`, `ibac_sni`); see `notes/SAME-AXES-VERDICT.md`.
+
 **Consequence, and it is the sequencing rule (Q47)**: `alda` and `ppg` attestations are already
 superseded by today's step-0 guard and LR-decay changes. One wave, after both blockers close, against
 the frozen tree. Not before.

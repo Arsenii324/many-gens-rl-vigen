@@ -1140,6 +1140,14 @@ is the argument for having done it BEFORE the wave rather than after: one wave c
 whether or not this change is in it, so landing it first costs nothing and landing it later costs a
 second wave. The freeze now waits only on A36's geometry answer.
 
+**Superseded 2026-09-07 (later): both premises of this entry moved.** `ctrl`'s own evaluation rule
+was corrected to `mode` (its released evaluator is greedy — `evaluate_ppo.py:84`), so the split
+this entry called 8/4 is 9/3 with `ctrl` on the deterministic side, and the "four stochastic
+families" plan above is now three (`idaac`, `ppg`, `ibac_sni`). The owner then ruled the residual
+split acceptable and directed "no secondaries" (A39 below): the both-modes pass described above is
+implemented and reachable but was never scheduled or run. See `notes/SAME-AXES-VERDICT.md` for the
+full account and the ruling.
+
 ### A25 REVISED, 2026-09-07 — the cross-group contrast is no longer winner-versus-winner
 
 **External review 21 #10, and it is right.** The "cross-group, best-in-group" row above selects the
