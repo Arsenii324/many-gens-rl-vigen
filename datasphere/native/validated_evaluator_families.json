@@ -48,10 +48,10 @@
     "baseline": "ctrl",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1mg9ens1di936htjc7__records.jsonl",
-    "evaluation_records_sha256": "89b6b9bf0c378bc35e31d7baed31c326f331a41213256d48b7a3eddb586ea74e",
-    "evaluator_measurement_revision": "514da6f0d88c940d50c52411b0da0accbcfd075c3b2e6fe1bfb52cf11dd0bed9",
-    "evaluator_revision": "763de034c4ec3f6da7d9b36dc17a803dfe928e5e6c546f89b931db7db20919da",
+    "evaluation_records_path": "results/records/bt13vlerk8p1vop3bmep__records.jsonl",
+    "evaluation_records_sha256": "b1d72630220c3bfa3faa8e601cd98b7b376cefe80878e3eefb13f839176273a2",
+    "evaluator_measurement_revision": "c7bb45274f7f1e03cc27a40acfb351d966876a6a6ea1df93c330e4a252d07ca6",
+    "evaluator_revision": "2be1bc763799ffd0ea793077783a8dc92973bf541a74383135d8c9b96f8ac155",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "ctrl",
@@ -68,8 +68,8 @@
       "eval_scope": "endpoint",
       "family": "ctrl",
       "frame": 10000,
-      "frame_stack": 3,
-      "image_size": 100,
+      "frame_stack": 1,
+      "image_size": 64,
       "regimes": [
         "train",
         "eval-easy"
@@ -80,10 +80,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "16e5e051f6c5824e19c5adf4dfc551801fbb36eaadba968bf7ad371dffd52d3d",
-    "family_code_revision": "23fcf491621af2f355009c3a6928bc72345d1379e6bc224a25ca586e21ddfa1a",
+    "evaluator_scope_revision": "690e5f2ac9bdb7ae18dc78c8774bba981f28560cc4a527407dcb663a55110bfd",
+    "family_code_revision": "f45db6bfd4441679323e75aeaaf51e17556f738922e022e5b06fdb6d5b1f6bb1",
     "family_config_revision": "eb76930446ca3b69607c477ac190fb5d35a3ea30d07ed73efae933896d69ba7f",
-    "job": "bt1mg9ens1di936htjc7",
+    "job": "bt13vlerk8p1vop3bmep",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
@@ -92,10 +92,10 @@
     "baseline": "rad",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt13r293fit1pbt7ah4p__records.jsonl",
-    "evaluation_records_sha256": "40cf3569f1b7d0121000ce1fab934afc7ce3b0dd6b36e9a631db693e006e69ed",
-    "evaluator_measurement_revision": "7d793b354ed2c06dd7332bbdc3fd35d2b2cb623f1715e52a228488aec7597304",
-    "evaluator_revision": "1a6bba90e0424e91384f9d7f3083f4378e073e7eeb38072cf402c113d67f5ddb",
+    "evaluation_records_path": "results/records/bt1k600n8r2e4divs2dk__records.jsonl",
+    "evaluation_records_sha256": "072d121dd2ab27ef2da23adc88c155201f8bafcff4e14442c03f976fa44177b6",
+    "evaluator_measurement_revision": "d44a646e67019a810569b03797c7ab8ad1828cd012526ab2cc08fea56b179d18",
+    "evaluator_revision": "19bf295ddfd9ff279c894d3d9c2558c7c588b298168b3af8b9f7f69d368f370a",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "rad",
@@ -125,9 +125,9 @@
       "task": "Door"
     },
     "evaluator_scope_revision": "62866cd0eda6186382a76250ff9a2ab338b60c953244b061877ec0f91cb5d734",
-    "family_code_revision": "949f2ab1dbb84337742d5f6633cbd8224319b0a93ceef51a110796242107f88e",
+    "family_code_revision": "f91b9e673714ca6ca3630e1e83241516274a005528303ee89c862492ce940c9e",
     "family_config_revision": "c041fb7a5ba3c33b95d79514a8e43387c35687a3b42a1b426800f63e3dc315a0",
-    "job": "bt13r293fit1pbt7ah4p",
+    "job": "bt1k600n8r2e4divs2dk",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
@@ -136,10 +136,10 @@
     "baseline": "ibac_sni",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt169vanpqh4u7no7n8c__records.jsonl",
-    "evaluation_records_sha256": "52aeb1688ccee9730742dcdf8100bfca28feb6bf3d7a9d09e9788739049b21d7",
-    "evaluator_measurement_revision": "f50ac1c5101a14e1019075950e46b0527bdd06e428fa523952cadc4c06513a2f",
-    "evaluator_revision": "37bd76ed23e7a8e9c733a9c1d8dbfb4b3baab1ddc44c44b006d35a257bd40cce",
+    "evaluation_records_path": "results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl",
+    "evaluation_records_sha256": "b2dcb420392ed21739ad3d26a4c5898180d62d4a6eb9c7b4febd22658e9b3377",
+    "evaluator_measurement_revision": "5ae5ef8f143ecbf515e5a957eaa611135b7938c643dbd0951d634fd64fae5f4f",
+    "evaluator_revision": "221eb86c15746aa26d70d280dfbb81ec8fd4ab1668cb0081ceaec70793a61fbf",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "ibac_sni",
@@ -156,8 +156,8 @@
       "eval_scope": "endpoint",
       "family": "ibac_sni",
       "frame": 10112,
-      "frame_stack": 3,
-      "image_size": 100,
+      "frame_stack": 1,
+      "image_size": 64,
       "regimes": [
         "train",
         "eval-easy"
@@ -168,10 +168,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "1add01a0487beb369b2fe016300c2edeee4e3069f939c683250a484d33d138e3",
-    "family_code_revision": "25add6c2e640d143e60912f6ebd4821802961b555385b8fc4b487d507e98dd0d",
+    "evaluator_scope_revision": "5c67aad8b4c498de663f2f4c4248c8a9546a4d22bd61fa91375fc20db285a826",
+    "family_code_revision": "f5f90db7d72d9598140673a2171fef6142d2ac0b10bb41a6ea7fa803f3ea6a33",
     "family_config_revision": "333737f5d3b76539887bc0a42d6accc714e51fb4fadfa5dea00c7b0115df39ef",
-    "job": "bt169vanpqh4u7no7n8c",
+    "job": "bt1crbkhqkpi8s7ngqf9",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
@@ -180,10 +180,10 @@
     "baseline": "idaac",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1tjsrd6oglrsq2g92m__records.jsonl",
-    "evaluation_records_sha256": "451ccafd888c2c4f182c8633d2deb7c277e8a7c7a69c488df89927b383bd4acf",
-    "evaluator_measurement_revision": "1b8d9a1bf8c99aefa9165d3007b6045f1eedd09e01475cc6c4b189a9f8c82cf6",
-    "evaluator_revision": "c1da1ce07f0fb089034e9087856f3e137d91d441264b2c0caeea62597826e948",
+    "evaluation_records_path": "results/records/bt1vcs013fq6lk17crou__records.jsonl",
+    "evaluation_records_sha256": "33be252dd6c38c0a537d30e42eee8179910061feac55e800bedcba0bf9d6a339",
+    "evaluator_measurement_revision": "16e287f9f121068a42a07db1e7c136145ad3cb139a38c20a38260c1938233810",
+    "evaluator_revision": "2fe1ee0956d34f06ce32d0aa4d73b2250a426990ad2a2b94c7274663dced6282",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "idaac",
@@ -199,9 +199,9 @@
       "eval_policy_mode": "sample",
       "eval_scope": "endpoint",
       "family": "idaac",
-      "frame": 9216,
+      "frame": 8192,
       "frame_stack": 3,
-      "image_size": 100,
+      "image_size": 64,
       "regimes": [
         "train",
         "eval-easy"
@@ -212,10 +212,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "8f02b3bc9ff03dcbbf7ee3d140169f55df36dc999c091b78369708ddff59e929",
-    "family_code_revision": "9a5eeb04b2314049eca6a2c33b36b80ba1b9934d84dec0e493250626ea853034",
+    "evaluator_scope_revision": "4bac6a2971b12bf1fab2ed1cee5b6108d701f4a58682dd24e3892f86737678dd",
+    "family_code_revision": "a90e1f795466c7e7d1fddcc03ff81eb66de9bfa5dec56734306af8af1e5f9856",
     "family_config_revision": "fe1a5195a450a73a651fe2ba94715dccbf54af22e0a2aeead14df80361ec117a",
-    "job": "bt1tjsrd6oglrsq2g92m",
+    "job": "bt1vcs013fq6lk17crou",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
@@ -224,10 +224,10 @@
     "baseline": "ppg",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1v89sh2c00bc1iop0j__records.jsonl",
-    "evaluation_records_sha256": "96cead4dcad2c262e3b481af16fe8916c8aaa61b3c800d9dec3ecdaba9714056",
-    "evaluator_measurement_revision": "d0a52fd224caf7926c76fd8c0572f6ba6dfa95f1a0949dac9f8b82c7152c739c",
-    "evaluator_revision": "99b8332fcb5c063f319d5328c0724c95a9ccb9e56e5f9621b8a1f084ce0f6723",
+    "evaluation_records_path": "results/records/bt11qhufomconlujompu__records.jsonl",
+    "evaluation_records_sha256": "f40166f8b7f336f6ad30b9f782329311e5d99a1beae6e4516c712158dd5a6954",
+    "evaluator_measurement_revision": "30a02a12251edf77e08a1c6427d18ad4dd6db54b29643e6e845d6b234cb6b7b0",
+    "evaluator_revision": "4923f70de323b5ce15fd80c87ccb1abcff7758f23687d57a571e41b0bd0edbeb",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "ppg",
@@ -245,7 +245,7 @@
       "family": "ppg",
       "frame": 10240,
       "frame_stack": 3,
-      "image_size": 100,
+      "image_size": 64,
       "regimes": [
         "train",
         "eval-easy"
@@ -256,10 +256,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "5d1cf4116f97e1d3285ca7e20ccaf17e06a8649444ebb862b76e0293a74b38e0",
-    "family_code_revision": "69e2817fd1a55f8fd36faa776b00f7c2a0005d6b317f400600f797ef5f3db0b0",
+    "evaluator_scope_revision": "41af018de8283d1673010b2bb2344449fc403b643af55ae6b70239d0e4e7702c",
+    "family_code_revision": "5b2fea0561bd026dba66bfe0e9c24fdc8a1671a6ea8d7affd8f6ffc71da06429",
     "family_config_revision": "5624ecce5f0fef9df08debc954a81ee7fbbebdec86b0758dce0c9afe4b6b48a1",
-    "job": "bt1v89sh2c00bc1iop0j",
+    "job": "bt11qhufomconlujompu",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
@@ -268,10 +268,10 @@
     "baseline": "drqv2",
     "code_revision": null,
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1s71ot06mfqmei9qi5__records.jsonl",
-    "evaluation_records_sha256": "4d29f8bc3800a2d066f869c4319ceb56e15c70e7c33d94ec8fb7c2cfea39fbb2",
-    "evaluator_measurement_revision": "75d5013525b3b94b4d866d0200954c00c0d8836d5e158a2b3239e5661611513a",
-    "evaluator_revision": "06dd8fef052036c531f8dcadca77d885954ff541f9d868bc3d09799ddb36324a",
+    "evaluation_records_path": "results/records/bt1lmtfcqafcpbh02ai7__records.jsonl",
+    "evaluation_records_sha256": "fe1667d7668e0c26e3ed5d15a12eed3cb920cda7ff7b0dd5f6878af743b16c31",
+    "evaluator_measurement_revision": "626238b0e5be32142142fae19fc3477746502150c578f1baab696ee62af6a562",
+    "evaluator_revision": "9ec56e449a3fe123c5bceea0884216c0dbf8eda027e267f25d56b554822c3949",
     "evaluator_scope": {
       "action_repeat": 1,
       "baseline": "drqv2",
@@ -289,7 +289,7 @@
       "family": "rlvigen",
       "frame": 10000,
       "frame_stack": 3,
-      "image_size": 100,
+      "image_size": 84,
       "regimes": [
         "train",
         "eval-easy"
@@ -300,10 +300,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "28f44299e4f12b7bd8628d979f4a939d1a86c2d1e6f065cefbb02c13ee177fb1",
-    "family_code_revision": "22a173074c86d04704141b89d1b66837fac04d64600d89d9634194abcfdbdd4d",
+    "evaluator_scope_revision": "55be489874c41058aeda03037af46def0b1708bb9107c99934ce3b0561b2731d",
+    "family_code_revision": "6e88cebaf902ee5f9d99e9178937088f844ddd51f5eb546897242fd128568087",
     "family_config_revision": "f9ccb57e88d061fed3b17853844b42548dbe983191f46d7fdf913e56811a5d5e",
-    "job": "bt1s71ot06mfqmei9qi5",
+    "job": "bt1lmtfcqafcpbh02ai7",
     "paired": true,
     "runtime_imports_checked": true,
     "validation_kind": "functional_endpoint"
