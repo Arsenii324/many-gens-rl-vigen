@@ -875,6 +875,59 @@ def gate_job_budgets_fit():
     return FAIL, ("job configs cannot fit their own workload: " + "; ".join(offending))[:400]
 
 
+
+def _audit_exit_code(script: str, *args: str) -> tuple[int, str]:
+    """Run a standalone audit and return its verdict, so a gate can carry it."""
+    try:
+        proc = subprocess.run([sys.executable, str(ROOT / "scripts" / script), *args],
+                              capture_output=True, text=True, timeout=300)
+    except Exception as error:  # noqa: BLE001 - a gate must never crash the report
+        return -1, f"{type(error).__name__}"
+    return proc.returncode, proc.stdout
+
+
+def gate_no_row_pools_two_closures():
+    """A24/A25: seeds from different closures are different revisions and must not be pooled.
+
+    This audit existed and NOTHING ran it before a release -- and until 2026-09-07 it could not
+    have failed anyway: it compared each row's `execution_kind` against the literal "production",
+    which is not in `contract.py`'s vocabulary, so its findings branch was unreachable. Both halves
+    are fixed; wiring it here is what makes it evidence rather than a script somebody might run.
+    """
+    code, out = _audit_exit_code("audit_row_closure.py", "--strict")
+    if code == -1:
+        return OWNER, f"the row-closure audit could not run: {out}"
+    if code == 0:
+        return PASS, ("no production row pools two scientific closures "
+                      "(exploratory rows may, and that is not a finding)")
+    findings = [line.strip() for line in out.splitlines() if "MIXED-CLOSURE finding" in line]
+    return FAIL, ("a reported row pools seeds from different closures: "
+                  + ("; ".join(findings) or "see scripts/audit_row_closure.py --strict"))[:300]
+
+
+def gate_observation_geometry_is_not_contradicted():
+    """No record may disagree with `OBSERVATION_GEOMETRY` about what it ran at.
+
+    Frame stack and render size are the values this project has most often stated wrongly, and the
+    errors were all found by hand-tracing. `--strict` fails when a baseline has records and none
+    carries its declared pair; the audit also NAMES the baselines that have produced no record at
+    all, which is a gap rather than a failure and is reported as such below.
+    """
+    code, out = _audit_exit_code("audit_observation_geometry.py", "--strict")
+    if code == -1:
+        return OWNER, f"the geometry audit could not run: {out}"
+    if code != 0:
+        contradicted = [line.strip() for line in out.splitlines() if "CONTRADICTED" in line]
+        return FAIL, ("a record contradicts the declared observation geometry: "
+                      + ("; ".join(contradicted) or "run scripts/audit_observation_geometry.py"))[:300]
+    never = [line.strip() for line in out.splitlines() if "never run for them" in line]
+    if never:
+        detail = never[0].split(":", 1)[-1].strip().rstrip(".")
+        return PASS, ("no record contradicts the declared geometry; the runtime assertion has "
+                      f"never run for {detail} -- declared and would-be-checked, not verified")
+    return PASS, "every baseline has a record carrying its declared observation geometry"
+
+
 def gate_clone_patches_reproduce():
     """RECOVERY-HANDOFF says the clones are reproducible from ext/ plus runnable/_patches/*.patch.
 
@@ -1200,6 +1253,8 @@ GATES = [
     ("ibac evaluator honours device", gate_ibac_evaluator_honours_device),
     ("container pinned by digest", gate_container_pinned_by_digest),
     ("no episode-level inference", gate_no_episode_level_inference),
+    ("no row pools two closures", gate_no_row_pools_two_closures),
+    ("observation geometry uncontradicted", gate_observation_geometry_is_not_contradicted),
 ]
 
 
