@@ -70,7 +70,7 @@ another ~99 GPU-h; they are not part of the trajectory-depth comparison.
 **No family carries a placeholder any more.** An earlier pass reported 160-325 GPU-h because six of
 twelve baselines had never had an evaluation episode timed and carried
 `audit_job_budgets.UNMEASURED_DEFAULT = 30 s/episode`. They have now, at zero compute cost: the
-v176 evaluator-validation wave already ran an endpoint grid per family at an identical scope
+v185 evaluator-validation wave already ran an endpoint grid per family at an identical scope
 (2 regimes x 1 scene x 5 episodes = 10 episodes), and every job log carries its own
 `NATIVE_ENDPOINT_EVAL_SECONDS`.
 
