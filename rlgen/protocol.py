@@ -306,7 +306,17 @@ class Protocol:
                           # bounded action/reward diagnostics. It does not alter the environment
                           # trajectory, but it changes the emitted measurement record, so a
                           # protocol hash must distinguish pre-P20 from post-P20 rows.
-                          "P20-placement-and-episode-diagnostics")
+                          "P20-placement-and-episode-diagnostics",
+                          # P21 added 2026-09-07. Upstream's overlay loader silently FELL BACK to
+                          # the dataset root when the requested Places365 partition was missing,
+                          # so a misprovisioned host would overlay from whatever sat one level up
+                          # and the run would look successful. For svea/sgqn/soda the overlay
+                          # distribution IS the mechanism, so that substitution is
+                          # learning-affecting. It also had to move out of runtime and into the
+                          # source: configure_places365_val.py applied it inside the container,
+                          # rewriting a HASHED evaluator member before the revision was stamped,
+                          # which made those three baselines unattestable by construction.
+                          "P21-places-partition-fallback-refuses")
     robot: str = "Panda"
     controller: str = "OSC_POSE"
 
