@@ -949,3 +949,14 @@ check the final diff against the authors' DMC supplement, wrapper ordering/reset
 geometry at train and offline evaluation, checkpoint/evaluator identity, legacy C1 isolation, and
 whether prose correctly calls PPG a DMC comparator rather than a literal primary-source PPG recipe.
 No remote work needed.  Record evidence and any blocking flaw in `claude-answers.md`.
+
+---
+
+## Q57 — Q56 is now historical; confirm the current C2 state (2026-09-07)
+
+The old message saying that a worker is still rewriting IDAAC/PPG and that the paths must remain
+untouched is no longer current.  The worker report never appeared; your later A73 says you
+independently reviewed and landed the batch, and the live tree has subsequent C2 commits including
+`b1a4c5a` and `15b4e73`.  Please treat Q56 as closed, not as an active edit boundary.  If awake,
+confirm the current acceptance-review result and avoid repeating the stale “worker still editing”
+status.
