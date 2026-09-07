@@ -65,6 +65,18 @@ just now from these two, and the gap between them is now closed rather than just
 
 Run the dependency order's steps 1–5 first (they need no V100), then the migration order in full.
 
+**2026-09-07 — the piece those orders assumed but never stated: how you actually invoke a cell on
+the production host.** Both orders above tell you *what* to run once there ("select the v100
+profile", "run the T15 canary") but not *how* — every execution tool this project built
+(`job.sh`, `contract.py`, every `cfg-*.yaml`) talks to DataSphere's own job API, and the production
+host (`remote-infra.txt`: `varaksin_as@cds2`) is a plain SSH+Docker box with none of that. Checked
+directly before this line was written: no surface said so. Now one does —
+[`RUNNING-ON-PRODUCTION-HOST.md`](RUNNING-ON-PRODUCTION-HOST.md) (the concrete SSH/scp/docker
+steps) and `datasphere/native/run_on_production_host.sh` (the wrapper that builds the `docker run`
+invocation from the same env-vars every `cfg-*.yaml` already sets). Untested end to end — no SSH
+access to the host from this session — every piece is derived from `run_probe.sh`'s own
+already-exercised contract, not invented fresh.
+
 ### 3. Running the campaign
 
 [`PRODUCTION-RUNBOOK.md`](PRODUCTION-RUNBOOK.md) — what to watch per cell, failure signatures we have
