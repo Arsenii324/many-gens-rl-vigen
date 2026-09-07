@@ -1,0 +1,35 @@
+# A36 matched control for cfg-ppg-geometry-v181.yaml, not a production result.
+#
+# Same current PPG C2 payload, gt4i.1 tier, Door task, seed, 65,536 interactions, checkpoint
+# cadence, and no endpoint grid. This arm deliberately leaves the descriptor's 8 environments x
+# 256 serial steps unchanged. The paired v181 arm overrides only those two rollout dimensions to
+# 1 environment x 2048 serial steps. Keeping both arms on gt4i.1 removes the tier-conversion
+# confound before comparing throughput.
+name: vigen-ppg-geometry-control-v182
+desc: "A36 matched PPG geometry control: current 8x256 port on gt4i.1, one seed, 65536 frames."
+cmd: >-
+  timeout --foreground 18000s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=ppg:1
+  FRAMES=65536
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=65536
+  ENDPOINT_EVAL=0
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v183-ppg-geometry.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
