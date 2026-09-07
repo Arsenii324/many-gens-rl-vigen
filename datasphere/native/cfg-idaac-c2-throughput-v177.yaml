@@ -1,0 +1,63 @@
+# [Claude 2026-09-07] IDAAC-C2 operational rehearsal: real GPU throughput/memory/stability under
+# the new compute pattern, not a fidelity or evaluator-identity check (v176 already covers that,
+# at a much smaller frame count). This is g1.1 (V100), a bounded REHEARSAL per the standing plan's
+# own framing -- not the certified V100 measurement (that needs the actual production host, not
+# reachable from here). Labeled as such wherever this result is used.
+#
+# Why this is needed: IDAAC-C2 changed the per-update compute pattern substantially versus the old
+# port (10 PPO epochs vs 1, 32 minibatches vs 8, one 2048-step rollout vs many smaller ones).
+# `scripts/audit_job_budgets.py`'s `MEASURED_TRAIN_FPS["idaac"] = 30` is the OLD recipe's number.
+# `fixed_peak_gib: 3.17` was measured at num_processes=4, not the new num_processes=1 with a much
+# larger rollout-storage tensor. Neither has been re-measured since C2 became the production
+# default (04-blind-spots-and-unverified-claims.md; review 19's own launch-gate item 11, now
+# tracked in review-19-response/01-launch-gate-status.md). This job produces a real number for both.
+#
+# 40960 frames = 20 full C2 update cycles (2048 steps/rollout x 20), enough to see per-update
+# timing stabilize past the first-rollout warmup and to reach a stable peak-memory reading, while
+# staying short. SAVE_EVERY_FRAMES=8192 (4 checkpoints across the run) so a mid-run timeout still
+# leaves at least one round-trippable 9-channel checkpoint to inspect -- closing the other named
+# blind spot ("actual checkpoint save/load round-tripping with the new 9-channel shape... none of
+# this has been run"). One endpoint eval closes that round-trip through the real offline evaluator.
+#
+# Reuses payload-v176-idaac.tgz (built and verified for the v176 wave, same source tree, no
+# rebuild needed -- the payload is platform-independent).
+#
+# NATIVE_HOST_PROFILE=datasphere, not v100: job.sh's own submit-time check refuses NATIVE_HOST_
+# PROFILE=v100 on a g1.1 cloud-instance-type, since "v100" names the separate real production
+# host, and g1.1 is explicitly "diagnostic only" (confirmed the hard way -- first submit attempt
+# was refused with exactly this message). idaac's own host_profiles entry in families.json is
+# empty either way (fidelity-fixed, no host-tunable overrides), so this has no effect on the
+# actual constants -- confirmed by reading the descriptor before writing this comment.
+name: vigen-idaac-c2-throughput-v177
+desc: "IDAAC-C2 g1.1 rehearsal: real FPS/peak-memory/stability at 40960 frames, 20 C2 update cycles."
+cmd: >-
+  timeout --foreground 5400s env
+  NATIVE_V100_RESERVATION_MINUTES=90
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=idaac:1
+  FRAMES=40960
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=8192
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v176-idaac.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: g1.1
