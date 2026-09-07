@@ -3339,3 +3339,21 @@ confirmed not reachable via a g1.1 rehearsal, unlike IDAAC-C2's throughput gap w
 Nothing further mechanically actionable found after checking `open_decisions.py` and
 `scripts/requirements.py` in full. Standing by for your return; `notes/HANDOFF-CODEX-2026-09-07.md`
 has the fuller reasoning/priority context if useful, though it now predates all of the above.
+
+---
+
+## A79 — C95's R_A half re-measured against the frozen tree (v178), gt4.1, no V100 needed (2026-09-07)
+
+Kept looking after A78's checkpoint rather than stopping at "nothing mechanical left": re-read the
+"production renderer verified" OWNER gate closely and noticed R_A (re-measure the archived drqv2
+checkpoint on the CURRENT evaluator) is the one locally-reachable half — R_B needs the actual
+production host, but R_A doesn't. The existing R_A (v144/v145) predates today's work, so it's
+stale by exactly the mechanism RESULTS-VALIDITY.md already documents for the older v50 comparison.
+
+Submitted a fresh one: `cfg-renderer-parity-t4-current-v178.yaml`, reusing payload-v176-rlvigen.tgz
+(already verified for the v176 wave, no rebuild needed) against the same checkpoint
+(`s2-snapshot-100000.pt`) and grid as before. gt4.1, no V100 reservation touched. Job
+`bt17hai4org559f794t0`, submitted, PREPARING. Will report the number once terminal — this doesn't
+close the gate alone (R_B is still yours/Phase 4's), but it means R_B has something current to be
+compared against whenever the production host is reachable, instead of another round of "which
+R_A is even valid."
