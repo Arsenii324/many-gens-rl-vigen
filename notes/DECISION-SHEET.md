@@ -2259,3 +2259,58 @@ and `ctrl`'s 64-env memory is still an unmeasured extrapolation. Order: finish t
 not — no painting exists in robosuite), or a decision that `ibac_sni`'s published CoinRun numbers
 must remain comparable to ours, which they are not in any case (different task, different action
 space, authored Gaussian head).
+
+### A40 REVISED-2, 2026-09-08 — all twelve at `frame_stack=3`, and `ctrl`'s reason is not the one `ai-help-26` gives
+
+Checking `ai-help-26`'s deeper argument against `ctrl`'s code changes my A40-REVISED split. Its
+decisive claim is not about painted velocity at all:
+
+> "I found no baseline among the twelve whose defining method assumes observations must be
+> single-frame... The single-frame cases arise from **environment conventions**, not methodological
+> commitments."
+
+**For `ctrl` this checks out.** Its temporal machinery operates on WINDOWS OVER TIMESTEPS —
+`algo.py:90 extract_windows_vectorized(array, window_size)`, `cluster_len` applied across
+`n_steps` (`algo.py:539`) — not on channels within one observation. Stacking three frames is
+orthogonal to the cluster/temporal-contrastive objective; it neither supplies nor removes what
+that objective consumes. There is no methodological stake in one frame.
+
+So my A40-REVISED reason for keeping `ctrl` at 1 — "it trained at 1 with `paint_vel_info=False`,
+so 1 is its real condition" — is true but not decisive. That condition is **Procgen's environment
+convention**, not CTRL's design. Door's domain convention is three (every DMC-derived pixel-control
+baseline here stacks three), and **this project already applied exactly that reasoning to `idaac`
+and `ppg`** — both Procgen-origin, both moved to 3 on the strength of the IDAAC authors' own DMC
+supplement ("We also use 3 stacked frames as observations", covering PPO, PPG, DAAC and IDAAC).
+Keeping `ctrl` at 1 is then an inconsistency traceable to nothing but the absence of a published
+continuous-control recipe for CTRL specifically — the same "absence of a decision decides the
+outcome" pattern the original A40 objected to.
+
+**DECISION (operational default, not ratified): `frame_stack=3` for all twelve.**
+
+| baseline | change | reason |
+|---|---|---|
+| `ibac_sni` | 1 -> 3 | authors' stated precondition for 1 (`PAINT_VEL_INFO=1`) is unmet on Door |
+| `ctrl` | 1 -> 3 | single-frame is Procgen's convention, not CTRL's method; the same move was already made for `idaac` and `ppg` |
+| the other ten | unchanged | already 3 |
+
+**`ai-help-26` is still wrong on one fact and it matters for the record**: it justifies `ctrl` by
+"velocity painted", but `ctrl`'s own trainer passes `paint_vel_info=False`
+(`runnable/ctrl/train_ppo.py:160`) while only the wrapper default is `True`
+(`vec_env.py:23`). The right justification is the convention argument above, not the painting one.
+
+**What this buys, precisely.** The frame-stack blocking axis disappears. `ibac_sni` becomes
+block-compatible with `idaac` and `ppg`, taking the on-policy group from 1 primary pair to 3.
+`ctrl` remains isolated from those three — but by the POLICY-MODE axis (it takes the mode, they
+sample), which is a separate and correctly identified split, not this one.
+
+**Documentation the adaptation requires** (both baselines, in `families.json` provenance):
+
+> Original Procgen implementation uses a single RGB frame. Door provides no equivalent pixel
+> velocity cue, so three consecutive RGB observations are stacked to supply short-horizon motion
+> information — following the same published continuous-control precedent already applied to
+> `idaac` and `ppg`.
+
+**Sequencing unchanged.** `frame_stack` is in `families.json`, a `CONFIG_MEMBER`; changing it moves
+every evaluator revision. After the v196 wave, not during: change both, pilot both, re-attest.
+`ctrl`'s 64-env memory is still an unmeasured extrapolation and a 3x observation stack makes
+measuring it first more important, not less.

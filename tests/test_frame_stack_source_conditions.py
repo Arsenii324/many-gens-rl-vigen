@@ -45,7 +45,18 @@ def test_ctrl_trains_without_painted_velocity_so_its_single_frame_is_uncondition
     assert "paint_vel_info=True" in vec_env, "the class default is True"
     assert "paint_vel_info=False" in train, (
         "ctrl's own training path passes False, so it trained single-frame WITHOUT painted "
-        "velocity -- keeping frame_stack=1 for ctrl on Door is faithful, unlike for ibac_sni")
+        "velocity. ai-help-26 justifies ctrl by 'velocity painted', which is false for the path "
+        "that produced its numbers -- see A40 REVISED-2, which keeps the conclusion (3 frames) "
+        "on the environment-convention argument instead")
+
+
+def test_ctrls_temporal_objective_works_over_timesteps_not_stacked_channels():
+    """So stacking is orthogonal to its method -- the basis for A40 REVISED-2's ctrl decision."""
+    algo = _read("runnable/ctrl/algo.py")
+    assert "def extract_windows_vectorized(array, window_size)" in algo
+    assert "cluster_len" in algo, (
+        "ctrl's auxiliary consumes windows over TIMESTEPS; frame stacking neither supplies nor "
+        "removes what it reads, so there is no methodological commitment to a single frame")
 
 
 def test_only_ibac_sni_hardcodes_its_input_channel_count():
