@@ -88,13 +88,18 @@ A payload is the code archive a run executes. It is built from the working tree 
 evaluator identity.
 
 ```bash
-python3 datasphere/native/contract.py build-payload --family idaac --out payload.tgz
-python3 datasphere/native/contract.py verify-payload --payload payload.tgz --require-evaluator-identity
-python3 datasphere/native/contract.py verify-evaluator-binding --payload payload.tgz
+python3 datasphere/native/contract.py build-payload \
+    --source . --families idaac --output payload.tgz
+python3 datasphere/native/contract.py verify-payload \
+    --archive payload.tgz --require-families idaac --require-evaluator-identity
+python3 datasphere/native/contract.py verify-evaluator-binding \
+    --archive payload.tgz --source . --families idaac
 ```
 
-**Proves it worked:** both verify commands exit 0, and the second prints the `evaluator_revision`
-the payload will stamp into every record it produces.
+**Proves it worked:** both verify commands exit 0 and print nothing. `--require-evaluator-identity`
+is what makes the payload carry the evaluator revision every record it produces will be stamped
+with; `verify-evaluator-binding` checks that the archive's copy of the evaluator agrees with the
+tree it was built from.
 
 ## 5. Submit a run
 
