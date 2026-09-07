@@ -593,8 +593,8 @@
       }
     },
     "constants": {
-      "num_envs": "8",
-      "nstep": "256",
+      "num_envs": "1",
+      "nstep": "2048",
       "frame_stack": "3",
       "gamma": ".99",
       "lr": "3e-4",
@@ -621,7 +621,8 @@
       "256 per minibatch against the released global 8,192. See the production report's on-policy",
       "section: the smaller rollout buys more updates, which is the reason not to compensate by",
       "raising nstep.",
-      "[Claude 2026-09-07, A36 REVERSED, external review 21 #7] Linear LR decay over 1e6 environment steps is now set, and the identity question that blocked it is settled by reading raileanu21a-supp.pdf SS E directly. SS E specifies the DMC continuous-control grid -- lr 3e-4, gamma .99, 32 minibatches, entropy 0, 2048 steps, 1 process, linear rate decay over 1e6 env steps -- and says 'Following this grid search, we used the best values found for all the methods'. PPG's own listed search covers only N_pi=32, E_pi=1, E_V=1, E_aux=6, beta_clone=1, and ALL FIVE equal PPG's released defaults, so nothing in PPG's search overrides the shared grid. Decisively: this port ALREADY runs lr 3e-4, gamma .99, 32 minibatches and entropy 0, every one of which DEVIATES from PPG's own release (5e-4, .999, 8, .01). We were already the comparator in every disputed value while lacking the one setting that identity requires -- which is exactly the 'sits between two identities' the review named. An earlier freeze this same day chose the other identity and was wrong; the deviation table above is the evidence that settled it."
+      "[Claude 2026-09-07, A36 REVERSED, external review 21 #7] Linear LR decay over 1e6 environment steps is now set, and the identity question that blocked it is settled by reading raileanu21a-supp.pdf SS E directly. SS E specifies the DMC continuous-control grid -- lr 3e-4, gamma .99, 32 minibatches, entropy 0, 2048 steps, 1 process, linear rate decay over 1e6 env steps -- and says 'Following this grid search, we used the best values found for all the methods'. PPG's own listed search covers only N_pi=32, E_pi=1, E_V=1, E_aux=6, beta_clone=1, and ALL FIVE equal PPG's released defaults, so nothing in PPG's search overrides the shared grid. Decisively: this port ALREADY runs lr 3e-4, gamma .99, 32 minibatches and entropy 0, every one of which DEVIATES from PPG's own release (5e-4, .999, 8, .01). We were already the comparator in every disputed value while lacking the one setting that identity requires -- which is exactly the 'sits between two identities' the review named. An earlier freeze this same day chose the other identity and was wrong; the deviation table above is the evidence that settled it.",
+      "[Claude 2026-09-07, A36 RESOLVED] num_envs 8 x nstep 256 -> 1 x 2048, adopting raileanu21a-supp.pdf SS E's stated geometry and closing the last gap between this port and the identity A36 froze it as. Decided on MEASURED cost, not preference: Codex ran both arms at 65,536 frames (one auxiliary cycle in each geometry) on the SAME tier, gt4i.1 -- 8x256 gives 78.54 IPS against 1x2048's 59.44, so the faithful geometry is 32% slower. PPG's production cost is 5.9 h/seed x 3 = 17.7 GPU-h, so 32% is about +8.3 GPU-h against a campaign near 893 -- under 1%. Paying under one percent to stop being the comparator in name while departing from it in the one place left is the whole of the decision. The two arms differ in GAE truncation and trajectory geometry, not merely in speed: eight 256-step trajectories advantage-estimated independently is not one 2048-step trajectory."
     ],
     "positional": [
       "{task}",

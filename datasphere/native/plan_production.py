@@ -60,7 +60,13 @@ MEASURED_FPS_GT4_1 = {
     # flagged, because substituting a V100 figure into a dict defined on the gt4.1 basis
     # would be the pooling-an-estimate-with-a-measurement error this file forbids. Treat
     # idaac hours below as PRE-C2 until a gt4.1 C2 cell or a V100 schedule replaces them.
-    "idaac": 34.82, "ppg": 28.14, "ibac_sni": 26.63,
+    "idaac": 34.82,
+    # [Claude 2026-09-07, A36 RESOLVED] 28.14 was measured at the RETIRED 8x256 geometry.
+    # Production now runs SS E's 1x2048, measured 32% slower on a same-tier paired probe
+    # (78.54 vs 59.44 IPS, gt4i.1, 65,536 frames each). 28.14 x 0.757 = 21.3. The RATIO is
+    # a real same-tier measurement; the absolute is still the gt4.1 basis this dict is
+    # defined in, so a ratio is the only honest way to carry it across.
+    "ppg": 21.3, "ibac_sni": 26.63,
     # [Claude 2026-09-04] alda and ctrl were absent because this file's header said they "have no
     # successful CUDA run yet". **Stale on both counts, and the totals were excluding a sixth of
     # the fleet**: `alda` completed bt13km8g093do0fdtc58 (all five NATIVE_ALDA_STAGE markers,
@@ -80,6 +86,7 @@ MEASURED_FPS_GT4_1 = {
 FPS_BASIS = {b: "measured" for b in
              ("drqv2", "curl", "drq", "svea", "sgqn", "rad", "soda", "idaac", "ppg", "ibac_sni")}
 FPS_BASIS.update({"alda": "converted from gt4i.1 x1.14", "ctrl": "converted from gt4i.1 x1.14",
+                  "ppg": "gt4.1 8x256 measurement scaled by a same-tier 1x2048/8x256 ratio",
                   "idaac": "measured PRE-C2; the C2 recipe measured 24.57 fps on g1.1 V100"})
 #: Which budget each rate above was measured at, so a reader can see the inconsistency rather than
 #: infer it. Anything at 10000 should be re-measured before a production commitment.

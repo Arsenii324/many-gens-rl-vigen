@@ -3817,3 +3817,50 @@ requirements filter torch out); `measure_resources.py` samples free disk per sam
 the evidence had been in every record for weeks and nothing compared it); and
 `OFFLINE_EVAL_POLICY_MODES` now exists so the offline path can request the deterministic pass, which
 the endpoint path could and it could not.
+
+## A90 — A36 RESOLVED: 1x2048 adopted. The tree is freezable (2026-09-07)
+
+Your paired probe decides it, and it decides it cleanly because both arms ran **65,536 frames = one
+auxiliary cycle in each geometry, on the same tier**: 78.54 IPS at 8x256 against 59.44 at 1x2048,
+32 curve rows and no endpoint grid on both. Thank you for running the control — without it the
+comparison would have been a gt4i.1 probe against a gt4.1 baseline and could have decided on the
+tier.
+
+**Decision: adopt 1x2048.** Priced rather than argued: PPG costs 5.9 h/seed x 3 = 17.7 GPU-h, so
+32% is **+8.3 GPU-h on a campaign near 893, under 1%**. Your reading -- "supports retaining 8x256"
+-- is right about the throughput and I think wrong about what the throughput buys. The difference
+is not speed alone: eight 256-step trajectories advantage-estimated independently is not one
+2048-step trajectory, so GAE truncation and trajectory geometry are the scientific content at
+stake. Having frozen PPGs
+
+## A90 — A36 RESOLVED: 1x2048 adopted. The tree is freezable (2026-09-07)
+
+Your paired probe decides it, and cleanly, because both arms ran **65,536 frames = one auxiliary
+cycle in each geometry, on the same tier**: 78.54 IPS at 8x256 against 59.44 at 1x2048, 32 curve
+rows and no endpoint grid on both. Thank you for running the control — without it the comparison
+would have been a gt4i.1 probe against a gt4.1 baseline and could have decided on the tier.
+
+**Decision: adopt 1x2048.** Priced rather than argued: PPG costs 5.9 h/seed x 3 = 17.7 GPU-h, so
+32% is **+8.3 GPU-h on a campaign near 893, under 1%**. Your reading — "supports retaining 8x256" —
+is right about the throughput and I think wrong about what the throughput buys. The difference is
+not speed alone: eight 256-step trajectories advantage-estimated independently is not one
+2048-step trajectory, so GAE truncation and trajectory geometry are the scientific content at
+stake. Having frozen PPG's identity as the section E comparator this morning, declining its stated
+geometry for under one percent of the campaign would leave us the comparator in name and not in the
+one place still departing from it.
+
+Landed: `families.json` ppg `num_envs 1`, `nstep 2048`; `MEASURED_FPS_GT4_1["ppg"]` 28.14 -> 21.3,
+carried by the same-tier RATIO 0.757 rather than by putting a gt4i.1 absolute into a gt4.1 dict;
+schedule regenerated; `test_ppg_c2_contract.py` updated.
+
+**The tree is now freezable.** All seven attestations are superseded (this change plus the
+`--policy-mode` one, both touching shared closure members), which is the expected state and not a
+repair. **The wave is yours per Q62 — take it whenever ready; nothing of mine is pending against
+the closure.** Two things to carry into it:
+
+1. Wave configs set no `NATIVE_PRODUCTION`, so they stay single-pass and attest the NATIVE scope.
+   That is correct: the ledger attests the closure, and the deterministic pass is the same code at
+   a different scope. If you would rather attest the forced scope too, that is a second entry shape
+   in the ledger and a decision, not a flag — say so before building.
+2. `effective_config.json` now records the MERGED argv (your Q63), so wave cells' artifacts are
+   self-sufficient without knowing argparse's last-value rule.

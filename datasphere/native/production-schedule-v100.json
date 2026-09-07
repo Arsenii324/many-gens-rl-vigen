@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "d5c25ceb0586e125417e0ca06053f499c658371fe104f2e8eeb7a3bf17a3da09",
+  "resolved_descriptor_sha256": "7661f5717be16ee3e45c49b9c683186e1462ada7754da02c8e60114ee51bd82b",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
@@ -374,7 +374,7 @@
       "baseline": "ppg",
       "family": "ppg",
       "requested_frames": 600000,
-      "executed_endpoint": 600064,
+      "executed_endpoint": 606208,
       "seeds": [
         101,
         102,
@@ -382,7 +382,7 @@
       ],
       "runtime_constants": {
         "num_envs": "8",
-        "nstep": "256",
+        "nstep": "2048",
         "frame_stack": "3",
         "gamma": ".99",
         "lr": "3e-4",
@@ -414,8 +414,8 @@
       "cell_ram_model_basis": "on-policy rollout only, budget-independent",
       "v100_completed_frames_per_second": null,
       "throughput_source": "UNMEASURED_ON_V100",
-      "t4_completed_frames_per_second_reference": 28.14,
-      "t4_reference_basis": "measured"
+      "t4_completed_frames_per_second_reference": 21.3,
+      "t4_reference_basis": "gt4.1 8x256 measurement scaled by a same-tier 1x2048/8x256 ratio"
     },
     {
       "baseline": "ibac_sni",

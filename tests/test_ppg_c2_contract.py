@@ -21,8 +21,10 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
     """Descriptor values, not train.py defaults, define production PPG C2."""
     ppg = _ppg_descriptor()
     assert ppg["constants"] == {
-        "num_envs": "8",
-        "nstep": "256",
+        # [A36 RESOLVED 2026-09-07] SS E's geometry, adopted after a same-tier paired probe put
+        # the cost at 32% (78.54 vs 59.44 IPS) = about +8.3 GPU-h on a campaign near 893.
+        "num_envs": "1",
+        "nstep": "2048",
         "frame_stack": "3",
         "gamma": ".99",
         "lr": "3e-4",

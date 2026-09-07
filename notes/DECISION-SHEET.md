@@ -1827,7 +1827,25 @@ descriptor — the same literal horizon `idaac` uses, from the same sentence, so
 comparison group now share the schedule instead of splitting on it. Default `None` leaves PPG's
 released constant-rate behaviour byte-identical for anything that does not ask for the DMC recipe.
 
-**Still open, and now the ONLY gap to this identity: the rollout geometry.** §E says 1 process x
+### A36 RESOLVED, 2026-09-07 — 1x2048 adopted; the identity is now complete
+
+Codex ran both arms at 65,536 frames — one auxiliary cycle in each geometry — on the **same tier**,
+which is what makes the comparison decide geometry rather than tier: **8x256 gives 78.54 IPS,
+1x2048 gives 59.44**, both with 32 curve rows and no endpoint grid. The faithful geometry is 32%
+slower.
+
+**Priced**: PPG's production cost is 5.9 h/seed x 3 seeds = 17.7 GPU-h, so 32% is **+8.3 GPU-h
+against a campaign near 893 — under 1%.** Adopted. Paying under one percent to stop being the
+comparator in name while departing from it in the one place left is the whole of the decision, and
+the difference is not merely speed: eight 256-step trajectories advantage-estimated independently
+is not one 2048-step trajectory, so GAE truncation and trajectory geometry were the scientific
+content at stake.
+
+`MEASURED_FPS_GT4_1["ppg"]` moves 28.14 -> 21.3, carried across by the same-tier RATIO (0.757)
+rather than by substituting a gt4i.1 absolute into a gt4.1 dict. **A36 is closed and the last
+freeze blocker with it.**
+
+**Superseded by the entry above: the rollout geometry.** §E says 1 process x
 2048 steps; this port runs 8 x 256. Both give 2048 samples per update and the same
 65,536-interaction auxiliary cadence, but not the same GAE truncation or trajectory geometry —
 eight 256-step trajectories advantage-estimated independently is not one 2048-step trajectory.
