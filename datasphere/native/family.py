@@ -643,21 +643,46 @@ def retain(family: str, fields: dict, output: Path, path: Path | None = None) ->
         # curve_eval_hours), and idaac's own training is only ~4.8 h -- a curve costing twice its
         # run.
         #
-        # Thinning by POSITION rather than by parsed frame number, because stamps are evenly spaced
-        # by construction (every `save_every`) and ppg names its files by save INDEX, not frame --
-        # so a frame-parsing rule would need ppg's training log here, which retain does not read.
-        # Idempotent for RL-ViGen, whose write side has already thinned.
+        # Thin by FRAME, not by position. Position was the first attempt and it is wrong for the one
+        # family whose write side already honours this cadence: RL-ViGen's P18 patch writes only
+        # multiples of `preserve_snapshots`, so keeping every k-th of an already-thinned set thins
+        # it a second time -- 100k, 200k, 300k... becomes 200k, 400k... The full test suite caught
+        # it, which is the argument for running it.
+        #
+        # By frame the rule is idempotent everywhere: keep a stamp when its frame is a multiple of
+        # the cadence. Six families name their files by frame. `ppg` names by save INDEX, so its
+        # frame is `(index + 1) * save_every` -- the same reconstruction `run_probe.sh`'s
+        # `ppg_checkpoint_frame` falls back to when the training log is unavailable.
         settings = entry.get("production", {}) or {}
         preserve = settings.get("preserve_snapshots")
         save_every = settings.get("save_every")
-        if preserve and save_every and preserve > save_every and matches:
-            keep_every = max(int(preserve) // int(save_every), 1)
+        # Only thin where the TRAINER does not already do it. rlvigen's P18 patch writes stamps at
+        # the cadence, so applying it again here thins twice.
+        applied_by = settings.get("preserve_snapshots_applied_by", "retain")
+        if (preserve and save_every and int(preserve) > int(save_every) and matches
+                and applied_by == "retain"):
+            def _frame_of(item, position):
+                if family == "ppg":
+                    return (position + 1) * int(save_every)
+                return _stamp_order(item.name)
+
             ordered = sorted(matches, key=lambda item: _stamp_order(item.name))
-            matches = [item for index, item in enumerate(ordered, start=1)
-                       if index % keep_every == 0]
-            retained["intermediate_thinned_to"] = {"preserve_snapshots": preserve,
-                                                   "keep_every_nth_stamp": keep_every,
-                                                   "kept": len(matches), "written": len(ordered)}
+            kept = [item for position, item in enumerate(ordered)
+                    if _frame_of(item, position) % int(preserve) == 0]
+            # A run shorter than one cadence step has no stamp at a multiple of it, and thinning to
+            # nothing is never what the cadence means -- `run_curve_eval` treats an empty stamp set
+            # as fatal in production, so a coarse cadence on a short budget would turn a working
+            # probe into a failed one. Keep everything in that case and say so.
+            if kept:
+                retained["intermediate_thinned_to"] = {
+                    "preserve_snapshots": preserve, "rule": "frame % preserve_snapshots == 0",
+                    "kept": len(kept), "written": len(ordered)}
+                matches = kept
+            else:
+                retained["intermediate_thinned_to"] = {
+                    "preserve_snapshots": preserve,
+                    "rule": "cadence exceeds the whole run; every stamp kept",
+                    "kept": len(ordered), "written": len(ordered)}
         if matches:
             (output / "checkpoints").mkdir(exist_ok=True)
             retained["intermediate_checkpoints"] = {}
@@ -1177,6 +1202,8 @@ def main(argv: list[str] | None = None) -> int:
     disk.add_argument("--frames", type=int, required=True)
     disk.add_argument("--profile")
     memory = commands.add_parser("check-memory")
+    memory.add_argument("--frames", type=int,
+                        help="the budget this cell will run; sizes the replay charge")
     memory.add_argument("--cells", required=True)
     memory.add_argument("--tier", required=True)
     memory.add_argument("--allow-unmeasured", action="store_true",
@@ -1261,7 +1288,8 @@ def main(argv: list[str] | None = None) -> int:
                 indent=2, sort_keys=True))
             return 0
         if args.command == "check-memory":
-            check_memory(args.cells, args.tier, allow_unmeasured=args.allow_unmeasured)
+            check_memory(args.cells, args.tier, allow_unmeasured=args.allow_unmeasured,
+                         frames=getattr(args, "frames", None))
             print(f"memory ok: {args.cells} on {args.tier}")
             return 0
         if args.command == "production-env":

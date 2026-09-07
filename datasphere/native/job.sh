@@ -600,8 +600,13 @@ submit)
     # Tier feasibility must be checked on the submission path. The planner also checks RAM, but
     # a hand-written cfg can bypass the planner and send ALDA to gt4.1, where its measured fixed
     # working set is too close to the usable limit.
+    # [Claude 2026-09-07] Pass the config's OWN budget. check_memory now charges the replay
+    # allocation that families.json's fixed_peak_gib excludes, and that charge is budget-dependent:
+    # without this a 10k probe is sized against a 600k buffer and refused on a tier it fits on.
+    cfg_frames="$(grep -oE '\bFRAMES=[0-9]+' "$cfg" | head -1 | cut -d= -f2- || true)"
     NATIVE_EXTRA_OVERRIDES="$cfg_extra_overrides" \
-      python3 datasphere/native/family.py check-memory --cells "$cells" --tier "$admission_tier"
+      python3 datasphere/native/family.py check-memory --cells "$cells" --tier "$admission_tier" \
+        ${cfg_frames:+--frames "$cfg_frames"}
   fi
   # every `- path: NAME` under inputs must exist, resolved relative to the repo root
   missing=0

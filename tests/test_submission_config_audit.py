@@ -50,7 +50,18 @@ def test_an_unmeasured_family_is_not_certified(monkeypatch, tmp_path):
 
 
 def test_the_escape_hatch_makes_the_risk_explicit():
-    _family().check_memory("soda:1", "gt4.1", allow_unmeasured=True)
+    # [Claude 2026-09-07] `frames` is explicit now. check_memory charges the replay allocation that
+    # fixed_peak_gib excludes, and that charge is budget-dependent: at the 600k default a soda cell
+    # needs 21.4 GiB and gt4.1's 14.5 correctly refuses it, which is a TIER verdict and not what
+    # this test is about. The escape hatch is about an absent MEASUREMENT.
+    _family().check_memory("soda:1", "gt4.1", allow_unmeasured=True, frames=10_000)
+
+
+def test_a_production_scale_cell_is_refused_on_a_tier_its_replay_does_not_fit():
+    """The other half of the same change, asserted rather than left implicit."""
+    fam = _family()
+    with pytest.raises((ValueError, SystemExit)):
+        fam.check_memory("soda:1", "gt4.1", allow_unmeasured=True, frames=600_000)
 
 
 def test_a_measured_family_that_does_not_fit_is_refused():
