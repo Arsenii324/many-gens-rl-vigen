@@ -23,6 +23,12 @@ remembering it.
 
 ## The categories, and where each lives
 
+**Start here for the direct answer**:
+[`PRE-PRODUCTION-STATUS-2026-09-07.md`](PRE-PRODUCTION-STATUS-2026-09-07.md) — can the fleet be
+released, and if not, exactly what blocks it, in three kinds: two freeze blockers that are ours,
+four measurements that need the host, and seven ratifications that change status rather than
+behaviour.
+
 ### 1. Decisions awaiting the owner — **one surface, as of 2026-09-05**
 
 - [`DECISION-SHEET.md`](DECISION-SHEET.md) — this session's, **answerable by exception**: every row
