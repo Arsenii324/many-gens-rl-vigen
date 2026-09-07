@@ -798,7 +798,18 @@ if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]
   # DIFFERENT training-placement perturbations, which is exactly what disabling it was meant to
   # prevent. The spelling is now the family's own: `null` where the loop has an upstream disable
   # path, and an explicit source guard where the cadence must stay an integer.
-  eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-2147483647}"
+  # No default here, deliberately. A silent fallback to the sentinel would hand rlvigen the exact
+  # value CORRECTIONS #99 exists to remove, and the run would look correct while evaluating at step
+  # 0 again. Production refuses instead: family.py sets this whenever it sets
+  # NATIVE_DISABLE_ONLINE_EVAL, so its absence means the two came apart and that is worth stopping
+  # for. The diagnostic path falls back, because there the cost of guessing is one extra evaluation.
+  if [[ -z "${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-}" ]]; then
+    echo "REFUSING: NATIVE_DISABLE_ONLINE_EVAL=1 but NATIVE_ONLINE_EVAL_DISABLED_SPELLING is unset." >&2
+    echo "  family.py sets both together; their disagreement means the descriptor lookup failed." >&2
+    echo "  Guessing here reintroduces the step-0 evaluation of CORRECTIONS #99 silently." >&2
+    exit 3
+  fi
+  eval_every="$NATIVE_ONLINE_EVAL_DISABLED_SPELLING"
 else
   eval_every="${EVAL_EVERY_FRAMES:-$frames}"
 fi

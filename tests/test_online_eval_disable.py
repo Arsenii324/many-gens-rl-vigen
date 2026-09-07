@@ -54,9 +54,24 @@ def test_int_cadence_families_guard_their_call_sites():
 
 
 def test_the_runner_takes_the_spelling_from_the_family():
+    """Neither cadence path may hardcode a spelling; both must take the family's own.
+
+    The sentinel survives only as a documented FALLBACK in the diagnostic path, reached when the
+    descriptor lookup fails. That is deliberate: falling back to a number leaves an extra step-0
+    evaluation in a probe, while falling back to `null` would leave dmc_gb and alda unable to
+    parse their own arguments.
+    """
     text = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
-    assert "NATIVE_ONLINE_EVAL_DISABLED_SPELLING" in text
-    assert "eval_every=2147483647" not in text, "the hardcoded sentinel must be gone"
+    assert text.count("NATIVE_ONLINE_EVAL_DISABLED_SPELLING") >= 2, (
+        "both the production and the diagnostic cadence paths must consult it")
+    # The production path takes the family's spelling with no numeric literal of its own.
+    production = text[text.index('eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING'):][:200]
+    assert "2147483647" not in production.split("\n")[0], (
+        "the production path must not carry a hardcoded cadence")
+    # Every remaining occurrence of the sentinel is a comment or the documented fallback.
+    for line in text.splitlines():
+        if "2147483647" in line and not line.strip().startswith("#"):
+            assert "run_eval_every=2147483647" in line, f"unexpected hardcoded sentinel: {line!r}"
 
 
 def test_every_affected_family_declares_a_spelling():
