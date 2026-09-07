@@ -89,7 +89,7 @@ stated once. This is `PREMISES.md` Q5 and it is unresolved.
 
 | baseline | source of our implementation | headline divergence | severity |
 |---|---|---|---|
-| `drqv2` | `[RLV]` upstream | replay 1e5 vs 1e6 (retracted, see below); **stddev schedule is resolved only in a composed probe, not yet certified for production** | **open** |
+| `drqv2` | `[RLV]` upstream | replay 1e5 vs 1e6 (retracted, see below); **Door composition resolves the easy-tier stddev schedule to `linear(1.0,0.1,100000)`** | **resolved/configured** |
 | `svea` | `[RLV]` upstream | **uses SODA's overlay, not SVEA's random convolution**; DrQ-v2-based not SAC-based | **high** |
 | `sgqn` | `[RLV]` upstream | **`aux_lr` = 1e-4 vs canonical 3e-4 — 3x on the shared encoder; the catastrophic 0.3 value is repaired, but canonical fidelity is not exact** | **medium** |
 | `curl` | `[RLV]` upstream | DrQ-v2-based, not SAC; lr 1e-4 vs 1e-3; paper/code disagree 5 ways | **high** |
@@ -160,17 +160,12 @@ Four consequences worth stating plainly:
    these do not reconcile cleanly with the task presets (`easy.yaml` 1.1e6, `medium.yaml` 3.1e6);
    on the agent-step axis canonical Door is ~550k against our 500k, so **Door is close and Lift is
    the real shortfall**. Do not silently pick one number (`PREMISES.md` Q2).
-4. **The exploration schedule was a live, systematic defect — the only one Table 6 exposed.** We
-   ran upstream's **medium** preset (`linear(1.0,0.1,500000)`) on a **Door** base with a 500k
-   budget, so noise finished annealing exactly at the final frame and every DrQ-v2-family arm
-   trained at near-maximal action noise throughout. That biases the comparison toward whichever
-   methods tolerate high action noise — systematic, not noise. The schedule's argument is **agent
-   steps, not frames** (`train.py:118`: `global_frame = global_step * action_repeat`, and
-   `agent.act(obs, self.global_step, ...)`); upstream robosuite runs `action_repeat=2` and we run
-   1, so in agent steps canonical Door is 1.1e6/2 = **550k** against our **500k**. `100000` is
-   therefore a *match*, not a rescale — and proportional rescaling independently gives
-   0.182 x 500k = 91k, within 10%. Fixed to `linear(1.0,0.1,100000)`; a Lift config must override
-   it back to 500000.
+4. **Historical schedule defect, now corrected in the active path.** A pre-fix run used upstream's
+   **medium** preset (`linear(1.0,0.1,500000)`) on a **Door** base with a 500k budget, so noise
+   finished annealing at the final frame. The active launcher composes Door's **easy** preset,
+   `linear(1.0,0.1,100000)`, which fresh Hydra composition confirms reaches all five agents. The
+   schedule argument is **agent steps, not frames** (`train.py:118`); the active Door launcher also
+   sets action repeat to 1. A future Lift composition must select its own medium-tier value.
 
 **Read Table 6 as a table, not with grep.** There is an *Adroit* table (Tables 5) whose tasks are
 `Door, Pen, Hammer` — Adroit Door is **not** robosuite Door — and `pdftotext -layout` misaligns its
@@ -273,9 +268,10 @@ The reference arm, and the one `base` is tuned for. `lr 1e-4` `[P]`, `feature_di
 Two divergences, both `[OURS]`:
 - **replay capacity 1e5**, where DrQ-v2 uses **1e6** (only `quadruped_run` drops to 1e5). Ours is
   DrQ **v1**'s value. At 500k frames a 1e5 buffer holds the most recent 20% and evicts the rest.
-- **`stddev_schedule: linear(1.0,0.1,500000)`** is DrQ-v2's **medium-tier** string, whose budget is
-  3.1M frames — noise finishes annealing at 16% of training. Paired with our 500k budget it
-  finishes at the last frame, so the agent never trains under low noise. See `PREMISES.md` P7.
+- **Door uses `stddev_schedule: linear(1.0,0.1,100000)`** from the easy task preset, verified by
+  fresh composition of the active launcher. At the 600k production budget, noise reaches its
+  floor near 16.7% of training. The medium preset's `500000` is historical/contextual, not the
+  active Door value. See `PREMISES.md` P7.
 
 DrQ-v2's repo is the **best-behaved** of all sources here: it ships per-task YAMLs that reproduce
 the paper without undocumented CLI overrides.
@@ -1289,8 +1285,8 @@ they don't justify any change to my initial assessment."* Never resolved with ev
 DrQ-v2's hyperparameter set and DrQ-v2's own reviewers doubted it transfers off DMControl.**
 Two specifics that land on us:
 - The exploration-stddev schedule **scales with difficulty tier** (easy 100k, medium 500k, hard
-  2M). We use the *medium* string at a 500k budget — confirming `PREMISES.md` P7 from the review
-  record, not just from the config files.
+  2M). Active Door composition uses the *easy* string at a 600k budget; the medium-string
+  statement belongs to the historical pre-fix run, not production.
 - DrQ-v2's only manipulation-tagged task is **Reach Duplo**, and it is **sparse**-reward. Our task
   is dense-shaped. There is no dense-reward manipulation precedent in its tuning at all.
 

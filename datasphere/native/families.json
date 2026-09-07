@@ -861,13 +861,19 @@
       "lr_ctrl": "0.0001",
       "max_grad_norm": "0.5"
     },
-    "host_profiles": {
-      "v100": {
-        "constants": {
-          "num_envs": "64"
-        },
-        "constants_reason": "The separate production host has 113 GiB available RAM; CTRL's measured 16-env peak was 13.57 GiB, so the upstream 64-env rollout is approximately 54 GiB and fits when CTRL runs alone. Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate."
-      }
+      "host_profiles": {
+        "v100": {
+          "constants": {
+            "num_envs": "64"
+          },
+          "production": {
+            "host_memory_model": {
+              "cell_ram_gib": 54.28,
+              "basis": "linear extrapolation of the measured 13.57 GiB 16-env peak to 64 envs; direct V100 measurement still required"
+            }
+          },
+          "constants_reason": "The separate production host has 113 GiB available RAM; CTRL's measured 16-env peak was 13.57 GiB, so the upstream 64-env rollout is approximately 54 GiB and fits when CTRL runs alone. Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate."
+        }
     },
     "constants_note": [
       "[Claude 2026-09-02 12:20 MSK] CORRECTED. The first version of this descriptor carried the",

@@ -329,3 +329,19 @@ def test_no_register_row_calls_itself_resolved_while_its_status_says_open():
         "these rows claim **RESOLVED in their prose while their status column still reads `open`; "
         "people read the prose and open_decisions.py reads the status, so the row means two "
         "different things to two readers:\n  " + "\n  ".join(offenders))
+
+
+def test_active_rlvigen_door_composition_pins_seed_and_exploration_values():
+    """Guard against short-probe overrides being mistaken for production composition."""
+    from hydra import compose, initialize_config_dir
+    from omegaconf import OmegaConf
+
+    cfg_dir = str((ROOT / "RL-ViGen-upstream" / "cfgs").resolve())
+    configs = ("config", "svea_config", "drq_config", "sgqn_config", "curl_config")
+    for config_name in configs:
+        with initialize_config_dir(config_dir=cfg_dir, version_base=None):
+            cfg = compose(config_name=config_name,
+                          overrides=["env=robosuite", "task@_global_=Door", "action_repeat=1"])
+        assert OmegaConf.select(cfg, "num_seed_frames") == 4000, config_name
+        assert OmegaConf.select(cfg, "stddev_schedule") == "linear(1.0,0.1,100000)", config_name
+        assert OmegaConf.select(cfg, "agent.stddev_schedule") == "linear(1.0,0.1,100000)", config_name

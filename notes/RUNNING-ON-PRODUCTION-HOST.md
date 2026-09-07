@@ -71,6 +71,58 @@ and a doc saying so — not a reimplementation.
    specify — in particular, do not skip step 1's GPU/factor measurement or step 2's R_A/R_B control
    just because execution is now possible).
 
+## Production-length runs: four things a diagnostic probe does not need
+
+Added 2026-09-07, after being asked directly whether this design actually suits a *production* run
+rather than a short probe. Three of the four were real defects in the first version of the script,
+found by reading `run_probe.sh` again rather than by reasoning about the wrapper alone.
+
+1. **`NATIVE_PRODUCTION` must reach the container — it did not.** `run_probe.sh` refuses outright
+   (`exit 3`) at `FRAMES >= 600000` when `NATIVE_PRODUCTION` is unset, because
+   `apply_production_settings` would otherwise silently apply *nothing* and train a 600k run at
+   probe-scale cadence and replay settings, completing successfully and looking fine. The first
+   version of `run_on_production_host.sh` built its forwarded-variable allow-list from what a
+   *diagnostic* `cfg-*.yaml` sets, so `NATIVE_PRODUCTION` never reached the container and **every
+   production-scale cell, the 600k canary included, would have died after paying the full container
+   bootstrap** — with the failure reading as a config error rather than a wrapper bug. Fixed; the
+   script now also raises both of `run_probe.sh`'s production refusals on the host, before the
+   bootstrap is paid for, and `tests/test_run_on_production_host.py` pins both.
+2. **Partial output was not durable.** `run_probe.sh` keeps every `SAVE_EVERY_FRAMES` checkpoint,
+   `training.log`, and per-cell run directory in `out=/tmp/native-out` — container-local — and
+   copies nothing to the mounted result path until its single closing
+   `tar -czf "$result" -C "$out" .` (its own line 1546). A container killed at any point before
+   that line lost the entire run, unrecoverably, because none of it had ever touched host storage.
+   The script now bind-mounts `/tmp/native-out` onto the host (`NATIVE_OUT_HOST_DIR`, defaulting to
+   a timestamped directory beside the result archive, deliberately *outside* the `mktemp -d` the
+   EXIT trap removes). Checkpoints are now durable as they are written, and the run is inspectable
+   while it runs — which is also what `scripts/watch_divergence.py --run <dir>` needs, and could
+   not have had before.
+3. **Detach the whole script, not the container.** `docker run` here is foreground and blocking.
+   `dockerd` keeps the container alive across an SSH drop, but this script dies with its SSH
+   session and never reaches its result-retrieval `cp` steps. Wrap the whole invocation:
+   `nohup bash datasphere/native/run_on_production_host.sh ... > run.log 2>&1 &`, or run it under
+   `tmux`. With fix 2 in place a lost wrapper no longer costs the run, only the final packaging.
+4. **Packing is one container, not two.** `run_probe.sh` takes a comma-separated `CELLS` list and
+   runs the entries concurrently when `NATIVE_CONCURRENT=1` (its own line ~303), serially
+   otherwise — so `MIGRATION-T4-TO-V100.md` step 4's two-cell packing is
+   `CELLS=drqv2:1,drqv2:2 NATIVE_CONCURRENT=1` in a single container, not two invocations of this
+   script. `NATIVE_CONCURRENT` was missing from the allow-list too, which silently disabled packing
+   entirely; fixed. Two separate invocations would each pay their own bootstrap, neither would see
+   the other's memory use, and nothing would arbitrate between them. Note the constraint
+   `run_probe.sh`'s own `check-co-schedulable` enforces: families that cannot share one Python
+   environment cannot be packed together (`ctrl` is JAX and strips torch — `jax[cuda12]`'s cudnn 9
+   and torch's pinned cudnn 8.9.2.26 have no common version).
+
+**GPU pinning belongs at the Docker level.** `DOCKER_GPUS='"device=1"'` attaches exactly one card
+to the container. `CUDA_VISIBLE_DEVICES` is deliberately *not* in the forwarded-variable list: it
+would look like it pinned the run while the container still had both cards attached, and a library
+that ignores it could still reach the occupied GPU.
+
+**No `--memory` or `--cpus` limits are set, deliberately.** `MIGRATION-T4-TO-V100.md` step 4 gates
+the packing decision on *measured* peak RAM/CPU headroom; a cgroup cap guessed before that
+measurement exists would convert an honest overcommit into an OOM-kill mid-run. Add them after
+step 2's measurement, not before.
+
 ## What this does NOT establish, named explicitly rather than left implicit
 
 - **Not tested on the actual host.** No SSH access from this session. Every command above is

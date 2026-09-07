@@ -238,12 +238,12 @@ handicap every arm but one:
 | `lr: 1e-4` | DrQ-v2 | all 12 — but DrQ and CURL publish **1e-3**, IDAAC 3e-4, CTRL 5e-4 |
 | `nstep: 3` | DrQ-v2 | all off-policy — RAD/SVEA/SODA/SGQN/DrQ/ALDA are all **1-step TD** |
 | `replay_capacity: 100000` | DrQ **v1** | all off-policy — DrQ-v2 uses **1e6** |
-| `stddev_schedule: linear(1.0,0.1,500000)` | DrQ-v2 **medium tier**, whose budget is 3.1M | our budget is 500k |
+| `stddev_schedule: linear(1.0,0.1,100000)` | RL-ViGen **Door easy tier**, selected by `Door.yaml` | our budget is 600k |
 
-The last one is subtle and worth spelling out: in DrQ-v2-medium the exploration noise finishes
-annealing at **16%** of training and the agent exploits for the rest. With our budget it reaches
-its floor **at the final frame** — the agent never trains under low-noise conditions. Same string,
-different experiment.
+The last one is subtle and worth spelling out: active Door composition selects the easy-tier
+schedule, so exploration noise finishes annealing at about **16.7%** of the 600k budget and the
+agent trains under low noise for the remainder. The medium-tier 500k string describes a historical
+pre-fix run, not the production composition.
 
 > **True premise**: R4 ("equal training conditions") is satisfiable in the letter and violated in
 > fact. Equal *values* across arms is not equal *treatment* when the values are one arm's optimum.

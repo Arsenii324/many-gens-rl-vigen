@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "d2af0fb2bd00792017ee1c38af227300ccb4b42fec7a0ed0f83a3fcd95821f81",
+  "resolved_descriptor_sha256": "aae7ab6b00ead4f7273ae21546df4ba4066f0f490bc01d92c73e185ec76fbdae",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
@@ -499,8 +499,8 @@
         8,
         9
       ],
-      "cell_ram_gib_model": 13.4,
-      "cell_ram_model_basis": "on-policy rollout only, budget-independent",
+      "cell_ram_gib_model": 54.28,
+      "cell_ram_model_basis": "linear extrapolation of the measured 13.57 GiB 16-env peak to 64 envs; direct V100 measurement still required",
       "v100_completed_frames_per_second": null,
       "throughput_source": "UNMEASURED_ON_V100",
       "t4_completed_frames_per_second_reference": 14.92,

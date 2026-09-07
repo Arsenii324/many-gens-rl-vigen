@@ -107,3 +107,74 @@ def test_refuses_a_missing_payload(tmp_path):
     )
     assert result.returncode != 0
     assert "no such payload archive" in result.stderr
+
+
+def test_production_scale_refuses_without_native_production(tmp_path):
+    """The refusal run_probe.sh raises inside the container must happen on the host first.
+
+    run_probe.sh exits 3 at FRAMES >= 600000 with NATIVE_PRODUCTION unset -- but only after the
+    full apt-get/pip bootstrap has been paid for. Catching it here costs nothing.
+    """
+    code = tmp_path / "payload.tgz"
+    code.write_text("payload")
+    env = {"PATH": "/usr/bin:/bin", "FRAMES": "600000", "NATIVE_HOST_PROFILE": "v100"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
+        capture_output=True, text=True, env=env, cwd=str(ROOT),
+    )
+    assert result.returncode == 3
+    assert "NATIVE_PRODUCTION is unset" in result.stderr
+
+
+def test_production_scale_refuses_without_host_profile(tmp_path):
+    code = tmp_path / "payload.tgz"
+    code.write_text("payload")
+    env = {"PATH": "/usr/bin:/bin", "FRAMES": "600000", "NATIVE_PRODUCTION": "1"}
+    result = subprocess.run(
+        ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
+        capture_output=True, text=True, env=env, cwd=str(ROOT),
+    )
+    assert result.returncode == 3
+    assert "NATIVE_HOST_PROFILE is unset" in result.stderr
+
+
+def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_path):
+    """The variables a production cell needs, and the mount that makes a killed run recoverable.
+
+    NATIVE_PRODUCTION gates apply_production_settings; NATIVE_CONCURRENT gates run_probe.sh's
+    parallel cell branch (packing). Both were missing from the forwarding allow-list originally,
+    which made this script unable to run the production campaign it exists for.
+    """
+    code = tmp_path / "payload.tgz"
+    code.write_text("payload")
+    result_out = tmp_path / "result.tgz"
+    log_path = tmp_path / "docker-argv.txt"
+    out_dir = tmp_path / "durable-out"
+
+    fake_bin = _stub_docker(tmp_path, log_path)
+    env = {
+        "PATH": f"{fake_bin}:/usr/bin:/bin",
+        "CELLS": "drqv2:1,drqv2:2",
+        "FRAMES": "600000",
+        "NATIVE_PRODUCTION": "1",
+        "NATIVE_CONCURRENT": "1",
+        "NATIVE_HOST_PROFILE": "v100",
+        "NATIVE_OUT_HOST_DIR": str(out_dir),
+        "DOCKER_GPUS": '"device=1"',
+    }
+    result = subprocess.run(
+        ["bash", str(SCRIPT), str(code), str(result_out)],
+        capture_output=True, text=True, env=env, cwd=str(ROOT),
+    )
+    assert result.returncode == 0, result.stderr
+
+    argv = log_path.read_text().splitlines()
+    assert "NATIVE_PRODUCTION=1" in argv
+    assert "NATIVE_CONCURRENT=1" in argv
+    assert "NATIVE_HOST_PROFILE=v100" in argv
+    assert "CELLS=drqv2:1,drqv2:2" in argv
+    assert '"device=1"' in argv, "DOCKER_GPUS must pin at the docker level, not via CUDA_VISIBLE_DEVICES"
+    assert f"{out_dir}:/tmp/native-out" in argv, (
+        "run_probe.sh writes every checkpoint to the container-local /tmp/native-out and only "
+        "packages it at the very end -- without this mount a killed container loses the whole run")
+    assert out_dir.is_dir()

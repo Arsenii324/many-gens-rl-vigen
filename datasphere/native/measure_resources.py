@@ -155,12 +155,19 @@ def main() -> int:
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--interval-seconds", type=float, default=1.0)
+    parser.add_argument(
+        "--ready-file",
+        type=Path,
+        help="touch after the first sample, so a launcher can start the measured child only then",
+    )
     args = parser.parse_args()
     if args.interval_seconds <= 0:
         parser.error("--interval-seconds must be positive")
     samples = []
     while is_live(args.pid):
         samples.append(sample(args.pid))
+        if args.ready_file is not None and not args.ready_file.exists():
+            args.ready_file.touch()
         time.sleep(args.interval_seconds)
     args.output.write_text(json.dumps({"host": topology(), "root_pid": args.pid, "samples": samples}, sort_keys=True))
     return 0

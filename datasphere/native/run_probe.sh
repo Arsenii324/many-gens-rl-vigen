@@ -20,14 +20,20 @@ run_measured() {
   local temporary
   temporary="$(mktemp -d)"
   local pipe="$temporary/training.pipe"
+  local sampler_ready="$temporary/sampler.ready"
   mkfifo "$pipe"
+  # Keep a small supervisor alive while the sampler takes its first process-tree sample. Without
+  # this handshake, a short but successful command can exit between starting the sampler and its
+  # first poll, leaving an empty resources.json and making the runner's evidence depend on timing.
+  local supervisor_script='ready="$1"; shift; while [[ ! -e "$ready" ]]; do sleep 0.01; done; "$@"'
   if command -v setsid >/dev/null; then
-    setsid "$@" > "$pipe" 2>&1 &
+    setsid bash -c "$supervisor_script" run_probe_supervisor "$sampler_ready" "$@" > "$pipe" 2>&1 &
   else
-    "$@" > "$pipe" 2>&1 &
+    bash -c "$supervisor_script" run_probe_supervisor "$sampler_ready" "$@" > "$pipe" 2>&1 &
   fi
   local training_pid="$!"
-  python3 datasphere/native/measure_resources.py --pid "$training_pid" --output "$output_dir/resources.json" &
+  python3 datasphere/native/measure_resources.py --pid "$training_pid" --output "$output_dir/resources.json" \
+    --ready-file "$sampler_ready" &
   local sampler_pid="$!"
   tee "$output_dir/training.log" < "$pipe" &
   local tee_pid="$!"

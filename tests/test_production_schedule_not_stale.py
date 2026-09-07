@@ -111,6 +111,16 @@ def test_v100_schedule_models_ibac_sni_resolved_process_tree_not_one_worker_enve
     assert "process tree" in row["cell_ram_model_basis"]
 
 
+def test_v100_schedule_does_not_reuse_ctrls_16_env_peak_for_64_env_profile():
+    """The V100 artifact must expose CTRL's explicit extrapolation until a 64-env run measures it."""
+    row = next(row for row in plan.v100_schedule(600_000, [101])["rows"]
+               if row["baseline"] == "ctrl")
+    assert row["runtime_constants"]["num_envs"] == "64"
+    assert row["cell_ram_gib_model"] == 54.28
+    assert "linear extrapolation" in row["cell_ram_model_basis"]
+    assert "direct V100 measurement still required" in row["cell_ram_model_basis"]
+
+
 def test_checked_in_v100_schedule_matches_the_explicit_profile_generator():
     assert V100_SCHEDULE.is_file(), (
         "generate it with plan_production.py --host-profile v100 --sync-schedule")

@@ -104,11 +104,12 @@ critical and it is not gone.
 **`curl` — high, CONFIRMED current.** `cfgs/curl_config.yaml`: `lr: 1e-4`, `aux_lr: 1e-4`, against a
 canonical **1e-3** — a **10×** divergence on the main learning rate, still live.
 
-**`drqv2` — "stddev schedule from the wrong tier — FIXED".** **Not verifiable from the shipped
-configs**: `config.yaml` carries `stddev_schedule: ${stddev_schedule}`, the value is not in
-`robo_config.yaml`, and our launcher does not pass it. Resolving it needs the runtime-composed
-config from an actual job. Left **unverified** rather than assumed — the row is dated, which is
-weak evidence and not proof.
+**`drqv2` — "stddev schedule from the wrong tier — FIXED".** The old note below records a
+historical short/determinism job and must not define production. Fresh Hydra composition of each
+active RL-ViGen config with `task@_global_=Door` and the launcher override resolves production to
+`stddev_schedule: linear(1.0,0.1,100000)` and `num_seed_frames: 4000`; the value reaches
+`agent.stddev_schedule`. The easy preset supplies 100000; the medium preset's 500000 remains a
+valid value for a different task tier.
 
 ## Standing conclusion after both passes
 
@@ -152,24 +153,16 @@ is lower than the k-neighbour formulation implies, and that is CTRL's own behavi
 code.** Its real, recordable deviations are elsewhere — the restored lines (a repair, without which
 the algorithm cannot run at all) and this upstream neighbour-index quirk (faithfully preserved).
 
-## `drqv2`'s stddev schedule — resolved from a real job's composed config
+## Historical diagnostic composition — superseded by active Door composition
 
 `det3/drqv2_a/.hydra/config.yaml` (an actual run, so this outranks the template):
 
     stddev_schedule: linear(1.0, 0.1, 100000)      nstep: 3    lr: 1e-4    batch_size: 256
-    num_seed_frames: 600        <- NOT the 4000 in cfgs/config.yaml
+    num_seed_frames: 600        <- explicit short/determinism probe override
 
-Two things follow. **The schedule resolves to DrQ-v2's short-horizon form** — noise decays to 0.1
-over 100k frames. Whether that is the right tier *for Door* needs the benchmark's task→tier mapping,
-which I have not established; "FIXED 2026-08-10" says it was corrected, not what it was corrected
-*to*. **Still open**, and now open with a concrete value rather than a template.
-
-**And `num_seed_frames: 600` contradicts the 4000 I quoted earlier** from `cfgs/config.yaml`. That
-job was a determinism probe and very likely overrode it, so the production value is probably still
-4000 — but **I asserted 4000 as a production fact earlier today on the strength of the base config
-alone**, and this shows the composed config can differ. The seed-frame share of a budget (40% at 10k)
-was part of my reasoning about why short runs sit at the floor; that reasoning needs the *production*
-composed config to stand, not the template.
+This diagnostic proves only that an explicit short job can compose 600; it does not override the
+active production launcher. The active Door composition independently proves the production values
+above. Preserve this block as historical evidence, but do not cite it as a production uncertainty.
 
 ---
 

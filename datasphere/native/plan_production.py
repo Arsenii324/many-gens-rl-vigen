@@ -296,6 +296,9 @@ def cell_ram_gib(baseline: str, frames: int, capacity: int | None,
     if baseline == "alda":
         return ALDA_FIXED_GIB, "fixed working set, budget-independent"
     if entry is not None:
+        host_memory = entry.get("production", {}).get("host_memory_model")
+        if host_memory:
+            return float(host_memory["cell_ram_gib"]), str(host_memory["basis"])
         parallel = entry.get("production", {}).get("parallel_rollout_memory")
         if parallel:
             procs = int(entry.get("constants", {}).get("procs", 1))

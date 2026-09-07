@@ -56,12 +56,42 @@
 # into the container unchanged -- copy them verbatim from whichever cfg-*.yaml's `cmd:` block is
 # the template, exactly as this file's own usage example above does for v178.
 #
+# LONG RUNS, PACKING, GPU PINNING -- the three things a production cell needs and a diagnostic
+# probe does not:
+#
+#   Detach. `docker run` below is foreground and blocking. An SSH drop sends SIGHUP to this
+#   script, and although dockerd keeps the container itself alive, this script dies before its
+#   result-retrieval `cp` steps -- so run any multi-hour cell under nohup or tmux, wrapping the
+#   WHOLE script, not just the docker command:
+#     nohup bash datasphere/native/run_on_production_host.sh ... > run.log 2>&1 &
+#   Partial output survives regardless, via the /tmp/native-out mount below; the wrapper is what
+#   makes the final packaging step survive too.
+#
+#   Packing. Two cells on one host is ONE container, not two: run_probe.sh takes a comma-separated
+#   CELLS list and runs the entries concurrently when NATIVE_CONCURRENT=1 (its own line ~303),
+#   serially otherwise. `CELLS=drqv2:1,drqv2:2 NATIVE_CONCURRENT=1` is the packing experiment
+#   MIGRATION-T4-TO-V100.md step 4 describes. Do not pack by launching this script twice -- the two
+#   containers would each bootstrap separately, neither would see the other's memory use, and
+#   nothing would arbitrate between them. One container, one CELLS list, one cgroup.
+#   NOTE the co-scheduling constraint: run_probe.sh's own `check-co-schedulable` refuses families
+#   that cannot share one Python environment (ctrl is JAX and strips torch; jax[cuda12]'s cudnn 9
+#   and torch's pinned cudnn 8.9.2.26 have no common version). Pack within a family, not across.
+#
+#   Resource limits. This script sets no --memory and no --cpus, deliberately: the packing decision
+#   in MIGRATION-T4-TO-V100.md step 4 is gated on MEASURED peak RAM/CPU headroom, and a cgroup cap
+#   guessed before that measurement would convert an honest overcommit into an OOM-kill mid-run.
+#   Add them once step 2's measurement exists, not before.
+#
 # GPU selection: notes/remote-infra.txt (2026-09-05) recorded GPU 0 occupied by another user
 # (15.1 GB, 67% util), GPU 1 free. Re-check with `nvidia-smi` before every run -- that snapshot is
 # a week-plus old by the time this runs and the occupant may have changed or left. Default below
 # is `--gpus all`; export CUDA_VISIBLE_DEVICES=1 (or whichever index nvidia-smi shows free) to
 # pin to one card instead, matching CTRL's own review-14-flagged caution about not assuming a
-# packing plan without a real measurement.
+# packing plan without a real measurement. Pin at the DOCKER level, not with CUDA_VISIBLE_DEVICES:
+# `DOCKER_GPUS='"device=1"'` gives the container exactly one card, so a library that ignores
+# CUDA_VISIBLE_DEVICES cannot reach the occupied one. CUDA_VISIBLE_DEVICES is deliberately absent
+# from the forwarded-variable list below for the same reason -- it would look like it pinned the
+# run while the container still had both cards attached.
 set -euo pipefail
 
 IMAGE="$(python3 -c "import json,pathlib; print(json.loads(pathlib.Path('datasphere/native/source-lock.json').read_text())['container_image'])")"
@@ -73,6 +103,22 @@ RLVIGEN_ARCHIVE_HOST="${3:-}"
 [[ -f "$CODE" ]] || { echo "no such payload archive: $CODE" >&2; exit 2; }
 [[ -z "$RLVIGEN_ARCHIVE_HOST" || -f "$RLVIGEN_ARCHIVE_HOST" ]] || {
   echo "no such RL-ViGen archive: $RLVIGEN_ARCHIVE_HOST" >&2; exit 2; }
+
+# Mirror run_probe.sh's own production refusals HERE, on the host, before a container bootstrap is
+# paid for. run_probe.sh raises both of these itself (its lines ~391 and ~404); catching them at
+# this boundary is the same discipline contract.py's payload check already applies -- refuse before
+# the expensive step, not after it.
+if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
+  [[ -n "${NATIVE_PRODUCTION:-}" ]] || {
+    echo "refusing: FRAMES=$FRAMES is production scale and NATIVE_PRODUCTION is unset." >&2
+    echo "  run_probe.sh would exit 3 inside the container after the full bootstrap was paid." >&2
+    echo "  Set NATIVE_PRODUCTION=1 (and NATIVE_HOST_PROFILE) for any production-scale cell." >&2
+    exit 3; }
+  [[ -n "${NATIVE_HOST_PROFILE:-}" ]] || {
+    echo "refusing: FRAMES=$FRAMES is production scale and NATIVE_HOST_PROFILE is unset." >&2
+    echo "  run_probe.sh requires it explicitly at this scale (its own line ~391)." >&2
+    exit 3; }
+fi
 
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
@@ -89,7 +135,22 @@ fi
 # three standard ones above (e.g. `datasphere/native/s2-snapshot-100000.pt: SNAP` becomes
 # `EXTRA_MOUNT_1=datasphere/native/s2-snapshot-100000.pt:/work/snap.pt:OFFLINE_EVAL_SNAPSHOT`).
 DOCKER_ENV_ARGS=()
-DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work")
+# [Claude 2026-09-07] run_probe.sh keeps its whole working state -- every SAVE_EVERY_FRAMES
+# checkpoint, training.log, the per-cell run dirs -- in `out=/tmp/native-out` and `work=
+# /tmp/native-work`, both container-local, and copies NOTHING to the mounted result path until its
+# single final `tar -czf "$result" -C "$out" .` (its own line 1546). A container killed at any
+# point before that line therefore loses the entire run: hours of training, all intermediate
+# checkpoints, unrecoverable, because none of it was ever on host storage. Mounting /tmp/native-out
+# on the host makes every checkpoint durable as it is written, and makes the run inspectable while
+# it runs (`scripts/watch_divergence.py --run <dir>` needs a readable training.log, which is
+# otherwise sealed inside the container). This needs no run_probe.sh change -- it writes to the
+# same path either way. NATIVE_OUT_HOST_DIR overrides the location.
+# Deliberately NOT under $WORKDIR: the EXIT trap removes that, and it fires on a crash too --
+# which would delete exactly the partial run this mount exists to save. Default lands next to
+# the result archive, where the operator is already looking.
+NATIVE_OUT_HOST_DIR="${NATIVE_OUT_HOST_DIR:-$(dirname "$RESULT")/native-out-$(date +%Y%m%d-%H%M%S)}"
+mkdir -p "$NATIVE_OUT_HOST_DIR"
+DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work" -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out")
 i=1
 while true; do
   var="EXTRA_MOUNT_$i"
@@ -107,11 +168,21 @@ done
 
 # Forward every env var a cfg-*.yaml's `cmd:` block would set. Allow-list, not blanket `-e` of
 # the whole environment, so a stray unrelated shell variable never silently reaches the container.
+# [Claude 2026-09-07] The first version of this list was built from what a *diagnostic* cfg-*.yaml
+# sets, and that silently made the script unable to run the thing it exists for. run_probe.sh
+# refuses outright at FRAMES >= 600000 when NATIVE_PRODUCTION is unset (its own line ~404,
+# `exit 3`) -- so every production-scale cell, the 600k canary included, would have died after
+# paying the full container bootstrap, with the refusal blamed on the config rather than on this
+# forwarding list. NATIVE_CONCURRENT was missing for the same reason and silently disabled cell
+# packing (run_probe.sh:303 gates the parallel branch on it), which is exactly the capability
+# MIGRATION-T4-TO-V100.md step 4 plans to use on this host.
 for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES SAVE_EVERY_FRAMES \
-    ENDPOINT_EVAL ENDPOINT_EVAL_REGIMES ENDPOINT_EVAL_SCENES ENDPOINT_EVAL_EPISODES \
+    SAVE_EVERY ENDPOINT_EVAL ENDPOINT_EVAL_REGIMES ENDPOINT_EVAL_SCENES ENDPOINT_EVAL_EPISODES \
     ENDPOINT_EVAL_DEVICE OFFLINE_EVAL_FAMILY OFFLINE_EVAL_BASELINE OFFLINE_EVAL_SEED \
     OFFLINE_EVAL_FRAME OFFLINE_EVAL_DEVICES OFFLINE_EVAL_REGIMES OFFLINE_EVAL_SCENES \
-    OFFLINE_EVAL_EPISODES NATIVE_HOST_PROFILE NATIVE_DISABLE_ONLINE_EVAL CUDA_ROOT; do
+    OFFLINE_EVAL_EPISODES NATIVE_HOST_PROFILE NATIVE_DISABLE_ONLINE_EVAL CUDA_ROOT \
+    NATIVE_PRODUCTION NATIVE_PRODUCTION_STRICT NATIVE_CONCURRENT NATIVE_LAUNCHER \
+    NATIVE_EXTRA_OVERRIDES NATIVE_NO_TIME_WRAPPER NATIVE_FAMILY; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
 done
@@ -144,3 +215,4 @@ if [[ -f "$WORKDIR/out/records.jsonl" ]]; then
   cp "$WORKDIR/out/records.jsonl" "$(dirname "$RESULT")/records.jsonl"
 fi
 echo "result: $RESULT" >&2
+echo "run directory (checkpoints, training.log): $NATIVE_OUT_HOST_DIR" >&2

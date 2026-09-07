@@ -18,7 +18,7 @@ retraction list before repeating it.
 | 7 | Bootstrap by resampling **seeds and scenes** | **WRONG** | That silently treats the ten certified scenes as a sample from a population. They are a fixed grid; resample whole seed-vectors |
 | 8 | Cross-method **training-seed pairing** gives the statistical power | **OVERSTATED** | Pairing holds for regime, scene and placement — measurement noise. "Seed 1" for two different algorithms is not a common-random-number block |
 | 9 | "35.5 GB of checkpoints **does not fit**" | **PREMISE WITHDRAWN** | Free disk was 73.1 GB, not ~30. The conclusion (evaluate in-container) stands on **C95** alone, which never needed the storage argument |
-| 10 | `num_seed_frames` is **4000** in production | **UNVERIFIED** | A real job's composed config showed **600**. The base config says 4000; the composed config governs. The production value needs the composed config, not the template |
+| 10 | `num_seed_frames` is **4000** in production | **CORRECTED 2026-09-07** | Fresh Hydra composition of all five active RL-ViGen configs with `task@_global_=Door` and launcher overrides gives **4000**. The historical **600** value is an explicit short/determinism probe override, not production provenance. |
 | 11 | "`runnable/idaac` and `runnable/ppg` are clean — `git status` shows nothing" | **UNFOUNDED** | `.gitignore:35` is `runnable/*/`; the parent repo does not track the clones. Empty output meant *not tracked*. Use `scripts/deviations.py` |
 | 12 | Production calendar is **731 job-hours / 15.2 days** on two V100s | **INCOMPLETE, twice — and now SUPERSEDED, see `notes/PRODUCTION-CALENDAR.md`. Its env-construction term (28–168 h) implied 5–30 s per construction; the measured value is 0.6 s, i.e. 3.4 h, an overestimate of 8x to 50x** | Missing endpoint eval (40 h), contingency, and **20,160 env constructions** (28–168 h); also assumed no packing. Complete envelope **6.5–17 days**, realistically 7–11 — before the GPU-0 occupancy below |
 | 13 | Two V100s are available for scheduling | **QUALIFIED** | `remote-infra.txt` shows **GPU 0 occupied** by another user (15.1 GB, 67%). With one GPU the campaign is roughly double |
@@ -2149,3 +2149,20 @@ project's evaluator-identity mechanism has found by actually diffing a local com
 live remote one (the first was #88's AppleDouble sidecars). Both bugs are the same shape — a file
 assumed static that a macOS-vs-Linux or code-vs-runtime boundary silently changes — found only
 because someone insisted the mismatch be explained rather than revalidated around.
+
+## #98 — fixed: the V100 CTRL schedule reused a 16-environment RAM peak
+
+`production-schedule-v100.json` correctly resolved CTRL to the upstream `num_envs=64`, but its
+`cell_ram_gib_model` still came from the 16-environment `13.4 GiB` envelope. That understated the
+V100 production shape by roughly fourfold and made the schedule's RAM field false even though the
+DataSphere scheduler gate remained valid for its separate 16-environment profile.
+
+The V100 schedule now carries an explicit `54.28 GiB` model (`13.57 GiB × 64/16`) marked as a
+**linear extrapolation**. This repairs the planner's claim without laundering an estimate into a
+measurement: a direct 64-environment V100 run is still required before packing or claiming the
+memory envelope. The generated schedule and a regression test pin both the value and its
+uncertainty.
+
+The short-process resource-sampler race found while verifying this correction was fixed alongside
+it: `run_probe.sh` now holds a supervisor until `measure_resources.py` has emitted its first sample,
+so a successful short command cannot leave an empty `resources.json` merely due to startup timing.
