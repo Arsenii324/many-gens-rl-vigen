@@ -25,6 +25,7 @@ from __future__ import annotations
 import pathlib
 import re
 
+import numpy as np
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -32,6 +33,7 @@ LAUNCH = ROOT / "runnable" / "_launch"
 PATCHES = ROOT / "runnable" / "_patches"
 
 from rlgen.protocol import OBSERVATION_GEOMETRY  # noqa: E402
+from scripts.eval_across_scenes import verify_runtime_observation_geometry  # noqa: E402
 
 #: Which launcher drives which baseline. Several baselines share one, which is the point of the
 #: clone layout: dmc_gb carries rad and soda, rlvigen.sh carries all five of RL-ViGen's own.
@@ -57,6 +59,48 @@ def test_every_baseline_has_a_declared_geometry():
     assert set(OBSERVATION_GEOMETRY) == set(LAUNCHER_OF), (
         "OBSERVATION_GEOMETRY and LAUNCHER_OF must cover the same twelve baselines; a baseline "
         "in one and not the other is a baseline whose observation shape nothing checks.")
+
+
+@pytest.mark.parametrize("family,shape", [
+    ("rlvigen", (9, 84, 84)), ("dmc_gb", (9, 100, 100)),
+    ("idaac", (1, 9, 64, 64)), ("ppg", (1, 64, 64, 9)),
+    ("ibac_sni", (64, 64, 3)), ("ctrl", (1, 64, 64, 3)),
+])
+def test_runtime_geometry_guard_accepts_each_family_layout(family, shape):
+    observation = np.zeros(shape, dtype="uint8")
+    size = shape[-1] if family in {"rlvigen", "dmc_gb"} else 64
+    stack = 1 if family in {"ibac_sni", "ctrl"} else 3
+    verify_runtime_observation_geometry(observation, image_size=size, frame_stack=stack,
+                                        family=family)
+
+
+def test_runtime_geometry_guard_finds_rgb_inside_an_observation_mapping():
+    observation = {"rgb": np.zeros((9, 64, 64), dtype="uint8"),
+                   "state": np.zeros((1, 5), dtype="float32")}
+    verify_runtime_observation_geometry(observation, image_size=64, frame_stack=3,
+                                        family="alda")
+
+
+def test_runtime_geometry_guard_rejects_wrong_channels():
+    observation = np.zeros((1, 64, 64, 3), dtype="uint8")
+    with pytest.raises(RuntimeError, match="expected 9 channels"):
+        verify_runtime_observation_geometry(observation, image_size=64, frame_stack=3,
+                                            family="ppg")
+
+
+def test_runtime_geometry_guard_rejects_right_dimensions_in_wrong_layout():
+    observation = np.zeros((1, 9, 64, 64), dtype="uint8")
+    with pytest.raises(RuntimeError, match="in NHWC"):
+        verify_runtime_observation_geometry(observation, image_size=64, frame_stack=3,
+                                            family="ppg")
+
+
+def test_runtime_geometry_guard_only_accepts_the_rgb_mapping_field():
+    observation = {"rgb": np.zeros((3, 64, 64), dtype="uint8"),
+                   "state": np.zeros((64, 64, 9), dtype="uint8")}
+    with pytest.raises(RuntimeError, match="rgb"):
+        verify_runtime_observation_geometry(observation, image_size=64, frame_stack=3,
+                                            family="alda")
 
 
 @pytest.mark.parametrize("name", sorted(OBSERVATION_GEOMETRY))

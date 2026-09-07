@@ -81,6 +81,49 @@ LAST_EPISODE_DIAGNOSTICS: list[dict] = []
 LAST_POLICY_ACTION_DIAGNOSTICS: dict | None = None
 
 
+def verify_runtime_observation_geometry(observation, *, image_size: int, frame_stack: int,
+                                        family: str) -> None:
+    """Fail closed unless a live observation has the declared RGB geometry.
+
+    Each evaluator's layout is part of its real policy contract: accepting a transpose with the
+    same dimensions would certify a different tensor. This is read-only; callers invoke it on an
+    observation they were going to use anyway, so it adds no reset or RNG draw. A
+    declaration/launcher check cannot catch a wrapper that silently changes the tensor.
+    """
+    expected_size = int(image_size)
+    expected_channels = 3 * int(frame_stack)
+    layouts = {
+        "rlvigen": "CHW", "rad": "CHW", "soda": "CHW", "dmc_gb": "CHW",
+        "idaac": "NCHW", "ppg": "NHWC", "ibac_sni": "HWC", "alda": "RGB-CHW",
+        "ctrl": "NHWC",
+    }
+    layout = layouts.get(family)
+    if layout is None:
+        raise ValueError(f"unknown evaluator family for geometry check: {family!r}")
+    if layout == "RGB-CHW":
+        if not isinstance(observation, dict) or "rgb" not in observation:
+            raise RuntimeError(f"{family}: expected an observation mapping with an rgb field")
+        observation = observation["rgb"]
+
+    shape = getattr(observation, "shape", None)
+    try:
+        shape = tuple(int(dim) for dim in shape)
+    except (TypeError, ValueError):
+        shape = None
+    expected = {
+        "CHW": (expected_channels, expected_size, expected_size),
+        "NCHW": (1, expected_channels, expected_size, expected_size),
+        "NHWC": (1, expected_size, expected_size, expected_channels),
+        "HWC": (expected_size, expected_size, expected_channels),
+        "RGB-CHW": (expected_channels, expected_size, expected_size),
+    }[layout]
+    if shape != expected:
+        field = " in rgb field" if layout == "RGB-CHW" else ""
+        raise RuntimeError(
+            f"{family}: runtime observation geometry mismatch; expected {expected_channels} "
+            f"channels in {layout}{field} at {expected_size}x{expected_size}, observed {shape}")
+
+
 def placement_witness(observation) -> str:
     """Hash the first post-reset observation so placement provenance is inspectable."""
     digest = hashlib.sha256()
@@ -129,7 +172,7 @@ def find_snapshot(explicit: str | None) -> pathlib.Path | None:
 
 
 def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: int,
-              action_repeat: int, frame_stack: int, step: int):
+              action_repeat: int, frame_stack: int, step: int, image_size: int = 84):
     global LAST_PLACEMENT_WITNESSES
     global LAST_EPISODE_DIAGNOSTICS
     global LAST_POLICY_ACTION_DIAGNOSTICS
@@ -242,6 +285,9 @@ def run_scene(agent, task: str, scene_id: int, mode: str, episodes: int, seed: i
         ).generate_state(1, dtype=np.uint32)[0])
         np.random.seed(condition)
         ts = env.reset()
+        if episode_index == 0:
+            verify_runtime_observation_geometry(
+                ts.observation, image_size=image_size, frame_stack=frame_stack, family="rlvigen")
         LAST_PLACEMENT_WITNESSES.append(placement_witness(ts.observation))
         total, succeeded = 0.0, False
         while not ts.last():

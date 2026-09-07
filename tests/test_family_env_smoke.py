@@ -20,6 +20,7 @@ import types
 
 import numpy as np
 import pytest
+from scripts.eval_across_scenes import verify_runtime_observation_geometry
 
 
 
@@ -68,6 +69,8 @@ def family_paths():
     if sys.platform == "darwin":
         os.environ.setdefault("MUJOCO_GL", "glfw")
         os.environ.setdefault("PYGLFW_LIBRARY", "/opt/homebrew/lib/libglfw.dylib")
+    previous_image_size = os.environ.get("RLVIGEN_IMAGE_SIZE")
+    os.environ["RLVIGEN_IMAGE_SIZE"] = "64"
     candidates = [rlv, rlv / "envs" / "robosuiteVGB", ROOT / "ext" / "baselines",
                   ROOT / "runnable" / "_shim" / "no_tf", ROOT / "runnable" / "_shim" / "alda_models",
                   ROOT / "runnable" / "idaac", ROOT / "runnable" / "ppg",
@@ -89,6 +92,10 @@ def family_paths():
                                       "phasic_policy_gradient", "vec_env", "models", "trainers",
                                       "dmcontrol_generalization_benchmark", "env", "utils"}:
                 sys.modules.pop(name, None)
+        if previous_image_size is None:
+            os.environ.pop("RLVIGEN_IMAGE_SIZE", None)
+        else:
+            os.environ["RLVIGEN_IMAGE_SIZE"] = previous_image_size
 
 
 def _grid():
@@ -179,9 +186,15 @@ def test_family_env_constructs_and_verifies_its_regime(family, family_paths):
         _absence_or_fail(error, f"{family} stack not importable here: {type(error).__name__}: {error}")
     try:
         grid.verify_regime(env, "train", 0, family, strict=True)
+        if family == "ppg":
+            observation = env.observe()[1]
+        else:
+            observation = env.reset()
+        verify_runtime_observation_geometry(
+            observation, image_size=64, frame_stack=1, family=family)
     except RuntimeError as error:
         raise AssertionError(
-            f"{family}: strict regime verification fails on a freshly constructed env -- "
+            f"{family}: strict runtime verification fails on a freshly constructed env -- "
             f"every production cell for this family would abort. {error}"
         ) from error
 

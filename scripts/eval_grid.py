@@ -376,7 +376,8 @@ def dmc_eval_seed(mode, seed):
     return seed if mode == "train" else seed + 42
 
 
-def run_scene_dmc_gb(agent, task, scene_id, mode, episodes, seed, image_size, episode_length):
+def run_scene_dmc_gb(agent, task, scene_id, mode, episodes, seed, image_size, episode_length,
+                     baseline="rad"):
     """One (regime, scene) cell for rad/soda, through dmc_gb's own env and action path.
 
     `select_action` is the deterministic one (`mu`); `sample_action` is the stochastic one, and
@@ -402,6 +403,10 @@ def run_scene_dmc_gb(agent, task, scene_id, mode, episodes, seed, image_size, ep
     for episode_index in range(episodes):
         seed_episode_placement(seed, scene_id, episode_index)
         obs = env.reset()
+        if episode_index == 0:
+            _eval_across_scenes.verify_runtime_observation_geometry(
+                obs, image_size=OBSERVATION_GEOMETRY[baseline][0],
+                frame_stack=OBSERVATION_GEOMETRY[baseline][1], family=baseline)
         LAST_PLACEMENT_WITNESSES.append(placement_witness(obs))
         total, succeeded = 0.0, False
         done = False
@@ -534,6 +539,9 @@ def run_scene_idaac(agent, task, scene_id, mode, episodes, seed, frame_stack=Non
     returns, successes, flags = [], 0, []
     seed_episode_placement(seed, scene_id, 0)
     obs = envs.reset()
+    _eval_across_scenes.verify_runtime_observation_geometry(
+        obs, image_size=OBSERVATION_GEOMETRY["idaac"][0],
+        frame_stack=OBSERVATION_GEOMETRY["idaac"][1], family="idaac")
     LAST_PLACEMENT_WITNESSES.append(placement_witness(obs))
     succeeded = False
     while len(returns) < episodes:
@@ -604,6 +612,11 @@ def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None,
                     frame_stack=(OBSERVATION_GEOMETRY["ppg"][1]
                                  if frame_stack is None else int(frame_stack)))
     verify_regime(venv, mode, scene_id, "ppg", strict=True)
+    initial_observation = venv.observe()
+    _eval_across_scenes.verify_runtime_observation_geometry(
+        initial_observation[1] if isinstance(initial_observation, tuple) else initial_observation,
+        image_size=OBSERVATION_GEOMETRY["ppg"][0],
+        frame_stack=OBSERVATION_GEOMETRY["ppg"][1], family="ppg")
     action_probe = _new_action_probe(venv)
     original_venv_act = venv.act
 
@@ -724,6 +737,10 @@ def run_scene_ibac_sni(built, task, scene_id, mode, episodes, seed, policy_mode=
         obs = env.reset()
         if isinstance(obs, tuple):
             obs = obs[0]
+        if episode_index == 0:
+            _eval_across_scenes.verify_runtime_observation_geometry(
+                obs, image_size=OBSERVATION_GEOMETRY["ibac_sni"][0],
+                frame_stack=OBSERVATION_GEOMETRY["ibac_sni"][1], family="ibac_sni")
         LAST_PLACEMENT_WITNESSES.append(placement_witness(obs))
         total, succeeded, done = 0.0, False, False
         while not done:
@@ -852,6 +869,10 @@ def run_scene_alda(built, task, scene_id, mode, episodes, seed):
         obs = env.reset()
         if isinstance(obs, tuple):
             obs = obs[0]
+        if episode_index == 0:
+            _eval_across_scenes.verify_runtime_observation_geometry(
+                obs, image_size=OBSERVATION_GEOMETRY["alda"][0],
+                frame_stack=OBSERVATION_GEOMETRY["alda"][1], family="alda")
         LAST_PLACEMENT_WITNESSES.append(placement_witness(obs))
         total, succeeded, done = 0.0, False, False
         while not done:
@@ -1005,6 +1026,9 @@ def run_scene_ctrl(built, task, scene_id, mode, episodes, seed, policy_mode="nat
     returns, successes, flags = [], 0, []
     seed_episode_placement(seed, scene_id, 0)
     state = env.reset()
+    _eval_across_scenes.verify_runtime_observation_geometry(
+        state, image_size=OBSERVATION_GEOMETRY["ctrl"][0],
+        frame_stack=OBSERVATION_GEOMETRY["ctrl"][1], family="ctrl")
     LAST_PLACEMENT_WITNESSES.append(placement_witness(state))
     for episode_index in range(episodes):
         total, succeeded, done = 0.0, False, False
@@ -1084,10 +1108,12 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
                                               a.episode_seed, a.frame_stack, policy_mode=a.policy_mode)
             elif a.family == "dmc_gb":
                 returns, succ, flags = run_scene_dmc_gb(agent, a.task, scene, regime, a.episodes,
-                                                 a.episode_seed, a.image_size, a.episode_length)
+                                                 a.episode_seed, a.image_size, a.episode_length,
+                                                 baseline=a.baseline)
             else:
                 returns, succ, flags = run_scene(agent, a.task, scene, regime, a.episodes,
-                                          a.episode_seed, a.action_repeat, a.frame_stack, frame)
+                                          a.episode_seed, a.action_repeat, a.frame_stack, frame,
+                                          image_size=declared_image_size)
                 witnesses = list(_eval_across_scenes.LAST_PLACEMENT_WITNESSES)
                 diagnostics = list(_eval_across_scenes.LAST_EPISODE_DIAGNOSTICS)
             if a.family != "rlvigen":

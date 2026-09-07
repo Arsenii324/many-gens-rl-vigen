@@ -70,11 +70,12 @@ stronger sense (see below) — it means the specific gate this section poses is 
 ## "Strongly recommended, but do not invalidate the algorithms"
 
 8. **Runtime-observed, independent geometry certification** (declared vs. observed-at-construction
-   vs. checkpoint-expected, failing startup on any mismatch) — NOT DONE. Correctly named as open in
-   `00-review-19-triage.md` ("production hardening item, not evidence current rows are
-   reinterpreted"). `rlgen/protocol.py::OBSERVATION_GEOMETRY` remains the single declared source of
-   truth; nothing cross-checks it against an actual constructed tensor's `.shape` at every
-   production call site as one automated gate. Worth doing, not done.
+   vs. checkpoint-expected, failing startup on any mismatch) — **IMPLEMENTED; revalidation pending**.
+   `scripts/eval_across_scenes.py::verify_runtime_observation_geometry` now fail-closes on the
+   first live observation for all seven evaluator families, accepting only the declared RGB
+   channel-first/last shape (and the one-env batch form). It adds no reset or RNG draw. The current
+   seven-family attestation wave is consequently superseded and must be rerun once, after this
+   change, before it can count as current evidence.
 9. **SHA256 provenance chain** (per-baseline upstream URL/commit/pristine-tree/patch/final-tree
    hashes) — PARTIALLY DONE, differently shaped than review 19 asked for. `scripts/
    build_external_review_artifact.py` (committed `722bc3f`) computes a project-tree-level
