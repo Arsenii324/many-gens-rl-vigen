@@ -18,36 +18,49 @@
 > gates exist to prevent, so the claim is corrected in place rather than deleted. The wave that
 > would earn 7/7 is in flight and tabulated below.
 
-## IN FLIGHT: the v191/v192 revalidation wave — this is what stands between the tree and a freeze
+## IN FLIGHT: the v194 revalidation wave — this is what stands between the tree and a freeze
 
-Seven families, one cell each, bounded at 3600s (cut from 10800s: a wave cell does ~15 minutes of
-work, and seven jobs at a three-hour ceiling is 21 GPU-hours of exposure if anything hangs).
+**Seven families, one clean generation, all from the same tree.** Bounded at 3600s each.
 
-| family | job | status at last check |
-|---|---|---|
-| idaac | `bt1kekqmfrpl1kqn1uoa` | SUCCESS |
-| ppg | `bt1bs9rq73ksdhc604m2` | SUCCESS |
-| ibac_sni | `bt182v4sg5grkcr7ql1b` | SUCCESS |
-| ctrl | `bt1i4k4j3jo0qu04r9sc` | SUCCESS |
-| alda | `bt1ivjfgolsu90pbka9p` | EXECUTING |
-| rlvigen | `bt1gb1hpr8ofmt7uv2q8` | EXECUTING — v192 payload, after the `_run_grid` NameError fix |
-| dmc_gb | `bt1ekba6on8tot3m882v` | EXECUTING — v193 payload, after the geometry-checker normalisation fix. The v191 job `bt1vccuivle5i619hbkr` ERRORed |
+| family | job |
+|---|---|
+| rlvigen | `bt1h73oou888t1duau73` |
+| dmc_gb | `bt1t27ff1tcogv7fd6mv` |
+| idaac | `bt1r29b6em0m0cs74v70` |
+| alda | `bt1vtciqmrt5m4jklupk` |
+| ppg | `bt1plfp98967v0ouud7h` |
+| ibac_sni | `bt19u2koj34i168otpkg` |
+| ctrl | `bt1lj7qk3vofb21r6k6m` |
 
-**When a family lands**: pull its `records.jsonl`, populate
-`datasphere/native/validated_evaluator_families.json` with revisions computed from
-`evaluator_identity.py` against the live tree, and require the `shared evaluator validated` gate to
-read 7/7. Nothing in that entry is typed by hand.
+**Why v191/v192/v193 were abandoned, and it is the lesson of the day.** That wave produced four
+SUCCESS jobs (idaac, ppg, ibac_sni, ctrl) whose records were **stale on arrival**: their
+`evaluator_revision` did not match the live tree, because two fixes landed in shared closure
+members WHILE the wave was running — `ee32d72` (frame-stack authority, `eval_grid.py`) and
+`02a2dcb` (observation normalisation, `eval_across_scenes.py`). The populate step caught it by
+assertion rather than writing a false attestation:
 
-**When a family errors, diagnose before resubmitting.** A bare `ERROR` status is not a diagnosis:
-the last two rlvigen failures were the same `NameError` in `_run_grid`, and the first went
-undiagnosed through an entire wave because the status was read and the log was not.
+    AssertionError: ('0c383ce7edd8...', '35f79dc39a15...')
 
-Written to answer one question directly: **can the 36-cell production fleet be released?** No, and
-this page says exactly why, with the evidence for each item rather than a status word.
+Both fixes were necessary — without them rlvigen and dmc_gb could not complete a cell at all — but
+fixing during a wave means the wave certifies a tree that no longer exists. **This is the rule I
+gave Codex and then broke myself: once a wave starts, no closure member changes until it is
+attested.** All in-flight jobs were cancelled and the four stale record files deleted rather than
+left to look like evidence.
 
-`scripts/production_gates.py` reads **33 pass / 0 fail / 8 owner**. "No mechanical failures remain"
-is a true statement about the instruments and a misleading one about readiness, which is why this
-page exists beside it.
+**THE TREE IS FROZEN for closure purposes.** Do not edit `eval_grid.py`, `eval_across_scenes.py`,
+`eval_provenance.py`, `evaluator_identity.py`, `normalize_curves.py`, `metrics.py`,
+`rlvigen-source.json` or `families.json` until this wave is attested. If one must change, cancel
+the wave and start a new generation; never let a half-attested ledger exist.
+
+**When they land**: pull each `records.jsonl` into `results/records/<job>__records.jsonl`, run the
+populate step, and require the `shared evaluator validated` gate to read 7/7. That step asserts the
+record's revision equals the live one — the check that caught this.
+
+**When one errors, read the log, not the status.** Today's three wave failures were a `NameError`
+in `_run_grid` (rlvigen — survived an entire earlier wave undiagnosed), an unnormalised observation
+in the geometry checker (dmc_gb — failed AFTER training completed and the checkpoint verified
+finite, behind an `EGLError` that was only teardown noise), and this staleness. None was visible
+from the job status.
 
 ## Historical snapshot before the A36 decision (2026-09-07, late)
 

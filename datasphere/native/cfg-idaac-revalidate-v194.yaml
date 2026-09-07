@@ -1,0 +1,46 @@
+# [Claude 2026-09-07] Final evaluator-identity validation wave, per the governing rule
+# (Codex mailbox Q47): run once against the frozen tree, not reactively after every fix.
+# v170 predates PPG-C2 (frame_stack=3, source-backed DMC comparator hyperparameters),
+# IDAAC-C2 being made the actual committed production default, SODA's aux_lr fix, and the
+# 12-baseline provenance-labeling pass -- all now landed and committed (b1a4c5a, 722bc3f).
+# Working tree was 0 uncommitted paths (production_gates.py: 31 pass, 0 fail, 9 owner) when
+# this wave's payloads were built.
+#
+# Frame budget recomputed live via `family.py expected-endpoint`, not copied from v170:
+# idaac moved 9216 -> 8192 because C2's num_steps floor is 2048 (was 1024) -- every other
+# family's endpoint is unchanged from v170 (its rollout quantum did not move).
+#
+# payload-v194-idaac.tgz built and passed both `contract.py verify-payload
+# --require-evaluator-identity` and `verify-evaluator-binding` locally before submission.
+name: vigen-idaac-revalidate-v194
+desc: Schema-2 evaluator identity re-validation for idaac, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 3600s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=idaac:1
+  FRAMES=8192
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=8192
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v194-idaac.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1
