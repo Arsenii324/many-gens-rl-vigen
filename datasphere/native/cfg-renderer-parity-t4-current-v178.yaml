@@ -1,0 +1,41 @@
+# [Claude 2026-09-07] C95 R_A, re-measured against the NOW-frozen tree. Byte-identical to
+# cfg-renderer-parity-t4-current-v144.yaml except the payload: v144/v145 predates today's
+# evaluator-affecting work (schema-2 identity was already in v145, but IDAAC-C2, PPG-C2, SODA's
+# aux_lr fix, and the 12-baseline provenance labeling all landed since) -- v144's own number would
+# be exactly the same kind of stale comparison RESULTS-VALIDITY.md already warns against for v50,
+# just one freeze-cycle later. Reuses payload-v176-rlvigen.tgz, already built and verified this
+# session for the v176 evaluator-identity wave (contract.py verify-payload
+# --require-evaluator-identity and verify-evaluator-binding both passed) -- same source tree,
+# no rebuild needed.
+#
+# Same checkpoint (datasphere/native/s2-snapshot-100000.pt, drqv2 100k, seed 2), same RL-ViGen
+# archive, same 4-regime x 10-scene x 10-episode grid as v144/v128. gt4.1, no V100 reservation.
+# Once this reports, it is the current, valid R_A half of C95 -- R_B (the same checkpoint,
+# evaluator, and container on the actual production host) remains a Phase 4 handoff item, not
+# reachable from here.
+name: vigen-native-renderer-parity-t4-current-v178
+desc: C95 R_A, re-measured against the current (post v176-wave) evaluator identity.
+cmd: >-
+  timeout --foreground 9000s env
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  OFFLINE_EVAL_SNAPSHOT=${SNAP}
+  RECORDS_OUT=${RECORDS}
+  OFFLINE_EVAL_DEVICES=cuda
+  OFFLINE_EVAL_FAMILY=rlvigen OFFLINE_EVAL_BASELINE=drqv2
+  OFFLINE_EVAL_SEED=2 OFFLINE_EVAL_FRAME=100000
+  OFFLINE_EVAL_REGIMES=train,eval-easy,eval-medium,eval-hard
+  OFFLINE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9 OFFLINE_EVAL_EPISODES=10
+  CELLS=drqv2:2 FRAMES=100000 TASK=Door SEED=2
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v176-rlvigen.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - datasphere/native/s2-snapshot-100000.pt: SNAP
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4.1
