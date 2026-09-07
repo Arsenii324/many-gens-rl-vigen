@@ -2095,3 +2095,37 @@ sequence — not because it already happened that way, but because the validatio
 for trusting a pilot's result, not a competing use of the same budget. Submitting the v146-v152
 wave is a real-money action and still needs the owner's explicit go-ahead per this project's
 spend-authorization convention; this entry settles the *ordering* question, not the authorization.
+
+### A39 DECIDED (operational), 2026-09-07 — the forced-mode pass gets NO ledger entry shape
+
+**The question**, left open when `--policy-mode mode` was implemented: wave configs attest the
+NATIVE scope only. If a forced-mode pass ever ran, would its record need its own attestation? That
+is a second entry shape in `validated_evaluator_families.json`, not a flag, so it is a decision to
+take deliberately rather than discover while building a cross-group table.
+
+**The decision: no second shape. The ledger attests the native scope, and only that.**
+
+**Why this is now the cheap answer rather than a deferral.** Two things settled it on 2026-09-07:
+
+1. **The owner ruled the 9/3 policy-mode split acceptable and scheduled no secondary pass**
+   (`notes/SAME-AXES-VERDICT.md`). A ledger shape for records nobody will produce is speculative
+   machinery, and speculative machinery in the attestation path is exactly what should not exist —
+   the ledger's whole value is that a reader can say what each entry certifies.
+2. **`ctrl` no longer needs the pass at all.** Its native rule IS the mode, so for one of the four
+   families that motivated the question, the forced pass and the native pass are the same
+   measurement.
+
+**What this costs, and how it is paid if the decision is wrong.** If a cross-block contrast ever
+becomes necessary, the forced-mode records would exist without an attestation covering their
+scope. That is recoverable and bounded: `evaluator_scope_revision` is already stamped on every row
+and already distinguishes a `mode` scope from a `native` one — the canonicaliser admits both
+(`evaluator_identity.py`, `policy_mode not in (family_eval_policy_mode(family), "mode")`). So the
+evidence to build the second shape later is being recorded now, whether or not the shape exists.
+Adding it later is a schema addition over records that already carry the field, not a re-run.
+
+**What would overturn it.** A decision to report any cross-block ranking. That would make the
+forced pass load-bearing, and a load-bearing measurement must be attested like any other.
+
+**Status: OPERATIONAL DEFAULT, not ratified.** No gate reads this, nothing is removed, and
+`--policy-mode mode` stays implemented and reachable. The dormancy is the decision; the capability
+is retained precisely so the decision is reversible.
