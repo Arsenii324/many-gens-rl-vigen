@@ -23,6 +23,11 @@ remembering it.
 
 ## The categories, and where each lives
 
+**If you are resuming after a break or a compaction**: read [`HANDOFF.md`](HANDOFF.md)
+first — it carries the intent, open suspicions and carried constraints that the other
+documents deliberately do not, because they record what is true rather than what was
+being thought.
+
 **Start here for the direct answer**:
 [`PRE-PRODUCTION-STATUS-2026-09-07.md`](PRE-PRODUCTION-STATUS-2026-09-07.md) — can the fleet be
 released, and if not, exactly what blocks it, in three kinds: two freeze blockers that are ours,
