@@ -7634,8 +7634,37 @@ stands unchanged and is now explained rather than merely observed.
 container run reproducing the laptop's numbers under EGL. The device leg is closed: two devices,
 one platform, same answer.
 
+**R_A re-measured against the frozen tree, 2026-09-07.** The `production renderer verified` gate's
+three-step probe needs R_A (current checkpoint + current evaluator, here) and R_B (same
+checkpoint/evaluator/container, the production host) to isolate the platform as the only changed
+factor. The prior R_A (`v144`/`v145`, 2026-09-06) predates IDAAC-C2, PPG-C2, SODA's `aux_lr` fix,
+and the 12-baseline provenance labeling — stale by exactly the mechanism this project's own
+`notes/RESULTS-VALIDITY.md` already documents for the older archived number, one freeze-cycle
+later. Re-measured (`cfg-renderer-parity-t4-current-v178.yaml`, job `bt17hai4org559f794t0`, gt4.1,
+no V100 reservation), same checkpoint (`s2-snapshot-100000.pt`, drqv2 100k seed 2), same grid,
+against the now-current (post-`v176`-wave) evaluator identity (`evaluator_revision` matches the
+`v176` wave's own `rlvigen` ledger entry exactly): scene-0 train **456.779** (success 1.0),
+10-scene aggregate train **96.213** (success 0.27), scene-0 eval-easy **11.648**, 10-scene
+aggregate eval-easy **4.733**, eval-medium **1.076**, eval-hard **0.709** (all aggregates).
+**Not** a claim these numbers agree or disagree with the archived pre-fix 480.6/1.44 — that
+comparison is exactly the one `RESULTS-VALIDITY.md` refuses, for the same reason. This is R_A
+alone: the fresh, current-evaluator baseline R_B must be compared against once the actual
+production host is reachable. R_B remains a Phase 4 handoff item, not attempted here. Records:
+`results/records/bt17hai4org559f794t0__records.jsonl`.
+
 ### C96 — The shared-evaluator ledger certified neither the code that acted nor a stable scope {#c96}
-**Class** OURS + FALSE-CERTIFICATION · **Status** READY · **Cross-ref** [C76](#c76), [C95](#c95), [`EVAL-PROTOCOL.md`](EVAL-PROTOCOL.md), [`REGISTER.md`](REGISTER.md)
+**Class** OURS + FALSE-CERTIFICATION · **Status** RESOLVED · **Cross-ref** [C76](#c76), [C95](#c95), [`EVAL-PROTOCOL.md`](EVAL-PROTOCOL.md), [`REGISTER.md`](REGISTER.md)
+
+**RESOLVED, 2026-09-07.** The "what remains" this entry named — "re-run each family against its
+native evaluator on the current payload... and record the paired result" — is done. The `v176`
+wave (7 fresh schema-2 payloads, each `verify-payload --require-evaluator-identity` and
+`verify-evaluator-binding`-checked before submission) validated all seven families against the
+tree as it stood once IDAAC-C2, PPG-C2, SODA's `aux_lr` fix, and the 12-baseline provenance
+labeling had landed and been committed. `scripts/production_gates.py`'s "shared evaluator
+validated" gate now reads **PASS**: "all 7 evaluator families validated on their current family
+closures." Ledger: `datasphere/native/validated_evaluator_families.json`; commits `15493f4`
+through `0ef59ab`. Kept the body below unedited, per this project's append-a-correction
+convention — it correctly describes the mechanism this wave exercised, not a stale claim.
 
 The former evaluator identity was a single global hash. It included all of
 `setup/apply_patches.py`, although a checkpoint-only evaluation never imports a training-time
