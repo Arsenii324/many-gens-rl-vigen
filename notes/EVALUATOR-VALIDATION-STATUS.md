@@ -1,5 +1,13 @@
 # Which families are validated on the CURRENT evaluator, and how
 
+> **Current superseding update, 2026-09-07:** commit `b19d12c` added exact-layout runtime
+> observation certification to all seven evaluator families. That measurement-affecting change
+> supersedes the v185 attestations below. The v186 wave is submitted as `bt1cc6kjs8o1dqr55hgs`
+> (ppg), `bt14ungh9h33gp26g8df` (ctrl), `bt1dqke8a7gvulp5a0n7` (idaac),
+> `bt1v3p80ag3bu05qk44e` (rlvigen), with dmc_gb, alda and ibac_sni to follow under the four-job
+> cap. Until all seven return and are reviewed, the shared-evaluator gate is intentionally not
+> current.
+
 > **Superseding update, 2026-09-07:** the final v185 endpoint wave completed for all seven
 > evaluator families, including CTRL (`bt10tugtltvqoi2ag2cj`). Its seven retained JSONL
 > artifacts are in `results/validation/`, and `production_gates.py` now accepts **7/7 current

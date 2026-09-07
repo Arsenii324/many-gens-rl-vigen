@@ -1,5 +1,9 @@
 # Pre-production status, 2026-09-07 — what is finished, what is not, and what "not" costs
 
+> **Current superseding update, 2026-09-07:** runtime geometry certification landed in `b19d12c`.
+> This intentionally supersedes the v185 evaluator attestations; the v186 seven-family wave is
+> in flight, so the v185 33-pass statement below is historical until v186 is reviewed.
+
 > **Superseding update:** A36 is now resolved: the operational PPG default is 1 process ×
 > 2048 steps, chosen after the matched 1×2048 / 8×256 gt4i.1 probe. The final seven-family
 > evaluator wave has completed successfully against the resulting tree: all seven endpoint
