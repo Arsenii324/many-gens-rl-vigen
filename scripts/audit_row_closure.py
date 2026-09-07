@@ -30,6 +30,9 @@ RECORDS = ROOT / "results" / "records"
 
 #: What must agree across the seeds of one reported row. Not everything in a record: `seed` differs
 #: by construction, and wall-clock, host and job id are execution facts rather than scientific ones.
+#: The execution kinds that mean "this is a reported production number".
+PRODUCTION_KINDS = {"training_production"}
+
 CLOSURE_FIELDS = (
     ("payload_sha256", lambda r: (r.get("native", {}).get("run_provenance") or {}).get("payload_sha256")),
     ("requirements_native_sha256",
@@ -106,11 +109,24 @@ def main() -> int:
     # Separate the two, because they mean different things. An exploratory corpus SHOULD contain
     # rows built from several payloads -- that is what development looks like -- and reporting those
     # as findings would train a reader to ignore this audit by the time it matters.
-    production = [item for item in mixed if kinds.get(item[0]) == "production"]
-    exploratory = [item for item in mixed if kinds.get(item[0]) != "production"]
+    # [Claude 2026-09-07] This compared `execution_kind` to the literal "production", which is not
+    # in the vocabulary: contract.py's RECORD_EXECUTION_KINDS are preflight, eval_only_validation,
+    # training_production and exploratory. No record has ever carried "production" -- checked
+    # across the whole corpus -- so the branch below was unreachable and this audit could not fail,
+    # whatever it was given. A synthetic mixed-closure production row passed it. Decoration.
+    production = [item for item in mixed if kinds.get(item[0]) in PRODUCTION_KINDS]
+    unknown = [item for item in mixed if kinds.get(item[0]) is None]
+    exploratory = [item for item in mixed
+                   if kinds.get(item[0]) is not None and kinds.get(item[0]) not in PRODUCTION_KINDS]
     if exploratory:
         print(f"  {len(exploratory)} mixed-closure group(s) among EXPLORATORY/probe records --")
         print("  expected, and not a finding: development runs legitimately span payloads.")
+    if unknown:
+        # Not silently exempted: an unlabelled record is one this audit CANNOT classify, and
+        # treating "no label" as "not production" is how the check above came to be unreachable.
+        print(f"  {len(unknown)} mixed-closure group(s) carry NO execution_kind and cannot be")
+        print("  classified. Every such record predates the field; if a production row ever")
+        print("  appears here, treat it as a finding.")
     if not production:
         print("  no PRODUCTION row mixes closures.")
         return 0
