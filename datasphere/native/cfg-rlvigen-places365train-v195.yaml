@@ -1,3 +1,7 @@
+# SUPERSEDED by cfg-<family>-attest-v196.yaml. These two were cancelled mid-flight on
+# 2026-09-07 (they predate the hardcoded-val assertion repair), and their 3600s budget is
+# now known to be too tight for a Places365 cell anyway: soda measures 2.9 fps, so 10k
+# frames need ~4885s. Kept as history, not for submission.
 # [Claude 2026-09-07] Attesting wave, Phase 2: the v194 rlvigen entry used the drqv2 baseline, which
 # does not touch Places365 at all (family.py needs-places365 --cells drqv2:1 -> false), so that
 # attestation says nothing about the train-split path A22 decided production must use. svea is

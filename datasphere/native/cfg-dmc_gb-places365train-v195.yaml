@@ -1,3 +1,7 @@
+# SUPERSEDED by cfg-<family>-attest-v196.yaml. These two were cancelled mid-flight on
+# 2026-09-07 (they predate the hardcoded-val assertion repair), and their 3600s budget is
+# now known to be too tight for a Places365 cell anyway: soda measures 2.9 fps, so 10k
+# frames need ~4885s. Kept as history, not for submission.
 # [Claude 2026-09-07] Attesting wave, Phase 2: the v194 dmc_gb entry used the rad baseline, which does
 # not touch Places365 (family.py needs-places365 --cells rad:1 -> false) -- and separately fixed
 # the RLVIGEN_IMAGE_SIZE gap in run_endpoint_eval/run_curve_eval/run_offline_eval. soda is dmc_gb's
