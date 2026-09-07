@@ -59,29 +59,36 @@ BOOTSTRAP_SECONDS = 200
 #: evaluator-validation wave already ran an endpoint grid per family, every one at the SAME scope
 #: (ENDPOINT_EVAL_REGIMES=train,eval-easy x ENDPOINT_EVAL_SCENES=0 x ENDPOINT_EVAL_EPISODES=5 = 10
 #: episodes), and each job's log carries its own NATIVE_ENDPOINT_EVAL_SECONDS. Six of twelve
-#: baselines had been carrying UNMEASURED_DEFAULT = 30 s/episode, and that single placeholder was
-#: the whole of a 165 GPU-h spread in the campaign's trajectory-grid estimate.
+#: baselines had been carrying UNMEASURED_DEFAULT = 30 s/episode.
 #:
-#: The method validates itself: drqv2's extracted 90s/10 = 9.0 reproduces the independently
-#: measured 9 above, from a different job at a different scope.
+#: **CORRECTED the same day, before these numbers were used for anything.** The first version of
+#: this block pooled the seven raw figures and called them comparable. They are not: the v176 wave
+#: ran on TWO tiers -- rlvigen, dmc_gb, alda and ctrl on gt4i.1, ppg, ibac_sni and idaac on gt4.1 --
+#: and this project's own measurement puts gt4i.1 at 1.14x gt4.1 (20.05 vs 17.53 fps on drqv2). A
+#: gt4i.1 second is a faster second, so a gt4i.1 duration MULTIPLIED by 1.14 is its gt4.1
+#: equivalent. Everything below is stated on the gt4.1 basis this file and plan_production already
+#: use, with each entry's own tier recorded, exactly as FPS_BASIS does for throughput.
 #:
-#: EVERY family lands between 8.6 and 10.6. The pessimistic 30 was 3x too high for all of them.
-#:
-#: idaac is the one conflict and the newer number is the right one. The old 25 came from
-#: bt1ip5f8c6mqqm7fd2bn, which predates the C2 recipe (4 processes, 256-step rollout); the v176
-#: wave ran the current C2 configuration against the current evaluator. Both are kept visible
-#: rather than one silently replacing the other.
+#: **These are T4-class, NOT V100.** The production host's factor is unmeasured for evaluation just
+#: as it is for training, and PRODUCTION-CALENDAR.md is explicit that its whole basis is T4-class
+#: and therefore an upper bound. These belong there on that footing and nowhere else.
 MEASURED_SECONDS_PER_EPISODE = {
-    "drqv2": 9,      # bt1rr9hodosm5sn09t1a: 400 episodes in 3593s wall -> 8.5, rounded up
-    "rlvigen": 9,    # bt1lmtfcqafcpbh02ai7 (v176 wave): 90s / 10 episodes = 9.0 -- confirms the above
-    "dmc_gb": 9,     # bt1k600n8r2e4divs2dk: 86s / 10 = 8.6, rounded up
-    "alda": 10,      # bt1m638bct3b2rs1g844: 95s / 10 = 9.5, rounded up
-    "ppg": 11,       # bt11qhufomconlujompu: 106s / 10 = 10.6, rounded up
-    "ibac_sni": 9,   # bt1crbkhqkpi8s7ngqf9: 89s / 10 = 8.9, rounded up
-    "ctrl": 10,      # bt13vlerk8p1vop3bmep: 99s / 10 = 9.9, rounded up
-    "idaac": 11,     # bt1vcs013fq6lk17crou (v176, C2 recipe): 102s / 10 = 10.2, rounded up.
+    # gt4.1 basis. Converted entries are marked; raw gt4i.1 durations are in the comment.
+    "drqv2": 9,      # bt1rr9hodosm5sn09t1a, gt4.1 native: 400 episodes in 3593s -> 8.5, rounded up
+    "rlvigen": 11,   # bt1lmtfcqafcpbh02ai7, gt4i.1: 90s/10 = 9.0 raw -> x1.14 = 10.3, rounded up
+    "dmc_gb": 10,    # bt1k600n8r2e4divs2dk, gt4i.1: 86s/10 = 8.6 raw -> x1.14 = 9.8, rounded up
+    "alda": 11,      # bt1m638bct3b2rs1g844, gt4i.1: 95s/10 = 9.5 raw -> x1.14 = 10.8, rounded up
+    "ctrl": 12,      # bt13vlerk8p1vop3bmep, gt4i.1: 99s/10 = 9.9 raw -> x1.14 = 11.3, rounded up
+    "ppg": 11,       # bt11qhufomconlujompu, gt4.1 native: 106s/10 = 10.6, rounded up
+    "ibac_sni": 9,   # bt1crbkhqkpi8s7ngqf9, gt4.1 native: 89s/10 = 8.9, rounded up
+    "idaac": 11,     # bt1vcs013fq6lk17crou, gt4.1 native, C2 recipe: 102s/10 = 10.2, rounded up.
                      # Supersedes 25 from bt1ip5f8c6mqqm7fd2bn, which predates C2.
 }
+#: On one basis every family lands between 8.9 and 11.3 s/episode, against a placeholder of 30 --
+#: so the placeholder was roughly 3x too high for all of them, which is the finding that survives
+#: the tier correction. The `drqv2` and `rlvigen` rows differ by 2 s only because one is a native
+#: gt4.1 measurement and the other a converted gt4i.1 one; that is the conversion's own error bar,
+#: and it is why the raw durations stay in the comments.
 #: What these numbers do NOT establish: they are 10-episode grids over ONE scene, while production
 #: runs 800 episodes over ten. Per-episode cost should be equal or slightly lower there, since the
 #: fixed environment construction amortises over more episodes -- but that is reasoning, not
