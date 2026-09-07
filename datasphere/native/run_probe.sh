@@ -714,6 +714,15 @@ run_endpoint_eval() {
   # deterministic ones for one would re-run an identical grid at full price.
   local endpoint_modes="${ENDPOINT_EVAL_POLICY_MODES:-native}"
   local rc=0 policy_mode out_suffix
+  # [Claude 2026-09-07] dmc_gb's own render is 84x84; rad/soda need the raw 100x100 render to
+  # crop from -- runnable/_launch/dmc_gb.sh exports this before TRAINING, but this function calls
+  # eval_grid.py directly, in run_probe.sh's own shell, which never inherited it. Unset, the env
+  # (robosuitevgb/utils.py) renders natively at 84, RAD's own random_crop degrades to the identity
+  # by its `crop_max <= 0` guard, and soda hard-asserts `x.size(-1) == 100` and cannot run at all.
+  # `verify_runtime_observation_geometry` is what caught this (v194, rad-s1: "expected ... 100x100,
+  # observed (9, 84, 84)") -- it was failing correctly, on a real mismatch, not a false positive.
+  local image_size_env=()
+  [[ "$family" == "dmc_gb" ]] && image_size_env=(RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-100}")
   local previous_ifs_modes="$IFS"
   IFS=','
   local mode_list=($endpoint_modes)
@@ -727,7 +736,7 @@ run_endpoint_eval() {
   started="$(date +%s)"
   echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame policy_mode=$policy_mode epoch=$started ==="
   set +e
-  python3 scripts/eval_grid.py \
+  env "${image_size_env[@]}" python3 scripts/eval_grid.py \
     --family "$family" \
     --baseline "$baseline" \
     --task "${TASK:-Door}" \
@@ -759,6 +768,11 @@ run_curve_eval() {
   local cell_out="$1" family="$2" baseline="$3" seed="$4" save_every="$5"
   local dir="$cell_out/checkpoints"
   [[ -d "$dir" ]] || { echo "=== NATIVE_CURVE_EVAL_NO_STAMPS $baseline ===" >&2; return 1; }
+  # See run_endpoint_eval's identical comment: dmc_gb needs RLVIGEN_IMAGE_SIZE=100 for rad/soda's
+  # crop to be real rather than an identity, and this call site never inherits the training
+  # launcher's export either.
+  local image_size_env=()
+  [[ "$family" == "dmc_gb" ]] && image_size_env=(RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-100}")
   local failed=0
   local count=0 item base stamp frame
   for item in "$dir"/*; do
@@ -775,7 +789,7 @@ run_curve_eval() {
     fi
     echo "=== NATIVE_CURVE_EVAL_BEGIN $baseline frame=$frame file=$base ==="
     set +e
-    python3 scripts/eval_grid.py \
+    env "${image_size_env[@]}" python3 scripts/eval_grid.py \
       --snapshot "$item" \
       --family "$family" \
       --baseline "$baseline" \
@@ -840,6 +854,11 @@ run_offline_eval() {
   fi
   local status=0
   local device policy_mode
+  # See run_endpoint_eval's identical comment: dmc_gb (rad/soda) needs RLVIGEN_IMAGE_SIZE=100 here
+  # too, for the same reason -- this is a bare eval_grid.py invocation, not the training launcher.
+  local image_size_env=()
+  [[ "${OFFLINE_EVAL_FAMILY:-rlvigen}" == "dmc_gb" ]] && \
+    image_size_env=(RLVIGEN_IMAGE_SIZE="${RLVIGEN_IMAGE_SIZE:-100}")
   # [Claude 2026-09-07] The endpoint path gained ENDPOINT_EVAL_POLICY_MODES and this one did not,
   # which is its own inconsistency: `run_offline_eval` is the mechanism recommendation 22 item 6
   # relies on -- re-evaluate an existing checkpoint without retraining -- so it is exactly where a
@@ -856,7 +875,7 @@ run_offline_eval() {
   _eval_started="$(date +%s)"
   echo "=== NATIVE_OFFLINE_EVAL_BEGIN device=$device checkpoint=$(basename "$snapshot") epoch=$_eval_started ==="
     set +e
-    python3 scripts/eval_grid.py \
+    env "${image_size_env[@]}" python3 scripts/eval_grid.py \
       --snapshot "$snapshot" \
       --family "${OFFLINE_EVAL_FAMILY:-rlvigen}" \
       --baseline "${OFFLINE_EVAL_BASELINE:-drqv2}" \
