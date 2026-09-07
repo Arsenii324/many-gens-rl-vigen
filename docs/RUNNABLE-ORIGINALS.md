@@ -51,7 +51,7 @@ before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +264/−10 |
 | `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +362/−9 |
 | `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 9 files, +582/−50 |
-| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 11 files, +731/−184 |
+| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 11 files, +757/−187 |
 | `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 5 files, +530/−84 |
 
 **No candidate-wide total is asserted in this checkout.** `scripts/deviations.py` marks four clones
@@ -194,7 +194,7 @@ instance" means. **Different from Procgen, and it bears on IDAAC specifically:**
 draws a new level every episode, so one rollout spans many instances; here each env is one
 instance for the whole run and instance diversity per batch is capped at `num_processes`.
 
-### `ibac_sni` — 11 files, +731 / −184
+### `ibac_sni` — 11 files, +757 / −187
 
 Drives `torch_rl/`, the authors' **own PyTorch** implementation, not the TF `coinrun/` branch.
 `utils/get_obss_preprocessor` already had a generic `Box([H,W,3])` branch — written for RGB envs,

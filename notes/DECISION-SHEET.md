@@ -424,7 +424,9 @@ the port is a hybrid of the authors' two implementations, so either lineage can 
 CoinRun because the trunk and the recorded fidelity claim both point there.
 
 Not fixed, and not fixable without authoring: `--nr-samples 12` has no equivalent in `torch_rl`
-(we draw a single VIB sample) and the latent is this branch's 64-d against CoinRun's 256-d. The
+(we draw a single VIB sample). [**Superseded in part by A47, 2026-09-08**: the latent width was
+never a missing flag but a literal, and is now 256 on the impala trunk, matching CoinRun. The
+sampling half of this stands.] The
 honest description stays **"an authored hybrid continuous-action IBAC-SNI adaptation."**
 
 ### A18 (new) — subtract the random floor before forming any retention ratio
@@ -2053,7 +2055,9 @@ follows CoinRun.
 
 **What this does not resolve**: A17's own stated gap — `--nr-samples 12` has no equivalent in
 `torch_rl` (this port draws a single VIB sample against CoinRun's multi-sample bottleneck), and
-the latent dimension is this branch's 64-d against CoinRun's 256-d. Picking the lineage doesn't
+the latent dimension is this branch's 64-d against CoinRun's 256-d [**A47, 2026-09-08: the
+latent half is now closed — it was a literal, not a missing flag; 256 on the impala trunk**].
+Picking the lineage doesn't
 manufacture the missing sampling/dimensionality parity; it commits to a stated target so any
 future gap is measured against ONE reference rather than an ambiguous blend of two. Whether to
 spend implementation effort closing the sampling/dimensionality gap itself is a separate, larger
@@ -2497,7 +2501,8 @@ Two parts, decided separately because they cost differently:
   supported decay and only the flag was missing. Here it would be new code on a path that is
   already an authored hybrid and whose competence is still unproven (open item 1 of
   `notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md`). **Declared as a deviation from the CoinRun
-  lineage**, alongside the 64-d latent and the single VIB sample that A37 already declares.
+  lineage**, alongside the single VIB sample that A37 declares (the 64-d latent was closed by
+  A47 the same day — it was a literal, not a missing flag).
 
 **Sequencing: batched with A40 REVISED-2, not run separately.** `frame_stack` and `lr` are both
 `families.json` values, a `CONFIG_MEMBER`, so either alone moves every family's evaluator revision.
@@ -2817,5 +2822,59 @@ point. It is deliberately **not** a second headline column: gate 7 fixes endpoin
 no selected-best column, and a per-baseline "report each at its own horizon" would be exactly the
 outcome-shopping that rule exists to prevent, since the horizons differ per baseline. Predeclared,
 retained, reportable on request, not in the headline table.
+
+**Status: operational, not ratified.**
+
+---
+
+## A47 — IBAC-SNI's VIB latent was a constant that meant opposite things (2026-09-08)
+
+Reviews 17, 18, 19 and 20 all record IBAC-SNI's "64-d latent against CoinRun's 256-d" as part of a
+gap **no configuration can close**, and `docs/FAITHFULNESS.md` and A37 declare it as such.
+`notes/PARAMETER-REVIEW-CONSENSUS-MATRIX.md` item 7 repeats it: *"this cannot be closed by a
+launcher flag; it would require new code."*
+
+Half of that is right and half is not, and the half that is wrong is the load-bearing half.
+
+**It is not a missing flag. It is `model.py:212`, a literal.** And the literal means opposite
+things on the two branches this port is a hybrid of, measured by constructing both:
+
+| | trunk embedding | latent | ratio |
+|---|---|---|---|
+| `torch_rl`, MiniGrid 7x7 — where the constant comes from | 64 | 64 | **1.0x** |
+| CoinRun `impala_cnn` — the trunk A37 adopted | 2048 | 256 | 8.0x |
+| this port, until today | 2048 | 64 | **32.0x** |
+
+In its own branch the constant imposes **no dimensional squeeze at all** — the bottleneck there is
+purely the stochastic/KL one, because the embedding is already 64. A37 then moved this port onto
+CoinRun's IMPALA trunk, precisely because the MiniGrid-shaped architecture was wrong for a visual
+task, and the latent width did not move with it. So a constant that squeezed nothing became a 32x
+squeeze, four times narrower than CoinRun's own choice on the identical 2048-d embedding.
+
+Nobody chose that. It is the same shape as the frame stack (A40 REVISED-2) and the learning rate
+(A43): a convention carried across a boundary where its condition no longer holds.
+
+**Changed: `self.latent_dim = 256 if model_type == "impala" else 64`**, used by the bottleneck and
+by both heads — the three literals were coupled, and a mismatch would surface only at the first
+forward. Keyed on the trunk rather than set globally, so the MiniGrid path keeps 64 where it is
+correct and every original caller of that file is unchanged.
+
+**What this does and does not close.** The latent dimension now matches the lineage A37 chose. The
+**12-sample SNI mixture remains genuinely absent** — `--nr-samples` exists in neither branch's
+argparse here, and a faithful continuous adaptation would be a uniform mixture of 12 Gaussian
+policies (review 19's reading of the CoinRun source), which is real new code. So the reviews'
+conclusion survives for the sampling half and fails for the dimensional half. That distinction was
+worth making: one of the two is a one-line constant and it had been filed for weeks behind the one
+that is not.
+
+**Cost, and the risk it adds.** `runnable/ibac_sni/torch_rl/model.py` is a `FAMILY_RUNTIME_MEMBER`,
+so `ibac_sni`'s evaluator revision moves and its payload is rebuilt; nothing else is touched. But
+`ibac_sni` has now changed three times today — frame stack, learning rate, latent width — and its
+competence was already unproven (open item 1 of `notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md`).
+**The pilot is no longer optional for this baseline, and the revert order is fixed in advance,
+cheapest first:** `lr` (config), then `latent_dim` (one line), then the frame stack (authored code).
+All three are fidelity corrections rather than tuning, so a pilot failure is more likely to be a
+plumbing fault than any one of them — but guessing after the fact is exactly what predeclaring
+avoids.
 
 **Status: operational, not ratified.**

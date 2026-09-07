@@ -258,10 +258,22 @@ rectangular blotches."* And on sampling: *"a high-fidelity continuous adaptation
 analogue is a uniform mixture of 12 Gaussian action policies."* Reviews 17, 18, 20 concur on the
 missing pieces (256-d vs 64-d latent; 1 sample vs 12; no L2=1e-4).
 
-**Disposition: KEEP + DISCLOSE as an authored hybrid.** `docs/FAITHFULNESS.md` and A37 already say
-*"an authored hybrid continuous-action IBAC-SNI adaptation"*, and A37 is explicit that picking the
-lineage *"doesn't manufacture the missing sampling/dimensionality parity."* An open engineering gap,
-not a values dispute; no review disputes the framing.
+**Disposition: was KEEP + DISCLOSE as an authored hybrid. HALF OF IT WAS WRONG.**
+
+> CORRECTED 2026-09-08 (DECISION-SHEET A47). The latent dimension was **not** a missing flag — it
+> was `model.py:212`, a literal — and the literal means opposite things on the two branches this
+> port hybridises: in `torch_rl`'s MiniGrid setting the embedding is *itself* 64, so
+> `Bottleneck(embedding, 64)` is a **1.0x identity width with no dimensional squeeze at all**;
+> A37 then moved the port onto CoinRun's 2048-d IMPALA trunk and the width did not follow, making
+> it a **32x** squeeze against CoinRun's own **8x**. Now `256` on the impala trunk, `64` kept on
+> the MiniGrid path where it is correct.
+>
+> The **sampling half stands**: `--nr-samples` exists in neither branch's argparse here, and a
+> faithful continuous adaptation is a uniform mixture of 12 Gaussian policies (review 19's reading
+> of the CoinRun source) — real new code, not a constant.
+>
+> Worth separating, because the two had been filed together for weeks and one of them was a
+> one-line change hiding behind the one that is not.
 
 ### 8. PPG `aux_lr=3e-4`: weakly sourced, still open
 

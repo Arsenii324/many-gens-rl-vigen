@@ -32,7 +32,23 @@ def test_door_training_retains_upstream_16_rollout_count_with_spawn_factories():
 
 
 def test_visual_impala_box_head_preserves_batchwise_ppo_contract():
-    """64px Impala plus VIB must emit one seven-action Gaussian event per environment."""
+    """64px Impala plus VIB must emit one seven-action Gaussian event per environment.
+
+    Updated 2026-09-08 for two changes, and the parameter count is the point of the update rather
+    than an inconvenience: it is the only assertion here that would notice if either landed
+    partially.
+
+      A40 REVISED-2  the input is 9 channels, not 3 -- three stacked frames.
+      A47            the VIB latent is 256 on the impala trunk, not 64. That constant came from
+                     `torch_rl`'s MiniGrid path where the embedding IS 64, so it squeezed nothing;
+                     on CoinRun's 2048-d trunk it was a 32x squeeze against CoinRun's own 8x.
+
+    360,399 -> 1,149,615 parameters. Almost all of the growth is the widened head: the bottleneck
+    emits 2 x 256 instead of 2 x 64 from a 2048-d embedding, and the actor and critic take 256.
+    The 9-channel input adds only 864 (16 filters x 3x3 x 6 extra channels), which is why the
+    3-channel and 9-channel builds differ by so little -- the frame stack is nearly free in
+    parameters and the latent width is not.
+    """
     code = r'''
 import contextlib
 import io
@@ -42,15 +58,16 @@ import gym
 import torch
 with contextlib.redirect_stdout(io.StringIO()):
     from model import ACModel
-    model = ACModel({'image': (64, 64, 3)},
+    model = ACModel({'image': (64, 64, 9)},
                     gym.spaces.Box(-1., 1., (7,), dtype=np.float32),
                     model_type='impala', use_bottleneck=True, sni_type='vib')
-    obs = type('Obs', (), {'image': torch.zeros((2, 64, 64, 3))})()
+    obs = type('Obs', (), {'image': torch.zeros((2, 64, 64, 9))})()
     dist_run, dist_train, value, kl = model.compute_train(obs)
 sample = dist_run.sample()
 print(json.dumps({
     'params': sum(p.numel() for p in model.parameters()),
     'embedding': model.image_embedding_size,
+    'latent': model.latent_dim,
     'sample': list(sample.shape),
     'log_prob': list(dist_run.log_prob(sample).shape),
     'entropy': list(dist_train.entropy().shape),
@@ -65,8 +82,9 @@ print(json.dumps({
     assert proc.returncode == 0, proc.stderr
     observed = json.loads(proc.stdout.splitlines()[-1])
     assert observed == {
-        "params": 360399,
+        "params": 1149615,
         "embedding": 2048,
+        "latent": 256,
         "sample": [2, 7],
         "log_prob": [2],
         "entropy": [2],

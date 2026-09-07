@@ -149,3 +149,57 @@ def test_the_impala_trunk_takes_its_input_width_from_the_observation(channels):
         assert out.shape[0] == 2
     finally:
         sys.path.remove(str(CLONE))
+
+
+@pytest.mark.parametrize("model_type,shape,expected_latent", [
+    ("impala", (64, 64, 9), 256),
+    ("default", (7, 7, 3), 64),
+])
+def test_the_vib_latent_width_follows_the_trunks_lineage(model_type, shape, expected_latent):
+    """A47: the `64` was a constant that meant opposite things on the two branches.
+
+    Reviews 17-20 recorded "64-d against CoinRun's 256-d" as an engineering gap no configuration
+    could close. It was not a missing flag, it was a literal — and the literal imposed NO
+    dimensional squeeze in the branch it came from:
+
+        torch_rl MiniGrid 7x7   embedding   64 -> 64   ratio  1.0x
+        CoinRun impala_cnn      embedding 2048 -> 256  ratio  8.0x
+        this port, before A47   embedding 2048 -> 64   ratio 32.0x
+
+    A37 moved this port onto CoinRun's trunk; the latent width did not follow, so a constant that
+    squeezed nothing became a 32x squeeze four times narrower than CoinRun's own. Keyed on the
+    trunk so the MiniGrid path — where 64 is correct — is untouched.
+    """
+    sys.path.insert(0, str(CLONE))
+    try:
+        for stale in [m for m in sys.modules if m.split(".")[0] in {"model", "utils", "torch_rl"}]:
+            del sys.modules[stale]
+        import model as ibac_model
+        net = ibac_model.ACModel(
+            obs_space={"image": shape}, action_space=gym.spaces.Box(-1, 1, (7,)),
+            model_type=model_type, use_bottleneck=True)
+        assert net.latent_dim == expected_latent
+        # The heads must take the same width, or this fails only at the first forward.
+        assert net.actor[-1].in_features == expected_latent
+        assert net.critic[-1].in_features == expected_latent
+    finally:
+        sys.path.remove(str(CLONE))
+
+
+def test_the_widened_model_runs_a_real_forward():
+    """The three literals were coupled; a mismatch surfaces only when data flows through."""
+    sys.path.insert(0, str(CLONE))
+    try:
+        for stale in [m for m in sys.modules if m.split(".")[0] in {"model", "utils", "torch_rl"}]:
+            del sys.modules[stale]
+        import model as ibac_model
+        net = ibac_model.ACModel(
+            obs_space={"image": (64, 64, 9)}, action_space=gym.spaces.Box(-1, 1, (7,)),
+            model_type="impala", use_bottleneck=True)
+        batch = type("Obs", (), {"image": torch.zeros(2, 64, 64, 9)})()
+        # `compute_run` is the rollout path (ACModel has no `forward`); it is what the actor and
+        # critic heads are actually reached through.
+        out = net.compute_run(batch)
+        assert out is not None
+    finally:
+        sys.path.remove(str(CLONE))

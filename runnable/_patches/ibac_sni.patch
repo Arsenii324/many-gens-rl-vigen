@@ -190,7 +190,7 @@ index 0000000..4cc70f3
 +
 +    return HWCStack(env, k)
 diff --git a/torch_rl/model.py b/torch_rl/model.py
-index 1523a27..38087c5 100644
+index 1523a27..7342bf3 100644
 --- a/torch_rl/model.py
 +++ b/torch_rl/model.py
 @@ -2,6 +2,8 @@ import torch
@@ -279,7 +279,7 @@ index 1523a27..38087c5 100644
          print("Image embedding size: ", self.image_embedding_size)
  
          # Not supported with current bottleneck
-@@ -126,7 +191,20 @@ class ACModel(nn.Module):
+@@ -126,28 +191,64 @@ class ACModel(nn.Module):
          self.embedding_size = self.semi_memory_size
  
          # Define actor's model
@@ -300,17 +300,56 @@ index 1523a27..38087c5 100644
 +        else:
              raise ValueError("Unknown action space: " + str(action_space))
  
++        # [OURS 2026-09-08, DECISION-SHEET A47] THE LATENT WIDTH FOLLOWS THE TRUNK'S LINEAGE.
++        #
++        # This was the literal `64` on every path, and reviews 17-20 recorded the resulting
++        # "64-d against CoinRun's 256-d" as an engineering gap no configuration could close. It is
++        # not a missing flag; it is a constant, and the constant means opposite things on the two
++        # branches this port is a hybrid of:
++        #
++        #   torch_rl, MiniGrid 7x7   embedding 64   -> 64   ratio 1.0x  (NO dimensional squeeze;
++        #                                                                the bottleneck is purely
++        #                                                                the stochastic/KL one)
++        #   CoinRun, impala_cnn      embedding 2048 -> 256  ratio 8.0x
++        #   this port before today   embedding 2048 -> 64   ratio 32.0x  <- chosen by nobody
++        #
++        # A37 moved this port onto CoinRun's IMPALA trunk precisely because the MiniGrid-shaped
++        # architecture was wrong for a visual task. The latent width did not move with it, so a
++        # constant that imposed no squeeze at all in its own branch became a 32x squeeze here --
++        # four times narrower than CoinRun's own choice on the identical 2048-d embedding. That is
++        # the same "convention transplanted where its condition does not hold" as the frame stack
++        # (A40 REVISED-2) and the learning rate (A43).
++        #
++        # Keyed on the trunk, not set globally: the MiniGrid path keeps 64, where it is correct and
++        # where every original caller of this file still lives.
++        self.latent_dim = 256 if model_type == "impala" else 64
          if use_bottleneck:
-@@ -140,7 +218,7 @@ class ACModel(nn.Module):
+             assert self.dropout == 0
+-            self.reg_layer = Bottleneck(self.embedding_size, 64)
++            self.reg_layer = Bottleneck(self.embedding_size, self.latent_dim)
+         else:
+-            self.reg_layer = nn.Linear(self.embedding_size, 64)
++            self.reg_layer = nn.Linear(self.embedding_size, self.latent_dim)
+ 
+         self.dropout_layer = nn.Dropout(p=self.dropout, inplace=False)
+ 
          self.actor = nn.Sequential(
              # nn.Linear(self.embedding_size, 64),
              nn.Tanh(),
 -            nn.Linear(64, action_space.n)
-+            nn.Linear(64, self.num_actions)
++            nn.Linear(self.latent_dim, self.num_actions)
          )
  
          # Define critic's model
-@@ -201,17 +279,23 @@ class ACModel(nn.Module):
+         self.critic = nn.Sequential(
+             # nn.Linear(self.embedding_size, 64),
+             nn.Tanh(),
+-            nn.Linear(64, 1)
++            nn.Linear(self.latent_dim, 1)
+         )
+ 
+         # Initialize parameters correctly
+@@ -201,17 +302,23 @@ class ACModel(nn.Module):
  
          return bot_mean, bot, kl
  
@@ -336,7 +375,7 @@ index 1523a27..38087c5 100644
              value = self.critic(bot).squeeze(1)
          return dist, value, kl
  
-@@ -221,15 +305,15 @@ class ACModel(nn.Module):
+@@ -221,15 +328,15 @@ class ACModel(nn.Module):
          if self.sni_type == 'vib':
              # Need both policies for training, but still only one value function:
              x_dist_run = self.actor(bot_mean)

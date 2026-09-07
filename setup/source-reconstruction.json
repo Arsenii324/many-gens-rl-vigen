@@ -94,8 +94,8 @@
       "destination": "runnable/ibac_sni",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ibac_sni.patch",
-      "patch_sha256": "2c19426180200da6e1f807b1e4b0d20397f6496dd74bd8fad7cebd2d09acaa78",
-      "expected_tree_hash": "d0f4ce2d6b89e6a4ac000b4b87ff81df33538f47ecc6b9c75d8066989a12c844",
+      "patch_sha256": "f2407f6159b58dd234f05f5ece12b9722d4efe73ceeaf6ec9ba847e944780676",
+      "expected_tree_hash": "e7e7ac8836b2a104f63090ba2382779a13dc821491f293dd1e06b88c14c9339a",
       "exclude": ["results", "logs", "storage", "models", "door.xml", "torch_rl/door.xml", ".egg-info"]
     },
     "ctrl": {
