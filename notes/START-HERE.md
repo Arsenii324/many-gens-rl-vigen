@@ -89,6 +89,12 @@ killed the 600k canary after a full bootstrap), and the four decisions implement
 are still the owner's to ratify — the single-constant disk floor, the unmeasured free disk on the
 host, no-resume-for-off-policy-cells, and the seven-point curve spacing.
 
+**External recommendation 22 (2026-09-07)** — sixteen production-resilience requirements, audited
+against the live tree in [`recommendation-22-accounting.md`](recommendation-22-accounting.md).
+Thirteen met, three were not: the accelerator was recorded but never enforced, disk was recorded
+once and never watched, and closure identity was stamped on every record and never compared across
+the seeds of a row. All three fixed.
+
 **External reviews 20 and 21 (2026-09-07)**: item-by-item accounting in
 [`review-20-21-accounting.md`](review-20-21-accounting.md) — what was real and fixed, what was a
 snapshot artefact that does not hold here, and what is host-bound.

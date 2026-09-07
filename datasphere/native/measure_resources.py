@@ -7,6 +7,7 @@ import json
 import os
 import platform
 import subprocess
+import shutil
 import time
 from pathlib import Path
 
@@ -138,6 +139,28 @@ def topology() -> dict[str, object]:
     }
 
 
+def _free_gib(path: str = ".") -> float | None:
+    """Free space on the filesystem holding the run, per sample.
+
+    [Claude 2026-09-07, external recommendation 22 item 11.] Disk was recorded ONCE, in the
+    environment manifest, and then never again. `safe_checkpoint.py` reacts at write time -- it
+    waits, announces, and skips -- which is the right last line of defence but tells you nothing
+    until the moment a write is already in trouble. A multi-day off-policy cell grows its replay
+    to roughly 19 GB along a curve nobody could see, so the question "was this cell heading for a
+    full disk an hour before it hit one" had no evidence behind it. One `statvfs` per sample is
+    free and makes the trend readable while the cell is alive.
+
+    Deliberately NOT an auto-stop. Recommendation 22 asks to "stop cleanly before a checkpoint
+    write fails", but a monitor that kills a 27-hour cell on a threshold it inferred is a new way
+    to lose a run, and safe_checkpoint's wait already converts a transient squeeze into a pause an
+    operator can act on. Observation here; the decision stays with the operator and the writer.
+    """
+    try:
+        return round(shutil.disk_usage(path).free / (1024 ** 3), 3)
+    except OSError:
+        return None
+
+
 def sample(root_pid: int) -> dict[str, object]:
     pids = linux_processes(root_pid) if platform.system() == "Linux" else [root_pid]
     processes = [entry for pid in pids if (entry := portable_process(pid)) is not None]
@@ -145,6 +168,7 @@ def sample(root_pid: int) -> dict[str, object]:
         "monotonic_seconds": time.monotonic(),
         "process_count": len(processes),
         "processes": processes,
+        "free_disk_gib": _free_gib(),
         "gpu_devices": gpu_devices(),
         "gpu_compute_processes": gpu_compute_processes(),
     }
