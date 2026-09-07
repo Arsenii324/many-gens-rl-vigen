@@ -126,7 +126,12 @@ def audit() -> int:
             # failure here would flag six of seven families and make the instrument unreadable,
             # which is how instruments stop being run. Treating it as a PASS is what killed ctrl.
             # It is neither: it is a named, countable gap.
-            family_tool.check_memory(spec, admission_tier, allow_unmeasured=True)
+            # [Claude 2026-09-07] Pass THIS config's budget: check_memory now charges the
+            # replay allocation that families.json's fixed_peak_gib excludes (review 21 #12), and
+            # a 10k probe must not be sized against the 600k production buffer.
+            config_frames = re.search(r"\bFRAMES=(\d+)", text)
+            family_tool.check_memory(spec, admission_tier, allow_unmeasured=True,
+                                     frames=int(config_frames.group(1)) if config_frames else None)
         except (ValueError, SystemExit) as exc:
             # family.fail() raises ValueError. Catching only SystemExit sent these to the generic
             # branch below, which labelled a clean, correct REJECTION as "could not be evaluated"

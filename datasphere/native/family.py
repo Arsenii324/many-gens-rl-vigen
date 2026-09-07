@@ -266,7 +266,7 @@ def check_tier(cells: str, tier: str, path: Path | None = None) -> None:
 
 
 def check_memory(cells: str, tier: str, path: Path | None = None,
-                 allow_unmeasured: bool = False) -> None:
+                 allow_unmeasured: bool = False, frames: int | None = None) -> None:
     """Reject a tier that cannot hold its measured working set plus safety margin.
 
     Most families have one fixed peak.  IBAC-SNI also has an explicitly measured process-tree
@@ -274,14 +274,36 @@ def check_memory(cells: str, tier: str, path: Path | None = None,
     peak cannot certify a command that asks for sixteen.  The runner's extra overrides are part of
     the effective command and therefore part of this preflight, rather than a loophole around it.
     """
-    usable = {"gt4.1": 14.5, "gt4i.1": 27.0}
+    # [Claude 2026-09-07, external review 21 #4] `v100` was absent, so the production host had no
+    # memory preflight of any kind -- `check_memory` could only certify DataSphere tiers, and
+    # `run_probe.sh` never called it at all. 100.0 of the host's 113 GiB available
+    # (notes/remote-infra.txt, measured 2026-09-05), reserving 13 GiB for the OS, page cache and
+    # the other user whose process notes/remote-infra.txt records on GPU 0. That reserve is a
+    # judgement, not a measurement, and is deliberately generous: the failure it prevents is an
+    # OOM-kill hours into a 600k cell.
+    usable = {"gt4.1": 14.5, "gt4i.1": 27.0, "v100": 100.0}
     if tier not in usable:
         fail(f"unknown job tier: {tier}")
+    # PROFILE-AWARE. Reading the base descriptor here would certify ctrl's v100 cell against its
+    # 16-environment 13.57 GiB peak while the v100 profile restores 64 environments, whose own
+    # descriptor estimates ~54 GiB. Same class of error as validating a cadence from the base
+    # profile: the number is real, it just belongs to a configuration that is not the one running.
+    profile = os.environ.get("NATIVE_HOST_PROFILE") or None
     unmeasured: list[str] = []
+    estimated: list[str] = []
     for family in families_of_cells(cells, path):
-        entry = resolved_descriptor(family, path)
+        entry = resolved_descriptor(family, path, profile=profile)
         settings = entry.get("production", {})
         peak = settings.get("fixed_peak_gib")
+        # A host profile may carry its own model for a configuration whose peak was never measured
+        # at that geometry. It is used, and it is recorded as an ESTIMATE, never pooled with a
+        # measurement -- `basis` says which it is.
+        model = settings.get("host_memory_model") or {}
+        if model.get("cell_ram_gib") is not None:
+            peak = float(model["cell_ram_gib"])
+            if "extrapolat" in str(model.get("basis", "")).lower() or "estimate" in str(
+                    model.get("basis", "")).lower():
+                estimated.append(family)
         margin = settings.get("memory_margin_gib", 0.0)
         if peak is None:
             # This used to `continue`, so a family with no measured peak fell through to the
@@ -290,7 +312,7 @@ def check_memory(cells: str, tier: str, path: Path | None = None,
             # An absent measurement is not a passing one.
             unmeasured.append(family)
             continue
-        required = float(peak) + float(margin)
+        required = float(peak) + float(margin) + _replay_gib(family, settings, frames)
         parallel = settings.get("parallel_rollout_memory")
         if parallel:
             # `--procs=16` is how the launcher receives this field; accept the whitespace form as
@@ -310,11 +332,58 @@ def check_memory(cells: str, tier: str, path: Path | None = None,
         if required > usable[tier]:
             fail(f"{family}: measured fixed peak plus margin is {required:.2f} GiB, "
                  f"but {tier} has {usable[tier]:.1f} GiB usable")
+    # Packing on an estimate is the specific thing external review 21 refused to accept, and it is
+    # right: two cells sharing a host on the strength of a linear extrapolation is how a 600k run
+    # dies at hour six. One cell against a generous reserve is a different risk from two.
+    if estimated and len(cells.split(",")) > 1:
+        fail(f"refusing to pack {len(cells.split(','))} cells: "
+             f"{', '.join(sorted(set(estimated)))} has an ESTIMATED memory figure, not a measured "
+             "one. Run the bounded memory measurement first (cfg-ctrl-v100-memory-v130.yaml is "
+             "that shape), then pack against the result")
     if unmeasured and not allow_unmeasured:
         fail("no measured memory peak for " + ", ".join(sorted(unmeasured))
              + f"; cannot certify {tier}. Record `fixed_peak_gib` from a completed run, or pass "
                "--allow-unmeasured to accept the risk explicitly")
 
+
+
+def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float:
+    """Replay memory a cell holds, from the planner's model -- ONE memory truth, not two.
+
+    [Claude 2026-09-07, external review 21 #12] `check_memory` sized a cell as
+    `fixed_peak_gib + margin`, and for the two replay-holding families that peak excludes the
+    replay entirely: rlvigen's 3.33 GiB is the SVEA process measured at a 10k probe, while the
+    v100 profile restores a 620,000-transition buffer -- 36.7 GiB of worker-resident replay that
+    `plan_production` has always modelled and this check never saw. The schedule therefore said
+    38.78 GiB for a drqv2 cell while this function would have certified 5.33. Review 21 called this
+    "one memory truth, not two" and that is exactly right; the planner's constants are imported
+    here rather than restated, so there is still only one.
+
+    Budget-dependent, so it reads FRAMES the same way the runner does: rlvigen's buffer grows to
+    its cap or to the budget, whichever is smaller, and dmc_gb allocates `train_steps` up front at
+    construction with no cap available.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_plan_production_for_family", Path(__file__).resolve().with_name("plan_production.py"))
+    plan = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(plan)
+
+    # The CALLER's budget when it has one -- `audit_submission_configs` audits 10k probe configs
+    # and must not have a 600k production replay charged against them. FRAMES from the environment
+    # is the runner's own path; the default is the production budget, the conservative direction.
+    if frames is None:
+        frames = int(os.environ.get("FRAMES", 600_000) or 600_000)
+    if family == "rlvigen":
+        capacity = settings.get("replay_capacity")
+        retained = min(int(capacity), frames) if capacity else frames
+        return retained * plan.BYTES_PER_TRANSITION / plan.GIB
+    if family == "dmc_gb":
+        # utils.ReplayBuffer takes capacity=args.train_steps and prefill_memory touches every slot
+        # at construction, so the BUDGET sets the resident size and no cap is reachable.
+        return frames * plan.DMC_GB_BYTES_PER_FRAME / plan.GIB
+    return 0.0
 
 def production_env(cells: str, path: Path | None = None) -> dict:
     """Production settings for these cells, as environment the runner can apply.

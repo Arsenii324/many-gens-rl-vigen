@@ -216,10 +216,26 @@ run_one_cell() {
       python3 -c '
 import json, os, sys
 argv = [a for a in sys.stdin.buffer.read().decode("utf-8", "replace").split("\0") if a]
-keep = ("NATIVE_HOST_PROFILE", "NATIVE_FAMILY", "NATIVE_LAUNCHER", "NATIVE_EXTRA_OVERRIDES",
-        "NATIVE_DISABLE_ONLINE_EVAL", "NATIVE_CONCURRENT", "CURVE_EVAL", "ENDPOINT_EVAL",
-        "RLGEN_DETERMINISTIC_EVAL", "CUBLAS_WORKSPACE_CONFIG", "MUJOCO_GL", "SAVE_EVERY",
-        "SAVE_EVERY_FRAMES", "EVAL_EVERY_FRAMES", "EVAL_EPISODES")
+# [Claude 2026-09-07, external review 21 #11] This was a hand-maintained allow-list and it had
+# fallen behind what the runner actually reads: NATIVE_ISOLATE_ONLINE_EVAL was missing, and it
+# changes training RNG semantics for the continuous on-policy ports; so were every
+# ENDPOINT_EVAL_*/CURVE_EVAL_*/OFFLINE_EVAL_* axis, the snapshot controls, and the new
+# NATIVE_ONLINE_EVAL_DISABLED_SPELLING. An "effective config" that omits a learning- or
+# evaluation-affecting variable is not effective, and the omission is invisible in the artifact.
+# Captured by PREFIX now, so a variable added to the runner is captured the day it is added rather
+# than the day someone remembers this list. Prefixes, not os.environ wholesale: the container also
+# holds credentials and unrelated host variables that must not be stamped into a record.
+prefixes = ("NATIVE_", "ENDPOINT_EVAL", "CURVE_EVAL", "OFFLINE_EVAL", "RLGEN_", "RLVIGEN_",
+            "EVAL_", "SAVE_EVERY", "CELLS", "FRAMES", "TASK", "SEED", "CUDA_", "CUBLAS_",
+            "MUJOCO_GL", "XLA_", "JAX_", "PYTHON", "OMP_NUM_THREADS", "MKL_NUM_THREADS")
+# Never stamped, whatever prefix they match: paths that leak the host layout, and anything that
+# could carry a secret.
+redact = ("NATIVE_EXTRA_OVERRIDES_FILE",)
+keep = sorted(k for k in os.environ
+              if k.startswith(prefixes) and k not in redact
+              and not k.startswith("_EC_")
+              and "TOKEN" not in k and "KEY" not in k and "SECRET" not in k
+              and "PASSWORD" not in k and "CREDENTIAL" not in k)
 json.dump({
     "cell": os.environ.get("_EC_CELL"),
     "family": os.environ.get("_EC_FAMILY"),
@@ -797,6 +813,14 @@ python3 "$FAMILY_TOOL" check-budget --cells "$cells" --frames "$frames"
 # [Claude 2026-09-02 10:35 MSK: refuse a job whose families cannot share one python environment,
 # before the bootstrap rather than after it.]
 python3 "$FAMILY_TOOL" check-co-schedulable --cells "$cells"
+# [Claude 2026-09-07, external review 21 #4] The production host had NO memory preflight. check_memory
+# existed but only knew DataSphere tiers, was never called by this runner, and read the base
+# descriptor -- so a ctrl cell would have been sized by its 16-environment peak while the v100
+# profile restores 64 environments. DataSphere jobs are still checked before submission by
+# scripts/audit_submission_configs.py; this is the equivalent for the host that has no submit step.
+if [[ "${NATIVE_HOST_PROFILE:-}" == "v100" ]]; then
+  python3 "$FAMILY_TOOL" check-memory --cells "$cells" --tier v100
+fi
 python3 -m pip install --upgrade pip
 # [Claude 2026-09-02 10:50 MSK: a family that cannot share a job may also need a base requirement
 # left out. CTRL is a JAX baseline and never imports torch, and jax[cuda12]'s cudnn 9 and torch's
