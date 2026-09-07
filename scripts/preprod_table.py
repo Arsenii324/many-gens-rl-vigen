@@ -32,11 +32,30 @@ from datasphere.native.family import provenance_for
 # audit_eval_state recorded. But the calls that produce the numbers a ctrl cell actually reports --
 # `train_ppo.py:244` and `:253`, the ID and OOD test-env steps behind Eprew200/Eprew0 -- both pass
 # `sample=True`. The capability is not the usage, and the column has to say what was used.
-ESTIMATOR = {
-    "drqv2": "mode", "svea": "mode", "drq": "mode", "sgqn": "mode", "curl": "mode",
-    "rad": "mode", "soda": "mode", "alda": "mode",
-    "idaac": "SAMPLE", "ibac_sni": "SAMPLE", "ppg": "SAMPLE", "ctrl": "SAMPLE",
-}
+# [Claude 2026-09-07] DERIVED, not typed. This dict was the last hand-written literal in this
+# file, sitting directly above the comment explaining why STACK and TIME_LIMIT stopped being
+# literals -- "a hand-typed per-baseline literal drifts silently from its source, which is exactly
+# how C1's false-certification half happened". The authoritative source is
+# evaluator_identity.FAMILY_EVAL_POLICY_MODE, which is what eval_grid.py actually acts on, so a
+# change there now propagates here instead of leaving the table describing a run it did not
+# produce. Verified equal to the previous literal at the time of this change.
+def _estimator_by_baseline() -> dict:
+    import importlib.util
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location(
+        "_evaluator_identity_for_table", root / "datasphere" / "native" / "evaluator_identity.py")
+    identity = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(identity)
+    out = {}
+    for family, baselines in identity.FAMILY_ALLOWED_BASELINES.items():
+        mode = identity.FAMILY_EVAL_POLICY_MODE[family]
+        for baseline in baselines:
+            out[baseline] = "mode" if mode == "mode" else "SAMPLE"
+    return out
+
+
+ESTIMATOR = _estimator_by_baseline()
 # [Claude 2026-09-06] Read from rlgen/protocol.py's OBSERVATION_GEOMETRY (render size, frame
 # stack) rather than hand-duplicated, the same fix TIME_LIMIT below already needed: a
 # hand-typed per-baseline literal drifts silently from its source, which is exactly how C1's
@@ -239,6 +258,28 @@ def main(argv=None) -> int:
 
     missing = [r["baseline"] for r in rows if r["mean"] is None]
     have = {r["baseline"] for r in rows}
+    # [Claude 2026-09-07] The estimator split is the fleet's ONLY UNITS-class comparability split
+    # (audit_comparability_seam.py, "evaluation policy mode"), and until now this table displayed it
+    # per row without ever saying that rows on opposite sides are not comparable. eval_grid.py's own
+    # comment claims "no table pools the two"; that claim was unenforced -- only C1's time-limit
+    # split had a guard, in the LEGACY results_table.py. A UNITS split is stronger than C1's: a
+    # CONDITIONS split makes a difference unattributable, this one makes the numbers different
+    # quantities. E[return | a = argmax pi] is not E[return | a ~ pi].
+    estimator_groups = sorted({ESTIMATOR.get(r["baseline"], "?") for r in rows})
+    if len(estimator_groups) > 1:
+        by_estimator = {g: sorted({r["baseline"] for r in rows
+                                   if ESTIMATOR.get(r["baseline"], "?") == g})
+                        for g in estimator_groups}
+        print("\n  WARNING (UNITS): this table pools two EVALUATION POLICY MODES in one comparison:")
+        for group, names in by_estimator.items():
+            print(f"    {group:<8} {', '.join(names)}")
+        print("    These are different estimands, not the same estimand measured differently, so")
+        print("    returns are NOT rankable across the two groups. eval_grid.py reproduces each")
+        print("    family's own action rule deliberately (evaluator_identity.FAMILY_EVAL_POLICY_MODE);")
+        print("    DECISION-SHEET A25's addendum carries the resolution -- evaluate the four")
+        print("    sampling families in both modes and use the mode-taking pass for cross-group")
+        print("    contrasts. Until that runs, a cross-mode comparison here is descriptive only.")
+
     absent = sorted(set(ESTIMATOR) - have)
 
     lines.append("")

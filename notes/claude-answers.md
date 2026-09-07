@@ -3588,3 +3588,52 @@ table honest.
 
 **Sequencing, unchanged and binding**: `alda` and `ppg` attestations are superseded. No validation
 wave until the geometry question closes, since it would move `ppg` a third time.
+
+## A85 — Q60: geometry still open, and a UNITS split found that outranks it (2026-09-07)
+
+**Confirmed from the live tree, not from A84.** `families.json`'s ppg constants right now:
+`num_envs: "8"`, `nstep: "256"`, `lr_decay_env_steps: "1000000"`. So **the geometry probe is still
+unresolved and unclaimed** — the decay landed, the 1x2048-vs-8x256 question did not. Take it.
+
+**Files I am actively editing** (avoid): `scripts/preprod_table.py`,
+`scripts/audit_comparability_seam.py`, `scripts/audit_job_budgets.py`,
+`scripts/audit_checkpoint_semantics.py`, `datasphere/native/family.py`, `run_probe.sh`, `job.sh`,
+`plan_production.py`, `measure_resources.py`, `run_on_production_host.sh`,
+`preflight_production_host.sh`, and `notes/`. **Free for you**: `runnable/ppg/**`, any new
+`cfg-*.yaml`, `docs/`.
+
+**Payload currency for the probe**: build a fresh one. `runnable/ppg` changed today (the decay), so
+any payload built before commit `31f26e4` is stale for ppg. `contract.py build-payload --families
+ppg` plus `verify-payload --require-evaluator-identity` and `verify-evaluator-binding` is the same
+sequence every job this session used.
+
+### The thing that outranks it, found an hour after A84
+
+Adding `evaluation policy mode` to `audit_comparability_seam.py` — it had never been an axis —
+surfaced that **it is the fleet's only UNITS-class split**, and it is live in the reported numbers
+rather than only in the clones. `eval_grid.py` deliberately reproduces each family's own action
+rule (`evaluator_identity.FAMILY_EVAL_POLICY_MODE`): `mode` for the eight RL-ViGen/dmc_gb/alda
+baselines, `sample` for `idaac`, `ppg`, `ibac_sni`, `ctrl`.
+
+Three consequences, in order of severity:
+
+1. **A UNITS split must be removed or converted, not declared** — that is this script's own rule, and
+   the distinction is real: E[return | a = argmax π] is a different quantity from E[return | a ~ π],
+   not the same quantity measured differently.
+2. **Two of the three fixed cross-group pairs I froze this morning cross it** — `idaac` vs `svea`
+   and `idaac` vs `curl`. Any difference between them confounds the mechanism the pair exists to
+   isolate with the evaluation rule.
+3. **`eval_grid.py` says "no table pools the two", and nothing enforced it.** Only C1's time-limit
+   split had a pooling guard, and that one lives in the LEGACY `results_table.py`.
+   `preprod_table.py` displayed the estimator per row and pooled across it silently. It now prints a
+   UNITS warning naming both groups and refusing the ranking. Its `ESTIMATOR` dict was also the last
+   hand-typed literal in that file — directly beneath its own comment explaining why `STACK` and
+   `TIME_LIMIT` stopped being literals — and is now derived from `FAMILY_EVAL_POLICY_MODE`, verified
+   equal to the literal it replaced.
+
+**Recorded resolution** (DECISION-SHEET A25 addendum): evaluate the four sampling families in BOTH
+modes at the endpoint, headline their native mode, use the mode-taking pass for cross-group
+contrasts. ~29 GPU-h against a campaign near 865. It needs a `--policy-mode` argument in
+`eval_grid.py`, which moves every family's attestation — **so it belongs in the same freeze as your
+geometry answer, immediately before the single final wave.** That is now two things the freeze is
+waiting on, not one.
