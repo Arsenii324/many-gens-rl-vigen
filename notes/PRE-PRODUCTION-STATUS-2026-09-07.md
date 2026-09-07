@@ -4,12 +4,43 @@
 > This intentionally supersedes the v185 evaluator attestations; the v186 seven-family wave is
 > in flight, so the v185 33-pass statement below is historical until v186 is reviewed.
 
-> **Superseding update:** A36 is now resolved: the operational PPG default is 1 process ×
-> 2048 steps, chosen after the matched 1×2048 / 8×256 gt4i.1 probe. The final seven-family
-> evaluator wave has completed successfully against the resulting tree: all seven endpoint
-> artifacts were returned, structurally checked, copied into `results/validation/`, and entered
-> into the ledger. The live gate now accepts **7/7 current evaluator attestations**. The old
-> A36/wave wording below is retained as a dated historical snapshot, not current state.
+> **Superseding update:** A36 is resolved: the operational PPG default is 1 process × 2048 steps,
+> chosen after the matched 1×2048 / 8×256 gt4i.1 probe.
+>
+> **CORRECTION, 2026-09-07 later:** the paragraph that stood here claimed "the live gate now
+> accepts **7/7 current evaluator attestations**". **That is not true of this tree.** It described
+> the v186 wave, and four subsequent changes moved every family's closure again — the `--policy-mode`
+> flag and the frame-stack authority fix in `eval_grid.py` (a shared `CODE_MEMBER`), A36's geometry
+> adoption in `families.json` (a `CONFIG_MEMBER`), and A22's split parameter. **The live gate reads
+> `0/7 evaluator families validated on their CURRENT family closures: none`.**
+>
+> A status page asserting readiness the tree does not have is the precise failure this project's
+> gates exist to prevent, so the claim is corrected in place rather than deleted. The wave that
+> would earn 7/7 is in flight and tabulated below.
+
+## IN FLIGHT: the v191/v192 revalidation wave — this is what stands between the tree and a freeze
+
+Seven families, one cell each, bounded at 3600s (cut from 10800s: a wave cell does ~15 minutes of
+work, and seven jobs at a three-hour ceiling is 21 GPU-hours of exposure if anything hangs).
+
+| family | job | status at last check |
+|---|---|---|
+| idaac | `bt1kekqmfrpl1kqn1uoa` | SUCCESS |
+| ppg | `bt1bs9rq73ksdhc604m2` | SUCCESS |
+| ibac_sni | `bt182v4sg5grkcr7ql1b` | SUCCESS |
+| ctrl | `bt1i4k4j3jo0qu04r9sc` | SUCCESS |
+| alda | `bt1ivjfgolsu90pbka9p` | EXECUTING |
+| rlvigen | `bt1gb1hpr8ofmt7uv2q8` | EXECUTING — v192 payload, after the `_run_grid` NameError fix |
+| dmc_gb | `bt1vccuivle5i619hbkr` | **ERROR — undiagnosed** |
+
+**When a family lands**: pull its `records.jsonl`, populate
+`datasphere/native/validated_evaluator_families.json` with revisions computed from
+`evaluator_identity.py` against the live tree, and require the `shared evaluator validated` gate to
+read 7/7. Nothing in that entry is typed by hand.
+
+**When a family errors, diagnose before resubmitting.** A bare `ERROR` status is not a diagnosis:
+the last two rlvigen failures were the same `NameError` in `_run_grid`, and the first went
+undiagnosed through an entire wave because the status was read and the log was not.
 
 Written to answer one question directly: **can the 36-cell production fleet be released?** No, and
 this page says exactly why, with the evidence for each item rather than a status word.
