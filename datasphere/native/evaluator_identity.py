@@ -229,7 +229,8 @@ def canonical_evaluation_scope(values: Mapping[str, object]) -> dict[str, object
     # cannot be attested, and an un-attestable second pass would be evidence nothing could certify.
     # Note the asymmetry: `"mode"` is always resolvable because taking the mode is well defined for
     # every family, while a family whose native rule IS `mode` gains nothing from the override --
-    # `family.py` therefore requests the second pass only for the four sampling families.
+    # `family.py` therefore requests the second pass only for the sampling families --
+    # three since ctrl was corrected to `mode` (2026-09-07): idaac, ppg, ibac_sni.
     if policy_mode not in (family_eval_policy_mode(family), "mode"):
         raise ValueError(f"evaluator scope eval_policy_mode is unresolved for {family}/{baseline}")
     deterministic = values["deterministic_setting"]

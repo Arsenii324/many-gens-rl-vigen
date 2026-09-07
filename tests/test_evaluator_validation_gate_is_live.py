@@ -67,9 +67,14 @@ def _with_fake_ledger(gates, monkeypatch, fake: dict):
 
 
 def _scope(family):
-    from datasphere.native.evaluator_identity import FAMILY_ALLOWED_BASELINES
+    from datasphere.native.evaluator_identity import (
+        FAMILY_ALLOWED_BASELINES, family_eval_policy_mode,
+    )
 
-    sampled = family in {"idaac", "ppg", "ibac_sni", "ctrl"}
+    # Derived, not restated: this set was hardcoded as the four sampling families and went stale
+    # the day ctrl was corrected to `mode` (its released evaluator is greedy), which made the
+    # fixture build a scope the canonicaliser then refused.
+    sampled = family_eval_policy_mode(family) == "sample"
     ctrl = family == "ctrl"
     return {
         "family": family,

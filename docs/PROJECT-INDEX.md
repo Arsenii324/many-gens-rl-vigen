@@ -3,6 +3,13 @@
 The benchmark repo is this directory's parent. These are the documents that outlive any one
 session; the code's own entry point is [`../README.md`](../README.md).
 
+## Start here from a fresh clone
+
+**[`RUN-THIS-PROJECT.md`](RUN-THIS-PROJECT.md)** — clone to submitted run in six steps, each
+stating what proves it worked: reconstruct the pinned sources, build the environment, provision
+Places365, build and verify a payload, submit, and check the launch gates. Written so a newcomer
+does not have to know which of the documents below to read first.
+
 ## How this set works
 
 **[`STAGES.md`](STAGES.md)** — where the project is, at the level a person asks it.

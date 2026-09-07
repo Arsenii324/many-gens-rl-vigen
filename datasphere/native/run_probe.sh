@@ -710,8 +710,9 @@ run_endpoint_eval() {
   # mechanism with the action rule.
   #
   # `native` alone is the default and is what every existing record was produced under. Only the
-  # four sampling families are given a second `mode` pass by family.py; asking the eight
-  # deterministic ones for one would re-run an identical grid at full price.
+  # sampling families are given a second `mode` pass by family.py -- three since ctrl was
+  # corrected to `mode` (idaac, ppg, ibac_sni); asking the nine deterministic ones for one would
+  # re-run an identical grid at full price.
   local endpoint_modes="${ENDPOINT_EVAL_POLICY_MODES:-native}"
   local rc=0 policy_mode out_suffix
   # [Claude 2026-09-07] dmc_gb's own render is 84x84; rad/soda need the raw 100x100 render to

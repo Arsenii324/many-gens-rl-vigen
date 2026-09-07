@@ -1291,9 +1291,10 @@ def main() -> int:
     # stamp is deliberately shallower. Pooling them would silently mix a headline number with a
     # descriptive one, and nothing in the record distinguished them.
     # [Claude 2026-09-07, DECISION-SHEET A25 addendum] The evaluation policy mode is the fleet's
-    # ONLY UNITS-class comparability split (audit_comparability_seam.py): eight baselines report
-    # E[return | a = argmax pi] and four report E[return | a ~ pi], because this evaluator
-    # deliberately reproduces each family's own action rule. Those are different estimands, and two
+    # ONLY UNITS-class comparability split (audit_comparability_seam.py): nine baselines report
+    # E[return | a = mode pi] and three report E[return | a ~ pi] -- 9/3 since ctrl was corrected
+    # on 2026-09-07 -- because this evaluator deliberately reproduces each family's own action
+    # rule, taken from its own released EVALUATOR. Those are different estimands, and two
     # of A25's three fixed cross-group pairs straddle the split.
     #
     # `native` is the default and changes nothing: each family acts exactly as its own reporting

@@ -20,6 +20,9 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 > python scripts/collect_metrics.py <dir>   # all twelve baselines' metrics on one set of axes
 > ```
 >
+> - **[`docs/RUN-THIS-PROJECT.md`](docs/RUN-THIS-PROJECT.md)** — **start here from a fresh clone.**
+>   Reconstruct the pinned sources, build the environment, provision Places365, build and verify a
+>   payload, submit a run. Each step states what proves it worked.
 > - **[`notes/START-HERE.md`](notes/START-HERE.md)** — the index to every other surface: which
 >   decisions are still the owner's to make, the host-migration order, and how to run the campaign.
 >   Start there rather than here if the question is "what is still open" or "how do I run this on
@@ -89,7 +92,7 @@ python train.py --list
 | **off-policy** | `drqv2`, `svea`, `sgqn`, `curl`, `drq` (DrQ-v2 / SAC backbones) · `rad`, `soda`, `alda` (SAC) |
 | **corrected** | `ctrl` is *Cross-Trajectory Representation Learning* (ICLR 2022) — **PPO**-based, not a CURL variant. The previous `class CTRLAgent(CURLAgent)` was a name-similarity mistake. |
 | **on-policy** | `ppg`, `ibac_sni`, `idaac`, `ctrl` (IMPALA backbone) — driven by `rlgen/trainer_onpolicy.py`, which shares this repo's evaluator, logger, protocol and eval cadence with the off-policy loop |
-| **data-gated** | `svea`, `sgqn`, `soda` need Places365 for their overlay augmentation *to train* (not to evaluate). `bash setup/fetch_overlay_dataset.sh` fetches the **val** split, ~2 GB rather than the 24 GB train split — a declared protocol choice, recorded in the card. |
+| **data-gated** | `svea`, `sgqn`, `soda` need Places365 for their overlay augmentation *to train* (not to evaluate). `bash setup/fetch_overlay_dataset.sh` fetches the **train** split, ~24 GB — the production value, because the overlay distribution IS their mechanism (DECISION-SHEET A22). Pass `val` for a ~2 GB probe asset, which production refuses unless the deviation is stated explicitly. |
 
 Not claimed: that `ppg`, `ibac_sni` or `ctrl` reproduce published returns. Nobody has published either on
 RL-ViGen robosuite, so there is no number to reproduce — see `rlgen/algos/onpolicy_ext.py`.
