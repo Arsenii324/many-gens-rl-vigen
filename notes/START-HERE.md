@@ -34,6 +34,11 @@ documents deliberately do not, because they record what is true rather than what
 being thought.
 
 **Start here for the direct answer**:
+[`PRE-PRODUCTION-STATUS-2026-09-07-EVENING.md`](PRE-PRODUCTION-STATUS-2026-09-07-EVENING.md)
+— **the current status.** The freeze candidate, what the ctrl correction invalidated, and
+why the wave is one job before it is seven. Read this one first; the page below is the
+earlier state it supersedes.
+
 [`PRE-PRODUCTION-STATUS-2026-09-07.md`](PRE-PRODUCTION-STATUS-2026-09-07.md) — can the fleet be
 released, and if not, exactly what blocks it, in three kinds: two freeze blockers that are ours,
 four measurements that need the host, and seven ratifications that change status rather than
