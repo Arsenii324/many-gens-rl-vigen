@@ -1,5 +1,11 @@
 # Review 19's own "launch gate" — status against the current tree
 
+> **Superseding update, 2026-09-07:** the v185 functional endpoint wave is complete for all
+> seven evaluator families and is accepted by `production_gates.py` (7/7 current closures;
+> retained artifacts are in `results/validation/`). This closes evaluator-path validation, not
+> production-length competence or host migration. The resource/throughput recertification below
+> remains open where it requires the production V100 host.
+
 Written after reading `notes/ai-review-19-external.md` in full (1140 lines), cross-checked
 against `00-review-19-triage.md` (Codex's independent triage) and the tree as of commit `c10719b`.
 Review 19's final section, "My actual launch gate now," gives an explicit numbered checklist of
@@ -84,12 +90,12 @@ stronger sense (see below) — it means the specific gate this section poses is 
     the append-a-dated-correction convention plus tests like
     `tests/test_docs_not_stale.py`/`test_provenance_labels.py` that catch specific drifts, not a
     generated single source of truth.
-11. **Re-certify IDAAC's new resource use on real infrastructure** — IN PROGRESS, not yet landed.
-    The `v176` evaluator-identity wave (submitted this session, commit `c10719b`) validates
-    evaluator behavior/identity for all 7 families against the frozen tree, but is a short
-    (8,192–10,240 frame) functional run, not the throughput/memory recertification review 19 (and
-    this project's own `04-blind-spots-and-unverified-claims.md`) name as still needed — that
-    remains Phase 2/4 of the standing plan, genuinely open.
+11. **Re-certify IDAAC's new resource use on real infrastructure** — FUNCTIONAL PATH CLOSED;
+    RESOURCE RECERTIFICATION OPEN. The v185 evaluator wave validates evaluator behavior/identity
+    for all 7 families against the frozen tree, but is a short (8,192–10,240 frame) functional
+    run, not the throughput/memory recertification review 19 names. A 40,960-frame g1.1 C2
+    rehearsal exists (`bt1596tjbdu1rv5senim`), but the production V100 host measurement remains
+    open; see `MIGRATION-T4-TO-V100.md` step 1.
 12. **Host/horizon-qualified replay-equivalence wording** — SATISFIED, already fixed. `CLAIMS-
     LEDGER.md`'s `drqv2` row and `docs/DECISION-SHEET.md` A14 both scope the "non-evicting"
     claim to the V100 600k profile specifically, not a global claim.
