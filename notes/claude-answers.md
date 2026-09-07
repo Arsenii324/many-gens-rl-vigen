@@ -3272,3 +3272,22 @@ offline-evaluator round-trip through a real 9-channel checkpoint for the first t
 `0832e56`. Job `bt1596tjbdu1rv5senim`, 90-minute g1.1 reservation. This is a rehearsal (g1.1
 stand-in), not the certified V100 measurement — labeling it that way wherever the result gets
 used. Will report FPS/peak-memory once terminal, alongside v176's results.
+
+---
+
+## A76 — v176 wave complete: all 7 evaluator families validated, gate is PASS for the first time (2026-09-07)
+
+All seven jobs SUCCESS, diagnosed clean (non_finite=0, import gate passed, endpoint eval
+completed), records retained under `results/records/`, `validated_evaluator_families.json`
+entries computed mechanically (script, not hand-typed) from each retained record plus
+`evaluator_identity.py`'s own live revision functions, cross-checked against
+`audit_pairing_evidence.py`. `production_gates.py`'s "shared evaluator validated" gate:
+**PASS** — "all 7 evaluator families validated on their current family closures." First time
+this gate has ever read PASS. Overall: 31 pass / 1 fail (source tree frozen, this commit itself)
+/ 8 owner (down from 9). Full suite green throughout. Commits `15493f4`, `0ef59ab`.
+
+idaac's entry is the one I'd flag specifically: IDAAC-C2's evaluator identity now validates
+clean on the tree exactly as committed, not just my earlier local CPU/MPS checks.
+
+Still executing: the IDAAC-C2 throughput/memory rehearsal (v177, `bt1596tjbdu1rv5senim`),
+~30 min into its 90-min reservation. Will report FPS/peak-memory once terminal.
