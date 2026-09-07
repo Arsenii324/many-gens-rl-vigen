@@ -1,25 +1,49 @@
 #!/usr/bin/env bash
-# Places365 for the overlay augmentation used by SVEA, SGQN and SODA — VALIDATION split.
+# Places365 for the overlay augmentation used by SVEA, SGQN and SODA.
 #
-# WHY VAL AND NOT TRAIN. The augmentation pastes a random natural image behind the scene as a
-# distractor. The images are nuisance, not labels, so there is no train/test leakage argument for
-# preferring the train split — and `places365_standard/train` is ~24 GB against val's ~2 GB.
-# The size difference is the whole reason this script exists; the repo owner declined the 24 GB.
+#   bash setup/fetch_overlay_dataset.sh [DEST] [val|train]
 #
-# THIS IS A DECLARED PROTOCOL CHOICE, not a silent one: `overlay_dataset_split` goes into the
-# protocol card, so a run that used val and a run that used train are not silently comparable.
+# [Claude 2026-09-07, DECISION-SHEET A22 DECIDED] PRODUCTION USES `train`. The header below argued
+# for val on size, and that argument no longer holds: the overlay distribution IS the mechanism for
+# these three baselines, so drawing it from the validation partition is a learning-affecting
+# deviation, and the cost is the easyformat package rather than the large-resolution archive.
 #
-#   bash setup/fetch_overlay_dataset.sh [DEST]
+# Note the number in the original text: "~24 GB against val's ~2 GB". That was right, and it sat
+# in this file the whole time. A later revision of A22 priced the alternative at 105 GB -- the
+# high-resolution archive, which this pipeline never needed since the loader crops to 84x84 -- and
+# nearly kept the deviation on a cost that our own tooling already contradicted.
+#
+# WHAT THE ORIGINAL HEADER ARGUED, kept because the correction is the point. "The images are
+# nuisance, not labels, so there is no train/test leakage argument for preferring the train split."
+# True, and it answers a question nobody asked: the reason to use train is not leakage, it is that
+# `use_val=False` is what the released loaders do, and these three methods' published behaviour is
+# defined against that population (~1.8M images, not 36,500).
+#
+# THIS REMAINS A DECLARED PROTOCOL CHOICE: `overlay_dataset_split` goes into the protocol card, so
+# a run that used val and a run that used train are not silently comparable.
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="${1:-$REPO/data}"
-URL="http://data.csail.mit.edu/places/places365/val_256.tar"
+SPLIT="${2:-train}"
+case "$SPLIT" in
+  val)   URL="http://data.csail.mit.edu/places/places365/val_256.tar"; SIZE="~2 GB";;
+  train) URL="http://data.csail.mit.edu/places/places365/places365standard_easyformat.tar"; SIZE="~24 GB";;
+  *) echo "unknown split: $SPLIT (expected val or train)" >&2; exit 2;;
+esac
 
 mkdir -p "$DEST"
-if [[ -d "$DEST/places365_standard/val" ]]; then
-  echo "already present: $DEST/places365_standard/val"
+if [[ -d "$DEST/places365_standard/$SPLIT" ]]; then
+  echo "already present: $DEST/places365_standard/$SPLIT"
+elif [[ "$SPLIT" == "train" ]]; then
+  # The easyformat archive already contains places365_standard/{train,val} as ImageFolder trees,
+  # so it needs no flat-dump repair -- unlike val_256, handled below.
+  echo ">>> $SIZE from $URL"
+  curl -L --fail -o "$DEST/places365standard_easyformat.tar" "$URL"
+  tar -xf "$DEST/places365standard_easyformat.tar" -C "$DEST"
+  rm -f "$DEST/places365standard_easyformat.tar"
+  echo "extracted: $DEST/places365_standard/train"
 else
-  echo ">>> ~2 GB from $URL"
+  echo ">>> $SIZE from $URL"
   curl -L --fail -o "$DEST/val_256.tar" "$URL"
   mkdir -p "$DEST/places365_standard"
   tar -xf "$DEST/val_256.tar" -C "$DEST/places365_standard"
