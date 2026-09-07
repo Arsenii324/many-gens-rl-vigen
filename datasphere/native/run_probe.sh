@@ -316,13 +316,36 @@ run_cell_list() {
   IFS=','
   local cell_list=($cells)
   IFS="$previous_ifs"
+  # [Claude 2026-09-07] Per-cell GPU assignment. Packed cells had NO device differentiation: every
+  # cell inherited the same visible devices and every framework here defaults to cuda:0, so two
+  # cells packed on the two-GPU production host would both land on GPU 0 -- one card saturated at
+  # double the memory, the other idle, and the packing buying nothing it was run for. Invisible on
+  # DataSphere, whose tiers have one GPU, which is why it survived this long.
+  #
+  # NATIVE_CELL_DEVICES is a comma-separated list of device indices to round-robin across; unset
+  # leaves the environment exactly as before, so no existing job changes behaviour.
+  local devices=()
+  if [[ -n "${NATIVE_CELL_DEVICES:-}" ]]; then
+    local previous_ifs_devices="$IFS"
+    IFS=','
+    devices=(${NATIVE_CELL_DEVICES})
+    IFS="$previous_ifs_devices"
+  fi
+  local cell_index=0
   if [[ "${NATIVE_CONCURRENT:-}" == "1" ]]; then
     local pids=() specs=()
     for spec in "${cell_list[@]}"; do
       echo "=== NATIVE_CELL_BEGIN $(cell_id "$spec") ==="
-      run_one_cell "$spec" "$task" "$frames" "$eval_every" "$eval_episodes" "$out_root" "$work_root" &
+      if [[ "${#devices[@]}" -gt 0 ]]; then
+        local device="${devices[$(( cell_index % ${#devices[@]} ))]}"
+        echo "=== NATIVE_CELL_DEVICE $(cell_id "$spec") CUDA_VISIBLE_DEVICES=$device ==="
+        CUDA_VISIBLE_DEVICES="$device"           run_one_cell "$spec" "$task" "$frames" "$eval_every" "$eval_episodes" "$out_root" "$work_root" &
+      else
+        run_one_cell "$spec" "$task" "$frames" "$eval_every" "$eval_episodes" "$out_root" "$work_root" &
+      fi
       pids+=("$!")
       specs+=("$spec")
+      cell_index=$((cell_index + 1))
     done
     local index=0
     while [[ "$index" -lt "${#pids[@]}" ]]; do

@@ -141,7 +141,19 @@ CELLS=drqv2:1,drqv2:2 NATIVE_CONCURRENT=1 ... bash datasphere/native/run_on_prod
 serially otherwise. Two separate invocations would each pay their own bootstrap, neither would see
 the other's memory use, and nothing would arbitrate between them.
 
-Two constraints:
+**Pin the cells to different GPUs, or packing buys nothing.** `NATIVE_CELL_DEVICES=0,1` makes
+`run_probe.sh` round-robin `CUDA_VISIBLE_DEVICES` across the packed cells and announce each
+assignment as `NATIVE_CELL_DEVICE <cell> CUDA_VISIBLE_DEVICES=<n>`. Without it every cell inherits
+the same visible devices and every framework here defaults to `cuda:0`, so two packed cells land on
+one card at double the memory while the other sits idle. This was invisible on DataSphere, whose
+tiers have a single GPU.
+
+Note the interaction with `DOCKER_GPUS`: that flag decides which cards the CONTAINER can see, and
+`NATIVE_CELL_DEVICES` indexes within that set. Packing across both cards therefore needs
+`--gpus all` (the default) plus `NATIVE_CELL_DEVICES=0,1`; pinning the whole container to one card
+and then asking for two devices would fail.
+
+Three constraints:
 
 - **Co-scheduling.** `run_probe.sh`'s `check-co-schedulable` refuses families that cannot share one
   Python environment. `ctrl` is JAX and strips torch — `jax[cuda12]`'s cudnn 9 and torch's pinned
@@ -149,6 +161,19 @@ Two constraints:
 - **Headroom first.** `MIGRATION-T4-TO-V100.md` step 4 gates packing on measured peak RAM/CPU from
   step 2. The script sets no `--memory` or `--cpus`: a cap guessed before that measurement would
   convert an honest overcommit into an OOM-kill mid-run.
+- **Disk doubles too, and that is now checked.** Two packed `drqv2` cells need 84 GiB against one
+  cell's 44 — the replay episode files are per cell. `family.py disk-requirement --cells a:1,a:2`
+  prints it and the runner refuses below it.
+
+**No config conflation.** `family.py production_env` refuses a cell list spanning families outright
+("production settings are per family and these cells span ..."), so a packed job is always one
+family, whose constants are identical across its cells; only the seed differs. Each cell gets its
+own output directory (`cells/<baseline>-s<seed>`), its own run directory, its own `training.log`,
+`effective_config.json`, `resources.json` and records. The one genuinely shared write is
+`door.xml`, which `vgb_wrapper.py:368` dumps at the process CWD on every reset — harmless, because
+nothing ever reads it back (the wrapper passes the XML string in memory) and CORRECTIONS #97
+removed it from the hashed evaluator closure for exactly this reason. The shared `job.log`
+interleaves lines from concurrent cells; the per-cell `training.log` files do not.
 
 ## 5. Disk
 

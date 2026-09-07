@@ -160,3 +160,37 @@ def test_effective_config_captures_the_variables_that_change_the_experiment():
                  "ENDPOINT_EVAL_SCENES", "CURVE_EVAL_EPISODES", "OFFLINE_EVAL_REGIMES"):
         assert name in captured, f"{name} changes the experiment and must be stamped"
     assert not any("secret" in str(value) for value in captured.values())
+
+
+def test_packed_cells_can_be_pinned_to_different_gpus():
+    """Packed cells had no device differentiation and every framework defaults to cuda:0.
+
+    On the two-GPU production host that meant both packed cells on GPU 0 -- one card at double the
+    memory, the other idle. Invisible on DataSphere, whose tiers have one GPU.
+    """
+    runner = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
+    assert "NATIVE_CELL_DEVICES" in runner
+    assert "NATIVE_CELL_DEVICE " in runner, "the assignment must be announced in the log"
+    concurrent = runner[runner.index('if [[ "${NATIVE_CONCURRENT:-}" == "1" ]]'):]
+    assert "CUDA_VISIBLE_DEVICES=\"$device\"" in concurrent[:1500], (
+        "the concurrent branch is where the collision happened")
+
+
+def test_device_pinning_is_opt_in_and_round_robins():
+    """Unset must leave every existing job's environment untouched."""
+    script = """
+    set -euo pipefail
+    devices=()
+    if [[ -n "${NATIVE_CELL_DEVICES:-}" ]]; then
+        IFS=',' read -ra devices <<< "$NATIVE_CELL_DEVICES"
+    fi
+    if [[ "${#devices[@]}" -eq 0 ]]; then echo "none"; exit 0; fi
+    for i in 0 1 2 3; do printf '%s ' "${devices[$(( i % ${#devices[@]} ))]}"; done
+    """
+    unset = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                           env={"PATH": "/usr/bin:/bin"})
+    assert unset.stdout.strip() == "none"
+
+    pinned = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                            env={"PATH": "/usr/bin:/bin", "NATIVE_CELL_DEVICES": "0,1"})
+    assert pinned.stdout.split() == ["0", "1", "0", "1"]
