@@ -105,6 +105,27 @@ def verify_runtime_observation_geometry(observation, *, image_size: int, frame_s
             raise RuntimeError(f"{family}: expected an observation mapping with an rgb field")
         observation = observation["rgb"]
 
+    # [Claude 2026-09-07] Normalise HERE rather than at each call site. This read `.shape` off
+    # whatever the caller passed, so `dmc_gb`'s `env.reset()` -- which returns a gym-style tuple,
+    # not an array -- produced `observed None` and failed the whole wave cell AFTER training had
+    # completed and its checkpoint had been verified finite. One call site already worked around
+    # the same thing inline (`initial_observation[1] if isinstance(..., tuple) else ...` for ppg),
+    # which is the tell that the checker, not the callers, owed this.
+    #
+    # Two shapes of wrapper are unwrapped: a `(observation, info)` reset tuple, and anything
+    # array-like that carries no `.shape` of its own, such as a frame-stack `LazyFrames`.
+    if isinstance(observation, tuple):
+        with_shape = [item for item in observation if hasattr(item, "shape")]
+        if len(with_shape) == 1:
+            observation = with_shape[0]
+        elif observation:
+            # Gym's `(obs, info)` puts the observation first; a tuple of several arrays is not
+            # something this check can disambiguate, and guessing would defeat its purpose.
+            observation = observation[0]
+    if not hasattr(observation, "shape") and hasattr(observation, "__array__"):
+        import numpy as _np
+        observation = _np.asarray(observation)
+
     shape = getattr(observation, "shape", None)
     try:
         shape = tuple(int(dim) for dim in shape)

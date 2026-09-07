@@ -220,3 +220,30 @@ class TestTheProtocolCarriesEachBaselineSGeometry:
         p = Protocol()
         assert (p.image_size, p.frame_stack) == (DEFAULT_IMAGE_SIZE, DEFAULT_FRAME_STACK)
         assert p.name not in OBSERVATION_GEOMETRY
+
+
+def test_the_checker_normalises_reset_tuples_and_lazy_frames():
+    """It read `.shape` off whatever it was handed, so dmc_gb's reset tuple observed `None`.
+
+    That failed a wave cell AFTER training completed and its checkpoint verified finite -- the
+    most expensive possible moment. One call site already worked around the same thing inline for
+    ppg, which is the tell that the checker owed this, not the callers.
+    """
+    import numpy as np
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT / "scripts"))
+    from eval_across_scenes import verify_runtime_observation_geometry as verify
+
+    frame = np.zeros((9, 100, 100), dtype=np.uint8)
+
+    class LazyFrames:
+        def __array__(self, dtype=None):
+            return frame
+
+    verify(frame, image_size=100, frame_stack=3, family="rad")
+    verify((frame, {}), image_size=100, frame_stack=3, family="rad")
+    verify(LazyFrames(), image_size=100, frame_stack=3, family="rad")
+
+    import pytest
+    with pytest.raises(RuntimeError, match="geometry mismatch"):
+        verify(np.zeros((3, 84, 84)), image_size=100, frame_stack=3, family="rad")

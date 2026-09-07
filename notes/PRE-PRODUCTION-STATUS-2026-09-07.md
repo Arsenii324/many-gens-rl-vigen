@@ -31,7 +31,7 @@ work, and seven jobs at a three-hour ceiling is 21 GPU-hours of exposure if anyt
 | ctrl | `bt1i4k4j3jo0qu04r9sc` | SUCCESS |
 | alda | `bt1ivjfgolsu90pbka9p` | EXECUTING |
 | rlvigen | `bt1gb1hpr8ofmt7uv2q8` | EXECUTING — v192 payload, after the `_run_grid` NameError fix |
-| dmc_gb | `bt1vccuivle5i619hbkr` | **ERROR — undiagnosed** |
+| dmc_gb | `bt1ekba6on8tot3m882v` | EXECUTING — v193 payload, after the geometry-checker normalisation fix. The v191 job `bt1vccuivle5i619hbkr` ERRORed |
 
 **When a family lands**: pull its `records.jsonl`, populate
 `datasphere/native/validated_evaluator_families.json` with revisions computed from
