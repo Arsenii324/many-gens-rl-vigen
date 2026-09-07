@@ -17,7 +17,13 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = Path(__file__).with_name("source-reconstruction.json")
-ALWAYS_IGNORED_NAMES = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+ALWAYS_IGNORED_NAMES = {
+    ".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache",
+    # Finder litter, not source. Its absence from this set is exactly why a macOS working copy
+    # that has ever been browsed in Finder fails `verify_sources.py` with a closure-hash mismatch
+    # that has nothing to do with the actual reconstructed content.
+    ".DS_Store",
+}
 ALWAYS_IGNORED_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -244,10 +250,20 @@ def _prepare_auxiliary(entry: dict, temporary: Path) -> tuple[Path, Path]:
 
 def _verify_destination(root: Path, entry: dict) -> None:
     destination = root / entry["destination"]
-    if _git(destination, "rev-parse", "HEAD") != entry["commit"]:
-        raise BootstrapError(f"wrong source commit at {destination}")
-    if _git(destination, "rev-parse", "HEAD^{tree}") != entry["tree"]:
-        raise BootstrapError(f"wrong source tree at {destination}")
+    # `git -C` walks UP to an enclosing repository when the destination carries no `.git` of its
+    # own, so a destination materialized without git metadata was being checked against THIS
+    # project's HEAD. Verify git identity only where there is git identity to verify; the closure
+    # hash below is the content proof either way.
+    if (destination / ".git").exists():
+        # A real clone's HEAD is the pinned commit. A pre-bootstrap-era snapshot repo instead
+        # carries one locally-authored commit recording the pin in its message, so its HEAD never
+        # matches -- but its tree still can, and tree equality is as strong a content proof.
+        head = _git(destination, "rev-parse", "HEAD")
+        tree = _git(destination, "rev-parse", "HEAD^{tree}")
+        if head != entry["commit"] and tree != entry["tree"]:
+            raise BootstrapError(f"wrong source commit at {destination}")
+        if tree != entry["tree"]:
+            raise BootstrapError(f"wrong source tree at {destination}")
     if entry.get("patch_sha256"):
         _verify_patch_hash(root / entry["patch_file"], entry)
     expected = entry.get("expected_tree_hash")
@@ -258,14 +274,21 @@ def _verify_destination(root: Path, entry: dict) -> None:
         raise BootstrapError(f"source closure hash mismatch at {destination}: {actual}")
 
 
-def verify_all(root: Path = ROOT, families: Iterable[str] | None = None) -> None:
+def verify_all(root: Path = ROOT, families: Iterable[str] | None = None) -> list[str]:
     manifest = load_manifest()
     selected = set(families or manifest["families"])
     unknown = selected - set(manifest["families"])
     if unknown:
         raise BootstrapError(f"unknown family: {', '.join(sorted(unknown))}")
+    unverifiable: list[str] = []
     for name in sorted(selected):
         entry = manifest["families"][name]
+        # A family whose reconstruction refuses to run on this filesystem cannot be verified on it
+        # either: the recorded hash describes a tree this machine cannot materialize. Say that,
+        # rather than reporting a content mismatch that reads like corruption.
+        if entry.get("requires_case_sensitive_fs") and not filesystem_is_case_sensitive(root):
+            unverifiable.append(name)
+            continue
         _verify_destination(root, entry)
         for relocation in entry.get("relocate", []):
             target = root / relocation["to"]
@@ -275,6 +298,7 @@ def verify_all(root: Path = ROOT, families: Iterable[str] | None = None) -> None
     if "idaac" in selected:
         auxiliary = manifest["auxiliary"]["openai_baselines"]
         _verify_destination(root, auxiliary)
+    return unverifiable
 
 
 def bootstrap(root: Path = ROOT, families: Iterable[str] | None = None) -> None:

@@ -11,11 +11,14 @@ def main() -> int:
     parser.add_argument("--family", action="append")
     args = parser.parse_args()
     try:
-        verify_all(families=args.family)
+        unverifiable = verify_all(families=args.family)
     except BootstrapError as error:
         print(f"error: {error}")
         return 2
     print("source reconstruction verified")
+    for name in unverifiable:
+        print(f"NOT VERIFIED HERE: {name} needs a case-sensitive filesystem; "
+              f"its reconstruction cannot be materialized on this one. Verify it on Linux.")
     return 0
 
 

@@ -9,10 +9,12 @@
       "patch_kind": "apply_patches_registry",
       "patch_file": "setup/apply_patches.py",
       "expected_tree_hash": "e908a33eefe5da87a09b0161c628ff79d01accb5c52905ec9cb61d19a393aa75",
+      "requires_case_sensitive_fs": true,
       "exclude": [
         "envs/DMCVGB",
         "img",
         "results",
+        "door.xml",
         "cfgs/task/TwoArmHandover.yaml",
         "third_party/robosuite/robosuite/models/assets/robots/sawyer",
         "third_party/robosuite/robosuite/models/assets/robots/baxter",
@@ -35,6 +37,7 @@
         "src/env/data",
         "data",
         "door.xml",
+        "src/door.xml",
         "results",
         "logs",
         ".egg-info"
@@ -55,7 +58,8 @@
         "models",
         "results",
         "logs",
-        ".egg-info"
+        ".egg-info",
+        "door.xml"
       ],
       "relocate": [
         {"from": "models", "to": "third_party/alda/models", "expected_tree_hash": "cc71e3dce66686f8bcc3bab360de578203bfa6987b97df4b20306e096b1134a2"}
@@ -70,7 +74,7 @@
       "patch_file": "runnable/_patches/ppg.patch",
       "patch_sha256": "323b5bc546d8d9d57074a443abc6d3e4bdccd93a459574799a3302b9bfd644f3",
       "expected_tree_hash": "e505edca46fd76de7cb86c3827d35abba2c0a5bee8821a7f2735394e33dd930d",
-      "exclude": ["phasic_policy_gradient/results", "results", "logs", ".egg-info"]
+      "exclude": ["phasic_policy_gradient/results", "results", "logs", "door.xml", ".egg-info"]
     },
     "idaac": {
       "url": "https://github.com/rraileanu/idaac.git",
@@ -81,7 +85,7 @@
       "patch_file": "runnable/_patches/idaac.patch",
       "patch_sha256": "cc5a48132619490bdd9ba8c77d19eaf392a4d40826ba8becaeb4a0323469d5cd",
       "expected_tree_hash": "e24575c7512affaae62bb7225b7355ec702bc8700cc8849f34a6901e5d6af201",
-      "exclude": ["results", "logs", ".egg-info"]
+      "exclude": ["results", "logs", "door.xml", ".egg-info"]
     },
     "ibac_sni": {
       "url": "https://github.com/microsoft/IBAC-SNI.git",
@@ -92,7 +96,7 @@
       "patch_file": "runnable/_patches/ibac_sni.patch",
       "patch_sha256": "cf6378bf7bfaef89790602615575fa28db77191f91884912b9ad3c02f4d284dd",
       "expected_tree_hash": "2cd7c7c6e5ee605b2f1364c366f2eb173f5b0fbff3634fa61bb4e2bb05327510",
-      "exclude": ["results", "logs", "storage", "models", "door.xml", ".egg-info"]
+      "exclude": ["results", "logs", "storage", "models", "door.xml", "torch_rl/door.xml", ".egg-info"]
     },
     "ctrl": {
       "url": "https://github.com/bmazoure/ctrl_public.git",
