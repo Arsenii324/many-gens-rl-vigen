@@ -737,7 +737,7 @@ run_endpoint_eval() {
   started="$(date +%s)"
   echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame policy_mode=$policy_mode epoch=$started ==="
   set +e
-  env "${image_size_env[@]}" python3 scripts/eval_grid.py \
+  env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
     --family "$family" \
     --baseline "$baseline" \
     --task "${TASK:-Door}" \
@@ -790,7 +790,7 @@ run_curve_eval() {
     fi
     echo "=== NATIVE_CURVE_EVAL_BEGIN $baseline frame=$frame file=$base ==="
     set +e
-    env "${image_size_env[@]}" python3 scripts/eval_grid.py \
+    env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
       --snapshot "$item" \
       --family "$family" \
       --baseline "$baseline" \
@@ -876,7 +876,7 @@ run_offline_eval() {
   _eval_started="$(date +%s)"
   echo "=== NATIVE_OFFLINE_EVAL_BEGIN device=$device checkpoint=$(basename "$snapshot") epoch=$_eval_started ==="
     set +e
-    env "${image_size_env[@]}" python3 scripts/eval_grid.py \
+    env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
       --snapshot "$snapshot" \
       --family "${OFFLINE_EVAL_FAMILY:-rlvigen}" \
       --baseline "${OFFLINE_EVAL_BASELINE:-drqv2}" \

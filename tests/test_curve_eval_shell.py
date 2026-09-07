@@ -38,10 +38,32 @@ def _run(tmp_path: Path, family: str, filenames: list[str], save_every: int = 20
     (cell / "checkpoints").mkdir(parents=True)
     for name in filenames:
         (cell / "checkpoints" / name).write_bytes(b"weights")
+    # The stub is an executable on PATH, not a shell function: run_curve_eval invokes
+    # `env RLVIGEN_IMAGE_SIZE=... python3` for the dmc_gb family, and `env` execs a BINARY --
+    # it cannot see a shell function. A function stub silently stopped intercepting the call
+    # and the harness ran the real python3.
+    stub_dir = tmp_path / "stub-bin"
+    stub_dir.mkdir()
+    stub = stub_dir / "python3"
+    stub.write_text(
+        "#!/usr/bin/env bash\n"
+        'frame=""; snap=""; out=""; append=0\n'
+        'while [[ $# -gt 0 ]]; do\n'
+        '  case "$1" in --frame) frame="$2"; shift 2;; --snapshot) snap="$2"; shift 2;;'
+        ' --out) out="$2"; shift 2;; --append) append=1; shift;;'
+        ' *) shift;; esac\n'
+        'done\n'
+        'echo "CALLED frame=$frame file=$(basename "$snap")" >> "$LOG"\n'
+        'if [[ "$append" == 1 ]]; then echo "{\\"frame\\":$frame}" >> "$out";'
+        ' else echo "{\\"frame\\":$frame}" > "$out"; fi\n'
+    )
+    stub.chmod(0o755)
+
     script = tmp_path / "harness.sh"
     script.write_text(
         "set -euo pipefail\n"
-        # stub: record the --frame and --snapshot the function chose, then succeed
+        f'export PATH="{stub_dir}:$PATH"\n'
+        # kept as a function too, for the paths that call python3 without `env`
         'python3() {\n'
         '  local frame="" snap="" out="" append=0\n'
         '  while [[ $# -gt 0 ]]; do\n'
