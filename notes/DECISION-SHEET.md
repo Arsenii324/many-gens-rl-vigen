@@ -1695,6 +1695,37 @@ the PILOT RESULT above, which tested part of this recipe at a short budget and i
 this direction, not proof of it. Verified locally: env construction, forward pass through the real
 network, multi-step rollout, multi-env parallel construction, and the LR-schedule's exact math.
 
+### A36 IDENTITY FROZEN, 2026-09-07 — PPG is OpenAI PPG with borrowed values, not the IDAAC comparator
+
+**External review 21 #7 asks for exactly one thing: stop sitting between two identities.** It is
+right that the wording did, and the provenance string was the worse half of it — it read
+"continuous-action port of PPG using the IDAAC-authors' DMC comparator profile", which claims the
+identity that *requires* linear LR decay, while the port does not implement it.
+
+**Frozen as: OpenAI PPG's released code, adapted to continuous-action Door, borrowing selected
+continuous-control values from IDAAC's DMC supplement.** Under that identity:
+
+- **Constant LR is correct, not a missing setting.** OpenAI PPG itself uses a constant learning
+  rate; the linear decay over 1e6 environment steps belongs to the IDAAC authors' DMC experiment,
+  which is a different artefact. `idaac` implements the decay because `idaac` IS that artefact.
+- **The 8x256 rollout is a declared adaptation.** It preserves 2048 samples per update and the
+  65,536-interaction auxiliary cadence — the two quantities that define PPG's phasic structure —
+  and does NOT preserve the 1x2048 GAE truncation and trajectory geometry. Both halves are now in
+  the provenance string rather than only the first.
+
+**Why this identity rather than the other**, since either is internally consistent:
+`RESEARCH-FRAME.md`'s claim is twelve *published implementations* run at their authors' own
+settings. OpenAI PPG is a published implementation; the IDAAC-authors' PPG comparator is a
+third-party baseline inside someone else's paper. Adopting the comparator identity would make this
+cell a reimplementation of another group's baseline rather than the method's own release — a
+different project from the one the frame describes. The borrowed values are the minimum needed to
+make PPG expressible on a continuous-action target at all, and they are enumerated rather than
+implied.
+
+**What would overturn this**: a decision that cross-comparability with IDAAC's own published DMC
+comparator matters more than each method running its own release. That would require adding the
+decay and the 1x2048 geometry, and re-running PPG's cells.
+
 ### A36 OPEN, 2026-09-06 (analysis completed same entry) — PPG's design point: the remaining recipe gap, specified
 
 T16's cadence half is closed (A26: `n_pi` now matches the continuous-control reference exactly).

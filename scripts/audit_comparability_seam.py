@@ -812,6 +812,50 @@ def updates_per_env_frame() -> tuple[dict, str]:
     return out, "DERIVED from each training loop and its effective action_repeat"
 
 
+def learning_rate_schedule() -> tuple[dict, str]:
+    """Whether the learning rate is constant or decays, and on what clock.
+
+    [Claude 2026-09-07, named by external review 21 #7.] Not previously an axis, and the pair it
+    splits is inside a PRIMARY comparison group: `idaac` and `ppg` are two of the four on-policy
+    PPO methods, one of the six within-group pairs A25 names, and one of them decays its learning
+    rate while the other does not.
+
+    Both are faithful, but NOT in the same direction, and that is worth stating precisely rather
+    than letting "both faithful" do the work.
+
+    IDAAC's decay is OURS, from the paper. `ext/idaac/train.py` -- the vendored upstream -- builds
+    all three optimizers with a constant `lr=args.lr` and has no scheduler; `update_linear_schedule`
+    exists only in `runnable/idaac/ppo_daac_idaac/utils.py`, our clone. So the decay is an addition
+    taken from the supplement's DMC recipe, a deviation from released code TOWARD the publication --
+    the opposite direction from this project's usual resolution of a paper/code conflict (ctrl's
+    cluster_len=10 and sgqn's released profile both take the code).
+
+    PPG's constant rate is upstream's. `phasic_policy_gradient/ppo.py:194` constructs
+    `th.optim.Adam(params, lr=lr)` and nothing ever writes `param_group['lr']`.
+
+    The principle that makes those consistent, recorded in CLAIMS-LEDGER's idaac row: each method
+    follows its OWN authors' most relevant published guidance, and where its own authors are silent
+    on this target, its released code stands. IDAAC's authors published a DMC continuous-control
+    recipe and this is that target; OpenAI's PPG authors never addressed continuous control. Absent
+    that principle the two choices are simply inconsistent, which is why it is written down.
+
+    The consequence worth reading off: at a 600k budget against a 1e6-step schedule, `idaac`
+    finishes its run at 0.4x its initial rate while `ppg` finishes at 1.0x. Their late-training
+    updates are therefore taken at different effective rates, and any idaac-vs-ppg difference in
+    late-run behaviour is partly attributable to that rather than to the adversarial-dynamics
+    versus auxiliary-phase mechanism the pair is meant to isolate. Declared, not equalised, for the
+    same reason as every other axis on this list: equalising makes at least one cell unfaithful to
+    its own source, which is the thing this project claims not to do.
+    """
+    out = {b: "constant" for b in ("drqv2", "drq", "svea", "sgqn", "curl", "rad", "soda", "alda",
+                                   "ppg", "ibac_sni", "ctrl")}
+    out["idaac"] = ("linear decay to 0 over 1e6 ENV STEPS (train.py:233-244); at the 600k budget it "
+                    "ends at 0.4x initial")
+    out["ppg"] = "constant | ppo.py:194 has no scheduler; OpenAI PPG's own behaviour (A36)"
+    return out, ("DERIVED from each training loop's optimizer handling: the presence of an "
+                 "`update_linear_schedule` call for idaac, its absence everywhere else")
+
+
 def warmup_length() -> tuple[dict, str]:
     """Frames of random/undertrained action before the first learner update, per family.
 
@@ -857,6 +901,7 @@ AXES = [("reward pipeline", UNITS, reward_pipeline),
         ("observation layout and pixel scaling", CONDITIONS, observation_layout),
         ("regimes reachable in one run", CONDITIONS, regimes_in_one_run),
         ("updates per env frame", CONDITIONS, updates_per_env_frame),
+        ("learning-rate schedule", CONDITIONS, learning_rate_schedule),
         ("warmup length before first update", CONDITIONS, warmup_length)]
 
 #: Empty as of 2026-08-26, and that is a statement about this list rather than about the twelve.

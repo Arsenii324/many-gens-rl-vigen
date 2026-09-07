@@ -587,7 +587,7 @@
     "provenance": {
       "ppg": {
         "source_target": "PPG authors' released code",
-        "source_variant": "continuous-action port of PPG using the IDAAC-authors' DMC comparator profile"
+        "source_variant": "OpenAI PPG's released code adapted to continuous-action Door, borrowing selected continuous-control values from IDAAC's DMC supplement (gamma .99, lr 3e-4, 32 minibatches, entropy 0, frame_stack 3). NOT the IDAAC authors' DMC PPG comparator: that recipe also specifies linear LR decay over 1e6 environment steps, which this port does not implement, and a 1x2048 rollout where this runs 8x256 -- same 2048 samples per update and same 65,536-interaction auxiliary cadence, different GAE truncation and trajectory geometry"
       }
     },
     "constants": {
