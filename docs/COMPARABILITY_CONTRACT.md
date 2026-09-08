@@ -726,7 +726,7 @@ than stop at "probably fine."**
 
 ---
 
-## 3f. Three mechanism differences absent from this project's entire prose corpus (2026-09-08)
+## 3f. Three mechanism differences absent from this project's prose corpus (2026-09-08)  ·  [LIVE]
 
 Found by a from-first-principles source walk of all twelve training loops, then checked against
 every `.md` and `.txt` in the tree outside `ext/`, `RL-ViGen-upstream/` and `runnable/` — 247 files.

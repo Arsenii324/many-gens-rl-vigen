@@ -30,6 +30,12 @@ PLATFORM = {
     # runs INSIDE the job, it runs on this machine before submission. Genuinely platform-local,
     # not a typo: grep confirms the only readers are job.sh and the two v100 cfgs that set it.
     "NATIVE_V100_RESERVATION_MINUTES",
+    # [Claude 2026-09-08] Read by the XLA runtime inside the process, not by any code of ours --
+    # the same shape as MUJOCO_GL and XLA_PYTHON_CLIENT_PREALLOCATE already in this set. Introduced
+    # by cfg-ctrl-stackpilot-v203, which sets `--xla_gpu_autotune_level=0` to skip the conv
+    # autotuning that deadlocked bt1hvkmei18hasgj5bbv on a driver 12.2.0 / runtime 12.9.0 pairing.
+    # It is a diagnostic knob, not a production setting.
+    "XLA_FLAGS",
 }
 
 # [Claude 2026-09-06] (cfg, knob) pairs whose reader was deliberately REMOVED after a one-time

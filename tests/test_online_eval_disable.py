@@ -68,10 +68,30 @@ def test_the_runner_takes_the_spelling_from_the_family():
     production = text[text.index('eval_every="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING'):][:200]
     assert "2147483647" not in production.split("\n")[0], (
         "the production path must not carry a hardcoded cadence")
-    # Every remaining occurrence of the sentinel is a comment or the documented fallback.
+    # Every remaining occurrence of the sentinel is a comment, the documented fallback, or the
+    # normalizer DETECTING it in order to replace it.
+    #
+    # [Claude 2026-09-08] That last allowance is new and the distinction is the whole point:
+    # assigning the sentinel as a cadence is the defect, and comparing against it is the repair.
+    # `normalize_eval_sentinel` exists because twenty cfgs set it explicitly and took the else
+    # branch straight past the fix this file pins -- so it has to read the value to remove it.
+    allowed = ("run_eval_every=2147483647",                       # documented diagnostic fallback
+               '"${EVAL_EVERY_FRAMES:-}" == "2147483647"',        # detection, in the normalizer
+               "NATIVE_EVAL_SENTINEL_NORMALIZED 2147483647")      # the marker announcing removal
     for line in text.splitlines():
         if "2147483647" in line and not line.strip().startswith("#"):
-            assert "run_eval_every=2147483647" in line, f"unexpected hardcoded sentinel: {line!r}"
+            assert any(a in line for a in allowed), f"unexpected hardcoded sentinel: {line!r}"
+
+
+def test_the_normalizer_replaces_the_sentinel_rather_than_assigning_it():
+    """The allowance above must not become a licence to reintroduce the defect."""
+    text = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
+    body = text[text.index("normalize_eval_sentinel() {"):]
+    body = body[:body.index("\n}\n")]
+    assert 'EVAL_EVERY_FRAMES=""' in body, "it must CLEAR the cadence, not set one"
+    assert "NATIVE_DISABLE_ONLINE_EVAL=1" in body, (
+        "clearing alone leaves the guarded branch unreachable on every non-production cfg")
+    assert "eval_every=2147483647" not in body
 
 
 def test_every_affected_family_declares_a_spelling():

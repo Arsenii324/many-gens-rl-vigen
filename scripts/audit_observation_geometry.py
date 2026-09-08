@@ -158,11 +158,22 @@ def main() -> int:
         # `stale` now means "produced by an evaluator closure that is no longer live", which is
         # the only reading under which a record disagreeing with the declaration is not a defect.
         stale = sorted(historical.get(baseline, set()))
-        if declared in records:
-            status = "yes"
-        elif records:
+        # [Claude 2026-09-08] A CURRENT record whose pair is not the declared one is a
+        # contradiction even when another current record agrees -- two records from the same
+        # closure with different geometry means one of them is wrong, and reporting `yes` because
+        # one of them is right hides that.
+        #
+        # This mattered the moment it was written: every one of the twelve now has a current
+        # record, so the old `elif records` branch had become UNREACHABLE and `--strict` could no
+        # longer fail at all. A check whose failure path cannot be entered is not a check, and this
+        # project has retired two of those already (audit_row_closure comparing against a string
+        # contract.py cannot emit; the environment gate regexing prose).
+        wrong = sorted(pair for pair in records if pair != declared)
+        if wrong:
             status = "CONTRADICTED"
             contradicted.append(baseline)
+        elif declared in records:
+            status = "yes"
         else:
             status = "never run"
             unobserved.append(baseline)
@@ -181,8 +192,9 @@ def main() -> int:
 
     if contradicted:
         print()
-        print(f"  CONTRADICTED: {', '.join(contradicted)} -- a record disagrees with the")
-        print("  declaration and none agrees. Either the declaration is wrong or the run was.")
+        print(f"  CONTRADICTED: {', '.join(contradicted)} -- a record produced by the CURRENT")
+        print("  closure carries a geometry that is not the declared one. Either the declaration")
+        print("  is wrong or that run was, and one right record beside it does not settle which.")
         if args.strict:
             return 1
 
