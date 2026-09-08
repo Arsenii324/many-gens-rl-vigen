@@ -180,3 +180,65 @@ what we take, and keep the run short enough that the window is small.
 **The RAM arithmetic is settled** for sequential cells and now refuses concurrent ones that would
 not fit. **The VRAM arithmetic is the one that has never been measured at production geometry**,
 which is why step 5 exists and why it runs at 10k frames.
+
+
+---
+
+# The four contention channels, measured 2026-09-08 — and which one actually binds
+
+Memory was the channel we watched all day and it is the one that does **not** bind.
+
+| channel | reading | binds? |
+|---|---|---|
+| GPU memory | 17,994 MiB free, flat across 120 samples / 30 min | **no** — `idaac` needs 1,204 |
+| host CPU | 16 cores, load average 1.42 (~9%), 32 users | **no** — `idaac` needs 1.35 cores |
+| GPU memory bandwidth | `mem` 13–15% while `sm` 83–100% | **no** — ~85% headroom |
+| **GPU SMs** | 83–100%, mean 88% over 30 min | **YES** |
+| **GPU power** | 260–274 W against a 300 W limit | **YES** — ~26 W headroom |
+
+The neighbour's job is **compute-bound**, not bandwidth-bound. Two consequences we could not have
+seen from memory figures: our kernels contend for SMs that are already saturated, and they push a
+card drawing 274 W into its 300 W cap, **clocking both jobs down**. Neither fails anything. Both
+make someone else's work slower, and the second one does it to *our* work too.
+
+## What is certain, what is not, and what is not ours to know
+
+**Measured and stable:** free memory, CPU load, bandwidth headroom, power draw, SM utilisation.
+Card 0 is parked — 135 MHz against a 1,530 MHz maximum, 41.8 W, 0 compute processes. That is
+idle by four independent indicators, not one.
+
+**Uncertain, and it is our uncertainty to reduce:** `idaac`'s 1,204 MiB was measured on `gt4.1`,
+a **T4**. cuDNN selects different algorithms per architecture, so a V100 may want a larger
+workspace. The 2,048 MiB cap is a reasonable first bound, not a derived one — and if it is too
+tight the cell dies against its own cap, loudly, which is cheap and is a finding.
+
+**Not ours to know, and no instrument here will fix it:** whether card 0 is booked by someone who
+simply is not using it yet; whether the card-1 job will grow its reservation at a phase boundary
+it has not reached; whether anyone is benchmarking. The schedule lives in a spreadsheet, and
+30 minutes of flat memory is evidence about 30 minutes.
+
+## The decision this forces, which is the owner's
+
+Running `idaac` now would not fail anybody. It **would** measurably slow a job that is currently
+using the card properly, through SM contention and the power cap. That is a courtesy question, not
+a safety one, and it has three honest answers:
+
+1. **Wait** for card 1 to fall idle. Costs time, costs nothing else, and the preflight already
+   refuses until then.
+2. **Run anyway**, with `--max-util 100` set deliberately and the cap at 2,048 MiB. Defensible —
+   the card is assigned to us today — but it slows a colleague.
+3. **Run the cell on DataSphere instead.** `idaac` at 600k is ~4.79 h of training plus the grid,
+   roughly **1,300–1,700 RUB**, and contends with nobody. Every baseline fits `gt4i.1` at the full
+   600k budget on the base profile; what does not fit a DataSphere tier is the **v100 profile's**
+   larger settings, which is a different axis from length.
+
+**Recommendation: (1) while the card is busy, (3) if the canary is wanted sooner than the card
+frees.** Do not take (2) without saying so out loud — it is the only one that spends someone
+else's throughput.
+
+## Before the first cell, calibrate the instrument on the idle card
+
+Card 0 is a known-zero baseline, which is the cheapest possible validation of a monitor: run the
+enriched watcher against it and confirm it reports 0 sm / 0 bandwidth / ~41 W / 135 MHz / 0
+processes. An instrument that cannot report a card that is definitely idle cannot be trusted about
+a card that is definitely busy. Do that before relying on it to watch our own cell.
