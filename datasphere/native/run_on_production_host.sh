@@ -98,24 +98,6 @@ set -euo pipefail
 # GPU refusal below is a pure environment test, and the image lookup after it starts a container --
 # so ordering them the other way round means the most dangerous misconfiguration in this file is
 # diagnosed only after a container has already been launched.
-# `command -v docker` proves only that the CLI is INSTALLED. The daemon may be stopped, or this
-# user may not be in the docker group -- and then the first real failure is a raw
-# "failed to connect to the docker API at unix:///var/run/docker.sock" from the middle of the
-# script, after the argument checks have already passed. `docker info` is the cheap question that
-# distinguishes the three cases, and preflight_production_host.sh's own check 1 makes the same
-# point: being in the docker group is not the same as docker running.
-docker info >/dev/null 2>&1 || {
-  if command -v docker >/dev/null 2>&1; then
-    echo "refusing: the docker CLI is installed but the daemon is not reachable as this user." >&2
-    echo "  Either dockerd is not running, or this account is not in the docker group." >&2
-    echo "  Check with: docker info" >&2
-  else
-    echo "refusing: docker is not on PATH." >&2
-  fi
-  echo "  Every computation this script performs now runs inside a container -- reading" >&2
-  echo "  source-lock.json and the disk model included -- because the production host permits" >&2
-  echo "  nothing but small python-unrelated actions and docker itself to run outside one." >&2
-  exit 2; }
 
 # [Claude 2026-09-08] `--gpus "${DOCKER_GPUS:-all}"` defaulted to ALL CARDS. On a shared machine
 # under a per-day GPU assignment schedule that is the single most dangerous line in this file: one
@@ -160,7 +142,59 @@ fi
 if [[ "$DOCKER_GPUS" == "none" ]]; then
   DOCKER_GPU_ARGS=()
 else
-  DOCKER_GPU_ARGS=(--gpus "$DOCKER_GPUS")
+  # [Claude 2026-09-08, external audit finding A1] A VRAM CAP IS NOW REQUIRED WHENEVER A GPU IS
+# REQUESTED, because the project's own policy said so and nothing enforced it.
+#
+# `CLAUDE.md` and `notes/production-host/10-resource-upper-bound-rule.md` both state: "We do not
+# satisfy this for VRAM today -- six of seven families have no VRAM measurement at all -- so no
+# production cell may start on a shared GPU until that is closed." `vram_cap.py` closed the
+# MECHANISM half on this date. This closes the other half: the mechanism was opt-in, and an audit
+# confirmed **no cfg-*.yaml in the repository sets NATIVE_VRAM_CAP_MIB**, so in practice every cell
+# would have run uncapped.
+#
+# Every other resource on this host is refused in code -- disk (exit 4), memory tier, result-mirror
+# device, tmpfs staging, GPU device collision. VRAM was the one left to documentation, and it is
+# the one that kills a co-tenant's process rather than merely inconveniencing them: on a shared
+# card the process that asks the driver SECOND is the one that fails, so an uncapped allocator that
+# grows takes down somebody else's job and never notices.
+#
+# Not required when no GPU is requested. The escape is explicit and named, because a cap that is
+# wrong is its own failure and the owner may knowingly accept an uncapped run on a card they own
+# outright.
+if [[ "$DOCKER_GPUS" != "none" && -z "${NATIVE_VRAM_CAP_MIB:-}" ]]; then
+  echo "refusing: a GPU was requested (DOCKER_GPUS=$DOCKER_GPUS) with no NATIVE_VRAM_CAP_MIB." >&2
+  echo "  A CUDA allocator's reservation is a floor, not a ceiling: it never shrinks and it grows" >&2
+  echo "  when a high-water mark is exceeded. On a shared card the process that asks SECOND is the" >&2
+  echo "  one that fails -- so an uncapped cell takes down a neighbour's job and never notices." >&2
+  echo "  Set a bound. Measured peaks, for reference:" >&2
+  echo "    idaac 1204   ibac_sni 1102   rad 1476   ppg 1588   drqv2 1650   svea 2358   sgqn 7142 MiB" >&2
+  echo "    e.g. NATIVE_VRAM_CAP_MIB=2048 for idaac (1.7x measured; add ~308 MiB CUDA context)" >&2
+  echo "  It caps PyTorch's allocator only -- EGL rendering buffers are outside it." >&2
+  echo "  On a card you own outright, NATIVE_ACCEPT_UNCAPPED_VRAM=1 accepts the risk explicitly." >&2
+  [[ "${NATIVE_ACCEPT_UNCAPPED_VRAM:-0}" == "1" ]] || exit 3
+  echo "=== NATIVE_VRAM_UNCAPPED_ACCEPTED no cap set, accepted explicitly ===" >&2
+fi
+
+# `command -v docker` proves only that the CLI is INSTALLED. The daemon may be stopped, or this
+# user may not be in the docker group -- and then the first real failure is a raw
+# "failed to connect to the docker API at unix:///var/run/docker.sock" from the middle of the
+# script, after the argument checks have already passed. `docker info` is the cheap question that
+# distinguishes the three cases, and preflight_production_host.sh's own check 1 makes the same
+# point: being in the docker group is not the same as docker running.
+docker info >/dev/null 2>&1 || {
+  if command -v docker >/dev/null 2>&1; then
+    echo "refusing: the docker CLI is installed but the daemon is not reachable as this user." >&2
+    echo "  Either dockerd is not running, or this account is not in the docker group." >&2
+    echo "  Check with: docker info" >&2
+  else
+    echo "refusing: docker is not on PATH." >&2
+  fi
+  echo "  Every computation this script performs now runs inside a container -- reading" >&2
+  echo "  source-lock.json and the disk model included -- because the production host permits" >&2
+  echo "  nothing but small python-unrelated actions and docker itself to run outside one." >&2
+  exit 2; }
+
+DOCKER_GPU_ARGS=(--gpus "$DOCKER_GPUS")
 fi
 
 # [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice
@@ -617,7 +651,7 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     NATIVE_PLACES365_DIR XLA_PYTHON_CLIENT_PREALLOCATE XLA_PYTHON_CLIENT_MEM_FRACTION \
     NATIVE_VRAM_CAP_MIB NATIVE_YIELD_SENTINEL \
     XLA_PYTHON_CLIENT_ALLOCATOR \
-    OMP_NUM_THREADS MKL_NUM_THREADS; do
+    OMP_NUM_THREADS MKL_NUM_THREADS OPENBLAS_NUM_THREADS NUMEXPR_NUM_THREADS; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
 done

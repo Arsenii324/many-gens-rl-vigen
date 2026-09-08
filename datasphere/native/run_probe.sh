@@ -1452,6 +1452,28 @@ export MUJOCO_GL=egl PYOPENGL_PLATFORM=egl WANDB_MODE=offline WANDB_DISABLED=tru
 #
 # Set for every cell, not just the JAX ones: these variables are inert for torch families, and a
 # guard that has to be remembered per family is a guard that will be missed.
+# [Claude 2026-09-08, external audit finding A3] BOUND THE BLAS THREAD POOL.
+#
+# The audit found an asymmetry: `run_cell_list` FAILS CLOSED when packed cells would collide on one
+# GPU (exit 3, added after external review 27 sec.12), and has nothing analogous for CPU threads.
+# `run_on_production_host.sh` sets no `--cpus` deliberately, and OMP/MKL are forwarded only if the
+# operator sets them -- so PyTorch and NumPy default their thread pools to the FULL host core
+# count. On cds2 that is 16 threads per cell, and `NATIVE_CONCURRENT=1` multiplies it by the number
+# of cells, on a box shared with about twenty people.
+#
+# The number is chosen from measurement, not caution. `measure_vram_bounds.py` over the seedvar
+# archives puts drqv2 at 1.68-1.69 CPU cores and families.json puts idaac at 1.35, both reproducible
+# across seeds -- so a pool of 4 is more than twice the observed need and cannot slow us, while
+# cutting the thread count fourfold. Thread pool size is not CPU utilisation: 16 threads doing 1.7
+# cores of work still contend for cache and scheduler.
+#
+# Overridable, and NOT applied when the caller has already decided.
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-$OMP_NUM_THREADS}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-$OMP_NUM_THREADS}"
+export NUMEXPR_NUM_THREADS="${NUMEXPR_NUM_THREADS:-$OMP_NUM_THREADS}"
+echo "=== NATIVE_THREAD_DISCIPLINE omp=$OMP_NUM_THREADS mkl=$MKL_NUM_THREADS openblas=$OPENBLAS_NUM_THREADS (measured need: idaac 1.35, drqv2 1.68 cores) ===" >&2
+
 export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
 export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.25}"
 export XLA_PYTHON_CLIENT_ALLOCATOR="${XLA_PYTHON_CLIENT_ALLOCATOR:-platform}"
@@ -1676,6 +1698,12 @@ if cells_need_places365 "$cells"; then
   if [[ "$places_split" != "val" && -d "$asset_dir/val" ]]; then
     ln -sfn "$asset_dir/val" "$dataset_root/places365_standard/val"
   fi
+  # [Claude 2026-09-08, second pass] Both loaders honour this now. `dmc_gb`'s copy in
+  # `src/augmentations.py` hardcoded `num_workers=16` with no override -- DOUBLE the count that
+  # produced glibc heap corruption in the RL-ViGen copy and prompted P19 -- and the dmc_gb patch
+  # was extended to read the same variable. The log line below reports the real value for both
+  # rather than asserting a constant for one of them.
+  #
   # [Claude 2026-09-08] P19 introduced `RLVIGEN_PLACES_WORKERS` as a dial and nothing ever read it
   # here, forwarded it, or recorded it. Its value is not cosmetic: `RandomResizedCrop` and
   # `RandomHorizontalFlip` run INSIDE the DataLoader workers, whose RNG is seeded from
@@ -1724,7 +1752,7 @@ if cells_need_places365 "$cells"; then
   # that need it most are the ones that do not set it.
   places_workers="${RLVIGEN_PLACES_WORKERS:-0}"
   export RLVIGEN_PLACES_WORKERS="$places_workers"
-  echo "=== NATIVE_PLACES365_LOADER split=$places_split rlvigen_workers=$places_workers dmc_gb_workers=16 ===" >&2
+  echo "=== NATIVE_PLACES365_LOADER split=$places_split rlvigen_workers=$places_workers dmc_gb_workers=$places_workers ===" >&2
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split"
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split" --check
   # [Claude 2026-09-02 04:20 MSK: soda loads the overlay through dmc_gb's own copy of the same

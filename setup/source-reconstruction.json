@@ -54,8 +54,8 @@
       "destination": "runnable/dmc_gb",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/dmc_gb.patch",
-      "patch_sha256": "bee51e5d836fdb78c74415b7381d960647a2c862ee785a4c86c3340e82e2a25e",
-      "expected_tree_hash": "1cc5640c4f65f632fced6c2129175634f1c6b9374eba41113e16034d93ddf6a1",
+      "patch_sha256": "faf93e5a76a81907f2ff37a0cb5ec7ff7059a50d94102443a6670f37334b51aa",
+      "expected_tree_hash": "faee77f43e170cfa91a2fec3107bf28b007ff29289c2f200c97a62044d889faf",
       "exclude": [
         "src/env/data",
         "data",
@@ -64,6 +64,16 @@
         "results",
         "logs",
         ".egg-info"
+      ],
+      "_dmc_gb_places_workers_note": [
+        "[Claude 2026-09-08, external audit finding A2] The patch now makes the Places365 DataLoader's",
+        "num_workers read RLVIGEN_PLACES_WORKERS, matching what P19 did for the RL-ViGen copy in",
+        "setup/apply_patches.py. Upstream hardcodes num_workers=16 with no override and the call site",
+        "never passes one, so a soda cell span 16 CPU-bound JPEG-decode workers unconditionally on a",
+        "16-core machine shared with about twenty people.",
+        "P19 exists because the IDENTICAL pattern at HALF this worker count -- 8 on a 4-CPU container --",
+        "produced glibc heap corruption ('malloc_consolidate(): unaligned fastbin chunk detected') in a",
+        "real job. That fix was never ported here; this ports it."
       ]
     },
     "alda": {

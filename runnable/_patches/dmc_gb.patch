@@ -77,6 +77,15 @@ index 74fcaab..c4d124b 100644
  			places_dataloader = torch.utils.data.DataLoader(
  				datasets.ImageFolder(fp, TF.Compose([
  					TF.RandomResizedCrop(image_size),
+@@ -32,7 +33,7 @@ def _load_places(batch_size=256, image_size=84, num_workers=16, use_val=False):
+ 					TF.ToTensor()
+ 				])),
+ 				batch_size=batch_size, shuffle=True,
+-				num_workers=num_workers, pin_memory=True)
++				num_workers=int(__import__("os").environ.get("RLVIGEN_PLACES_WORKERS", num_workers)), pin_memory=True)
+ 			places_iter = iter(places_dataloader)
+ 			break
+ 	if places_iter is None:
 diff --git a/src/env/wrappers.py b/src/env/wrappers.py
 index 96a9d25..7df4aef 100644
 --- a/src/env/wrappers.py

@@ -314,3 +314,99 @@ that the neighbour is already saturating. The complementarity is plausible and u
 **One number settles it** — our process's attributable `sm%` during a short `idaac` run, which is
 exactly what step 5 produces. If it comes back low, co-running becomes defensible on evidence
 instead of hope. Until then the preflight's utilisation refusal stands.
+
+---
+
+# The executable recipe: `idaac` on card 0 with a yield watch
+
+Written 2026-09-08. **Not yet run.** Every value below is either measured or derived from something
+measured; nothing here is a placeholder.
+
+## The sentinel path, which is the part that silently does not work
+
+`NATIVE_YIELD_SENTINEL` names **one file seen through three different mounts**. Get this wrong and
+the observer writes a file nobody reads, the cell never yields, and nothing announces the failure:
+
+| seen by | path |
+|---|---|
+| the host | `$WORK/yield.sentinel` |
+| the observer container (`-v $WORK:/work`) | `/work/yield.sentinel` |
+| the training container (`-v $WORK:/tmp/native-work`) | `/tmp/native-work/yield.sentinel` |
+
+So `NATIVE_YIELD_SENTINEL=/tmp/native-work/yield.sentinel` — the **training** container's view,
+because that is the process which reads it. And `$NATIVE_WORK_HOST_DIR` must be set **explicitly**:
+the wrapper otherwise generates a stamped directory the observer cannot predict.
+
+## Device numbering
+
+Card 0 on the host is index 0 in every view here — `--gpus '"device=0"'` renumbers the pinned card
+to 0 inside a container, and 0 is already 0 on the host. That coincidence does not hold for card 1
+(host 1, container 0), so do not carry this recipe over unchanged.
+
+## The sequence
+
+```bash
+export WORK=$HOME/rlvigen-runs/idaac-c0-$(date +%Y%m%d-%H%M)
+mkdir -p "$WORK" "$WORK/out" "$WORK/mirror"
+
+# 0. Verdict, not a glance. Non-zero exit means do not proceed.
+docker run --rm -v "$PWD:/repo:ro" -w /repo --gpus '"device=0"' python:3.11-slim \
+  python3 scripts/watch_gpu_headroom.py --preflight --device 0 --need-mib 4000
+
+# 1. A payload built from THIS tree. Every archive on disk predates RUNNER_CONTRACT 16.
+bash datasphere/native/host-run.sh -m "$PWD" <<'S'
+python3 datasphere/native/contract.py build-payload \
+  --source . --output /work/payload-idaac.tgz --families idaac
+python3 datasphere/native/contract.py verify-payload --archive /work/payload-idaac.tgz \
+  --require-runner-contract 16 --require-families idaac --require-evaluator-identity
+S
+
+# 2. The observer, in its own container, watching card 0 and writing the sentinel.
+#    It allocates nothing: nvidia-smi and sleep.
+docker run -d --rm --name rlvigen-yield-watch --gpus '"device=0"' \
+  -v "$WORK:/work" -v "$PWD:/repo:ro" -w /repo python:3.11-slim \
+  python3 scripts/yield_gpu_to_neighbour.py \
+    --device 0 --sentinel /work/yield.sentinel --floor-mib 4000 --interval 30
+
+# 3. The cell. DRY RUN FIRST -- every guard, no container, no GPU.
+NATIVE_HOST_DRY_RUN=1 \
+NATIVE_HOST_PROFILE=v100 NATIVE_PRODUCTION= \
+CELLS=idaac:101 FRAMES=10000 TASK=Door SEED=101 \
+DOCKER_GPUS='"device=0"' \
+NATIVE_VRAM_CAP_MIB=2048 \
+NATIVE_YIELD_SENTINEL=/tmp/native-work/yield.sentinel \
+NATIVE_WORK_HOST_DIR="$WORK/native-work" NATIVE_OUT_HOST_DIR="$WORK/native-out" \
+NATIVE_RESULT_MIRROR="$WORK/mirror" NATIVE_ACCEPT_SAME_DEVICE=1 \
+ENDPOINT_EVAL=1 ENDPOINT_EVAL_REGIMES=train,eval-easy ENDPOINT_EVAL_SCENES=0 \
+ENDPOINT_EVAL_EPISODES=5 \
+  bash datasphere/native/run_on_production_host.sh \
+    "$WORK/payload-idaac.tgz" "$WORK/result.tgz"
+
+# 4. The same command with NATIVE_HOST_DRY_RUN removed.
+```
+
+## Why each value
+
+- **`idaac`** — 5.17 GiB RAM, 1204 MiB VRAM, 9 GB disk, no Places365, every figure **measured**,
+  and **profile-invariant**: the v100 profile changes nothing for it, because it is on-policy and
+  holds no replay. `ibac_sni` is lighter on paper and runs `procs=16` on a 16-core shared box;
+  `ctrl` is the JAX family and its RAM figure is an extrapolation.
+- **`FRAMES=10000`** — minutes, not hours. This proves the host PATH. It proves nothing scientific:
+  `drqv2` at 100k solves its trained scene 63% of the time and eval-easy **0.0%**, so a 10k `idaac`
+  cell will learn nothing and is not meant to.
+- **`NATIVE_VRAM_CAP_MIB=2048`** — 1.7× the measured 1204 MiB. Verified to bind: a 1024 MiB request
+  past a 512 MiB cap raised `OutOfMemoryError` with **16.96 GiB still free on the card**. Add ~308
+  MiB of CUDA context outside the cap, plus EGL rendering buffers it cannot bound at all.
+- **`--floor-mib 4000`** — yield if free memory drops below roughly 3× what we need, whoever caused
+  it.
+- **`NATIVE_PRODUCTION=` empty and no `CELL_TIMEOUT_SECONDS`** — both are only demanded at
+  `FRAMES >= 600000`. At 10k the production refusals do not apply.
+- **`NATIVE_ACCEPT_SAME_DEVICE=1`** — cds2 has one filesystem, so a mirror on a different device
+  does not exist here. This is an owner-level property of the campaign, not an operator setting.
+
+## Abort criteria during the run
+
+Stop if our attributed VRAM exceeds 4000 MiB, if the card's power stays within 20 W of its 300 W
+limit with our kernels contributing, or if the neighbour's process disappears (we may have caused
+it). The yield watch handles the arrival of a co-tenant automatically; these are the ones a person
+still has to watch for.
