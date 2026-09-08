@@ -119,3 +119,54 @@ def test_it_reads_ctrls_wandb_sink_at_all(tmp_path):
     checks, indicted = read(cell)
     assert indicted, "a saturating ctrl run must be caught through the sink"
     assert [c for c in checks if c[0] == "NOT SATURATED"][0][1] == "INDICTED"
+
+
+def _records(cell: pathlib.Path, coord: float, vector: float, n: int = 4):
+    cell.mkdir(parents=True, exist_ok=True)
+    with (cell / "records.jsonl").open("w") as handle:
+        for _ in range(n):
+            handle.write(json.dumps({"native": {"policy_action_diagnostics": {
+                "available": True,
+                "action_clip_rate_coordinate": coord,
+                "action_clip_rate_vector": vector}}}) + "\n")
+    with (cell / "log.csv").open("w", newline="") as handle:
+        w = csv.writer(handle); w.writerow(["frames", "mean_log_std", "policy_loss"])
+        for i in range(20):
+            w.writerow([i * 2560, -0.001 * i, -0.01])
+
+
+def test_the_measured_clip_rate_indicts_where_the_analytic_one_passes(tmp_path):
+    """The ibac_sni pilot, exactly. sigma 1.073 puts the ANALYTIC rate at 0.351 and it passed,
+    while the evaluator measured 0.857 coordinate and 1.0000 vector -- the policy degenerating
+    through the MEAN while the check watched the VARIANCE."""
+    cell = tmp_path / "measured"
+    _records(cell, coord=0.857, vector=1.0)
+    checks, indicted = read(cell)
+    assert indicted
+    measured = [c for c in checks if c[0] == "NOT SATURATED (measured)"][0]
+    analytic = [c for c in checks if c[0] == "NOT SATURATED"][0]
+    assert measured[1] == "INDICTED"
+    assert analytic[1] == "pass", (
+        "the analytic check must still PASS here -- if it also failed, this fixture would stop "
+        "demonstrating the blind spot the measured check exists to cover")
+
+
+def test_the_unsquashed_groups_normal_clip_rate_does_not_indict(tmp_path):
+    """idaac and ppg sit at ~0.33 coordinate and ~0.94 vector at 10k. Substantial clipping is a
+    property of an unsquashed head on Door, and indicting it would indict three baselines for
+    being what they are."""
+    cell = tmp_path / "normal"
+    _records(cell, coord=0.346, vector=0.949)
+    _, indicted = read(cell)
+    assert not indicted
+
+
+def test_a_cell_with_no_action_diagnostics_is_unreadable_not_passed(tmp_path):
+    cell = tmp_path / "nodiag"
+    cell.mkdir(parents=True)
+    with (cell / "log.csv").open("w", newline="") as handle:
+        w = csv.writer(handle); w.writerow(["frames", "mean_log_std"])
+        for i in range(20):
+            w.writerow([i * 2560, -0.001 * i])
+    checks, _ = read(cell)
+    assert [c for c in checks if c[0] == "NOT SATURATED (measured)"][0][1] == "UNREADABLE"
