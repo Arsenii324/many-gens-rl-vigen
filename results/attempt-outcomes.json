@@ -1,0 +1,6 @@
+{
+  "bt12q2bfbiih2lb43obp": {
+    "state": "FAILED-TRAIN",
+    "reason": "A52: ctrl's three-frame stack could not build. flax ScopeParamShapeError, kernel (3,3,3,16) vs (3,3,9,16) in /encoder//conv2d_0 -- three call sites initialised Flax parameters from a hardcoded (64,64,3). Died 2:38 into the cell. Superseded by bt1d8jicbkdu1jv87ogp."
+  }
+}

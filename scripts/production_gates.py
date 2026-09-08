@@ -463,13 +463,43 @@ def gate_source_tree_frozen():
 
 
 def gate_environment_manifest():
-    """Review 2 gate #13 (second half) / review 1 #40 / C29."""
+    """Review 2 gate #13 (second half) / review 1 #40 / C29 / external review 27 sec.5.
+
+    [Claude 2026-09-08] This used to PASS on `re.search("container|image_digest|dependenc|
+    resolved_packages", lock)` -- a regex over PROSE. Any sentence containing the word "container"
+    satisfied it, so a gate named for the environment being frozen was really checking that a file
+    mentioned the subject. Review 27 put it precisely: "substantially weaker than its name
+    suggests", and finding that the source lock mentions a container does not prove the executed
+    environment is frozen.
+
+    It now checks the two things that are actually checkable from here, and reports OWNER for the
+    one that is not:
+
+      - the base image is pinned BY DIGEST, not by a mutable tag;
+      - the pinned requirements have a content hash.
+
+    What neither proves, and what this gate must not claim: the job still runs `apt-get install`
+    and `pip install` inside that base image at start-up, so two jobs from the same digest months
+    apart can resolve different Ubuntu packages, different transitive wheels and a different pip.
+    Reproducibility is pinned at the BASE-IMAGE level and not at the executed-environment level.
+    Closing that means baking the working environment into a final image and removing runtime
+    package mutation -- production-host work, so it is the owner's to schedule, not a FAIL this
+    repository can clear on its own.
+    """
     lock = _read("datasphere/native/source-lock.json")
-    if re.search(r"container|image_digest|dependenc|resolved_packages", lock):
-        return PASS, "source lock records the environment as well as the source"
-    return FAIL, ("source-lock.json pins source and assets but no dependency versions or container "
-                  "digest. The job already captures resolved_packages.json / environment.json / "
-                  "egl.json -- they are simply not bound to the records or the protocol hash")
+    digest = re.search(r'"container_image":\s*"[^"]*@sha256:[0-9a-f]{64}"', lock)
+    requirements = re.search(r'"requirements_native_sha256":\s*"[0-9a-f]{64}"', lock)
+    missing = []
+    if not digest:
+        missing.append("container_image is not pinned by @sha256 digest")
+    if not requirements:
+        missing.append("requirements_native_sha256 is absent or not a sha256")
+    if missing:
+        return FAIL, "; ".join(missing)
+    return OWNER, ("base image pinned by digest and requirements hashed -- but the job still runs "
+                   "apt-get/pip inside it, so the EXECUTED environment is not frozen and two jobs "
+                   "from this digest can differ (external review 27 sec.5). Closing it needs a "
+                   "baked final image with no runtime package mutation, on the production host")
 
 
 def gate_production_canary():
