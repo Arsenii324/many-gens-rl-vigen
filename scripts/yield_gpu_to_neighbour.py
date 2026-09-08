@@ -37,6 +37,20 @@ user's process — the only verb it has is `docker stop <our-name>`.
 """
 from __future__ import annotations
 
+# [Claude 2026-09-08] Line-buffer our own stdout. Python BLOCK-buffers stdout when it is not a tty,
+# which is always here -- these run detached in a container. Observed live: the yield watch ran for
+# 52 seconds with completely EMPTY `docker logs`, indistinguishable from a container that crashed
+# at startup. This project has already paid for this lesson once: run_probe.sh exports
+# PYTHONUNBUFFERED=1 because a stall watchdog reading a buffer's flush cadence instead of a
+# process's liveness killed two healthy ctrl cells.
+#
+# The alarm paths already pass flush=True, so a breach would have been visible. The routine
+# confirmations were not -- and a monitor whose healthy output is invisible cannot be distinguished
+# from a dead one, which is the whole property these scripts exist to provide.
+import sys as _sys
+_sys.stdout.reconfigure(line_buffering=True)
+_sys.stderr.reconfigure(line_buffering=True)
+
 import argparse
 import pathlib
 import subprocess
