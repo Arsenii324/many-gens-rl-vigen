@@ -40,6 +40,14 @@ BASE_ALLOWED = (
     "datasphere/native/family.py",
     "datasphere/native/measure_resources.py",
     "datasphere/native/normalize_curves.py",
+    # [Claude 2026-09-08] family.py:421 imports this at RUNTIME via spec_from_file_location, so
+    # every code path reaching _replay_gib -- check-memory and disk-requirement both -- dies with
+    # FileNotFoundError inside the container without it. It went unnoticed because check-memory
+    # used to be gated on NATIVE_HOST_PROFILE == "v100" and every previous run was on the
+    # datasphere profile, so the path had never executed in a container. The first real host cell
+    # found it in two minutes:
+    #   FileNotFoundError: '/tmp/native-work/datasphere/native/plan_production.py'
+    "datasphere/native/plan_production.py",
     "datasphere/native/robosuite-import-closure.json",
     "datasphere/native/rlvigen-source.json",
     "datasphere/native/run_probe.sh",
@@ -118,7 +126,9 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # Bumped to 16 on 2026-09-08: run_probe.sh sources
 # `datasphere/native/require_container.sh` and refuses to run outside a container, so the runner
 # requires another payload member it did not require before.
-RUNNER_CONTRACT = 16
+# Bumped to 17 on 2026-09-08: plan_production.py is now a member, because family.py imports it at
+# runtime and the runner therefore requires it.
+RUNNER_CONTRACT = 17
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:

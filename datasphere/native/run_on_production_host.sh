@@ -491,7 +491,20 @@ check_disk() {
 WORKDIR_PARENT="${NATIVE_WORKDIR_PARENT:-$(dirname "$RESULT")}"
 mkdir -p "$WORKDIR_PARENT"
 WORKDIR="$(mktemp -d "$WORKDIR_PARENT/native-payload-XXXXXX")"
-trap 'rm -rf "$WORKDIR"' EXIT
+# [Claude 2026-09-08] The container runs as root and writes into $WORKDIR, so a plain `rm -rf` as
+# the invoking user fails with Permission denied and LEAVES THE STAGING DIRECTORY BEHIND -- on a
+# shared disk, litter we cannot remove. Observed on the first real host cell: every file under
+# native-payload-*/code/ext/baselines/ survived the trap.
+#
+# Fall back to a throwaway container, which is root and can. Still only ever our own $WORKDIR.
+_clean_workdir() {
+  rm -rf "$WORKDIR" 2>/dev/null && return 0
+  [[ -d "$WORKDIR" ]] || return 0
+  docker run --rm -v "$(dirname "$WORKDIR"):/parent" "${NATIVE_HELPER_IMAGE:-python:3.11-slim}" \
+    rm -rf "/parent/$(basename "$WORKDIR")" >/dev/null 2>&1 \
+    || echo "warning: could not remove $WORKDIR; it is root-owned staging litter" >&2
+}
+trap _clean_workdir EXIT
 # `df -T` is GNU-only; on a host without it this reads empty and the case falls through rather
 # than refusing a run for a filesystem type it could not determine.
 WORKDIR_FSTYPE="$(df -PT "$WORKDIR" 2>/dev/null | awk 'NR==2 {print $2}')"

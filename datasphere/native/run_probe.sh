@@ -1227,7 +1227,7 @@ payload_families="${payload_families%,}"
 # that -- "payload was built for runner contract 14 but this runner needs 13". The check
 # worked; the number was maintained in one place and read in another. Same shape as
 # SAVE_EVERY vs SAVE_EVERY_FRAMES and the curve_eval_episodes duplicate.
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 16 \
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 17 \
   --require-families "$payload_families" \
   --require-evaluator-identity \
   --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'
