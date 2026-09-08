@@ -122,3 +122,36 @@ another process, and do not pack two cells without a measured peak for each at p
 geometry. An upper bound we cannot state is a reason not to run
 (`10-resource-upper-bound-rule.md`), and every quantity above is either extrapolated, unmeasured,
 or someone else's.
+
+## Measured: what the environment build actually costs on disk
+
+Run 2026-09-08 in the **pinned production image** on cds2, installing `requirements-native.txt`.
+No GPU flag. `--rm`, so everything below was freed on exit — `/` went 321 G → 318 G during the
+install and back to 321 G after.
+
+```
+site-packages                 5.8 GB
+  nvidia (CUDA runtime)       2.8 GB
+  torch                       1.6 GB
+  triton                      420 MB
+  llvmlite                    129 MB
+  scipy 97M, cv2 79M + opencv_python.libs 90M, imageio_ffmpeg 71M, sympy 57M, dm_control 57M
+/root/.cache/pip              3.0 GB
+apt (python3, python3-pip, git)  ~0.3 GB
+```
+
+**This replaced a guess with a number and the guess was wrong.** `disk_requirement_gib`'s
+`margin` was a flat **5.0 GiB** covering the payload, the pip wheels, the apt packages *and*
+RL-ViGen's extracted tree. Measured steady cost is **~7.3 GB** (5.8 site-packages + 1.1 RL-ViGen
+archive-plus-tree + ~0.3 apt), and the peak was **~10.3 GB** with pip's cache. The margin is now
+**8.0 GiB**, and `run_probe.sh` passes `--no-cache-dir`, which removes 3.0 GB from every cell's
+peak — the cache buys nothing in a layer `docker run --rm` discards.
+
+Why this mattered: `/var/lib/docker` has **no separate mount** on cds2, so the container's writable
+layer competes for the same `/dev/sda2` that `check_disk` reads. And `check_disk` runs on the host
+*before* `docker run`, so it has to anticipate a layer that does not exist yet. Under-counting it
+is the one direction that ends with a full shared root filesystem.
+
+**What this measurement does NOT cover:** one requirement set in one image. `ctrl` pulls its own
+JAX/CUDA stack, excluded from the torch base, and was not measured here. Per-family extras remain
+unmeasured, and `check_disk`'s refusal is what stands between that and the disk.

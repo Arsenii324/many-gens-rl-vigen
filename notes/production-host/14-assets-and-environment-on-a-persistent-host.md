@@ -133,14 +133,14 @@ docker run --rm -v "$PWD:/repo:ro" -w /repo python:3.11-slim \
 ```
 
 
-| cell | replay | checkpoints ×3 | Places365 | total | +5 GiB margin |
+| cell | replay | checkpoints ×3 | Places365 | total | +8 GiB margin |
 |---|---:|---:|---:|---:|---:|
-| soda | 16.76 | 3.96 | 45.00 | 65.73 | 70.73 |
-| svea / sgqn | 17.74 | 2.13 | 45.00 | 64.88 | 69.88 |
-| rad | 16.76 | 3.96 | 0 | 20.73 | 25.73 |
-| drqv2 / curl / drq | 17.74 | 2.13 | 0 | 19.88 | 24.88 |
-| alda | 0 | 3.96 | 0 | 3.96 | 8.96 |
-| idaac / ppg / ibac_sni / ctrl | 0 | 1.52 | 0 | 1.52 | 6.52 |
+| soda | 16.76 | 3.96 | 45.00 | 65.73 | 73.73 |
+| svea / sgqn | 17.74 | 2.13 | 45.00 | 64.88 | 72.88 |
+| rad | 16.76 | 3.96 | 0 | 20.73 | 28.73 |
+| drqv2 / curl / drq | 17.74 | 2.13 | 0 | 19.88 | 27.88 |
+| alda | 0 | 3.96 | 0 | 3.96 | 11.96 |
+| idaac / ppg / ibac_sni / ctrl | 0 | 1.52 | 0 | 1.52 | 9.52 |
 
 Two things this table settles. **Replay dominates every off-policy cell** — ~17 GiB of retained
 transitions at 63,504 B each (one 84×84×9 `uint8` observation), which is why "checkpoints are only
@@ -148,9 +148,9 @@ transitions at 63,504 B each (one 84×84×9 `uint8` observation), which is why "
 term wherever it appears**, larger than everything else in the cell combined, which is what makes
 mounting it once instead of copying it nine times the change worth making.
 
-Sequential execution with one cell at a time peaks at **70.73 GiB**. Nothing about the campaign
+Sequential execution with one cell at a time peaks at **73.73 GiB**. Nothing about the campaign
 needs 325 GB at once — but nothing enforces sequential execution either, and two overlay cells
-packed together would need ~141 GiB before either has trained a step.
+packed together would need ~139 GiB before either has trained a step.
 
 ## On "does it abort on every warning?"
 

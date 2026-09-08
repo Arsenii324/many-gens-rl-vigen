@@ -557,11 +557,28 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
     overlay_cells = sum(1 for row in rows.values() if row["places365_gib"] > 0)
     duplicated = PLACES365_TRAIN_GIB * max(0, overlay_cells - 1)
     total -= duplicated
-    # [Claude 2026-09-08] `margin` also covers the RL-ViGen archive (~227 MB) and its extracted
-    # tree, which have no term of their own. That is a judgement, not a measurement, and it is
-    # the only place those two appear -- if the extracted tree ever grows past a couple of GiB
-    # this floor stops covering the pip wheels and apt packages it is also standing in for.
-    margin = 5.0   # payload, pip wheels, apt packages and the extracted RL-ViGen tree
+    # [Claude 2026-09-08] MEASURED, replacing a 5.0 GiB judgement that was under by about 2x.
+    # `margin` is the only term covering everything that is not replay, checkpoints or Places365,
+    # and all of it lands on the same /dev/sda2 that check_disk reads -- the container's writable
+    # layer included, since /var/lib/docker has no separate mount on cds2.
+    #
+    # Measured on the host, in the pinned image, installing requirements-native.txt:
+    #
+    #     site-packages           5.8 GB   nvidia 2.8G, torch 1.6G, triton 420M, llvmlite 129M,
+    #                                      scipy 97M, opencv 90M+79M, imageio_ffmpeg 71M
+    #     RL-ViGen extracted      0.9 GB   plus 0.23 GB for the archive beside it
+    #     apt (python3, pip, git) ~0.3 GB
+    #     payload                 0.0 GB   249 KB
+    #     ----------------------------------
+    #     steady                  ~7.3 GB
+    #
+    # pip's own cache added a further 3.0 GB, which is why run_probe.sh now passes --no-cache-dir:
+    # the cache buys nothing in a layer that `docker run --rm` discards, and it was 3 GB of peak on
+    # a filesystem at 99%. 8.0 keeps roughly 10% over the measured steady figure. This is a
+    # MEASUREMENT of one requirement set in one image; a family whose extra pip set is large (ctrl
+    # pulls its own JAX/CUDA stack) is not covered by it, and check_disk's refusal is what stands
+    # between that and a full shared disk.
+    margin = 8.0   # measured: site-packages 5.8 + RL-ViGen 1.1 + apt ~0.3, over-provisioned ~10%
     return {"cells": rows,
             # Per-cell rows report STANDALONE need; these two say how the job total differs.
             "places365_charged_once_gib": round(PLACES365_TRAIN_GIB if overlay_cells else 0.0, 2),

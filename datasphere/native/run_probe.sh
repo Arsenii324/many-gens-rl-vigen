@@ -1232,7 +1232,13 @@ python3 -m pip install --upgrade pip
 # pinned cudnn 8.9.2.26 have no common version -- so a CTRL job installs the base requirements with
 # torch filtered out, and every other job installs them unchanged.]
 python3 "$FAMILY_TOOL" filtered-requirements --cells "$cells" --requirements requirements-native.txt > /tmp/requirements-for-this-job.txt
-python3 -m pip install -r /tmp/requirements-for-this-job.txt
+# [Claude 2026-09-08] --no-cache-dir, measured rather than assumed. Installing this requirement
+# set in the pinned image on cds2 leaves 5.8 GB in site-packages (nvidia 2.8G, torch 1.6G, triton
+# 420M) AND 3.0 GB in /root/.cache/pip -- both in the container's writable layer, both on the same
+# /dev/sda2 that check_disk measures, and the cache buys nothing here because the layer is
+# discarded by `docker run --rm` the moment the cell ends. Dropping it removes 3.0 GB from the
+# peak of every cell on a filesystem that is 99% full and shared.
+python3 -m pip install --no-cache-dir -r /tmp/requirements-for-this-job.txt
 # [Claude 2026-09-02 20:05 MSK: EXCLUDING A PACKAGE BY NAME DOES NOT EXCLUDE ITS DEPENDANTS.
 # ctrl declared excluded_base_requirements ["torch","torchvision"], and pip installed torch anyway
 # -- as a dependency of captum and kornia, which stayed in the list. With our pin removed it took

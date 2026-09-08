@@ -391,7 +391,7 @@ Three terms, each from a measurement this project holds rather than an estimate:
    retain` **copies** (`shutil.copy2`, not move) the retained set into the cell output; the closing
    `tar -czf` writes a third, compressed copy into `result.tgz` while both others are still on
    disk. 1.32 GiB per RL-ViGen cell each, so ~4 GiB of the 44.
-3. **5 GiB of margin** for the payload, the pip wheels, the apt packages and the extracted
+3. **8 GiB of margin** (measured 2026-09-08, was a 5 GiB judgement under by ~2x) for the payload, the pip wheels, the apt packages and the extracted
    RL-ViGen tree.
 
 **Disk pressure mid-run is loud and survivable, by design.** `runnable/_shim/safe_checkpoint.py`
