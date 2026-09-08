@@ -418,3 +418,58 @@ That reframes the budget question, and `sgqn`'s 2381s answers it: an `rlvigen` a
 rather than dropping toward `min_frames` 4001, for one specific reason: the corruption appeared at
 ~8500 frames, and a 4500-frame budget would attest the evaluator without ever entering the region
 where the fix is under test.
+
+---
+
+# The ibac_sni frame-stack pilot INDICTS, and the instrument nearly missed it
+
+`bt1leljqi6n7osmcdb77`, 102400 frames, carrying `frame_stack=3`, A43's `lr`, A47's latent width and
+today's small-gain policy head.
+
+**It passed the criterion as first written, and it should not have.** `gaussian_boundary_fraction`
+derives the clip rate from `log_std` and assumes a ZERO MEAN. The cell had `sigma 1.073`, so the
+analytic rate was **0.351** and the check said healthy — while the evaluator's own measurement said:
+
+| | 10112 frames | 102400 frames |
+|---|---:|---:|
+| `action_clip_rate_coordinate` | 0.443 | **0.857** |
+| `action_clip_rate_vector` | 0.983 | **1.0000** |
+| `action_raw_min` | -6.63 | **-10.43** |
+
+Every action vector has a clipped coordinate. Inverting 0.857 at `sigma 1.073` puts the mean about
+**2.1 action units outside** a [-1, 1] space. The policy is degenerating through the MEAN while the
+instrument watched the VARIANCE — the same shape as the failure it was built for, where
+`PRODUCTION-RUNBOOK` watched NaN and the failure was in sigma. `read_stack_pilot.py` now prefers
+the measured quantity over the modelled one and indicts on it.
+
+## The control, and why it is not conclusive yet
+
+Across every record in the corpus at ~10k frames:
+
+| group | coord clip | vector clip |
+|---|---:|---:|
+| squashed / clamped heads — alda, curl, drq, drqv2, rad, sgqn, soda, svea | **0.000** | 0.000 |
+| ctrl | 0.242 | 0.700 |
+| ppg | 0.323 | 0.940 |
+| idaac | 0.346 | 0.949 |
+| ibac_sni | 0.443 | 0.983 |
+
+So substantial clipping is a **property of the unsquashed group**, not an ibac_sni defect — the
+eight bounded heads clip exactly zero. ibac_sni is the highest of the four, and it doubled between
+10k and 102k.
+
+**What is missing is the control at the same length.** There is no idaac or ppg run at 102400
+frames, so "0.857 at 102k" cannot yet be separated from "what any unsquashed head does at 102k on
+Door". The `ctrl` pilot (`bt1hvkmei18hasgj5bbv`) is that control — same length, same task,
+unsquashed head, and its 10k value is the lowest of the four. **Do not spend a re-pilot cell before
+it lands.**
+
+A43's disambiguation order stands if the control confirms this is ibac_sni-specific: revert `lr`
+first, re-pilot, and if the failure survives that it is the stack. Note that today's init change is
+now a fifth variable in that stack, and the 10k evidence says it moved the clip rate the wrong way
+by 0.024 — so it should be reverted alongside `lr`, not held constant.
+
+**What passed.** Finiteness, and the sigma runaway that `PRODUCTION-RUNBOOK:18` records did NOT
+recur: 0.318 -> 0.351 over the run, against the 4.3 of the historical failure. `entropy_coef=0` is
+holding. The authored three-frame stack ran 102400 frames without crashing, which is the narrow
+thing the pilot was scheduled to establish.

@@ -70,7 +70,14 @@ from metrics import gaussian_boundary_fraction  # noqa: E402
 DOOR_RANDOM_FLOOR = 1.842
 DOOR_FLOOR_SD = 2.839
 
-SATURATED_BOUNDARY = 0.60      # scripts/metrics.py's own stated threshold
+SATURATED_BOUNDARY = 0.60      # scripts/metrics.py's own stated threshold, on the ANALYTIC rate
+
+#: On the MEASURED coordinate clip rate. Set at the same 0.60 as the analytic threshold, because
+#: the quantity means the same thing -- the fraction of coordinates leaving the action space -- and
+#: an untrained sigma~1 Gaussian already sits at 0.317, so 0.60 is roughly "twice what having no
+#: policy at all costs you". A vector rate of 1.0 is indicted on its own: it means no action the
+#: agent emits is representable in the action space.
+MEASURED_CLIP_INDICTS = 0.60
 COLLAPSED_SIGMA = 0.05
 TAIL_FRACTION = 0.25           # the last quarter of the curve is "late"
 
@@ -147,6 +154,31 @@ def _series(cell: pathlib.Path) -> dict[str, list[float]]:
     return series
 
 
+def _measured_clip(cell: pathlib.Path) -> tuple[float, float] | None:
+    """The evaluator's own `policy_action_diagnostics`, averaged over the records in this cell."""
+    coords, vectors = [], []
+    for path in list(cell.glob("**/records*.jsonl")) + list(cell.glob("**/*_records.jsonl")):
+        for line in path.read_text(errors="replace").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            native = row.get("native")
+            diag = native.get("policy_action_diagnostics") if isinstance(native, dict) else None
+            if not isinstance(diag, dict) or not diag.get("available"):
+                continue
+            if isinstance(diag.get("action_clip_rate_coordinate"), (int, float)):
+                coords.append(float(diag["action_clip_rate_coordinate"]))
+            if isinstance(diag.get("action_clip_rate_vector"), (int, float)):
+                vectors.append(float(diag["action_clip_rate_vector"]))
+    if not coords:
+        return None
+    return (sum(coords) / len(coords),
+            (sum(vectors) / len(vectors)) if vectors else 0.0)
+
+
 def _pick(series: dict[str, list[float]], *names: str) -> list[float]:
     for name in names:
         for key in series:
@@ -206,7 +238,41 @@ def read(cell: pathlib.Path) -> tuple[list[tuple[str, str, str]], bool]:
                      + " -- accumulators are NaN before the first episode completes")
         checks.append(("FINITE", "pass", note))
 
-    # 2 -- saturation. The failure that finiteness does not catch.
+    # 2a -- MEASURED saturation, which outranks the analytic one wherever it exists.
+    #
+    # [Claude 2026-09-08] Added after this reader PASSED the ibac_sni pilot
+    # (bt1leljqi6n7osmcdb77) that it should have flagged. `gaussian_boundary_fraction` derives the
+    # clip rate from `log_std` and assumes a ZERO MEAN. At 102400 frames that cell had sigma 1.073,
+    # so the analytic rate was 0.351 and the check passed -- while the evaluator's own
+    # `action_clip_rate_coordinate` measured **0.857** and `action_clip_rate_vector` measured
+    # **1.0000**: every action vector had at least one clipped coordinate. `action_raw_min` reached
+    # -10.43 at sigma ~ 1, which is a mean roughly 2.1 action units outside a [-1, 1] space, not a
+    # tail event.
+    #
+    # So the policy was degenerating through the MEAN and the instrument was watching the VARIANCE.
+    # That is the same shape as the failure it was built for -- PRODUCTION-RUNBOOK watched NaN and
+    # the failure was in sigma; this watched sigma and the failure was in the mean. The lesson is
+    # to prefer the measured quantity over the modelled one wherever the measurement exists.
+    measured = _measured_clip(cell)
+    if measured is not None:
+        coord, vector = measured
+        if coord > MEASURED_CLIP_INDICTS or vector >= 0.999:
+            checks.append(("NOT SATURATED (measured)", "INDICTED",
+                           f"action_clip_rate_coordinate {coord:.3f}, vector {vector:.4f} -- the "
+                           "executed action is mostly the bound, so the policy is not controlling "
+                           "so much as saturating. Measured by the evaluator, not modelled from "
+                           "log_std, and it outranks the analytic check below."))
+            indicted = True
+        else:
+            checks.append(("NOT SATURATED (measured)", "pass",
+                           f"action_clip_rate_coordinate {coord:.3f}, vector {vector:.4f}"))
+    else:
+        checks.append(("NOT SATURATED (measured)", "UNREADABLE",
+                       "no action_clip_rate_coordinate in the records -- the analytic check below "
+                       "assumes a zero mean and cannot see a mean that has run off-centre"))
+
+    # 2b -- analytic saturation, from log_std. Kept because it moves FIRST: sigma drifts before the
+    # executed clip rate does, so this is the earlier warning even though it is the weaker one.
     log_std = _pick(series, "mean_log_std", "log_std")
     if log_std:
         early = gaussian_boundary_fraction([log_std[0]])
