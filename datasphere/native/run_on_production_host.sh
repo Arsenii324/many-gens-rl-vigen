@@ -237,7 +237,11 @@ DOCKER_GPU_ARGS+=(-e "NVIDIA_DRIVER_CAPABILITIES=${NATIVE_DRIVER_CAPABILITIES:-c
     _drv="${_drv%%$'\n'*}"
     _drv="${_drv//[[:space:]]/}"
     if [[ -n "$_drv" ]]; then
-      _gpucomp="$(ldconfig -p 2>/dev/null | awk -v n="libnvidia-gpucomp.so.$_drv" '$1 == n {print $NF; exit}')"
+      # No `exit` in the awk program: it would quit early, `ldconfig -p` would take SIGPIPE, and
+      # `pipefail` + `set -e` would abort the wrapper with 141 -- the same defect as the `head -1`
+      # above, which is why it recurred here within ten lines of being fixed there. awk reads the
+      # whole stream and keeps only the first match.
+      _gpucomp="$(ldconfig -p 2>/dev/null | awk -v n="libnvidia-gpucomp.so.$_drv" '$1 == n && !seen {print $NF; seen=1}')"
       if [[ -n "$_gpucomp" && -r "$_gpucomp" ]]; then
         DOCKER_GPU_ARGS+=(--mount "type=bind,src=$_gpucomp,dst=/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.$_drv,readonly")
         echo "renderer: injecting libnvidia-gpucomp.so.$_drv read-only (toolkit too old to do it)" >&2
