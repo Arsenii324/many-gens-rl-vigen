@@ -63,6 +63,7 @@ W="${NATIVE_RUN_DIR:-$HOME/rlvigen-runs/card${CARD}-$(date +%Y%m%d-%H%M%S)}"
 IMAGE="${NATIVE_HELPER_IMAGE:-python:3.11-slim}"
 CELL_NAME="cell-c${CARD}-$$"
 EXCL="cell-c${CARD}-exclusivity-$$"
+DISK="cell-c${CARD}-disk-$$"
 YIELD="cell-c${CARD}-yield-$$"
 
 mkdir -p "$W/native-work" "$W/native-out" "$W/mirror" || exit 2
@@ -77,7 +78,7 @@ reaper_pid=""
 stand_down() {
   echo "=== STEP 4: stand down"
   [[ -n "$reaper_pid" ]] && kill "$reaper_pid" 2>/dev/null
-  docker stop "$EXCL" "$YIELD" >/dev/null 2>&1
+  docker stop "$EXCL" "$YIELD" "$DISK" >/dev/null 2>&1
   # `--rm` removal is asynchronous after `docker stop` returns, so an immediate check races it and
   # reports a leak that is not one -- observed 2026-09-09. Settle first, then report.
   local leaked=""
@@ -150,6 +151,47 @@ echo "  both armed and alive"
   fi
 ) &
 reaper_pid="$!"
+
+# [Claude 2026-09-09] DISK WATCH. `run_on_production_host.sh` checks free space ONCE, before the
+# container starts, and a cell then writes for hours: pip into the container layer, checkpoints in
+# triplicate, Places365 for the families that need it. This filesystem is SHARED and sits at 99%
+# used (317 GB free of 20 TB), and that free space is not ours to spend.
+#
+# The floor is DERIVED, not typed, from two independent concerns, whichever binds first:
+#   * our own overconsumption -- free-at-arm minus an allowance of 4x what a cell is estimated to
+#     need, so a runaway is caught well before it matters;
+#   * the machine itself -- an absolute floor below which nobody should be writing regardless of
+#     whose fault it is.
+# It stops OUR cell by writing the same sentinel the GPU co-tenancy watch uses. Somebody else's job
+# failing because we filled a shared disk is the outcome this exists to prevent, and by the time a
+# human reads a warning the space is already gone.
+_free_gib="$(df -PBG "$W" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')"
+DISK_ALLOWANCE_GIB="${NATIVE_DISK_ALLOWANCE_GIB:-40}"
+DISK_ABS_FLOOR_GIB="${NATIVE_DISK_ABS_FLOOR_GIB:-50}"
+if [[ -n "$_free_gib" ]]; then
+  DISK_FLOOR_GIB=$(( _free_gib - DISK_ALLOWANCE_GIB ))
+  # if/fi, not `[[ ]] && assign`: a false test makes that line return non-zero, which
+  # aborts the script under `set -e`. This file does not set -e today; the next edit might.
+  if [[ "$DISK_FLOOR_GIB" -lt "$DISK_ABS_FLOOR_GIB" ]]; then
+    DISK_FLOOR_GIB="$DISK_ABS_FLOOR_GIB"
+  fi
+else
+  DISK_FLOOR_GIB="$DISK_ABS_FLOOR_GIB"
+fi
+echo "disk:           ${_free_gib:-?} GiB free, floor ${DISK_FLOOR_GIB} GiB (allowance ${DISK_ALLOWANCE_GIB})"
+docker run -d --rm --name "$DISK" \
+  -v "$REPO:/repo:ro" -v "$W/native-work:/work" -w /repo "$IMAGE" \
+  python3 scripts/watch_disk_headroom.py --path /work --floor-gib "$DISK_FLOOR_GIB" \
+    --sentinel /work/yield.sentinel --max-seconds "$WATCH_SECONDS" \
+    --must-cover-seconds "$MUST_COVER" --interval 60 >/dev/null \
+  || { echo "ABORTING: the disk watch refused to arm."; exit 4; }
+sleep 5
+if [[ -z "$(docker ps -q --filter "name=^${DISK}$")" ]]; then
+  echo "ABORTING: the disk watch is not running. It refused:"
+  docker logs "$DISK" 2>&1 | tail -6
+  exit 4
+fi
+echo "  disk watch armed"
 
 echo "=== STEP 3: the cell"
 cd "$REPO" || exit 2
