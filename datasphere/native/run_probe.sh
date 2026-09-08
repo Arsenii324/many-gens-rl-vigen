@@ -877,6 +877,36 @@ export PAYLOAD_SHA256="$payload_sha256" ASSET_SHA256="$asset_sha256"
 export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
 apt-get -qq update
 apt-get -qq install -y python3 python3-pip git libglvnd0 libgl1 libegl1 libglew-dev libosmesa6 libglib2.0-0 libsm6 libxext6 libxrender1 time
+# [Claude 2026-09-09] REGISTER THE NVIDIA EGL VENDOR, and refresh the loader cache.
+#
+# Two separate omissions by libnvidia-container 1.13.2 have to be repaired here, and neither
+# announces itself:
+#
+#   1. No `10_nvidia.json`. libglvnd picks an EGL vendor by reading `egl_vendor.d/*.json`. The
+#      toolkit normally mounts the driver copy; this one does not, so the directory holds only
+#      `50_mesa.json` and EGL silently resolves to Mesa `llvmpipe` -- CPU rasterisation, which is
+#      what killed the 2026-09-08 cell after a two-and-a-half hour bootstrap.
+#   2. The loader cache predates the `libnvidia-gpucomp` bind mount the wrapper adds, so `ldconfig`
+#      has to run before anything dlopens the NVIDIA vendor.
+#
+# `__EGL_VENDOR_LIBRARY_FILENAMES` is libglvnd's documented override: it loads exactly the listed
+# files and enumerates nothing else. Preferred over deleting `50_mesa.json`, because deleting Mesa
+# would make a broken NVIDIA path fail as "no vendor at all" instead of failing loudly as itself.
+if [[ -e /dev/nvidiactl || -n "${NVIDIA_DRIVER_CAPABILITIES:-}" ]]; then
+  mkdir -p /etc/glvnd/egl_vendor.d
+  printf '%s\n' '{"file_format_version":"1.0.0","ICD":{"library_path":"libEGL_nvidia.so.0"}}' \
+    > /etc/glvnd/egl_vendor.d/10_nvidia.json
+  export __EGL_VENDOR_LIBRARY_FILENAMES=/etc/glvnd/egl_vendor.d/10_nvidia.json
+  ldconfig 2>/dev/null || true
+  echo "=== NATIVE_EGL_VENDOR_REGISTERED /etc/glvnd/egl_vendor.d/10_nvidia.json ===" >&2
+  if ldd /usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.* 2>/dev/null | grep -q "not found"; then
+    echo "=== NATIVE_EGL_DEPENDENCY_MISSING ===" >&2
+    ldd /usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.* 2>/dev/null | grep "not found" | sed 's/^/    /' >&2
+    echo "    The NVIDIA EGL vendor cannot load. Rendering would fall back to software, and the" >&2
+    echo "    renderer check below will refuse. If this names libnvidia-gpucomp, the host container" >&2
+    echo "    toolkit is older than 1.13.5 and run_on_production_host.sh should have injected it." >&2
+  fi
+fi
 python3 -V
 tar --no-same-owner -xzf "$code" -C "$work"
 cd "$work"

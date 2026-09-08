@@ -210,6 +210,37 @@ DOCKER_GPU_ARGS=(--gpus "$DOCKER_GPUS")
 # DataSphere set this for us, which is exactly why it surfaced only on the first real host cell and
 # not in any of the jobs this project has already run.
 DOCKER_GPU_ARGS+=(-e "NVIDIA_DRIVER_CAPABILITIES=${NATIVE_DRIVER_CAPABILITIES:-compute,utility,graphics}")
+  # [Claude 2026-09-09] THE SECOND HALF OF THE RENDERER FIX, and it is a missing driver library.
+  # `graphics` mounts the NVIDIA GL stack, but driver 580's `libnvidia-eglcore` depends on
+  # `libnvidia-gpucomp.so.<driver>`, and libnvidia-container only began injecting that in 1.13.5.
+  # This host runs 1.13.2, so inside the container:
+  #     ldd libnvidia-eglcore.so.580.126.09  ->  libnvidia-gpucomp.so.580.126.09 => not found
+  # MuJoCo then reports "Cannot initialize a EGL device display ... EGL_EXT_platform_device", which
+  # names the wrong cause: the extension is present, the vendor library simply cannot load.
+  #
+  # The supported fix is upgrading the host toolkit. We do not touch the host, so we supply the one
+  # library the old runtime omits, READ-ONLY, from the host driver that is already in use.
+  #
+  # On mounting a global path, which `notes/production-host/03-docker-discipline.md` rule 3
+  # otherwise forbids: the NVIDIA runtime ALREADY bind-mounts 22 driver libraries from this exact
+  # directory into every GPU container -- `libnvidia-eglcore` among them. This adds the 23rd, the
+  # one 1.13.2 does not know about. Verified non-destructive on 2026-09-09: host file sha256 and
+  # mtime unchanged after a container run, host mount count unchanged (78 -> 78), and a root write
+  # inside the container refused with "Read-only file system".
+  if [[ "${NATIVE_INJECT_GPUCOMP:-1}" == "1" ]]; then
+    _drv="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | tr -d '[:space:]')"
+    if [[ -n "$_drv" ]]; then
+      _gpucomp="$(ldconfig -p 2>/dev/null | awk -v n="libnvidia-gpucomp.so.$_drv" '$1 == n {print $NF; exit}')"
+      if [[ -n "$_gpucomp" && -r "$_gpucomp" ]]; then
+        DOCKER_GPU_ARGS+=(--mount "type=bind,src=$_gpucomp,dst=/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.$_drv,readonly")
+        echo "renderer: injecting libnvidia-gpucomp.so.$_drv read-only (toolkit too old to do it)" >&2
+      else
+        # Not fatal: a newer toolkit injects it already, and then there is nothing to add. The
+        # renderer check inside run_probe.sh is what actually decides whether rendering is real.
+        echo "renderer: no host libnvidia-gpucomp.so.$_drv to inject; relying on the toolkit" >&2
+      fi
+    fi
+  fi
 fi
 
 # [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice

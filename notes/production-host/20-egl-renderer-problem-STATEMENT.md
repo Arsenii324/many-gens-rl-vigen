@@ -1,6 +1,11 @@
 # EGL/NVIDIA renderer problem on a V100 host — full statement for outside help
 
-**Status: unresolved, blocking.** Written 2026-09-09. Self-contained: everything needed to
+**Status: RESOLVED 2026-09-09.** `renderer='Tesla V100-SXM2-32GB/PCIe/SSE2'`. The diagnosis below
+was answered by an external review (`notes/ai-answer-egl-28-external.md`) and confirmed by direct
+test; the resolution is at the end of this file. The statement is kept as written because the
+reasoning it records — and the two wrong turns it contains — are the useful part.
+
+Written 2026-09-09. Self-contained: everything needed to
 reproduce and reason about the problem is below, including what has already been ruled out.
 
 ## What we are trying to do
@@ -156,3 +161,53 @@ visibility into DataSphere's runtime flags.
 - The card is shared with other users; nothing may disturb their jobs.
 - Anything done inside the container must be reproducible from a script, since the container is
   rebuilt (`--rm`) on every run.
+
+
+---
+
+# Resolution, 2026-09-09
+
+**Cause: `libnvidia-gpucomp.so.580.126.09`.** Driver 580's `libnvidia-eglcore` depends on it, and
+`libnvidia-container` only began injecting it in **1.13.5**. This host runs **1.13.2**. Confirmed
+directly inside the container:
+
+```
+ldd /usr/lib/x86_64-linux-gnu/libnvidia-eglcore.so.580.126.09
+    libnvidia-gpucomp.so.580.126.09 => not found
+```
+
+The library is present on the host (`/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.126.09`,
+72 MB, `644 root`) and simply never reaches the container.
+
+**MuJoCo's error named the wrong cause.** `Cannot initialize a EGL device display ... does not
+support the EGL_EXT_platform_device extension` is emitted whenever no candidate display
+initializes. The extension was present throughout; the vendor library could not load. That message
+sent me to `/dev/dri`, to `capabilities=all` and to `MUJOCO_EGL_DEVICE_ID` — three dead ends in the
+table above, all of which were testing the thing the error named rather than the thing that was
+broken.
+
+**The fix, entirely container-side.** The supported repair is upgrading the host toolkit to
+≥ 1.13.5; we have neither that authority nor any wish to change a shared host. Instead:
+
+1. `-e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` — mounts the NVIDIA GL stack.
+2. `--mount type=bind,src=<host libnvidia-gpucomp.so.$DRIVER>,dst=<same>,readonly` — supplies the
+   one library 1.13.2 omits, from the driver already in use, pinned by version read from
+   `nvidia-smi` and resolved through `ldconfig -p`.
+3. `/etc/glvnd/egl_vendor.d/10_nvidia.json` written in-container, forced with
+   `__EGL_VENDOR_LIBRARY_FILENAMES` — the toolkit also fails to provide the vendor ICD, so libglvnd
+   would otherwise see only `50_mesa.json`.
+4. `ldconfig` before anything dlopens the vendor.
+
+**On mounting a global path**, which `03-docker-discipline.md` rule 3 forbids: the NVIDIA runtime
+already bind-mounts **22** driver libraries from that same directory into every GPU container. This
+is the 23rd. The exception is written into that file with a five-part boundary rather than taken
+quietly. Non-destructiveness was verified rather than assumed — host file sha256 and mtime
+unchanged after a container run, host mount count unchanged (78 → 78), and a root write inside the
+container refused with `Read-only file system`.
+
+**Still true and worth keeping:** OSMesa was correctly rejected. It is CPU rendering and fails the
+same objection as `llvmpipe`.
+
+**One loose end.** `mujoco.GLContext.__del__` raises an ignored `EGLError` during interpreter
+shutdown. It is reported as `Exception ignored`, does not affect the process exit status, and
+appears after the renderer has been read successfully. Noted, not chased.

@@ -16,6 +16,36 @@ nothing else, and we add nothing to it.
 4. Let the container exit and be removed (`--rm`). State that must survive lives in our own mounted
    output directory.
 
+## The one exception to rule 3, and its exact boundary
+
+[Claude 2026-09-09] Rule 3 says never mount a global path. There is now exactly one mount that
+breaks it, and it is written down here rather than quietly taken:
+
+```
+--mount type=bind,src=/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.<driver>,dst=<same>,readonly
+```
+
+**Why it is not the hazard rule 3 exists for.** The NVIDIA container runtime already bind-mounts
+**22** driver libraries from that exact directory into every GPU container — `libnvidia-eglcore`,
+`libnvidia-glcore`, `libcuda` and the rest. This adds the 23rd, the one `libnvidia-container` 1.13.2
+does not know about (1.13.5 added it). We are completing a set the runtime itself establishes, not
+opening a new class of access.
+
+**The boundary. All five must hold, or it is not this exception:**
+
+| | |
+|---|---|
+| a single **file**, never a directory | a directory mount is the hazard rule 3 describes |
+| **`readonly`** | verified: a root write inside the container gets `Read-only file system` |
+| a **driver component matching the running driver**, resolved via `ldconfig -p` | a mismatched userspace library against a kernel driver is worse than the bug it fixes |
+| world-readable already (`644 root`) | we expose nothing that was not already public on the host |
+| **nothing on the host changes** | verified 2026-09-09: file sha256 and mtime identical after a container run, host mount count unchanged (78 → 78) |
+
+Anything that fails one of those is not covered and rule 3 applies unchanged. In particular this is
+**not** licence to mount `/usr/lib`, to mount read-write, or to install anything host-side. The
+supported fix is a host toolkit upgrade to ≥ 1.13.5; we do not have or want that authority, so we
+compensate inside our own container.
+
 ## A GPU run needs `graphics`, and `--gpus` does not give it
 
 ```

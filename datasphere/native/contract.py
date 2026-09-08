@@ -142,6 +142,15 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # run_on_production_host.sh and by nothing else, so a payload from before this paired with a host
 # script from after it would mount a read-only venv the runner never activates and then try to pip
 # install into a container that has one -- slow, confusing, and not a crash.
+# NOT bumped to 20 on 2026-09-09 for the EGL renderer repair, and the reasoning is recorded because
+# the criterion matters more than the number. `run_probe.sh` now writes the NVIDIA EGL ICD and runs
+# `ldconfig`; `run_on_production_host.sh` injects `libnvidia-gpucomp`. That is a paired change, which
+# usually earns a bump. The test for a bump is whether a mismatched pair fails SILENTLY, and here
+# neither direction does: an old payload under the new wrapper gets Mesa and the renderer check
+# refuses; a new payload under an old wrapper gets an unloadable NVIDIA vendor and the same check
+# refuses, after NATIVE_EGL_DEPENDENCY_MISSING names the missing library. Both are loud, so the
+# number stays where it is. Bumping reflexively would invalidate every built payload for no gain and
+# would make the contract mean less each time it moved.
 RUNNER_CONTRACT = 19
 
 
