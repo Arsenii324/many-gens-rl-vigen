@@ -17,6 +17,8 @@ and the specifics are where the harm is.
 | [`05-privacy-and-non-alarm.md`](05-privacy-and-non-alarm.md) | what not to look at, and why looking is itself a hazard |
 | [`06-before-any-action.md`](06-before-any-action.md) | the mandatory pre-action procedure |
 | [`07-this-repo-s-own-hazards.md`](07-this-repo-s-own-hazards.md) | **specific dangerous defaults in OUR code**, read before running any of it |
+| [`08-gpu-assignment-and-time.md`](08-gpu-assignment-and-time.md) | **the GPU assignment schedule**, and why every time must be stated in UTC+3 |
+| [`09-standing-cautions.md`](09-standing-cautions.md) | the dense list — a floor for judgement, and one that must keep growing |
 
 ## The three that override everything else
 
@@ -26,6 +28,10 @@ and the specifics are where the harm is.
    outside a container, no conda, no drivers, no package manager of any kind. See `02`.
 3. **Never cause another user's process to fail.** Not by OOM, not by CUDA OOM, not by filling a
    disk, not by taking every core, not by claiming a GPU someone is using. See `04`.
+4. **Use only the GPU assigned to you, on the machine and day it was assigned.** Idle is not free,
+   and a similar name is not the same machine. See `08`.
+5. **No list here is complete.** `09` is a floor for judgement, not its boundary, and it is meant to
+   grow — a new hazard gets added in the same commit as its fix.
 
 ## If something blocks
 

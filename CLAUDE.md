@@ -23,6 +23,19 @@ replacement for reading:
 4. **A block is a stop, not a puzzle.** A busy GPU, a missing permission, an unreadable path: do
    not work around it. It probably encodes context nobody wrote down.
 
+**The GPU is assigned per machine, per card, per day, and the day is counted in UTC+3.** On record:
+**8 September — `cds2`, `V100-1`.** Not another card, not another machine, not an idle one. A
+similar hostname is never a rename or an equivalent machine. This shell reports **UTC**; the owner
+counts **UTC+3**, so state both and convert before reasoning about a window — near midnight they
+are different days, which is when assignments change hands. Details and the resolved window:
+[`notes/production-host/08-gpu-assignment-and-time.md`](notes/production-host/08-gpu-assignment-and-time.md).
+
+**No hazard list here is complete, and the practice is expected to develop rather than stall.**
+[`notes/production-host/09-standing-cautions.md`](notes/production-host/09-standing-cautions.md) is
+the dense standing list — a floor for judgement, never its boundary. An action it does not name is
+*unexamined*, not safe. When a new hazard or near miss is found, **add it there in the same commit
+as the fix**; a caution list that stopped growing has stopped describing the system.
+
 Two specifics that have already nearly caused harm and are easy to miss:
 
 - `run_on_production_host.sh` defaults to **`--gpus all`**, which takes *both* V100s. Always set
