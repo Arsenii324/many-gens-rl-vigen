@@ -10,51 +10,57 @@ revisions, so they land as **one batch** — the difference between one attestat
 
 ---
 
-## 1. `ibac_sni` base `procs`: the REASON is stale, the VALUE is not
+## 1. `ibac_sni` `procs` — one line of stale prose, and nothing else
 
-**First conclusion, and it was wrong.** I read `families.json`'s base note — dated 2026-09-02,
-reason: *"With 2 it dies at torch_rl.PPOAlgo's parallel env setup with EOFError"* — alongside the
-`v100` reason recording that the spawn/factory repair landed and *"the bounded Linux/EGL procs=16
-functional smoke passed on gt4i.1 (`bt1djai23kme336auat4`)"*, and concluded the base value was a
-leftover that should be raised to 16.
+This item shrank twice under challenge. Both earlier versions are kept, because the way they were
+wrong is the useful part.
 
-**Physical evidence says otherwise.** From `resources.json` in retained cells:
+**Version 1: "base `procs` is stale, raise it to 16."** Read from `families.json`'s base note
+(dated 2026-09-02, blaming an EOFError) plus the `v100` reason (recording that the spawn/factory
+repair passed a `procs=16` smoke). Wrong: `resources.json` from retained cells shows `gt4.1` has
+**4** logical CPUs and `gt4i.1` has **8**. Neither DataSphere tier has 16. The repair made
+`procs>1` runnable; it did not make 16 appropriate on 4 cores. **The value stays 1 there.**
 
-| tier | `logical_cpu_count` | families on it |
-|---|---:|---|
-| `gt4.1` | **4** | ibac_sni, idaac, ppg |
-| `gt4i.1` | **8** | ctrl, alda, dmc_gb, rlvigen |
+**Version 2: "the `v100` override to 16 assumes >=16 cores, unverified here."** Also wrong.
+`notes/remote-infra.txt` is a captured session from the production host:
 
-Neither DataSphere tier has 16 cores. `procs=16` there is 4x or 2x oversubscription. The repair
-made `procs>1` *runnable*; it did not make 16 *appropriate* on 4 CPUs.
+    varaksin_as@cds2:~$ nproc
+    16
+    CPU(s): 16   Core(s) per socket: 8   Socket(s): 2   Intel Xeon Gold 6154
+    Mem: 125 total, 113 available
 
-**So both halves need stating separately.**
+`procs=16` is grounded in a measured core count from the real machine.
 
-- **The recorded reason is stale and must be replaced.** The EOFError it cites was repaired, and
-  leaving it as the justification is the same stale-prose defect this project keeps finding — it
-  invites exactly the wrong conclusion I drew from it. Re-derive it from core count.
-- **The value stays 1** on DataSphere.
-- **The `v100` override to 16 assumes the production host has >=16 cores. That is unverified here**
-  and belongs in the host runbook's measurement list beside renderer parity and throughput.
+**And the pilot is already scheduled.** `notes/RUNNING-ON-PRODUCTION-HOST.md` step 5: *"Run the
+exact IBAC-SNI competence pilot. Use the intended production settings (`procs=16`, Impala trunk,
+`beta=1e-4`, entropy `0`) and predeclared internal health/learning criteria."*
+`notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md` gate 1 names the same thing as its cheapest test, and
+`production_gates.py` carries it as an OWNER gate. It is exactly the "once the production machine
+exists" series, and it was already in it.
 
-**The structural consequence stands, and gets sharper.** DataSphere cells cannot reproduce
-production's update structure, because production's `procs=16` needs cores DataSphere does not
-have:
+**What actually remains, and it is one thing:** the base note still justifies `procs=1` with a
+fault that was subsequently repaired. That is stale prose pointing at the wrong action — it is what
+produced version 1 above. **Re-derive the reason from the tier's core count (4 on `gt4.1`).** The
+value does not change.
+
+**Worth keeping regardless of the item**, because it is not written down elsewhere in these terms:
+DataSphere cannot reproduce production's update structure, and the arithmetic says why.
 
 | | rollout | minibatches | grad steps/rollout | updates/frame |
 |---|---:|---:|---:|---:|
 | DataSphere, `procs=1` | 128 | **1 — `--batch-size 256` exceeds the rollout, so it is inert** | 4 | 0.0312 |
 | production, `procs=16` | 2048 | 8 | 32 | 0.0156 |
 
-Full-batch updates at twice production's update-to-data ratio. Therefore **the "exact-final IBAC
-competence" pilot review 27 §10 asks for cannot be run pre-production at all** — on DataSphere it
-would exercise a different optimizer path. It requires the V100. That is a scheduling fact for the
-owner, not something to fix in this repository.
+Full-batch updates at twice production's update-to-data ratio. This is the mechanism behind the
+already-scheduled requirement that the competence pilot run on the V100 — the runbook says to do it
+there; this says what would be measured wrong if it were done here instead.
 
-**Method note, worth more than the item.** I derived a change from two pieces of project prose and
-the physical evidence contradicted it. The prose was stale in a way that pointed at the wrong
-action, and one `resources.json` settled it. Prefer the artifact over the note describing it —
-including when the note is this project's own.
+**Method note, and it is the whole lesson of this item.** Three times in this session I declared
+something unexamined or unverified that the project had already examined: `BOOTSTRAP_SECONDS`
+(prose vs code), reward normalization (12 review files discuss it), and now this (two docs, one of
+them a terminal capture from the host). Asserting absence is a claim like any other and needs the
+same evidence as asserting presence. **Read the docs that would close a gap before reporting the
+gap.**
 
 ## 2. `ibac_sni` policy-head initialization → small-gain
 
