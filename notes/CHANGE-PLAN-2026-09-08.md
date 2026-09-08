@@ -586,3 +586,39 @@ use, on a threshold I invented, would be exactly the outcome-dependent tuning ga
 
 **Pre-production is therefore complete when the seven attests and the `ctrl` frame-stack pilot
 land — about 10:05 — not when the ibac_sni arms finish at 12:10.**
+
+---
+
+# The ctrl frame-stack pilot PASSES, and it sharpens the ibac_sni reading
+
+`bt1ee0lr7n3gu2sqe3le`, 102400 frames, `frame_stack=3`, no `XLA_FLAGS` — the third attempt, after
+two were killed by a stall watchdog that was reading a stdout buffer's flush cadence rather than
+the process. Every check passes:
+
+    FINITE                     5 loss series, 24 rows -- a real trajectory, not one point
+    NOT SATURATED (measured)   action_clip_rate_coordinate 0.000, vector 0.0000
+    NOT SATURATED (analytic)   boundary fraction 0.318 -> 0.326, sigma 1.02
+    NOT COLLAPSED              sigma 1.018
+    SEPARATION                 late-window return 17.36 against the 1.842 floor, +5.47 floor-sd
+
+The separation row is informational by design and is still worth stating: **+5.47 floor-sd is real
+learning**, not merely survival, at 1.3% of `ctrl`'s own training horizon.
+
+**The authored three-frame stacking works.** Both baselines that had no stacking mechanism on the
+Door path before 2026-09-08 have now trained with authored stacks — `ibac_sni` for 102400 frames
+finite and stable, `ctrl` for 102400 frames while learning. That is what the gate asked, and it is
+met for both.
+
+**And the contrast is the sharpest evidence yet that `ibac_sni`'s saturation is its own:**
+
+| at 102400 frames | coord clip | vector clip | late return |
+|---|---:|---:|---:|
+| `ctrl` | **0.000** | 0.0000 | **17.36** |
+| `idaac` | 0.384 | 0.962 | — |
+| `ibac_sni` | **0.857** | 1.0000 | 1.80 (at floor) |
+
+Three unsquashed continuous heads, same task, same length. One clips nothing and learns, one sits
+flat at its 10k value, one doubles and stays at the floor. Whatever drives `ibac_sni` is not the
+head type, not the task and not the horizon — which is exactly what gate 1 exists to test at
+`procs=16` on the host, and exactly why tuning it here against a `procs=1` regime would have been
+tuning against the wrong thing.
