@@ -23,6 +23,17 @@ replacement for reading:
 4. **A block is a stop, not a puzzle.** A busy GPU, a missing permission, an unreadable path: do
    not work around it. It probably encodes context nobody wrote down.
 
+**The upper-bound rule, which comes before the rest.** If you do not know an **upper bound** on
+what a run will occupy, do not start it. If anything else is on the GPU, CPU, RAM or disk —
+someone else's, not certainly yours, or even certainly yours — and you are not sure the remainder
+covers your **whole** run, do not start yours. Peaks combine and are transient: CUDA OOM happens at
+the combined peak during loading, a phase switch, batch accumulation or autotuning, not at typical
+usage. A `ctrl` cell here has already asked for a transient 8.27 GiB inside XLA autotuning
+mid-run. An extrapolation is not a bound and a past observation is not a bound.
+[`notes/production-host/10-resource-upper-bound-rule.md`](notes/production-host/10-resource-upper-bound-rule.md).
+**We do not satisfy this for VRAM today** — six of seven families have no VRAM measurement at all —
+so no production cell may start on a shared GPU until that is closed.
+
 **The GPU is assigned per machine, per card, per day, and the day is counted in UTC+3.** On record:
 **8 September — `cds2`, `V100-1`.** Not another card, not another machine, not an idle one. A
 similar hostname is never a rename or an equivalent machine. This shell reports **UTC**; the owner

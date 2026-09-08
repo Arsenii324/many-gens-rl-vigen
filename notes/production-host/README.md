@@ -19,6 +19,17 @@ and the specifics are where the harm is.
 | [`07-this-repo-s-own-hazards.md`](07-this-repo-s-own-hazards.md) | **specific dangerous defaults in OUR code**, read before running any of it |
 | [`08-gpu-assignment-and-time.md`](08-gpu-assignment-and-time.md) | **the GPU assignment schedule**, and why every time must be stated in UTC+3 |
 | [`09-standing-cautions.md`](09-standing-cautions.md) | the dense list — a floor for judgement, and one that must keep growing |
+| [`10-resource-upper-bound-rule.md`](10-resource-upper-bound-rule.md) | **the upper-bound rule** — it subsumes much of `04`, and we do not yet satisfy it for VRAM |
+
+## The rule that comes before the others
+
+**If you do not know an upper bound on what you will occupy, do not run it. If anything else is on
+the GPU, CPU, RAM or disk — theirs, or not certainly yours, or even certainly yours — and you are
+not sure the remainder covers your whole run, do not run yours.** Peaks combine, and CUDA OOM
+happens at the combined peak, not at typical usage. [`10`](10-resource-upper-bound-rule.md).
+
+**We do not currently satisfy this for VRAM**: six of seven families have no VRAM measurement at
+all. That blocks the first shared-GPU cell until it is closed.
 
 ## The three that override everything else
 
