@@ -87,6 +87,41 @@ A47.
 **Caveat:** measured at 10k frames on near-untrained policies. Re-measure at production length;
 `log_std` moves.
 
+### FALSIFIED 2026-09-08 by job `bt116j2650ohtkj8ev7q`. The change is kept; its justification is not.
+
+The cell ran WITH the small-gain init -- verified by grepping the shipped payload, not assumed --
+and the clip rate did not fall:
+
+| | old init | new init |
+|---|---:|---:|
+| `action_clip_rate_coordinate` | 0.468 | **0.4925** |
+| analytic `boundary_fraction` from `mean_log_std` | 0.330 | 0.3176 |
+| excess | +0.138 | **+0.175** |
+
+So the prediction that motivated the change was wrong, and the direction is if anything slightly
+against it. The mechanism reasoning survives: `action_raw_min` reaches **-6.63** at
+`sigma ~ 1.0`, and over 17,500 coordinate draws from N(0,1) the expected extreme is |z| ~ 4.1, so
+that value needs a genuine **mean offset**, not a tail event. The mean really is off-centre. What
+is falsified is that the INITIALIZATION is what puts it there: at 10112 frames the head has taken
+~79 updates, and where the mean sits is by then a learned quantity, not an inherited one.
+
+**Kept, on the argument that does not depend on the falsified prediction.** `torch_rl`'s
+`initialize_parameters` was written for a head feeding a discrete softmax, where output scale is
+nearly irrelevant; ours is a Gaussian mean, where output scale *is* the action. That is the same
+condition-transplanted-across-a-domain-boundary shape as A43 and A47, and it holds independently of
+what the clip rate did. `orthogonal(0.01)` is also what every other continuous-action baseline here
+uses. Keeping a change whose stated benefit did not appear is only defensible because the
+justification was never only the benefit -- and that has to be said out loud rather than quietly
+re-labelled.
+
+**What is now open, and it is a better question than the one I asked.** Why does ibac_sni's action
+mean run off-centre within eighty updates when idaac's and ppg's do not? Candidates, none tested:
+the VIB bottleneck's KL term acting on a 256-d latent the head reads directly; the absence of any
+observation normalization beyond `/255`; or reward normalization -- ibac_sni trains on RAW reward
+while idaac and ppg both normalize, so its advantage scale is whatever Door's returns happen to be.
+The 102400-frame pilot (`bt1leljqi6n7osmcdb77`) is 10x longer and will show whether the offset
+grows, stalls or decays.
+
 ---
 
 ## 3. `--batch-size` -- WITHDRAWN. It is correct in production; only the DataSphere tier degenerates
