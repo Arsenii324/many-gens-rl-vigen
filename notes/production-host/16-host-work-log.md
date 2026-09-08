@@ -107,7 +107,10 @@ cache and **every other user on a ~20-user machine**. That reserve is a judgemen
 measurement. Two cells packed, or one `ctrl` cell whose real peak exceeds its extrapolation, is
 how we would evict someone else's process.
 
-**VRAM.** Card 1 held **17268 MiB at 0% utilisation** all day — allocated, not computing, and not
+**VRAM.** Card 1 held **17268 MiB at 0% utilisation** in the morning; by 17:02 a different job was
+resident at **14501 MiB and computing at 88% mean over a 30-minute window**. Neither is ours to
+clear, and the second is the one that matters: the binding constraints turned out to be SMs and
+POWER (260–282 W against a 300 W limit), not memory. Original note follows — allocated, not computing, and not
 ours to clear. 15500 MiB remain. No production-geometry VRAM peak has ever been measured; the
 figures we have (`sgqn` 7142 MiB the largest) come from smaller budgets on different hardware and
 must not be scaled. CUDA peaks are transient and land at loading, epoch switches and batch

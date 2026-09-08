@@ -40,12 +40,12 @@ So disk is consumed at rungs 3 and 5 even though neither trains anything.
 
 | rung | state | what actually happened |
 |---|---|---|
-| 0 read-only | **done** | one filesystem, 325→321 GB free at 99%; card 1 holds 17268 MiB at 0% util; 125 GB RAM, 111 available |
+| 0 read-only | **done** | one filesystem, 325→321 GB free at 99%; card 1 held 17268 MiB at 0% util at 11:20, then 14501 MiB at 88% mean over a 30-min window from 17:02 — the job restarted and is now COMPUTING; 125 GB RAM, 111 available |
 | 1 wrapper dry run | **done, and it found two more defects** | payload built and `verify-payload` passed (exit 0) in a container; then the dry run at 600k production scale passed every guard for `drqv2:1` (25 GB) and `svea:1` (70 GB, Places365 included), and `DOCKER_GPUS=none` was proven to omit the flag rather than pass an invalid value |
 | 2 pinned image present? | **done — it was ABSENT** | raised as the plan requires, then pulled by digest with the cost stated (~2 GB, 323→321 GB). `sha256:94c1577b…` confirmed, Ubuntu 22.04.3, no `python3` (correct for a runtime image) |
 | 3 container, no GPU, nothing installed | **done, and it found a blocker** | see below |
 | 4 GPU visible, no compute | **not started** | |
-| 5 first CUDA allocation | **blocked** | card 1's 17268 MiB is not ours to clear, and no production-geometry VRAM peak has been measured |
+| 5 first CUDA allocation | **blocked** | card 1's ~14.5 GiB is not ours to clear, and no production-geometry VRAM peak has been measured |
 | 6–7 real cells | **blocked** | on rung 5 and on the owner items |
 
 **Rung 3 was supposed to be a formality and was not.** Running the documented provisioning path in
@@ -72,7 +72,8 @@ it is why the remaining rungs get run rather than reasoned about.
 
 ## What actually blocks rungs 4-7, stated so it is not mistaken for work left undone
 
-1. **Card 1 holds 17268 MiB at 0% utilisation.** Not ours to clear, and the rules are explicit that
+1. **Card 1 holds ~14.5 GiB, now at 88% mean utilisation** (17268/0% at 11:20; 14501/88% over 30 min
+   from 17:02 — a different, actively-computing job). Not ours to clear, and the rules are explicit that
    a block of this shape is a stopping point, not something to work around. 15500 MiB remain, and
    no production-geometry VRAM peak has been measured to compare against it.
 2. **No durable second location exists.** One filesystem with >=20 GB free, so

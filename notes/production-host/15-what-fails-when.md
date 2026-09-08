@@ -34,7 +34,9 @@ The valuable band. All of these run at `run_probe.sh:1111-1230`, ahead of
 `pip install --upgrade pip`:
 
 - `SAVE_EVERY` vs `SAVE_EVERY_FRAMES` conflict → `exit 3`
-- `contract.py verify-payload --require-runner-contract 14 --require-families … --require-evaluator-identity`
+- `contract.py verify-payload --require-runner-contract 15 --require-families … --require-evaluator-identity`
+  (13→14 for `watch_policy_health.py`, 14→15 on 2026-09-08 for `vram_cap.py`; the number lives in
+  `contract.py::RUNNER_CONTRACT` **and** in this call, and that pair having drifted killed a job once)
 - `family.py check-budget` — refuses a frame budget below the family's floor
 - `family.py check-co-schedulable` — refuses families that cannot share one environment
 - `family.py check-memory` — **see the box below**
