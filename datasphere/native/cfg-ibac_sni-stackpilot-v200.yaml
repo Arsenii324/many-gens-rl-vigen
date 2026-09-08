@@ -66,10 +66,10 @@
 name: vigen-ibac_sni-stackpilot-v200
 desc: Schema-2 evaluator identity re-validation for ibac_sni, NATIVE_HOST_PROFILE=datasphere explicit.
 cmd: >-
-  timeout --foreground 16400s env
+  timeout --foreground 18600s env
   NATIVE_HOST_PROFILE=datasphere
   CELLS=ibac_sni:1
-  CELL_TIMEOUT_SECONDS=15200
+  CELL_TIMEOUT_SECONDS=17400
   FRAMES=102400
   TASK=Door
   SEED=1

@@ -190,7 +190,7 @@ index 0000000..4cc70f3
 +
 +    return HWCStack(env, k)
 diff --git a/torch_rl/model.py b/torch_rl/model.py
-index 1523a27..7342bf3 100644
+index 1523a27..841806e 100644
 --- a/torch_rl/model.py
 +++ b/torch_rl/model.py
 @@ -2,6 +2,8 @@ import torch
@@ -279,7 +279,7 @@ index 1523a27..7342bf3 100644
          print("Image embedding size: ", self.image_embedding_size)
  
          # Not supported with current bottleneck
-@@ -126,28 +191,64 @@ class ACModel(nn.Module):
+@@ -126,33 +191,110 @@ class ACModel(nn.Module):
          self.embedding_size = self.semi_memory_size
  
          # Define actor's model
@@ -349,7 +349,53 @@ index 1523a27..7342bf3 100644
          )
  
          # Initialize parameters correctly
-@@ -201,17 +302,23 @@ class ACModel(nn.Module):
+         self.apply(initialize_parameters)
+ 
++        # [OURS 2026-09-08] SMALL-GAIN INIT ON THE CONTINUOUS POLICY HEAD, AND ONLY ON IT.
++        #
++        # `initialize_parameters` normalizes every Linear layer's weight ROWS to unit norm. On the
++        # branch it was written for that is unobjectionable: the actor's output fed a discrete
++        # softmax, where scaling every logit does almost nothing -- softmax is shift-invariant and
++        # a uniform gain only sharpens it slightly. Our head is the one above, authored here, whose
++        # output IS the Gaussian mean, in the same units as the action. There, output scale is the
++        # action.
++        #
++        # MEASURED, from this wave's own records rather than from theory:
++        #
++        #   baseline   coord clip rate   predicted from its own log_std   excess
++        #   ctrl              0.000                    --                    --
++        #   idaac             0.350                  0.320               +0.030
++        #   ppg               0.327                  0.317               +0.010
++        #   ibac_sni          0.468                  0.330               +0.138
++        #
++        # idaac and ppg clip exactly as much as an untrained sigma~1 Gaussian must, so their excess
++        # is initialization noise. Inverting ibac_sni's numbers (sigma=1.027 from its log_std, then
++        # solving the two-sided clip probability for the mean) puts |mean| at ~0.818 -- 82% of the
++        # way to the action bound of a [-1, 1] space, before a single gradient step. Roughly half
++        # of every sampled action is clipped at init, and a clipped coordinate's executed value
++        # does not move with the mean, so the early gradient signal on it is degraded too.
++        #
++        # PPO can recentre a mean; the objection is not that this is unrecoverable. It is that
++        # ibac_sni runs 600k frames -- 0.375% of CoinRun's own horizon -- and is the one baseline
++        # whose competence is still an open OWNER gate. Spending the front of that budget undoing
++        # an initialization nobody chose is an avoidable handicap on exactly the wrong baseline.
++        #
++        # 0.01 is the small-gain convention every other continuous-action baseline here uses:
++        # `runnable/ctrl/models.py:23` is `nn.initializers.orthogonal(0.01)`. Same shape of finding
++        # as A43 (lr) and A47 (latent width): a constant transplanted across a domain boundary
++        # where the condition that justified it does not hold.
++        #
++        # Scoped to the Box case deliberately. On the Discrete path this file was written for,
++        # `initialize_parameters` stands untouched.
++        if isinstance(action_space, gym.spaces.Box):
++            policy_head = self.actor[-1]
++            nn.init.orthogonal_(policy_head.weight, gain=0.01)
++            nn.init.zeros_(policy_head.bias)
++
+     @property
+     def memory_size(self):
+         return 2*self.semi_memory_size
+@@ -201,17 +343,23 @@ class ACModel(nn.Module):
  
          return bot_mean, bot, kl
  
@@ -375,7 +421,7 @@ index 1523a27..7342bf3 100644
              value = self.critic(bot).squeeze(1)
          return dist, value, kl
  
-@@ -221,15 +328,15 @@ class ACModel(nn.Module):
+@@ -221,15 +369,15 @@ class ACModel(nn.Module):
          if self.sni_type == 'vib':
              # Need both policies for training, but still only one value function:
              x_dist_run = self.actor(bot_mean)

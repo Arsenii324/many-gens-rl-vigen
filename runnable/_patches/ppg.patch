@@ -418,7 +418,7 @@ index 8ad07ab..6931011 100644
  @functools.lru_cache()
  def warn_no_gradient(model, task):
 diff --git a/phasic_policy_gradient/train.py b/phasic_policy_gradient/train.py
-index e32b3a1..5b31ddf 100644
+index e32b3a1..32b30db 100644
 --- a/phasic_policy_gradient/train.py
 +++ b/phasic_policy_gradient/train.py
 @@ -7,24 +7,46 @@ from . import logger
@@ -493,7 +493,7 @@ index e32b3a1..5b31ddf 100644
  
      enc_fn = lambda obtype: ImpalaEncoder(
          obtype.shape,
-@@ -62,20 +94,52 @@ def train_fn(env_name="coinrun",
+@@ -62,20 +94,75 @@ def train_fn(env_name="coinrun",
              γ=gamma,
              λ=0.95,
              nminibatch=nminibatch,
@@ -541,13 +541,36 @@ index e32b3a1..5b31ddf 100644
 +        import os as _os
 +        import torch as _th
 +        _dest = _os.path.join(log_dir or ".", "model_terminal.jd")
-+        _th.save(model, _dest)
++        # [OURS 2026-09-08] Route the terminal save through the atomic primitive, and fail closed.
++        #
++        # This was a raw `_th.save(model, _dest)`: no tmp-file-then-rename, so a SIGKILL or an OOM
++        # partway through leaves a TORN `model_terminal.jd` of non-zero size. Retention
++        # (`family.py::retain`) validates existence and size only, so a torn file passes, and
++        # `eval_grid.py` takes the reported frame from `--frame` rather than from the checkpoint --
++        # which is how a partial write becomes a reported endpoint number.
++        #
++        # `safe_torch_save` writes to `<name>.tmp-writing` and `os.replace()`s it, so the
++        # destination either does not exist or is complete. Five families were made fail-closed
++        # under Codex mailbox Q18(b) (`notes/CORRECTIONS.md` #55); ppg and ctrl were not in that
++        # set. This is ppg's half.
++        try:
++            from safe_checkpoint import safe_torch_save, TERMINAL_MAX_WAIT_SECONDS
++        except ImportError:
++            safe_torch_save = None
++        if safe_torch_save is None:
++            _th.save(model, _dest)
++        elif not safe_torch_save(model, _dest, label="ppg.terminal",
++                                 max_wait_seconds=TERMINAL_MAX_WAIT_SECONDS):
++            raise RuntimeError(
++                f"ppg's terminal checkpoint write to {_dest} failed -- the run cannot produce a "
++                "usable terminal checkpoint. Exiting rather than reporting success over one that "
++                "does not exist.")
 +        logger.log(f"NATIVE_PPG_TERMINAL_SAVE {_dest} interacts={interacts_total}")
 +
  def main():
      parser = argparse.ArgumentParser(description='Process PPG training arguments.')
      parser.add_argument('--env_name', type=str, default='coinrun')
-@@ -84,9 +148,35 @@ def main():
+@@ -84,9 +171,35 @@ def main():
      parser.add_argument('--n_epoch_vf', type=int, default=1)
      parser.add_argument('--n_aux_epochs', type=int, default=6)
      parser.add_argument('--n_pi', type=int, default=32)
@@ -583,7 +606,7 @@ index e32b3a1..5b31ddf 100644
  
      args = parser.parse_args()
  
-@@ -99,7 +189,20 @@ def main():
+@@ -99,7 +212,20 @@ def main():
          n_epoch_vf=args.n_epoch_vf,
          n_aux_epochs=args.n_aux_epochs,
          n_pi=args.n_pi,

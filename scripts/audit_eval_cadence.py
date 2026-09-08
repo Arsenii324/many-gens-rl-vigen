@@ -77,7 +77,10 @@ UNITS = {
               "regimes": ["train (env)", "eval-easy (color_env)", "eval-hard (distract_env)"],
               "episodes": "n_eval_episodes = 10, per regime",
               "controllable": "spec override of eval_n_steps / n_eval_episodes"},
-    "ctrl":  {"file": "runnable/ctrl/train_ppo.py", "line": 165, "unit": "continuous",
+    # [Claude 2026-09-08] 165 -> 186: the fail-closed terminal-save block added 21 lines above
+    # this one (safe_write's bool was discarded, so ctrl could report a completed run over a
+    # checkpoint that was never written). Anchor text unchanged.
+    "ctrl":  {"file": "runnable/ctrl/train_ppo.py", "line": 186, "unit": "continuous",
               "anchor": 'env_test_OOD = _mk("eval-easy"',
               "regimes": ["train (env_test_ID)", "eval-easy (env_test_OOD)"],
               "episodes": "not episodic: both test envs are stepped inside the training loop",
@@ -89,7 +92,9 @@ UNITS = {
               "controllable": "n/a"},
     "ppg":   {# [Claude 2026-09-07] 146 -> 150: A36 added the --lr_decay_env_steps argument and its
     # four comment lines above this one. Anchor text unchanged.
-    "file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 159, "unit": "none",
+    # [Claude 2026-09-08] 159 -> 182: the terminal save moved off a raw torch.save onto
+    # safe_torch_save, which is atomic and fails closed; that block sits above this line.
+    "file": "runnable/ppg/phasic_policy_gradient/train.py", "line": 182, "unit": "none",
               "anchor": "parser.add_argument('--interacts_total'",
               "regimes": [],
               "episodes": "none: train.py evaluates nothing at any point",

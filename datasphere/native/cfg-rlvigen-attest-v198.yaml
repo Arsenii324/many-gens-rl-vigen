@@ -65,7 +65,7 @@
 name: vigen-rlvigen-attest-v198
 desc: Schema-2 evaluator identity re-validation for rlvigen, NATIVE_HOST_PROFILE=datasphere explicit.
 cmd: >-
-  timeout --foreground 4200s env
+  timeout --foreground 7800s env
   NATIVE_HOST_PROFILE=datasphere
   CELLS=svea:1
   FRAMES=10000
@@ -81,7 +81,7 @@ cmd: >-
   ENDPOINT_EVAL_SCENES=0
   ENDPOINT_EVAL_EPISODES=5
   ENDPOINT_EVAL_DEVICE=cuda
-  CELL_TIMEOUT_SECONDS=3600 RLVIGEN_PLACES_WORKERS=0
+  CELL_TIMEOUT_SECONDS=6600 RLVIGEN_PLACES_WORKERS=0
   NATIVE_PLACES365_SPLIT=train
   PLACES365_EXPECTED_COUNT=1000
   PLACES365_EXPECTED_SHA256=c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e

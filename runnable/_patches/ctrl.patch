@@ -386,10 +386,10 @@ index 67bd632..0459807 100644
          if self.embedding_type == "concat":
              z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
 diff --git a/train_ppo.py b/train_ppo.py
-index e18477e..f8ca7fe 100644
+index e18477e..3105147 100644
 --- a/train_ppo.py
 +++ b/train_ppo.py
-@@ -15,7 +15,68 @@ from jax.random import PRNGKey
+@@ -15,7 +15,88 @@ from jax.random import PRNGKey
  from algo import get_transition, select_action, update_ppo, update_daac, update_cluster, state_update
  from buffer import Batch
  from models import CTRLModel, CTRLDAACModel
@@ -416,7 +416,7 @@ index e18477e..f8ca7fe 100644
 +_policy_health = _m.gaussian_policy_health
 +
 +
-+def _save_state(train_state, frames):
++def _save_state(train_state, frames, terminal=False):
 +    """[OURS 2026-09-04] Serialise a TrainState to `checkpoint_<frames>.msgpack`.
 +
 +    One msgpack file rather than `flax.training.checkpoints`: that API is deprecated in the flax
@@ -428,17 +428,37 @@ index e18477e..f8ca7fe 100644
 +    """
 +    from flax.serialization import to_bytes as _flax_to_bytes
 +    try:
-+        from safe_checkpoint import safe_write
++        from safe_checkpoint import safe_write, TERMINAL_MAX_WAIT_SECONDS
 +    except ImportError:
++        TERMINAL_MAX_WAIT_SECONDS = 1800
 +        def safe_write(path, write_fn, **_kwargs):
 +            write_fn(path)
 +            return True
 +    _dir = os.path.abspath(os.path.join(FLAGS.model_dir, FLAGS.env_name))
 +    os.makedirs(_dir, exist_ok=True)
 +    _state_bytes = _flax_to_bytes(train_state)
-+    safe_write(os.path.join(_dir, 'checkpoint_%d.msgpack' % frames),
++    # [OURS 2026-09-08] RETURN the result, and take the terminal grace period when terminal.
++    #
++    # `safe_write` is deliberately non-fatal: it returns False rather than raising, which is right
++    # for a periodic save (losing one intermediate checkpoint should not kill a 45-hour run). This
++    # function discarded that bool, and it has no `return`, so its one terminal caller could not
++    # have checked it even if it wanted to -- and printed NATIVE_FINAL_EVALUATION_COMPLETED
++    # regardless. Retention then validates only that a file exists and is non-empty
++    # (`family.py::retain`), and `eval_grid.py` takes the frame number from `--frame`, never from
++    # inside the checkpoint. So a failed terminal write on a re-run directory could be scored as a
++    # completed run against a stale earlier checkpoint.
++    #
++    # Five families were made fail-closed under Codex mailbox Q18(b) (`notes/CORRECTIONS.md` #55,
++    # pinned by `tests/test_terminal_checkpoint_fail_closed.py`); ctrl and ppg were not in that
++    # set. This is ctrl's half, copying dmc_gb's shape exactly.
++    #
++    # The wait window matters too: `safe_checkpoint` gives a terminal save 1800s of disk-pressure
++    # grace against a periodic save's 300s, precisely because it is the one save that cannot be
++    # retried. This call took the 300s default for both.
++    return safe_write(os.path.join(_dir, 'checkpoint_%d.msgpack' % frames),
 +              lambda tmp: open(tmp, 'wb').write(_state_bytes), label="ctrl.checkpoint",
-+              expected_bytes=len(_state_bytes))
++              expected_bytes=len(_state_bytes),
++              max_wait_seconds=(TERMINAL_MAX_WAIT_SECONDS if terminal else None) or 300)
 +
 +
 +def _find_log_std(tree):
@@ -459,7 +479,7 @@ index e18477e..f8ca7fe 100644
  
  
  def safe_mean(x):
-@@ -66,7 +127,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
+@@ -66,7 +147,12 @@ flags.DEFINE_string("run_id", "jax_ppo",
                      "Run ID. Change that to change W&B name")
  flags.DEFINE_string("wandb_mode", "disabled",
                      "W&B logging (disabled, online, offline)")
@@ -473,7 +493,7 @@ index e18477e..f8ca7fe 100644
                      "W&B key")
  flags.DEFINE_string("wandb_entity", "ssl_rl",
                      "W&B entity (username or team name)")
-@@ -82,28 +148,26 @@ def main(argv):
+@@ -82,28 +168,26 @@ def main(argv):
      key = PRNGKey(seed)
  
      # Clip rewards for training
@@ -521,7 +541,7 @@ index e18477e..f8ca7fe 100644
  
      os.environ["WANDB_API_KEY"] = FLAGS.wandb_key
      group_name = "%s_%s_%s" % (FLAGS.algo, FLAGS.env_name, FLAGS.run_id)
-@@ -121,28 +185,45 @@ def main(argv):
+@@ -121,28 +205,45 @@ def main(argv):
      if "ppo" in FLAGS.algo:
          model = CTRLModel(dims=(256, 256),
                            n_cluster=FLAGS.num_clusters,
@@ -572,7 +592,7 @@ index e18477e..f8ca7fe 100644
      params_model = model.init(key,
                                state=fake_args_cluster[0],
                                action=fake_args_cluster[1],
-@@ -175,7 +256,8 @@ def main(argv):
+@@ -175,7 +276,8 @@ def main(argv):
                    gae_lambda=FLAGS.gae_lambda,
                    n_steps=FLAGS.n_steps + 1,
                    num_envs=FLAGS.num_envs,
@@ -582,7 +602,7 @@ index e18477e..f8ca7fe 100644
  
      state = env.reset()
      state_id = env_test_ID.reset()
-@@ -183,6 +265,16 @@ def main(argv):
+@@ -183,6 +285,16 @@ def main(argv):
  
      epinfo_buf_id = deque(maxlen=100)
      epinfo_buf_ood = deque(maxlen=100)
@@ -599,7 +619,7 @@ index e18477e..f8ca7fe 100644
  
      returns_ood_acc = []
  
-@@ -190,33 +282,48 @@ def main(argv):
+@@ -190,33 +302,48 @@ def main(argv):
          train_state, state, batch, key = get_transition(
              train_state, model.ac, env, state, batch, key)
  
@@ -668,7 +688,7 @@ index e18477e..f8ca7fe 100644
  
          if step % (FLAGS.n_steps + 1) == 0:
              data = batch.get()
-@@ -257,6 +364,17 @@ def main(argv):
+@@ -257,6 +384,17 @@ def main(argv):
              renamed_dict = {}
              for k, v in metric_dict.items():
                  renamed_dict["%s/%s" % (FLAGS.env_name, k)] = v
@@ -686,7 +706,7 @@ index e18477e..f8ca7fe 100644
              wandb.log(renamed_dict, step=FLAGS.num_envs * step)
  
              wandb.log({
-@@ -277,10 +395,53 @@ def main(argv):
+@@ -277,10 +415,59 @@ def main(argv):
                  returns_ood_acc.append(
                      safe_mean([info['r'] for info in epinfo_buf_ood]))
  
@@ -736,7 +756,13 @@ index e18477e..f8ca7fe 100644
 +    # A single msgpack file rather than flax.training.checkpoints: that API is deprecated in the
 +    # flax this repository pins and now writes an orbax DIRECTORY, whose shape varies by version.
 +    # One file of the serialised TrainState is what an offline evaluator needs and is stable.
-+    _save_state(train_state, _executed)
++    if not _save_state(train_state, _executed, terminal=True):
++        raise RuntimeError(
++            "ctrl's terminal checkpoint write to checkpoint_%d.msgpack failed -- the run cannot "
++            "produce a usable terminal checkpoint. Exiting rather than printing "
++            "NATIVE_FINAL_EVALUATION_COMPLETED over a checkpoint that does not exist, which "
++            "retention would accept because it validates existence and size, not content."
++            % _executed)
 +    print('NATIVE_FINAL_EVALUATION_COMPLETED frame=%d' % _executed, flush=True)
 +
      return (returns_ood_acc, safe_mean([info['r'] for info in epinfo_buf_ood]) )
