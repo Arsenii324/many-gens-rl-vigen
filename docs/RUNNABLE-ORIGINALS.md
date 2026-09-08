@@ -49,10 +49,10 @@ before P12 both said `train`. Verbatim table in `docs/smoke-p12-2026-08-17.txt`.
 | `rad` | `runnable/dmc_gb` | **yes** — 1k steps, real losses, train + eval-easy | shared, below |
 | `soda` | `runnable/dmc_gb` | **yes** — 1k steps, `aux_loss` live, train + eval-easy | shared, below |
 | `alda` | `runnable/alda` | **yes** — own `scripts/train.py` + spec; `episode_reward` and `episode_reward_distracting` | 4 files, +264/−10 |
-| `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +362/−9 |
+| `ppg` | `runnable/ppg` | **yes** — own `train.py` CLI; PPO **and** the auxiliary phase, 34 full PPG cycles (68 aux epochs); eval via `_launch/ppg_eval.py` | 8 files, +385/−9 |
 | `idaac` | `runnable/idaac` | **yes** — own `train.py`; train 28.15 vs eval-easy 2.64, exit 0 | 9 files, +582/−50 |
-| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 11 files, +757/−187 |
-| `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 6 files, +552/−85 |
+| `ibac_sni` | `runnable/ibac_sni` | **yes** — own `scripts/train.py`, bottleneck + SNI-vib active; **and its own `scripts/evaluate.py` measures a saved policy in a held-out regime** | 11 files, +798/−187 |
+| `ctrl` | `runnable/ctrl` | **yes** — own `train_ppo.py`; PPO + cluster + target EMA; in-distribution 7.177 vs eval-easy 4.315 | 6 files, +578/−85 |
 
 **No candidate-wide total is asserted in this checkout.** `scripts/deviations.py` marks four clones
 PARTIAL because their pristine histories omit non-source assets, so summing their present diffs
@@ -144,7 +144,7 @@ production runs otherwise discard every metric) had a latent bug — a residual 
 from the averaging loop above it crashes `json.dumps` where `wandb.log` tolerated it silently.
 Fixed with a `default=` handler scoped to this addition. See `notes/CORRECTIONS.md` #91.
 
-### `ppg` — 8 files, +362 / −9
+### `ppg` — 8 files, +385 / −9
 
 `envs.py` gains `get_robosuite_venv` and a one-line dispatch in `get_venv` on a `robosuite:`
 prefix. The venv is `gym3.ConcatEnv` of `gym3.FromGymEnv` — **gym3's own classes**, already a
@@ -194,7 +194,7 @@ instance" means. **Different from Procgen, and it bears on IDAAC specifically:**
 draws a new level every episode, so one rollout spans many instances; here each env is one
 instance for the whole run and instance diversity per batch is capped at `num_processes`.
 
-### `ibac_sni` — 11 files, +757 / −187
+### `ibac_sni` — 11 files, +798 / −187
 
 Drives `torch_rl/`, the authors' **own PyTorch** implementation, not the TF `coinrun/` branch.
 `utils/get_obss_preprocessor` already had a generic `Box([H,W,3])` branch — written for RGB envs,
@@ -215,7 +215,7 @@ Discrete and therefore byte-equivalent there.
 **Evidence:** logged `H 9.935`, the same 7-dim unit-Gaussian entropy, with episode length 500
 matching robosuite's horizon.
 
-### `ctrl` — 6 files, +552 / −85
+### `ctrl` — 6 files, +578 / −85
 
 The only JAX baseline. `vec_env.py` +85 adds `RLViGenVecEnvCustom` with interface parity to
 `ProcgenVecEnvCustom`, reusing the `VecMonitor`/`VecNormalize` **vendored in that same file**, plus

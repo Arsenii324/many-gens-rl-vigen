@@ -995,6 +995,13 @@ DESCRIPTIVE_AUDITS = {
     "audit_implementations.py", "audit_job_budgets.py", "audit_pairing_evidence.py",
     "audit_row_closure.py", "audit_submission_configs.py", "audit_observation_geometry.py",
     "audit_eval_cadence.py",
+    # [Claude 2026-09-08] DESCRIPTIVE and not GATING, and the reason is a constraint rather than a
+    # preference: it compares `resolved_packages.json` ACROSS returned job archives, which live
+    # outside the repository. A fresh checkout has none, so a gate consulting it would report
+    # "nothing to compare" -- and this project's own rule is that an instrument which could not run
+    # must never read as one that ran and passed. `gate_environment_manifest` names it as the
+    # instrument to run instead, with the job id that made it necessary.
+    "audit_environment_drift.py",
 }
 
 
