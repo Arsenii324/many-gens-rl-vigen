@@ -1069,6 +1069,13 @@ Every one of our CTRL knobs is `[OURS]`:
 | knob | `[P]` | ours | factor |
 |---|---|---|---|
 | clusters | **200** | `ctrl_clusters: 32` | 6× fewer |
+
+> **[PORT-ERA. The clone runs 200, i.e. the paper's value.]** `ctrl_clusters: 32` was the
+> retired `rlgen/` port's `configs/vigen.yaml`. The clone has no such config and
+> `runnable/ctrl/train_ppo.py`'s own `flags.DEFINE_integer("num_clusters", 200, ...)` is
+> upstream's default, which our launcher does not override. Section 5 item 5 dissolves this
+> in full; the marker is here because a reader scanning this table will not reach it.
+
 | clustering timesteps | T = 2 sampled timesteps | `ctrl_window: 8` | a different quantity |
 | samples per epoch | 8192 (32 envs × 256) | 2048 (one env × 2048; corrected 2026-08-13, was stated as 256) | 4× fewer, not 32× |
 | lr | 5e-4 | 1e-4 | 5× lower |

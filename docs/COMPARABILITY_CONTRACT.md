@@ -3,8 +3,10 @@
 > **Added 2026-08-17: the open "emission inventory" item is now done, elsewhere.**
 > `docs/PART2-METRIC-INVENTORY.md` carries the per-baseline account of what is emitted and against
 > what, with six findings — including two the contract below does not anticipate: frame stacking
-> splits the twelve 8/4 (so `Protocol.frame_stack` was certifying a value four runs do not have),
-> and the action distribution comes in three families, not one. Read that first; this file is the
+> split the twelve **8/4 when this was written**, then 9/3, then 10/2, and is now **12/0**
+> (A40 REVISED-2, 2026-09-08; `rlgen/protocol.py:118-132`) — so `Protocol.frame_stack` no
+> longer certifies a value any run lacks — and the action distribution comes in three
+> families, not one. Read that first; this file is the
 > older framing.
 
 

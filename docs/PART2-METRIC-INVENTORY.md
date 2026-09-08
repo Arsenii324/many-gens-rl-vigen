@@ -294,10 +294,17 @@ semantics (oldest first, zeroed on reset and on done). The effect on the reporte
 
 | stacked (3 frames, 9 channels) | single frame (3 channels) |
 |---|---|
-| `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | `ibac_sni` |
-| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | `ctrl` |
+| `rad`, `soda` (`FrameStack` in dmc_gb's `make_env`) | — |
+| `alda` (`FrameStack(_e, frame_stack)` in its own branch) | — |
 | `drqv2`, `svea`, `sgqn`, `curl`, `drq` (`FrameStackWrapper`, cfg `frame_stack: 3`) | — |
 | `idaac` and `ppg` (`FrameStack` in both train/eval adapters) | — |
+| `ibac_sni` (`RLVIGEN_FRAME_STACK=3`, authored wrapper) | — |
+| `ctrl` (`RLVIGEN_FRAME_STACK=3`, authored wrapper) | — |
+
+> **[Corrected 2026-09-08.]** The right column was still listing `ibac_sni` and `ctrl` one
+> paragraph below the text saying it should be empty. A table that contradicts its own preamble is
+> worse than either half alone: a reader scanning for the split finds the table, not the prose.
+> `rlgen/protocol.py:118-132` is authoritative and reads 12/0.
 | `ctrl` (authored `_stackedobs` in `RLViGenVecEnvCustom`) | — |
 | `ibac_sni` (authored `build_hwc_stack` in `ibac_sni_runtime`) | — |
 
