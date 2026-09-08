@@ -89,12 +89,39 @@ A47.
 
 ---
 
-## 3. `--batch-size` inertness must be stated
+## 3. `--batch-size` -- WITHDRAWN. It is correct in production; only the DataSphere tier degenerates
 
-Under the base profile `--batch-size 256` has no effect (item 1). A declared hyperparameter that
-does nothing is the same class as the inert `constants` entry A49 found. If item 1 lands this
-resolves itself; if base `procs` stays 1 for a host reason, the descriptor must say the batch size
-is inert there.
+**This item was wrong, and it is the third time in this session the same mistake produced one.**
+It read `--batch-size 256` against the BASE descriptor, found it inert, and filed it as a defect of
+the same class as A49's inert constant. Base is the DataSphere tier. Production is `v100`.
+
+Verified by executing the slicing arithmetic in
+`torch_rl/torch_rl/torch_rl/algos/ppo.py:203-204` against both profiles:
+
+| profile | `procs` | rollout | minibatches | sizes |
+|---|---:|---:|---:|---|
+| base (DataSphere) | 1 | 128 | **1** | [128] -- full-batch, `--batch-size` inert |
+| **v100 (production)** | **16** | **2048** | **8** | [256, 256, 256, ...] |
+
+Eight minibatches of exactly 256. That is `torch_rl`'s own released rollout shape, reproduced
+exactly. **`--batch-size 256` is not a dead flag; it is the correct flag, degenerating only on a
+tier production does not use.**
+
+The generalization is worth more than the item. Across all seven families there are exactly **two**
+`v100` constant overrides:
+
+    ibac_sni.procs      1  -> 16     (matches torch_rl's released default rollout)
+    ctrl.num_envs      16  -> 64     (matches CTRL's released default, 64 x 256 = 16,384)
+
+Both are the values the DataSphere tier was infra-bound *away* from. So the "infra-bound
+compromise" framing that appears throughout this project's prose is a statement about the
+**pre-production tier only** -- at production, both baselines run their own upstream parallelism
+exactly. Anything that reads `procs=1` or `num_envs=16` as a fidelity compromise in the write-up is
+describing a machine we are not going to publish results from.
+
+What remains actionable is one sentence, not a change: the base descriptor should say the batch
+size is inert *there*, so nobody rediscovers this as a defect. The production behaviour needs no
+fix because it is already right.
 
 ---
 

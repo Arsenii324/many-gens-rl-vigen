@@ -37,9 +37,65 @@ run_measured() {
   local sampler_pid="$!"
   tee "$output_dir/training.log" < "$pipe" &
   local tee_pid="$!"
+
+  # [Claude 2026-09-08] STALL WATCHDOG. `CELL_TIMEOUT_SECONDS` bounds how long a cell may RUN; it
+  # cannot bound how long a DEAD cell takes to notice. Job bt12f5us5h120laajpme is the case that
+  # forced this: a Places365 DataLoader worker took SIGABRT at ~8500 frames, the exception
+  # propagated and printed, and the process then sat there until the 7800s cell timeout fired 105
+  # minutes later. Roughly 1200 of 7800 seconds were work.
+  #
+  # A timeout must be sized for the longest legitimate RUN -- 45 hours at production scale -- so it
+  # is a useless bound on a hang. A stall detector is sized for the longest legitimate SILENCE,
+  # which is short and, importantly, does not grow with the run.
+  #
+  # Longest measured silent phase is the Places365 first load at 561.8s. Everything else is
+  # noisier: training logs every 500 frames (111s at sgqn's measured 4.51 fps), and the endpoint
+  # eval grid is 96s end to end (NATIVE_ENDPOINT_EVAL_SECONDS, job bt1utl06n6mqffrt2jdn). The
+  # 1800s default is 3.2x the longest silence anyone has measured. It would have killed the svea
+  # cell above at ~30 minutes instead of ~105.
+  #
+  # Kill the process GROUP, not the pid: the thing that hangs is often a child (a DataLoader
+  # worker, a vectorised env worker), and killing the parent alone can leave it. `setsid` above
+  # puts the cell in its own session, so the group is exactly the cell and nothing else.
+  local stall_pid=""
+  local stall_seconds="${CELL_STALL_SECONDS:-1800}"
+  if [[ "$stall_seconds" != "0" ]]; then
+    (
+      log="$output_dir/training.log"
+      last_size=-1
+      quiet=0
+      pgid="$(ps -o pgid= -p "$training_pid" 2>/dev/null | tr -d ' ')"
+      while kill -0 "$training_pid" 2>/dev/null; do
+        sleep 30
+        size="$(wc -c < "$log" 2>/dev/null || echo 0)"
+        if [[ "$size" == "$last_size" ]]; then
+          quiet=$((quiet + 30))
+        else
+          quiet=0
+          last_size="$size"
+        fi
+        if [[ "$quiet" -ge "$stall_seconds" ]]; then
+          echo "=== NATIVE_CELL_STALLED no output for ${quiet}s (limit ${stall_seconds}s) ===" >&2
+          if [[ -n "$pgid" ]]; then
+            kill -TERM "-$pgid" 2>/dev/null
+            sleep 20
+            kill -KILL "-$pgid" 2>/dev/null
+          else
+            kill -TERM "$training_pid" 2>/dev/null
+            sleep 20
+            kill -KILL "$training_pid" 2>/dev/null
+          fi
+          exit 0
+        fi
+      done
+    ) &
+    stall_pid="$!"
+  fi
+
   set +e
   wait "$training_pid"
   local training_status="$?"
+  if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"
@@ -55,6 +111,14 @@ run_measured() {
   # cell was killed at 11.5 GB on a 16 GB gt4.1, the runner saw "Exit status: 0", and the failure
   # surfaced later as an unexplained missing checkpoint with no error anywhere.]
   local measured_log="$output_dir/training.log"
+  # [Claude 2026-09-08] Check the stall FIRST. A watchdog kill arrives as a signal, so without this
+  # it would be reported as NATIVE_CELL_SIGNALLED and read like an OOM -- which is the diagnosis
+  # that cost alda three jobs. A cell that stopped talking and a cell that was killed for using too
+  # much memory need different fixes and must not share a marker.
+  if grep -q "NATIVE_CELL_STALLED" "$measured_log" 2>/dev/null; then
+    echo "=== NATIVE_CELL_FAILED_STALLED $(grep -m1 'NATIVE_CELL_STALLED' "$measured_log") ===" >&2
+    return 1
+  fi
   if grep -q "Command terminated by signal" "$measured_log" 2>/dev/null; then
     local signal_line
     signal_line="$(grep -m1 "Command terminated by signal" "$measured_log" || true)"
