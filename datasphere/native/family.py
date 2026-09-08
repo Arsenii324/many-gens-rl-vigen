@@ -1296,6 +1296,14 @@ def main(argv: list[str] | None = None) -> int:
     disk.add_argument("--cells", required=True)
     disk.add_argument("--frames", type=int, required=True)
     disk.add_argument("--profile")
+    # [Claude 2026-09-08] `run_on_production_host.sh` needs ONE integer, and used to get it by
+    # piping this command's JSON into a second `python3 -c` -- two python invocations ON THE HOST,
+    # outside any container. The production host's rule is that nothing but small python-unrelated
+    # actions and docker itself runs outside a container, so the wrapper now makes a single
+    # containerised call and this flag is what it calls. One number, one process, no host parser.
+    disk.add_argument("--ceil-total", action="store_true",
+                      help="print only required_gib rounded up, for a caller that wants a number "
+                           "rather than a document")
     memory = commands.add_parser("check-memory")
     memory.add_argument("--frames", type=int,
                         help="the budget this cell will run; sizes the replay charge")
@@ -1378,9 +1386,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "disk-requirement":
             import json as _json
-            print(_json.dumps(disk_requirement_gib(
-                args.cells, args.frames, profile=args.profile or os.environ.get("NATIVE_HOST_PROFILE")),
-                indent=2, sort_keys=True))
+            result = disk_requirement_gib(
+                args.cells, args.frames, profile=args.profile or os.environ.get("NATIVE_HOST_PROFILE"))
+            if args.ceil_total:
+                print(int(result["required_gib"] + 0.999))
+            else:
+                print(_json.dumps(result, indent=2, sort_keys=True))
             return 0
         if args.command == "check-memory":
             check_memory(args.cells, args.tier, allow_unmeasured=args.allow_unmeasured,

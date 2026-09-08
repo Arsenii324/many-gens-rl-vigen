@@ -94,7 +94,28 @@
 # run while the container still had both cards attached.
 set -euo pipefail
 
-IMAGE="$(python3 -c "import json,pathlib; print(json.loads(pathlib.Path('datasphere/native/source-lock.json').read_text())['container_image'])")"
+# [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice
+# more inside check_disk. The production host's rule is that nothing runs outside a container
+# except small python-unrelated actions (mkdir, cp, df, stat), a clone, and docker itself. Reading
+# JSON and computing a disk model are neither small nor python-unrelated, so both now happen in a
+# container against a read-only mount of this repo.
+#
+# The chicken-and-egg is real and is resolved deliberately: the image we RUN is read from
+# source-lock.json, so it cannot be the image we read it WITH. `NATIVE_HELPER_IMAGE` is therefore a
+# literal in this file -- one fixed, tiny, general-purpose interpreter, used only for computation
+# over a read-only mount and never for anything the experiment depends on. `python:3.11-slim` is
+# 124 MB and already present on cds2, so this costs no pull there. It is deliberately NOT the
+# pinned CUDA image: that one carries no python3 at all (run_probe.sh apt-installs it), so using it
+# here would mean an apt-get per disk check.
+HELPER_IMAGE="${NATIVE_HELPER_IMAGE:-python:3.11-slim}"
+
+# Run python over this repository, read-only, inside a container. Nothing it can do reaches the
+# host: the mount is `:ro`, the container is `--rm`, and no GPU is requested.
+helper_python() {
+  docker run --rm -v "$PWD:/repo:ro" -w /repo "$HELPER_IMAGE" python3 "$@"
+}
+
+IMAGE="$(helper_python -c "import json,pathlib; print(json.loads(pathlib.Path('datasphere/native/source-lock.json').read_text())['container_image'])")"
 
 CODE="${1:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz] [PLACES365.tgz]}"
 RESULT="${2:?usage: $0 PAYLOAD.tgz RESULT.tgz [RLVIGEN.tgz] [PLACES365.tgz]}"
@@ -247,10 +268,10 @@ check_disk() {
   if [[ -n "${NATIVE_DISK_FLOOR_GB:-}" ]]; then
     required="$NATIVE_DISK_FLOOR_GB"
   else
-    required="$(python3 datasphere/native/family.py disk-requirement \
-        --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" 2>/dev/null \
-        | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["required_gib"] + 0.999))' \
-        2>/dev/null)" || required=""
+    # One containerised call, not a host pipeline of two. `--ceil-total` exists for exactly this.
+    required="$(helper_python datasphere/native/family.py disk-requirement \
+        --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" --ceil-total 2>/dev/null)" \
+        || required=""
     # [Claude 2026-09-08] The fallback is a generic constant that is right for roughly none of the
     # fleet -- 60 GB is ~10x idaac's real need and ~10 GiB short of soda's. It stays as a floor for
     # probe-scale work, but at production scale a failed requirement computation means the number
@@ -271,7 +292,9 @@ check_disk() {
   echo "free disk at $target: ${free_gb} GB (this job needs ~${required} GB)" >&2
   if [[ "$free_gb" -lt "$required" ]]; then
     echo "refusing: ${free_gb} GB free at $target, below the ${required} GB this job needs." >&2
-    echo "  Breakdown: python3 datasphere/native/family.py disk-requirement --cells ${CELLS:-drqv2:1} --frames ${FRAMES:-10000}" >&2
+    echo "  Breakdown (run it in a container, not on the host):" >&2
+    echo "    docker run --rm -v \"\$PWD:/repo:ro\" -w /repo $HELPER_IMAGE \\" >&2
+    echo "      python3 datasphere/native/family.py disk-requirement --cells ${CELLS:-drqv2:1} --frames ${FRAMES:-10000}" >&2
     echo "  Replay episode files dominate for off-policy cells; on-policy cells need a fraction." >&2
     echo "  Free space, or set NATIVE_DISK_FLOOR_GB to override with a number you have justified." >&2
     exit 4
