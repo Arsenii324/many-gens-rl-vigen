@@ -75,7 +75,17 @@ import subprocess
 import sys
 import time
 
-FIELDS = ("index", "memory.total", "memory.used", "memory.free", "utilization.gpu")
+# [Claude 2026-09-08] Memory was never the binding constraint on this host, and watching only it
+# hid the two that are. Measured on cds2 card 1 while a neighbour trained: sm 83-100% but memory
+# BANDWIDTH only 13-15% (compute-bound, not bandwidth-bound), and power 260-274 W against a 300 W
+# limit -- about 26 W of headroom. Our kernels would push the card into its power cap and clock
+# BOTH jobs down, which is a way of harming a co-tenant that no memory figure can show.
+#
+# `clocks.sm` is the cheapest idle/busy discriminator there is: card 0 read 135 MHz against a
+# 1530 MHz maximum, which is parked, not merely between kernels.
+FIELDS = ("index", "memory.total", "memory.used", "memory.free", "utilization.gpu",
+          "utilization.memory", "power.draw", "power.limit", "temperature.gpu",
+          "clocks.sm", "clocks.max.sm")
 
 
 def read(device: int) -> dict | None:
@@ -93,7 +103,10 @@ def read(device: int) -> dict | None:
         return None
     try:
         row = {"index": int(parts[0]), "total_mib": int(parts[1]), "used_mib": int(parts[2]),
-               "free_mib": int(parts[3]), "utilization_pct": int(parts[4])}
+               "free_mib": int(parts[3]), "utilization_pct": int(parts[4]),
+               "membw_pct": int(parts[5]), "power_w": float(parts[6]),
+               "power_limit_w": float(parts[7]), "temp_c": int(parts[8]),
+               "clock_sm_mhz": int(parts[9]), "clock_sm_max_mhz": int(parts[10])}
     except ValueError:
         return None
     # COUNT only. Deliberately not the pids, not the per-process memory, not the command lines.
@@ -174,6 +187,19 @@ def report(rows: list[dict]) -> None:
     print(f"    free   MiB   min {min(free):6}  max {max(free):6}  mean {sum(free)//len(free):6}")
     print(f"    util    %    min {min(util):6}  max {max(util):6}  mean {sum(util)//len(util):6}")
     print(f"    compute procs min {min(procs)}  max {max(procs)}")
+    if "power_w" in rows[0]:
+        pw = [r["power_w"] for r in rows]; lim = rows[0]["power_limit_w"]
+        bw = [r["membw_pct"] for r in rows]
+        clk = [r["clock_sm_mhz"] for r in rows]; clkmax = rows[0]["clock_sm_max_mhz"]
+        print(f"    power   W    min {min(pw):6.0f}  max {max(pw):6.0f}  limit {lim:.0f}  "
+              f"HEADROOM at peak {lim-max(pw):5.0f} W")
+        print(f"    mem bandwidth %  min {min(bw):4}  max {max(bw):4}   (vs sm util above)")
+        print(f"    sm clock MHz min {min(clk):6}  max {max(clk):6}  of {clkmax}")
+        if lim - max(pw) < 40:
+            print("    POWER-LIMITED: adding work here pushes the card into its cap and clocks")
+            print("    BOTH jobs down. This is contention no memory figure can show.")
+        if max(bw) < 30 and max(util) > 70:
+            print("    Compute-bound, not bandwidth-bound: SMs are the contended resource.")
     print()
     print(f"  The number that matters for planning is the MINIMUM free: {min(free)} MiB. Not the "
           f"mean --")
