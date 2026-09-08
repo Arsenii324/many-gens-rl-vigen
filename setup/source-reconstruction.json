@@ -62,7 +62,11 @@
         "door.xml"
       ],
       "relocate": [
-        {"from": "models", "to": "third_party/alda/models", "expected_tree_hash": "cc71e3dce66686f8bcc3bab360de578203bfa6987b97df4b20306e096b1134a2"}
+        {
+          "from": "models",
+          "to": "third_party/alda/models",
+          "expected_tree_hash": "cc71e3dce66686f8bcc3bab360de578203bfa6987b97df4b20306e096b1134a2"
+        }
       ]
     },
     "ppg": {
@@ -72,9 +76,15 @@
       "destination": "runnable/ppg",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ppg.patch",
-      "patch_sha256": "323b5bc546d8d9d57074a443abc6d3e4bdccd93a459574799a3302b9bfd644f3",
-      "expected_tree_hash": "e505edca46fd76de7cb86c3827d35abba2c0a5bee8821a7f2735394e33dd930d",
-      "exclude": ["phasic_policy_gradient/results", "results", "logs", "door.xml", ".egg-info"]
+      "patch_sha256": "99e523e2b01e1b562fa3e9d872e5c755d325f38068a226b2d9bb62797f8bc4fc",
+      "expected_tree_hash": "bde1b5ecf7bc1cc305ee313262e5eb1025f2b6805acf90d27278cefcf42217db",
+      "exclude": [
+        "phasic_policy_gradient/results",
+        "results",
+        "logs",
+        "door.xml",
+        ".egg-info"
+      ]
     },
     "idaac": {
       "url": "https://github.com/rraileanu/idaac.git",
@@ -85,7 +95,12 @@
       "patch_file": "runnable/_patches/idaac.patch",
       "patch_sha256": "cc5a48132619490bdd9ba8c77d19eaf392a4d40826ba8becaeb4a0323469d5cd",
       "expected_tree_hash": "e24575c7512affaae62bb7225b7355ec702bc8700cc8849f34a6901e5d6af201",
-      "exclude": ["results", "logs", "door.xml", ".egg-info"]
+      "exclude": [
+        "results",
+        "logs",
+        "door.xml",
+        ".egg-info"
+      ]
     },
     "ibac_sni": {
       "url": "https://github.com/microsoft/IBAC-SNI.git",
@@ -94,9 +109,17 @@
       "destination": "runnable/ibac_sni",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ibac_sni.patch",
-      "patch_sha256": "f2407f6159b58dd234f05f5ece12b9722d4efe73ceeaf6ec9ba847e944780676",
-      "expected_tree_hash": "e7e7ac8836b2a104f63090ba2382779a13dc821491f293dd1e06b88c14c9339a",
-      "exclude": ["results", "logs", "storage", "models", "door.xml", "torch_rl/door.xml", ".egg-info"]
+      "patch_sha256": "53cdde0f399fbf946e7e5ee58fc40b97bea2e8dc822504fb22ab08fd4a421ab5",
+      "expected_tree_hash": "bd52531b890f43f9899d6ca18399934237db34f5fea47d6e678316f7af6aff74",
+      "exclude": [
+        "results",
+        "logs",
+        "storage",
+        "models",
+        "door.xml",
+        "torch_rl/door.xml",
+        ".egg-info"
+      ]
     },
     "ctrl": {
       "url": "https://github.com/bmazoure/ctrl_public.git",
@@ -105,9 +128,16 @@
       "destination": "runnable/ctrl",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ctrl.patch",
-      "patch_sha256": "5611648c7761ef2b35a3f0ed07fa17f9ff4eb68d5af51e0fcc3c17b3366b0b0c",
-      "expected_tree_hash": "79ac2235e1b107ee6358584a379ee52bb2374a3a0c55894c00e71b35f58f69ad",
-      "exclude": ["results", "logs", "storage", "models", "door.xml", ".egg-info"]
+      "patch_sha256": "bf9f99b5c05f5668db2d916849156d885cf362633d537d64255e3443c0e41ad4",
+      "expected_tree_hash": "15b6decdc7ae196efe60669bf2ee196e9644dc4e82afa3b03221e37af3d1e283",
+      "exclude": [
+        "results",
+        "logs",
+        "storage",
+        "models",
+        "door.xml",
+        ".egg-info"
+      ]
     }
   },
   "auxiliary": {
@@ -117,7 +147,11 @@
       "tree": "715e372b9071cc25de37d4fc2eeb09a5091a7397",
       "destination": "ext/baselines",
       "expected_tree_hash": "9c1aa2ce8de89e8b1a48cb1f51619134645421cb498f2fd53c2bbf0c0882a130",
-      "exclude": ["data/cartpole.gif", "data/fetchPickAndPlaceContrast.png", "data/logo.jpg"]
+      "exclude": [
+        "data/cartpole.gif",
+        "data/fetchPickAndPlaceContrast.png",
+        "data/logo.jpg"
+      ]
     }
   }
 }

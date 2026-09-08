@@ -1039,6 +1039,44 @@ def gate_clone_patches_reproduce():
                   "broken: " + "; ".join(stale))[:300]
 
 
+def gate_source_reconstruction_verifies():
+    """`setup/source-reconstruction.json` must still describe the trees on disk.
+
+    [Claude 2026-09-08] This gate did not exist, and its absence was found the way absences usually
+    are -- by breaking the thing it should have guarded. Editing three clones today
+    (`ctrl/train_ppo.py`, `ibac_sni/torch_rl/model.py`, `ppg/.../train.py`) moved both their patch
+    hashes and their closure hashes, and `setup/verify_sources.py` failed with
+    `source closure hash mismatch at runnable/ctrl` while EVERY gate passed.
+
+    That combination is the dangerous one. `gate_clone_patches_reproduce` checks that
+    `runnable/_patches/*.patch` still regenerates its clone; this checks the separate claim that
+    the RECONSTRUCTION MANIFEST -- the file a fresh clone bootstraps from -- still matches. The two
+    are different locks on the same door, and passing one while the other is broken means
+    README.md's reconstruction instructions are false while the gate report says the tree is fit to
+    launch from.
+
+    `rlvigen` cannot be materialized on a case-insensitive filesystem. That is named rather than
+    passed over: `verify_sources.py` prints it as NOT VERIFIED HERE, and a gate that read that as a
+    pass would be exactly the "instrument that cannot run reading as one that ran" failure this
+    project keeps finding.
+    """
+    try:
+        proc = subprocess.run([sys.executable, str(ROOT / "setup" / "verify_sources.py")],
+                              capture_output=True, text=True, timeout=300)
+    except Exception as error:
+        return FAIL, f"source reconstruction could not be verified: {type(error).__name__}"
+    combined = proc.stdout + proc.stderr
+    if proc.returncode != 0:
+        first = next((line.strip() for line in combined.splitlines() if "error" in line.lower()),
+                     combined.strip()[:200])
+        return FAIL, ("the source reconstruction manifest no longer describes the trees on disk, "
+                      f"so README's bootstrap instructions are false: {first}")[:300]
+    pending = "NOT VERIFIED HERE" in combined
+    return PASS, ("source reconstruction verified from setup/source-reconstruction.json"
+                  + (" (rlvigen still pending a case-sensitive filesystem, named not skipped)"
+                     if pending else ""))
+
+
 def gate_ibac_procs_is_runnable():
     """A configured process count that cannot start is worse than a small one that can.
 
@@ -1308,6 +1346,7 @@ GATES = [
     ("pairing proven physically", gate_pairing_proven_physically),
     ("ibac_sni procs runnable", gate_ibac_procs_is_runnable),
     ("clone patches reproduce", gate_clone_patches_reproduce),
+    ("source reconstruction verifies", gate_source_reconstruction_verifies),
     ("job budgets fit", gate_job_budgets_fit),
     ("claimed hyperparameters executed", gate_claimed_hyperparameters_are_executed),
     ("evaluation pairing", gate_evaluation_pairing),
