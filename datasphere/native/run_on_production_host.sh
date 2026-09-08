@@ -283,13 +283,25 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     # two cases apart keeps "the operator accepted a worse layout than this host offered" separate
     # from "this host offers nothing better", which is an owner-level fact about the campaign, not
     # an operator slip.
-    _real_filesystems="$(df -P --local -x tmpfs -x devtmpfs -x squashfs -x overlay -x fuse.gvfsd-fuse \
-        2>/dev/null | awk 'NR>1 {print $1}' | sort -u | wc -l | tr -d ' ')"
+    # [Claude 2026-09-08, second pass] Counting FILESYSTEMS was wrong: cds2 reports two, and the
+    # second is /dev/sda3, a 975 MB /boot partition with 376 MB free. Telling an operator "a better
+    # mirror location EXISTS" and pointing them at /boot is worse than saying nothing.
+    #
+    # What matters is not how many filesystems exist but whether any of them could actually HOLD a
+    # result. The floor below is deliberately crude and named in the message rather than hidden:
+    # anything with less than 20 GB free cannot take a production cell's output, so it is not a
+    # candidate whatever its mount point says.
+    _mirror_floor_gb=20
+    _mirror_candidates="$(df -P --local -x tmpfs -x devtmpfs -x squashfs -x overlay -x fuse.gvfsd-fuse \
+        2>/dev/null | awk -v need="$_mirror_floor_gb" 'NR>1 && ($4/1048576) >= need {print $1}' \
+        | sort -u | wc -l | tr -d ' ')"
+    _real_filesystems="$_mirror_candidates"
     echo "refusing: NATIVE_RESULT_MIRROR is on the SAME filesystem as the result path" >&2
     echo "  (fsid $_result_dev). A copy beside the original does not survive the failure it" >&2
     echo "  exists for." >&2
     if [[ "${_real_filesystems:-0}" -le 1 ]]; then
-      echo "  THIS HOST HAS ONLY ONE FILESYSTEM, so there is no second volume to point at and" >&2
+      echo "  THIS HOST HAS NO SECOND FILESYSTEM THAT COULD HOLD A RESULT (none besides this one" >&2
+      echo "  has ${_mirror_floor_gb} GB free), so there is no second volume to point at and" >&2
       echo "  no durable second location exists here. The mirror still buys a second COPY -- it" >&2
       echo "  survives our own tar failing, a bad path, an overwrite -- but it does NOT buy a" >&2
       echo "  second failure domain: one full or failed disk loses both." >&2
@@ -298,7 +310,10 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
       [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
       echo "=== NATIVE_RESULT_MIRROR_SINGLE_DEVICE_HOST filesystems=${_real_filesystems} fsid=$_result_dev (accepted explicitly) ===" >&2
     else
-      echo "  This host has ${_real_filesystems} filesystems, so a better mirror location EXISTS." >&2
+      echo "  This host has ${_real_filesystems} filesystems with at least ${_mirror_floor_gb} GB free," >&2
+      echo "  so a better mirror location EXISTS. They are:" >&2
+      df -Ph --local -x tmpfs -x devtmpfs -x squashfs -x overlay 2>/dev/null \
+        | awk -v need="$_mirror_floor_gb" 'NR>1 && ($4+0>0) {print "    " $0}' >&2
       echo "  Point it at another volume, or set NATIVE_ACCEPT_SAME_DEVICE=1 to record the" >&2
       echo "  deviation deliberately." >&2
       [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
