@@ -2224,3 +2224,99 @@ all source changes, not in a reactive job now.
 completed run in this project's corpus carried it, so there is no unaffected arm to compare
 against. The correction is to the mechanism; the historical records stay as they are, with this
 entry as the reason a pre-2026-09-07 training placement stream is not identical to a post-fix one.
+
+---
+
+## #100 — the step-0 evaluation was never actually disabled, because twenty cfgs set the sentinel explicitly
+
+**2026-09-08.** #99 fixed the mechanism and this entry is why the fix did not take.
+
+#99 made the runner resolve a per-family spelling of "never evaluate periodically". That resolution
+sits behind `[[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]`. Every
+attest and cover cfg — twenty of them — sets `EVAL_EVERY_FRAMES=2147483647` **explicitly**, so the
+`-z` test is false, the else branch runs, and `eval_every` becomes the exact numeric sentinel #99
+exists to remove.
+
+Not inferred. `bt1utl06n6mqffrt2jdn` (sgqn, SUCCESS, 2026-09-08) has it in its own training log:
+
+    | eval           | F: 0 | S: 0 | E: 0 | L: 500 | R: 7.6385 | T: 0:00:01 | SR: 0.0000
+
+**Fixed in the runner, not in the cfgs.** `normalize_eval_sentinel` maps the sentinel to the
+family's own spelling before either cadence path reads it. Editing twenty cfgs would have fixed
+twenty cfgs; this also covers the production cfgs, which do not exist yet and would have been
+written by copying one of the twenty.
+
+Scoped to families that actually take a cadence. `idaac`, `ppg`, `ibac_sni` and `ctrl` have no
+`{eval_every}` option, so the value never reaches their loops — refusing there would have broken
+four families to fix a defect they never had.
+
+`tests/test_eval_sentinel_normalization.py` drives all three branches out of the shell directly.
+Worth stating plainly: when that function was installed, exactly one of its branches had ever run
+on a real job, and it was not the important one.
+
+## #101 — `ctrl` and `ppg` were left out of the fail-closed terminal-save fix
+
+**2026-09-08.** Q18(b) made five families fail closed on a failed terminal checkpoint write.
+`tests/test_terminal_checkpoint_fail_closed.py`'s `SITES` dict held exactly those five, and a
+five-entry list next to a seven-family fleet is not visibly incomplete.
+
+- `ctrl`: `_save_state` had **no `return` statement at all**, so `safe_write`'s bool was discarded
+  and the terminal caller could not have checked it. `train_ppo.py` then printed
+  `NATIVE_FINAL_EVALUATION_COMPLETED` unconditionally. It also took the 300s periodic grace period
+  instead of the 1800s terminal one, on the one save that cannot be retried.
+- `ppg`: the terminal save was a raw `torch.save`, bypassing the atomic tmp-then-rename primitive,
+  so a kill mid-write leaves a torn file of non-zero size.
+
+Retention validates existence and size, never content, and `eval_grid.py` takes the reported frame
+from `--frame` rather than from inside the checkpoint — so either failure could surface as a
+completed run reported at the wrong weights.
+
+**No failure was ever observed.** These are fail-open paths verified in source, not an incident.
+The distinction matters at 45 h per cell (`notes/PRODUCTION-RUNBOOK.md:90`), where the cost of the
+path firing once is the cell.
+
+## #102 — today's own clone edits broke the reconstruction manifest while every gate passed
+
+**2026-09-08.** Editing `ctrl/train_ppo.py`, `ibac_sni/torch_rl/model.py` and `ppg/.../train.py`
+moved their patch hashes *and* their closure hashes. `setup/verify_sources.py` failed with
+`source closure hash mismatch at runnable/ctrl` — and `production_gates.py` reported no failures,
+because `verify_sources.py` was not among its checks.
+
+`gate_clone_patches_reproduce` watches whether `runnable/_patches/*.patch` regenerates its clone.
+Nothing watched whether `setup/source-reconstruction.json`, the manifest a fresh clone bootstraps
+from, still matches. Two locks on the same door; one was unwatched, so README's reconstruction
+instructions were false while the gate report said the tree was fit to launch from.
+
+Both hash sets refreshed from the trees using `bootstrap_sources.normalized_tree_hash` — the same
+function that checks them, rather than a second implementation — and
+`gate_source_reconstruction_verifies` added. It reports `rlvigen`'s case-sensitivity limitation as
+NAMED, not passed: a gate reading "NOT VERIFIED HERE" as a pass is the recurring failure of an
+instrument that could not run reading as one that ran.
+
+## #103 — the `ibac_sni` policy-head init: prediction falsified, change kept, justification corrected
+
+**2026-09-08.** `torch_rl`'s `initialize_parameters` unit-norms every `Linear` layer's weight rows,
+including the authored continuous policy head. Measured excess clipping (0.468 against the 0.330 its
+own `log_std` predicts) was read as an off-centre initial mean and the head was moved to
+`orthogonal(0.01)`, the convention every other continuous-action baseline here uses.
+
+**Job `bt116j2650ohtkj8ev7q` ran that change and the clip rate did not fall: 0.4925, against 0.468
+before.** The payload really did carry it — checked by grepping the shipped archive, not assumed.
+
+The mechanism survives and the remedy does not. `action_raw_min` reaches **-6.63** at `sigma ~ 1.0`,
+and over 17,500 coordinate draws from N(0,1) the expected extreme is |z| ~ 4.1, so that value needs
+a real mean offset rather than a tail event. What is falsified is that the *initialization* puts it
+there: by 10,112 frames the head has taken roughly eighty updates and the mean is a learned
+quantity.
+
+**Kept**, on the argument that never depended on the prediction: `initialize_parameters` was written
+for a head feeding a discrete softmax, where output scale is nearly irrelevant, and ours is a
+Gaussian mean, where output scale *is* the action — the same transplanted-condition shape as A43 and
+A47. Keeping a change whose stated benefit did not appear is only defensible because the benefit was
+never the whole justification, and that has to be said rather than quietly re-labelled.
+
+**Open, and a better question than the one asked**: why does `ibac_sni`'s mean run off-centre within
+eighty updates when `idaac`'s and `ppg`'s do not? Untested candidates: the VIB KL term acting on the
+256-d latent the head reads directly; no observation normalization beyond `/255`; or reward scale —
+`ibac_sni` trains on RAW reward while `idaac` and `ppg` both normalize, so its advantage scale is
+whatever Door's returns happen to be.
