@@ -2878,3 +2878,53 @@ plumbing fault than any one of them — but guessing after the fact is exactly w
 avoids.
 
 **Status: operational, not ratified.**
+
+---
+
+## A48 — Why the frame-stack argument does NOT transfer to time-limit handling (2026-09-08)
+
+Closing the frame-stack axis (A40 REVISED-2) invites an obvious question, and a reviewer will ask
+it: the reasoning was *"single-frame is Procgen's environment convention, its condition does not
+hold on Door, so it was inherited rather than chosen"*. **C1, time-limit handling, has the same
+surface shape** — `idaac`, `ppg`, `ibac_sni` and `ctrl` treat the 500-step limit as terminal
+because in Procgen every episode genuinely ends, and Door only ever truncates. `rlgen/protocol.py`
+itself says their authors *"were right for Procgen and are wrong here, purely because the
+environment changed underneath them."*
+
+So why is one closed and the other still declared? Answering it now, before results exist, because
+after them it would look like a rationalisation.
+
+**They differ in whether the transplanted treatment is still a coherent choice on Door.**
+
+- **Frame stack is not.** A single frame on Door does not encode velocity, and no objective makes
+  it do so. CoinRun's `PAINT_VEL_INFO=1` put velocity *in the pixels*; Door does not. The policy
+  was blind to a state variable it needs, and there is no reading of the task on which that is a
+  defensible design. Nobody chose it and nobody could have.
+- **Terminal time-limit handling is.** Review 8's objection is right and the project adopted it:
+  *"If the 500-step horizon defines the benchmark's finite episodic task, zeroing the value target
+  at the endpoint is a perfectly coherent finite-horizon objective."* Door under a 500-step limit
+  **is** a finite-horizon task if you define the task that way, and RL-ViGen does. Both treatments
+  correspond to real, defensible objectives; they are simply different objectives.
+
+That is the whole distinction, and it is not a matter of degree. One axis had a wrong answer and a
+right one. The other has two right answers to two different questions, which is exactly the
+situation that declaring exists for.
+
+**A refinement worth recording, which does not change the disposition.** The 9 "terminal" baselines
+are not homogeneous in provenance. The RL-ViGen five get it from
+`wrappers/robo_wrapper.py:42`'s `discount = 0.0` — a choice RL-ViGen's authors made **for this
+benchmark, on this task**. The four Procgen-origin ones inherited it from an environment where the
+question never arose. So the split is really 3 bootstrap / 5 chosen-for-Door / 4 inherited.
+
+The *behaviour* is identical across those nine, so this changes no comparison and no number. It
+changes what may be claimed about them: "nine baselines treat the limit as terminal" is true, and
+"nine authors decided the limit is terminal for Door" is not.
+
+**Equalising remains refused, and now for a stated reason rather than by inheritance.** Changing
+the value target is invasive, and there is no direction that is faithful to all twelve sources:
+bootstrapping the nine deviates from nine repositories, terminating the three deviates from three.
+A5's disposition stands — report the difference, drop the directional claim — and A46's budget
+table is the other half of the same honesty, since a finite-horizon objective evaluated at 120% of
+one method's own horizon and 0.375% of another's is not one condition either.
+
+**Status: operational, not ratified.** This is an argument, not a change; nothing in the code moves.
