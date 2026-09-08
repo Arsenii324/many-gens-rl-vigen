@@ -2417,8 +2417,21 @@ below, which was fixed then. One call earlier, in the same block, it survived �
 executed the train path.
 
 Worse at production scale: `places365standard_easyformat.tar` unpacks as
-`places365_standard/<split>/<class>/` and carries **no flat `val/images` at all**, so the first real
-svea/sgqn/soda cell would have died at this guard *after* the 21 GB upload.
+`places365_standard/<split>/<class>/`, so there is no flat `val/images` for the check to find and
+the first real svea/sgqn/soda cell would have died at this guard *after* the 21 GB upload.
+
+**Stated precisely, because this one is an inference and the others here are measurements.** The
+archive is not on this machine — it was deleted after the fixtures were built — so its `val`
+layout was not read directly. The grounds are the repository's own record from when it *was* on
+disk: `run_probe.sh`'s pre-existing comment, *"The canonical easyformat archive unpacks as
+`places365_standard/train`; the small probe fixture carries a flat `train/`"*, plus DMC-GB's
+README pointing at that archive. `val` follows by symmetry with `train`.
+
+The fix does not depend on the inference being right: the resolution accepts **either** layout for
+**either** split and refuses loudly when neither is present, and
+`tests/test_places365_checks_the_split_it_consumes.py` executes it against synthetic copies of
+both. What the inference affects is only the claim about what *would* have happened, and it is
+labelled as such.
 
 **Fixed**: the check now resolves the split actually consumed, in either archive layout, and
 refuses loudly when the archive lacks it. `PLACES365_EXPECTED_COUNT`/`_SHA256` in the four
