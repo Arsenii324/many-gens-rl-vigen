@@ -534,3 +534,55 @@ Making the on-policy four log comparable optimizer diagnostics is the obvious ne
 evaluator revisions and void the 7/7 attestation for a hypothesis with a single data point behind
 it. It belongs in the same batch as the `eval_provenance.py` import fix — the next one that already
 touches a closure member.
+
+---
+
+# Course correction: the ibac_sni clip finding does not block production, and the procs=1 pilots cannot settle it
+
+Prompted by the right question — *why the diagnostic; why not run as-is in production?* Two things
+were conflated, and separating them removes about three hours from the schedule.
+
+## The frame-stack gate is MET, and I indicted it on a threshold I invented
+
+`DECISIONS-IF-PRODUCTION-GOES-WRONG`'s frame-stack section asks for *"one short cell each, read for
+non-degenerate learning rather than a score"*, because `ctrl` and `ibac_sni` run **authored**
+stacking code that had never trained. `bt1leljqi6n7osmcdb77` ran 102400 frames with finite losses
+and a stable `sigma` of 1.073. **The authored stacking code works. That is what the gate asked.**
+
+What indicted it was `MEASURED_CLIP_INDICTS = 0.60` in `scripts/read_stack_pilot.py` — a number
+**I chose**, reasoning "twice what having no policy costs you". It is not the project's criterion.
+The project's words are *"non-collapsed action distribution"*, and at `sigma` 1.073 the
+distribution is not collapsed; it is off-centre. Those are different findings, and mine was the
+stricter one applied under the other's name.
+
+## And the pilots run a regime production does not
+
+    pilot tier   procs= 1   rollout=  128   minibatches=1   (full-batch PPO)
+    v100         procs=16   rollout= 2048   minibatches=8   (torch_rl's own released shape)
+
+Every ibac_sni pilot available on the DataSphere tiers is `procs=1`, because `gt4.1` has 4 logical
+CPUs and `gt4i.1` has 8. So v207 (init reverted) and the planned v208 (lr reverted) would each
+spend 3.6 hours isolating a variable **in an update structure production never runs** — full-batch
+against eight minibatches, at twice the update-to-data ratio. A variable that mattered there might
+not matter at production, and vice versa. Tuning against it is tuning against the wrong thing.
+
+**v208 was written and deliberately not submitted.** v207 is already executing and is left to
+finish: it costs nothing further and gives a clean matched isolation of the init against v200's
+0.857 at the same frame count. It is **informative, not blocking**.
+
+## Where the finding actually belongs
+
+Gate 1, `ibac_sni competence` — an OWNER gate, whose test `notes/RUNNING-ON-PRODUCTION-HOST.md`
+step 5 already schedules **at the production settings**, `procs=16`. That is the only place the
+question can be answered. Step 5a now tells the operator to read
+`action_clip_rate_coordinate` there, with the fleet calibration attached.
+
+## What this means for running as-is
+
+**Production should run ibac_sni as it stands.** It is the authors' own PyTorch branch on their own
+CoinRun trunk; a faithfully implemented method that performs badly is a result, not a defect, and
+that sentence is the project's own. Adjusting it now, against a pilot regime production does not
+use, on a threshold I invented, would be exactly the outcome-dependent tuning gate 4 forbids.
+
+**Pre-production is therefore complete when the seven attests and the `ctrl` frame-stack pilot
+land — about 10:05 — not when the ibac_sni arms finish at 12:10.**
