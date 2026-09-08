@@ -7861,3 +7861,24 @@ itself is part of A65's still-open implementation trace, not this fix.
 4. **Every `RESOLVED` item names its commit**, so the claim can be checked against the diff.
 5. Structure is pinned by `tests/test_construction_register.py`. If that test fails, the register
    drifted from its own rules — fix the register, not the test.
+
+### `eval_provenance.py`'s missing `sys.path` guard — KNOWN, deliberately not fixed
+
+**2026-09-08.** `scripts/eval_provenance.py:18` does `from datasphere.native.evaluator_identity
+import ...`, and `datasphere/` is a plain directory with no `__init__.py`, so that import resolves
+only when the repository root is already on `sys.path`. Every other script importing it inserts the
+root first (`collect_metrics.py:50`, `eval_grid.py`, and `preprod_table.py` as of today);
+`eval_provenance.py` does not.
+
+**It is not broken in the path that runs.** Its only caller is `eval_grid.py`, which inserts the
+root before importing it, so the evaluator works. It fails only when run standalone or imported
+directly — which nothing does.
+
+**Not fixed, and the reason is the cost, stated rather than glossed.** `eval_provenance.py` is a
+`CODE_MEMBER` (`evaluator_identity.py::CODE_MEMBERS`), so a one-line change moves **every** family's
+evaluator revision and voids all seven attestations, costing a full re-attestation wave. Paying
+that for a latent fragility with no live symptom is the wrong trade.
+
+**Fix it in the next batch that already touches a closure member**, where it is free. Recorded here
+so the next person to open that file does not rediscover it, and does not fix it in isolation
+without knowing what the fix costs.

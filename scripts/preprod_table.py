@@ -23,7 +23,14 @@ import sys
 import tarfile
 from pathlib import Path
 
-from datasphere.native.family import provenance_for
+# [Claude 2026-09-08] `datasphere` is a plain directory with no `__init__.py`, so this import only
+# resolves when the repo root is on sys.path. Every other script that imports it inserts the root
+# first (`collect_metrics.py:50`, `eval_grid.py`, `eval_provenance.py`); this one did not, so the
+# file has been unrunnable -- `ModuleNotFoundError: No module named 'datasphere'` on import, before
+# argparse, so even `--help` failed. Found by running it rather than reading it.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from datasphere.native.family import provenance_for  # noqa: E402
 
 # The two axes that decide whether two rows may be compared at all. Sources: audit_eval_state.py
 # for the estimator, CONSTRUCTION.md C2 for the stack.
