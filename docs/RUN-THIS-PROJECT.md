@@ -113,10 +113,29 @@ This is the route to use if you have a machine, and it needs no account anywhere
 ```bash
 CELLS=drqv2:1 FRAMES=10000 TASK=Door SEED=1 \
 NATIVE_HOST_PROFILE=<your-profile> \
+DOCKER_GPUS='"device=0"' \
 ENDPOINT_EVAL=1 ENDPOINT_EVAL_REGIMES=train,eval-easy ENDPOINT_EVAL_SCENES=0 \
   bash datasphere/native/run_on_production_host.sh \
     payload.tgz result.tgz rlvigen-door2-90d8b8c4.tgz [places365.tgz]
 ```
+
+**`DOCKER_GPUS` is mandatory** and has no default. It used to default to `all`, which on a shared
+machine takes every card including one assigned to somebody else, so the script now refuses when it
+is unset. Name the card you are entitled to:
+
+| value | meaning |
+|---|---|
+| `'"device=0"'` | one card by index — note the inner quotes, docker needs them |
+| `'"device=GPU-<uuid>"'` | the same card, immune to re-enumeration (`nvidia-smi -L`) |
+| `none` | CPU-only; the `--gpus` flag is omitted entirely, since `--gpus none` is invalid docker |
+| `all` | every card — only if you own them all |
+
+On a **shared** machine also set `NATIVE_VRAM_CAP_MIB` (e.g. `2048`). It bounds PyTorch's
+reservation so a neighbour's allocation cannot be starved by ours; without it a caching allocator
+grows until something fails, and the process that fails is whichever asks the driver second.
+
+If you already have Places365 extracted somewhere, `NATIVE_PLACES365_DIR_HOST=/path/to/it` mounts
+it read-only instead of copying and expanding ~45 GiB per job.
 
 Argument order is `PAYLOAD RESULT [RLVIGEN] [PLACES365]`. Read
 `notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,

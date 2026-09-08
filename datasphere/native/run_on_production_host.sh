@@ -98,8 +98,20 @@ set -euo pipefail
 # GPU refusal below is a pure environment test, and the image lookup after it starts a container --
 # so ordering them the other way round means the most dangerous misconfiguration in this file is
 # diagnosed only after a container has already been launched.
-command -v docker >/dev/null 2>&1 || {
-  echo "refusing: docker is not on PATH." >&2
+# `command -v docker` proves only that the CLI is INSTALLED. The daemon may be stopped, or this
+# user may not be in the docker group -- and then the first real failure is a raw
+# "failed to connect to the docker API at unix:///var/run/docker.sock" from the middle of the
+# script, after the argument checks have already passed. `docker info` is the cheap question that
+# distinguishes the three cases, and preflight_production_host.sh's own check 1 makes the same
+# point: being in the docker group is not the same as docker running.
+docker info >/dev/null 2>&1 || {
+  if command -v docker >/dev/null 2>&1; then
+    echo "refusing: the docker CLI is installed but the daemon is not reachable as this user." >&2
+    echo "  Either dockerd is not running, or this account is not in the docker group." >&2
+    echo "  Check with: docker info" >&2
+  else
+    echo "refusing: docker is not on PATH." >&2
+  fi
   echo "  Every computation this script performs now runs inside a container -- reading" >&2
   echo "  source-lock.json and the disk model included -- because the production host permits" >&2
   echo "  nothing but small python-unrelated actions and docker itself to run outside one." >&2
