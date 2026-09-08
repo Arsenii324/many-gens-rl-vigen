@@ -317,9 +317,15 @@ def render() -> str:
            "actually references, `cfg yaml` an RL-ViGen config, and **`default` means nobody passes",
            "it** and the clone's own default applies. That last one is not a detail: the IBAC `beta`",
            "incident was a documented 1e-4 that nobody passed, executing as 1.0.", "",
-           "`v100 overlay` is what PRODUCTION changes relative to the DataSphere tiers. Two entries",
-           "exist in the whole fleet, and both RESTORE each baseline's own upstream parallelism",
-           "rather than compromising it.", "",
+           "`v100 overlay` shows what PRODUCTION changes in a family's **`constants`** relative to",
+           "the DataSphere tiers. There are exactly two, and both RESTORE each baseline's own",
+           "upstream parallelism rather than compromising it.", "",
+           "**That column is not the whole overlay.** Three further overrides live in the",
+           "`production` section and are not constants, so they do not appear above:",
+           "`rlvigen.replay_capacity` 300000->620000 (non-evicting at the 600k budget),",
+           "`rlvigen.preserve_snapshots` 100000->50000 (all thirteen stamps kept, not six), and",
+           "`ctrl.host_memory_model` null->54.28 GiB -- which is an EXTRAPOLATION from a measured",
+           "16-env peak and says so in its own `basis` field, not a measurement.", "",
            "| " + " | ".join(head) + " |",
            "|" + "|".join(["---"] * len(head)) + "|"]
     out += ["| " + " | ".join(r) + " |" for r in rows]

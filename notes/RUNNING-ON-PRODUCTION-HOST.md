@@ -26,9 +26,12 @@ on the host, and a later change requires a new payload and a new run.
    source lock, and a freshly built payload. Verify both payload identity and evaluator binding.
    Never reuse a payload made before the last source commit. Transfer the payload, the RL-ViGen
    asset, and any explicitly mounted checkpoint; record their hashes.
-2. **Prove the host boundary.** SSH to `cds2`, inspect `nvidia-smi` for a currently free GPU,
-   verify `docker run --gpus ... <pinned-image> nvidia-smi`, check free disk against the 60-GB
-   floor, and check for competing users/processes. Stop on any mismatch. A DataSphere `g1.1`
+2. **Prove the host boundary.** SSH to `cds2`, read `nvidia-smi` for the occupancy of **the card
+   assigned to us** (8 September: `V100-1` — a free card that is not ours is still not ours),
+   verify `docker run --gpus '"device=1"' <pinned-image> nvidia-smi -L` shows exactly ONE GPU,
+   and check free disk against the 60-GB floor. Read occupancy with the aggregate query
+   `nvidia-smi --query-gpu=...`, which does not enumerate other users' processes. Stop on any
+   mismatch. A DataSphere `g1.1`
    diagnostic is not evidence that this production host is configured correctly.
 3. **Prove renderer parity before training.** Use the source-locked image and `MUJOCO_GL=egl`.
    Evaluate one known checkpoint with the current evaluator on the already validated side to get
@@ -118,7 +121,7 @@ bash datasphere/native/preflight_production_host.sh --cells drqv2:1 --frames 600
 2026-09-07, which is the wrong shape for something whose failure modes are a cell dying six hours
 in — or worse, succeeding while measuring something else. It checks: the Docker daemon is reachable
 *as this user* (being in the group is not the same as the daemon running); `source-lock.json` pins
-an image; `docker run --gpus all <pinned image> nvidia-smi` actually reaches the GPUs (host
+an image; `docker run --gpus '"device=1"' <pinned image> nvidia-smi` actually reaches the GPU (host
 `nvidia-smi` working does **not** prove this — it needs `nvidia-container-toolkit`); how many GPUs
 there are and whether they are busy; that the container has outbound network, since `run_probe.sh`
 bootstraps its whole environment per run; free disk against the **derived** requirement for those
@@ -321,9 +324,21 @@ one card at double the memory while the other sits idle. This was invisible on D
 tiers have a single GPU.
 
 Note the interaction with `DOCKER_GPUS`: that flag decides which cards the CONTAINER can see, and
-`NATIVE_CELL_DEVICES` indexes within that set. Packing across both cards therefore needs
-`--gpus all` (the default) plus `NATIVE_CELL_DEVICES=0,1`; pinning the whole container to one card
-and then asking for two devices would fail.
+`NATIVE_CELL_DEVICES` indexes within that set. Packing across both cards would need `--gpus all`
+plus `NATIVE_CELL_DEVICES=0,1`; pinning the container to one card and then asking for two devices
+would fail.
+
+> **[SUPERSEDED 2026-09-08 — DO NOT PACK ACROSS BOTH CARDS.]** `cds2` is under a strict GPU
+> assignment schedule and the assignment names **one card**: 8 September is `V100-1`. Card 0 is not
+> ours whether or not it is idle. Two-card packing is therefore not available, and `--gpus all` —
+> which is the script's DEFAULT when `DOCKER_GPUS` is unset — would silently take both.
+>
+> **Always set `DOCKER_GPUS='"device=1"'` explicitly**, and confirm with `nvidia-smi -L` *inside*
+> the container that exactly one GPU is visible. `CUDA_VISIBLE_DEVICES` is not a substitute: a
+> library that ignores it still sees every attached card.
+>
+> See [`production-host/08-gpu-assignment-and-time.md`](production-host/08-gpu-assignment-and-time.md)
+> and [`production-host/`](production-host/) in full.
 
 Three constraints:
 

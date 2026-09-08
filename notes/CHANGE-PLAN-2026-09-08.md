@@ -142,8 +142,9 @@ Eight minibatches of exactly 256. That is `torch_rl`'s own released rollout shap
 exactly. **`--batch-size 256` is not a dead flag; it is the correct flag, degenerating only on a
 tier production does not use.**
 
-The generalization is worth more than the item. Across all seven families there are exactly **two**
-`v100` constant overrides:
+The generalization is worth more than the item. Across all seven families there are exactly **two** `v100` **constants** overrides (three
+further overrides live in the `production` section: `rlvigen.replay_capacity`,
+`rlvigen.preserve_snapshots`, and `ctrl.host_memory_model`):
 
     ibac_sni.procs      1  -> 16     (matches torch_rl's released default rollout)
     ctrl.num_envs      16  -> 64     (matches CTRL's released default, 64 x 256 = 16,384)
