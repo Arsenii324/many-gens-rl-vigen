@@ -22,6 +22,7 @@ and the specifics are where the harm is.
 | [`10-resource-upper-bound-rule.md`](10-resource-upper-bound-rule.md) | **the upper-bound rule** — it subsumes much of `04`; VRAM now measured |
 | [`11-host-state-2026-09-08.md`](11-host-state-2026-09-08.md) | **a read of the actual host, and its live blockers** — re-read before each session |
 | [`12-incremental-bringup-plan.md`](12-incremental-bringup-plan.md) | **the rung-by-rung bring-up plan** — one new risk per step, reviewed before the next |
+| [`13-how-the-operator-path-works.md`](13-how-the-operator-path-works.md) | what the wrapper actually does, and why the environment is rebuilt every cell |
 
 ## The rule that comes before the others
 
