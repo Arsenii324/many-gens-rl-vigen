@@ -132,6 +132,30 @@ loss.
 
 ## Not yet built, and worth having before day one
 
-- a single command that reports campaign state across cells (currently per-job);
-- an alert on `log_std` drift rather than post-hoc inspection;
-- the fleet-level exporter and schema note (`production-readiness-by-class.md` lists it as PARTIAL).
+Two of the three were built on 2026-09-08 and are named here rather than removed, so the reason
+each exists stays attached to it.
+
+- ~~a single command that reports campaign state across cells (currently per-job)~~ —
+  **`python scripts/campaign_status.py`**. All 36 cells in one view, every state DERIVED from
+  artifacts the run already emits (the schedule, the submission ledger, `results/records`, the
+  evaluator ledger) rather than from a file anyone has to maintain. `SUPERSEDED` is kept distinct
+  from `DONE` because a record that looks complete while describing a tree that no longer exists is
+  this project's characteristic failure. `--strict` exits 1 while any family is unattested.
+- ~~an alert on `log_std` drift rather than post-hoc inspection~~ —
+  **`scripts/watch_policy_health.py`**, wired into `run_measured` beside the stall watchdog and
+  running on every cell automatically. It emits `NATIVE_POLICY_SATURATION_WARNING` or
+  `NATIVE_POLICY_COLLAPSE_WARNING` into the `training.log` the archive returns, once each per run.
+  **It never aborts**, and that is the design: the rule in
+  `DECISIONS-IF-PRODUCTION-GOES-WRONG.md` — a faithfully implemented method that simply performs
+  badly is a result, not a defect — means a watchdog killing on saturation would delete exactly
+  those results, for whichever baseline struggled most. A test asserts the source contains no kill
+  path so the property cannot erode.
+- the fleet-level exporter and schema note (`production-readiness-by-class.md` lists it as PARTIAL)
+  — **still open.**
+
+Also new and worth knowing on day one: `run_measured` now carries a **stall watchdog**
+(`CELL_STALL_SECONDS`, default 1800). `CELL_TIMEOUT_SECONDS` bounds how long a cell may RUN and
+cannot bound how long a DEAD cell takes to notice — job `bt12f5us5h120laajpme` crashed at ~8500
+frames and then sat until its 7800s timeout fired 105 minutes later, of which roughly 1200 seconds
+were work. The watchdog kills the cell's process group after 1800s without output and reports
+`NATIVE_CELL_STALLED` distinctly from a signal, so it is never misread as an OOM.
