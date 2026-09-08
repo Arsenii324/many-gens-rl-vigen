@@ -78,8 +78,15 @@ stand_down() {
   echo "=== STEP 4: stand down"
   [[ -n "$reaper_pid" ]] && kill "$reaper_pid" 2>/dev/null
   docker stop "$EXCL" "$YIELD" >/dev/null 2>&1
-  local leaked
-  leaked="$(docker ps --filter "name=cell-c${CARD}-" --format '{{.Names}}')"
+  # `--rm` removal is asynchronous after `docker stop` returns, so an immediate check races it and
+  # reports a leak that is not one -- observed 2026-09-09. Settle first, then report.
+  local leaked=""
+  local _i
+  for _i in 1 2 3 4 5 6 7 8 9 10; do
+    leaked="$(docker ps --filter "name=cell-c${CARD}-" --format '{{.Names}}')"
+    [[ -z "$leaked" ]] && break
+    sleep 1
+  done
   [[ -z "$leaked" ]] && echo "  no watcher leaked" || echo "  LEAKED: $leaked"
   nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader | sed 's/^/  /'
 }

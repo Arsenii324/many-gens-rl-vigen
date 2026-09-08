@@ -228,7 +228,14 @@ DOCKER_GPU_ARGS+=(-e "NVIDIA_DRIVER_CAPABILITIES=${NATIVE_DRIVER_CAPABILITIES:-c
   # mtime unchanged after a container run, host mount count unchanged (78 -> 78), and a root write
   # inside the container refused with "Read-only file system".
   if [[ "${NATIVE_INJECT_GPUCOMP:-1}" == "1" ]]; then
-    _drv="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1 | tr -d '[:space:]')"
+    # NOT `nvidia-smi ... | head -1`. This host has two GPUs, so `head` exits after the first line,
+    # `nvidia-smi` takes SIGPIPE, `pipefail` reports 141 and `set -e` aborts the entire wrapper
+    # before it does anything at all -- observed 2026-09-09 as a bare `CELL EXIT=141` with no other
+    # output. Same family as the `cmd | tail` trap: a filter that finishes early kills its producer
+    # and the pipeline status is the one that matters.
+    _drv="$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null || true)"
+    _drv="${_drv%%$'\n'*}"
+    _drv="${_drv//[[:space:]]/}"
     if [[ -n "$_drv" ]]; then
       _gpucomp="$(ldconfig -p 2>/dev/null | awk -v n="libnvidia-gpucomp.so.$_drv" '$1 == n {print $NF; exit}')"
       if [[ -n "$_gpucomp" && -r "$_gpucomp" ]]; then

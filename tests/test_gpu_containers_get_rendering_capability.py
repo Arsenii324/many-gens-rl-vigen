@@ -121,3 +121,37 @@ def test_the_runner_registers_the_egl_vendor_and_refreshes_the_loader():
         "the loader cache predates the gpucomp bind mount, so the vendor cannot resolve")
     assert "NATIVE_EGL_DEPENDENCY_MISSING" in text, (
         "an unloadable EGL vendor must name itself; MuJoCo blames the wrong thing")
+
+
+def test_the_driver_lookup_survives_a_multi_gpu_host():
+    """`nvidia-smi | head -1` on a two-GPU host kills the whole wrapper.
+
+    [Claude 2026-09-09] Observed as a bare `CELL EXIT=141` with no other output. `head` exits after
+    the first of two lines, `nvidia-smi` takes SIGPIPE, `set -o pipefail` reports 141 and `set -e`
+    aborts run_on_production_host.sh before it validates anything. Third variant of the same family
+    tonight, after `cmd | tail` swallowing an exit status and `grep '^FAILED'` on coloured pytest
+    output -- a filter that finishes early, and a status read through it.
+
+    Executed with a stub `nvidia-smi` that prints TWO lines, which is what the real host does.
+    """
+    import subprocess
+    import textwrap
+
+    text = WRAPPER.read_text()
+    start = text.index('_drv="$(nvidia-smi')
+    end = text.index("\n", text.index('_drv="${_drv//', start))
+    snippet = textwrap.dedent(text[start:end])
+
+    import tempfile, os, pathlib as _p
+    with tempfile.TemporaryDirectory() as tmp:
+        stub = _p.Path(tmp) / "nvidia-smi"
+        stub.write_text("#!/bin/sh\nprintf '580.126.09\\n580.126.09\\n'\n")
+        stub.chmod(0o755)
+        script = (f"set -euo pipefail\nexport PATH={tmp}:$PATH\n"
+                  f"{snippet}\nprintf 'DRV[%s]\\n' \"$_drv\"\n")
+        out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60)
+
+    assert out.returncode == 0, (
+        f"the driver lookup aborts on a multi-GPU host (rc={out.returncode}); "
+        f"141 means SIGPIPE\n{out.stdout}{out.stderr}")
+    assert "DRV[580.126.09]" in out.stdout, out.stdout + out.stderr
