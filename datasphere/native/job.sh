@@ -737,7 +737,17 @@ print(json.dumps({
     "tier": tier,
     "source_commit": git("rev-parse", "HEAD"),
     # A dirty tree at submit time means the commit does NOT describe what was uploaded.
-    "source_dirty": bool(git("status", "--porcelain")),
+    #
+    # [Claude 2026-09-08] The ledger EXCLUDES ITSELF. `results/submissions.jsonl` is untracked and
+    # is written by this very block, so from the first submission onward `git status --porcelain`
+    # was never empty and every row said `source_dirty: true` -- including the six submitted from
+    # a verified-clean tree that `production_gates.py::gate_source_tree_frozen` had just passed.
+    # A flag that reports the same value whatever the world does carries no information, and this
+    # one would have made a genuinely dirty submission indistinguishable from a clean one.
+    "source_dirty": bool([
+        line for line in git("status", "--porcelain").splitlines()
+        if line[3:].strip() not in {"results/submissions.jsonl", "results/attempt-outcomes.json"}
+    ]),
     "inputs_sha256": inputs,
 }, sort_keys=True))
 LEDGER

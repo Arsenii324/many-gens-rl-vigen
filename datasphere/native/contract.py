@@ -211,7 +211,16 @@ def _git_identity(source: Path) -> dict:
     if commit is None:
         return {"source_commit": "unknown", "source_dirty": "unknown"}
     status = _run("status", "--porcelain")
-    return {"source_commit": commit, "source_dirty": status is None or bool(status)}
+    if status is None:
+        return {"source_commit": commit, "source_dirty": True}
+    # Same exclusion as job.sh's ledger writer, for the same reason: `results/submissions.jsonl` is
+    # untracked and is written by every submission, so once one job has been submitted this would
+    # report dirty forever regardless of the tree. The two files listed here are outputs of the
+    # provenance machinery itself and cannot describe the source it is recording.
+    IGNORED = {"results/submissions.jsonl", "results/attempt-outcomes.json"}
+    return {"source_commit": commit,
+            "source_dirty": bool([line for line in status.splitlines()
+                                  if line[3:].strip() not in IGNORED])}
 
 
 def write_payload(source: Path, output: Path, command: str, families: tuple[str, ...] = DEFAULT_FAMILIES) -> None:

@@ -2976,3 +2976,37 @@ default it claims to record — an exemption that is not checked is just a longe
 checking.
 
 **Status: operational, not ratified.** It makes A43 true; it does not change A43's reasoning.
+
+---
+
+## A50 — `source_dirty` was a constant, and the wave's own six rows prove it (2026-09-08)
+
+Found within a minute of the v197 wave's first real use of the attempt ledger.
+
+`source_dirty` answers "does the recorded commit describe what was uploaded". Both writers —
+`job.sh`'s ledger block and `contract.py`'s payload manifest — computed it as
+`bool(git status --porcelain)`. But `results/submissions.jsonl` is **untracked and written by the
+submission itself**, so from the first job onward the tree was never clean by that measure.
+
+All six Wave A rows read `[submitted from a DIRTY tree]`. The tree was **verified clean**: HEAD was
+`1b64c58`, `git status --short` was empty, and `production_gates.py::gate_source_tree_frozen`
+passed in the same minute. The flag was simply incapable of saying anything else.
+
+That is worse than an absent flag. A genuinely dirty submission would have been indistinguishable
+from these six, and the whole point of the field is to catch exactly that.
+
+**Fixed** in both writers, excluding only the two files the provenance machinery writes itself —
+`results/submissions.jsonl` and `results/attempt-outcomes.json`. Neither can describe the source it
+records. `tests/test_provenance_flags_are_not_self_defeating.py` pins both, and checks the
+exclusion is **narrow**: the ledger alone must not read dirty, and any other modification still
+must.
+
+**The six existing rows are left as written.** They are what the instrument recorded, and editing a
+provenance record to match a later belief is the failure this whole file exists to prevent. The
+correction lives here instead: **jobs `bt1felsu3m2p4q3rolnd`, `bt1efkde2vj17k5i1ptr`,
+`bt1qnn6kkfrqpj0gvrk5`, `bt12q2bfbiih2lb43obp`, `bt1qqsiccu983njs8fsl` and
+`bt1tjqjmpcnicb6ih739` were submitted from a clean tree at `1b64c58`**, and their payload manifests
+independently say so (`source_dirty: false`, written before any submission existed). Two records
+disagreeing is itself the evidence, and the one written earlier is the one that was right.
+
+**Status: operational, not ratified.**
