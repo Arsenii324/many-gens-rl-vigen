@@ -41,7 +41,7 @@ So disk is consumed at rungs 3 and 5 even though neither trains anything.
 | rung | state | what actually happened |
 |---|---|---|
 | 0 read-only | **done** | one filesystem, 325→321 GB free at 99%; card 1 holds 17268 MiB at 0% util; 125 GB RAM, 111 available |
-| 1 wrapper dry run | **in progress** | needed a payload on the host first; being built in a container |
+| 1 wrapper dry run | **done, and it found two more defects** | payload built and `verify-payload` passed (exit 0) in a container; then the dry run at 600k production scale passed every guard for `drqv2:1` (25 GB) and `svea:1` (70 GB, Places365 included), and `DOCKER_GPUS=none` was proven to omit the flag rather than pass an invalid value |
 | 2 pinned image present? | **done — it was ABSENT** | raised as the plan requires, then pulled by digest with the cost stated (~2 GB, 323→321 GB). `sha256:94c1577b…` confirmed, Ubuntu 22.04.3, no `python3` (correct for a runtime image) |
 | 3 container, no GPU, nothing installed | **done, and it found a blocker** | see below |
 | 4 GPU visible, no compute | **not started** | |
@@ -62,7 +62,26 @@ the staging directory was on a filesystem nothing checked; `check-memory` was re
 literal profile string; and **`--gpus` defaulted to `all`**, which on a per-day-assigned machine
 would have taken a neighbour's card on any run that forgot one environment variable.
 
-That is the argument for the ladder. The remaining rungs get run, not reasoned about.
+Rung 1 then found two more, both in the fixes themselves: `_dev_of` validated `stat -f -c %i`
+against `^[0-9]+$` while GNU stat prints that ID in **hex** (`c4aaf1bac0c3eb66`), so the mirror
+device check reported "unreadable" on every real run and could never reach the same-device branch;
+and `--gpus none`, an option this script's own refusal advertises, is invalid docker.
+
+**Five defects, none of them findable from this laptop.** That is the argument for the ladder, and
+it is why the remaining rungs get run rather than reasoned about.
+
+## What actually blocks rungs 4-7, stated so it is not mistaken for work left undone
+
+1. **Card 1 holds 17268 MiB at 0% utilisation.** Not ours to clear, and the rules are explicit that
+   a block of this shape is a stopping point, not something to work around. 15500 MiB remain, and
+   no production-geometry VRAM peak has been measured to compare against it.
+2. **No durable second location exists.** One filesystem with >=20 GB free, so
+   `NATIVE_ACCEPT_SAME_DEVICE=1` is permanent here. That is an owner-level property of the
+   campaign, not an operator setting.
+3. **Three seeds is unproven.** `notes/seed-variance-at-100k.md`: eval-easy 95% CI includes zero at
+   n=3. Widening costs 12 cells per seed.
+
+None of the three is code. All three are decisions or other people's processes.
 
 ## Rung 0 — read-only. No writes, no container, no GPU.
 
