@@ -744,9 +744,15 @@ print(json.dumps({
     # a verified-clean tree that `production_gates.py::gate_source_tree_frozen` had just passed.
     # A flag that reports the same value whatever the world does carries no information, and this
     # one would have made a genuinely dirty submission indistinguishable from a clean one.
+    # Parse the PATH, not a fixed offset. `git()` above strips the whole output, which removes
+    # porcelain's leading status space on the first line only -- so ` M results/submissions.jsonl`
+    # arrived here as `M results/submissions.jsonl` and `line[3:]` yielded `esults/...`, missing the
+    # one file this exclusion exists for. The first submission of a batch read false and every
+    # later one read true, which looked like the flag working and was an off-by-one.
     "source_dirty": bool([
         line for line in git("status", "--porcelain").splitlines()
-        if line[3:].strip() not in {"results/submissions.jsonl", "results/attempt-outcomes.json"}
+        if line.split(maxsplit=1)[-1].strip()
+        not in {"results/submissions.jsonl", "results/attempt-outcomes.json"}
     ]),
     "inputs_sha256": inputs,
 }, sort_keys=True))

@@ -73,3 +73,36 @@ def test_a_real_modification_still_reads_dirty(tmp_path):
     (tmp_path / "a.txt").write_text("two\n")
     assert contract._git_identity(tmp_path)["source_dirty"] is True, (
         "the exclusion is too broad; a real modification must still read dirty")
+
+
+def test_the_exclusion_works_for_a_TRACKED_ledger_not_only_an_untracked_one(tmp_path):
+    """The off-by-one that made the first fix a no-op for the case it existed for.
+
+    `git status --porcelain` uses a fixed two-column status field, so an untracked file is
+    `?? path` and a tracked modification is ` M path` — with a LEADING SPACE. Both writers strip
+    the command's whole output, which removes that leading space on the first line only. Slicing
+    `line[3:]` then yields `ath` instead of `path`, and the exclusion silently stops matching.
+
+    It showed up as the first submission of a batch reading clean and every later one reading
+    dirty, which looks like the flag working. The ledger becomes tracked as soon as it is
+    committed, so this is the normal case, not an edge one.
+    """
+    import subprocess
+    import sys
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    import contract
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "results").mkdir()
+    (tmp_path / "results" / "submissions.jsonl").write_text("{}\n")
+    (tmp_path / "a.txt").write_text("one\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-qm", "init"], check=True)
+    assert contract._git_identity(tmp_path)["source_dirty"] is False
+
+    # TRACKED and modified -- the ` M ` form, which is what a committed ledger produces.
+    (tmp_path / "results" / "submissions.jsonl").write_text('{"job_id": "bt1x"}\n')
+    assert contract._git_identity(tmp_path)["source_dirty"] is False, (
+        "a tracked, modified ledger must still be excluded; the leading status space is stripped "
+        "before the path is parsed, so a fixed offset drops a character and the match fails")
