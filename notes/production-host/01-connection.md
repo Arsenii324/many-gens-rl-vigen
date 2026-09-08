@@ -17,6 +17,49 @@ Installation and key enrolment are in the guide and are **not our step**: they n
 the key is issued per person and hostname. If the client were ever not configured, that is a stop
 and a message to the administrator, not something to set up.
 
+## The verified connection command
+
+```bash
+ssh -o BatchMode=yes -o ConnectTimeout=10 varaksin_as@100.98.2.11 <command>
+```
+
+Verified working 2026-09-08 12:22 UTC+3 (09:22 UTC): returned `/home/varaksin_as`, exit 0.
+
+Every part of it was established from evidence rather than guessed, and that matters because a
+wrong guess here produces failed authentications, which is what actually looks hostile:
+
+- **`varaksin_as`** — from shell history, used repeatedly against this exact IP. Not inferred from
+  a name.
+- **`100.98.2.11`, by IP** — the form already in `~/.ssh/known_hosts` (line 70) and the form used
+  historically. `cds2.cogmodel.mipt` is **not** in `known_hosts`, so connecting by domain would
+  prompt for a new host key. Use the IP; there is no reason to accept a second key form for the
+  same machine.
+- **`BatchMode=yes`** — never prompts for a password. If key auth is unavailable it fails
+  immediately instead of prompting, hanging a non-interactive session, or producing repeated
+  password attempts. Repeated auth failures are exactly the pattern that gets an account flagged.
+- **`ConnectTimeout=10`** — bounded, so a network problem fails fast rather than hanging.
+- **No `-v`.** Verbose output on a shared host adds nothing and looks like probing.
+- **Do not add `StrictHostKeyChecking=accept-new`.** The key is already known; under `BatchMode` a
+  *changed* key correctly fails rather than being silently accepted, which is the behaviour we
+  want.
+
+Prefer a **single non-interactive command** over an interactive shell where possible: it is
+bounded, it is auditable, and it cannot leave a stray session holding resources.
+
+## The post-quantum warning is expected, and is NOT to be acted on
+
+The connection prints:
+
+```
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+```
+
+This is the local client observing the server's OpenSSH version. It is informational, the
+connection is otherwise normal, and **it must not be treated as a task.** Upgrading OpenSSH — or
+anything else — on that host is prohibited outright (`02-absolute-prohibitions.md`). Note it and
+move on.
+
 ## Address table, reproduced for identification only
 
 | server | IP | domain |
