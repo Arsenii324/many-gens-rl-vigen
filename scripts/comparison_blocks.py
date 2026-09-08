@@ -176,11 +176,18 @@ def main() -> int:
                          if axes_of(left)[axis] != axes_of(right)[axis]]
             (descriptive if differing else primary).append(((left, right), differing))
         print(f"  {title}")
-        print(f"    {len(pairs)} pairs: {len(primary)} primary, {len(descriptive)} descriptive")
+        print(f"    {len(pairs)} pairs: {len(primary)} primary, {len(descriptive)} descriptive"
+              " (RAW RETURN)")
         for (left, right), _ in primary:
             print(f"      PRIMARY      {left} vs {right}")
         for (left, right), differing in descriptive:
             print(f"      descriptive  {left} vs {right}   (differs on: {', '.join(differing)})")
+        # RETENTION blocks on nothing, so every pair in the group is usable there WITH the stated
+        # caveat. Printed per group rather than only in the header, because the difference decides
+        # whether a group can carry a claim at all -- see the warning below.
+        if not primary and pairs:
+            print(f"    on RETENTION, the study's endpoint, all {len(pairs)} pair(s) are usable "
+                  "with RESEARCH-FRAME's second-order caveat")
         if not primary:
             empty.append(title)
         print()
@@ -197,8 +204,23 @@ def main() -> int:
 
     if empty:
         print()
-        print(f"  WARNING: {len(empty)} group(s) have NO primary pair left: {'; '.join(empty)}.")
-        print("  A group whose every comparison is confounded cannot carry a headline claim.")
+        print(f"  WARNING: {len(empty)} group(s) have no RAW-RETURN primary pair: "
+              f"{'; '.join(empty)}.")
+        # [Claude 2026-09-08] This used to read "cannot carry a headline claim", full stop, and
+        # that was wrong in a way that mattered. The set computed above is the RAW RETURN one;
+        # `RETENTION_BLOCKING_AXES` is empty by derivation, and retention is the study's actual
+        # endpoint (`docs/RESEARCH-FRAME.md`). So a group with no raw-return primary is not a
+        # group with nothing to say -- `alda` vs `curl` is the live case, and it is the only pair
+        # in the latent-dynamics group.
+        #
+        # An instrument that gates a scientific claim must name the quantity it is gating, or the
+        # honest answer "usable on retention, not on raw return" gets rounded to "unusable".
+        print("  That blocks a RAW-RETURN headline for those groups. It does NOT block retention,")
+        print("  which is this study's endpoint and blocks on nothing -- every axis above is a")
+        print("  per-method property appearing in both regimes of the ratio, so it cancels to")
+        print("  first order. Those pairs are reportable on retention WITH RESEARCH-FRAME's")
+        print("  second-order caveat and C18's near-zero-denominator caveat, and are NOT")
+        print("  promoted to unqualified primaries by this.")
         if args.strict:
             return 1
     return 0
