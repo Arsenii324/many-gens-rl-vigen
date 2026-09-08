@@ -1174,7 +1174,7 @@ payload_families="${payload_families%,}"
 # that -- "payload was built for runner contract 14 but this runner needs 13". The check
 # worked; the number was maintained in one place and read in another. Same shape as
 # SAVE_EVERY vs SAVE_EVERY_FRAMES and the curve_eval_episodes duplicate.
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 14 \
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 15 \
   --require-families "$payload_families" \
   --require-evaluator-identity \
   --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'
@@ -1403,6 +1403,28 @@ export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
 export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.25}"
 export XLA_PYTHON_CLIENT_ALLOCATOR="${XLA_PYTHON_CLIENT_ALLOCATOR:-platform}"
 echo "=== NATIVE_GPU_MEMORY_DISCIPLINE preallocate=$XLA_PYTHON_CLIENT_PREALLOCATE mem_fraction=$XLA_PYTHON_CLIENT_MEM_FRACTION allocator=$XLA_PYTHON_CLIENT_ALLOCATOR ===" >&2
+
+# [Claude 2026-09-08] The torch half of the same discipline. XLA's fraction is an environment
+# variable; torch has no equivalent, so the cap has to be applied IN-PROCESS -- and installing it
+# as `sitecustomize` means it runs at interpreter start, before any framework import, without
+# editing seven launchers that would each be a place to forget it.
+#
+# Why a cap and not a headroom check. A caching allocator's reservation is a FLOOR on future usage:
+# it never shrinks, and it grows whenever a high-water mark is exceeded. On a shared card the
+# process that asks the driver SECOND is the one that fails -- so if we take the free memory and a
+# neighbour's allocator then wants more, THEIR process raises the OOM and ours never notices. A
+# headroom ratio is computed from what they hold now and cannot protect against that; a cap bounds
+# what we can ever take, whatever we later want.
+#
+# Unset by default: a cap that is wrong is its own failure, so it is named per run rather than
+# guessed here. `notes/production-host/17-first-real-cell-plan.md` sets one for the first cell.
+if [[ -n "${NATIVE_VRAM_CAP_MIB:-}" ]]; then
+  vram_cap_dir="$work/.vram-cap"
+  mkdir -p "$vram_cap_dir"
+  cp datasphere/native/vram_cap.py "$vram_cap_dir/sitecustomize.py"
+  export PYTHONPATH="$vram_cap_dir${PYTHONPATH:+:$PYTHONPATH}"
+  echo "=== NATIVE_VRAM_CAP_REQUESTED ${NATIVE_VRAM_CAP_MIB} MiB via sitecustomize at $vram_cap_dir ===" >&2
+fi
 export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim"
 # [Codex 2026-09-01 10:31 MSK: fail before timed calibration when native training imports are incomplete]
 # [Claude 2026-09-02 13:20 MSK: this gate imports RL-ViGen's OWN train.py, which imports

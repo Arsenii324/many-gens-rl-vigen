@@ -125,6 +125,33 @@ container consumed nothing.*
 it, exit. Proves the driver/runtime pairing works under our image and that we can allocate at all,
 at a size that could not disturb anyone.
 
+**Cap ourselves before step 5, and understand why a headroom ratio is not enough.** A caching
+allocator's reservation is a **floor** on future usage, not a ceiling: it does not shrink, and it
+grows whenever a high-water mark is exceeded — at an eval pass with a different batch, a validation
+stage, a concurrent evaluator beside training. None of those has occurred in any window we have
+observed.
+
+On a shared card that failure is one-sided. **Whoever asks the driver second is the one that
+fails.** If we take the free memory and their allocator then wants more, *their* process raises the
+OOM and ours never notices — we would cause a failure we could not see. A headroom ratio is
+computed from what they hold now and cannot protect against that.
+
+So the first cell runs with `NATIVE_VRAM_CAP_MIB` set — `idaac` measured at 1204 MiB, so **2048**
+is roughly 1.7× with room for a transient and still 8× below what is free:
+
+```
+NATIVE_VRAM_CAP_MIB=2048
+```
+
+`torch.cuda.set_per_process_memory_fraction` then makes an allocation beyond that raise
+`OutOfMemoryError` **in our process**. That is the right way round: our cell fails loudly, theirs
+continues. A cell that dies against its own cap has a wrong bound, which is a finding rather than
+an accident. The runner prints `NATIVE_VRAM_CAP_APPLIED`, so a returned log proves it bound.
+
+Its limits, stated: it caps PyTorch's allocator only — cuDNN workspaces, NCCL buffers and any
+library going straight to the driver are outside it. JAX is bounded separately by
+`XLA_PYTHON_CLIENT_MEM_FRACTION`.
+
 **Step 5 — `idaac` at a SHORT budget.** 10k frames, not 600k: minutes of exposure instead of hours,
 with the full chain exercised. **Watch `nvidia-smi` throughout** and record our own peak from
 `resources.json` — this is the first production-geometry VRAM measurement this project will have.

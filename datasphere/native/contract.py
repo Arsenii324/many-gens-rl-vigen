@@ -44,6 +44,13 @@ BASE_ALLOWED = (
     "datasphere/native/rlvigen-source.json",
     "datasphere/native/run_probe.sh",
     "datasphere/native/source-lock.json",
+    # [Claude 2026-09-08] `run_probe.sh` copies this to `$work/.vram-cap/sitecustomize.py` and puts
+    # it on PYTHONPATH when NATIVE_VRAM_CAP_MIB is set, so the runner REQUIRES a member it did not
+    # before -- which is exactly what RUNNER_CONTRACT exists to catch, bumped to 15 below. Omitting
+    # it here would have made the cp fail inside the container after the whole bootstrap was paid
+    # for, and under `set -e` that ends the job with no useful message. This is the same shape as
+    # the watch_policy_health.py omission that cost a job on 2026-09-08.
+    "datasphere/native/vram_cap.py",
     "requirements-native.txt",
     # A hash INPUT for scripts/eval_provenance.py's evaluator revision, never an import: the remote
     # side reads its bytes and nothing else, so the single file ships without `rlgen/__init__.py`.
@@ -99,7 +106,11 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # `log_std` alert simply never starting on the container, with PRODUCTION-RUNBOOK stating it runs
 # on every cell. An instrument that cannot run must never read as one that ran; building that
 # failure into the instrument written to catch it is how it would have survived.
-RUNNER_CONTRACT = 14
+# Bumped to 15 on 2026-09-08: `run_probe.sh` installs `datasphere/native/vram_cap.py` as
+# `sitecustomize` when NATIVE_VRAM_CAP_MIB is set, so the runner requires a payload member it did
+# not require before. Same case as 14, and caught the same way -- by asking, before shipping,
+# whether the runner now reads something the payload might not carry.
+RUNNER_CONTRACT = 15
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:
