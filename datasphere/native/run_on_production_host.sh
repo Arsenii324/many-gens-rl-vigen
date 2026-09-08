@@ -94,6 +94,50 @@
 # run while the container still had both cards attached.
 set -euo pipefail
 
+# [Claude 2026-09-08] These two checks cost nothing and must precede everything that does. The
+# GPU refusal below is a pure environment test, and the image lookup after it starts a container --
+# so ordering them the other way round means the most dangerous misconfiguration in this file is
+# diagnosed only after a container has already been launched.
+command -v docker >/dev/null 2>&1 || {
+  echo "refusing: docker is not on PATH." >&2
+  echo "  Every computation this script performs now runs inside a container -- reading" >&2
+  echo "  source-lock.json and the disk model included -- because the production host permits" >&2
+  echo "  nothing but small python-unrelated actions and docker itself to run outside one." >&2
+  exit 2; }
+
+# [Claude 2026-09-08] `--gpus "${DOCKER_GPUS:-all}"` defaulted to ALL CARDS. On a shared machine
+# under a per-day GPU assignment schedule that is the single most dangerous line in this file: one
+# forgotten environment variable and the container claims every GPU on the host, including the one
+# assigned to somebody else today. The failure is silent from our side and looks like a CUDA OOM
+# or a slowdown from theirs.
+#
+# There is now no default. Name the card, every time.
+#
+#   DOCKER_GPUS='"device=1"'                        the card assigned to us
+#   DOCKER_GPUS='"device=GPU-<uuid>"'               the same card, immune to re-enumeration
+#   DOCKER_GPUS=none                                CPU-only work (bootstrap, payload build)
+#   DOCKER_GPUS=all                                 every card -- only if you actually own them
+#
+# The index form follows docker's PCI enumeration, which matches `nvidia-smi -L` order in the
+# ordinary case but is not guaranteed to across a driver reload or a hardware change. The UUID form
+# from `nvidia-smi -L` cannot be re-pointed by enumeration and is the safer spelling for a run that
+# must never touch a neighbour's card.
+#
+# NOTE an image cannot reach a GPU on its own: access is granted here, by this flag, via the NVIDIA
+# Container Toolkit. A CUDA base image with no --gpus sees no /dev/nvidia* at all. The danger has
+# never been in which image is pulled; it is in this one string.
+if [[ -z "${DOCKER_GPUS:-}" ]]; then
+  echo "refusing: DOCKER_GPUS is unset, and this script no longer defaults to 'all'." >&2
+  echo "  Defaulting to every card on a machine with a per-day GPU assignment is how a run" >&2
+  echo "  takes a card belonging to someone else. Name the card explicitly:" >&2
+  echo "    DOCKER_GPUS='\"device=1\"'              the card assigned to us" >&2
+  echo "    DOCKER_GPUS='\"device=GPU-<uuid>\"'     the same card, immune to re-enumeration" >&2
+  echo "                                            (uuid from: nvidia-smi -L)" >&2
+  echo "    DOCKER_GPUS=none                        CPU-only work" >&2
+  echo "    DOCKER_GPUS=all                         every card -- only if you own them all" >&2
+  exit 3
+fi
+
 # [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice
 # more inside check_disk. The production host's rule is that nothing runs outside a container
 # except small python-unrelated actions (mkdir, cp, df, stat), a clone, and docker itself. Reading
@@ -219,12 +263,38 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     [[ "${NATIVE_ACCEPT_UNVERIFIED_DEVICE:-0}" == "1" ]] || exit 3
     echo "=== NATIVE_RESULT_MIRROR_DEVICE_UNVERIFIED (accepted explicitly) ===" >&2
   elif [[ "$_result_dev" == "$_mirror_dev" ]]; then
+    # [Claude 2026-09-08] Same fsid has TWO causes and they need different answers. The operator
+    # pointing the mirror at the same volume when others exist is a mistake, and telling them to
+    # "point it at another volume" fixes it. A host that HAS only one volume is not making a
+    # mistake, and that advice is unfollowable -- cds2 is exactly this: `df -hT` shows a single
+    # /dev/sda2 carrying /, /home, /var/lib/docker and /tmp alike.
+    #
+    # This matters because the deviation marker is what identifies such a run afterwards, and a
+    # marker that fires on every single run of the campaign carries no information. Diagnosing the
+    # two cases apart keeps "the operator accepted a worse layout than this host offered" separate
+    # from "this host offers nothing better", which is an owner-level fact about the campaign, not
+    # an operator slip.
+    _real_filesystems="$(df -P --local -x tmpfs -x devtmpfs -x squashfs -x overlay -x fuse.gvfsd-fuse \
+        2>/dev/null | awk 'NR>1 {print $1}' | sort -u | wc -l | tr -d ' ')"
     echo "refusing: NATIVE_RESULT_MIRROR is on the SAME filesystem as the result path" >&2
     echo "  (fsid $_result_dev). A copy beside the original does not survive the failure it" >&2
-    echo "  exists for. Point it at another volume, or set NATIVE_ACCEPT_SAME_DEVICE=1 to" >&2
-    echo "  record the deviation deliberately." >&2
-    [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
-    echo "=== NATIVE_RESULT_MIRROR_SAME_DEVICE fsid=$_result_dev (accepted explicitly) ===" >&2
+    echo "  exists for." >&2
+    if [[ "${_real_filesystems:-0}" -le 1 ]]; then
+      echo "  THIS HOST HAS ONLY ONE FILESYSTEM, so there is no second volume to point at and" >&2
+      echo "  no durable second location exists here. The mirror still buys a second COPY -- it" >&2
+      echo "  survives our own tar failing, a bad path, an overwrite -- but it does NOT buy a" >&2
+      echo "  second failure domain: one full or failed disk loses both." >&2
+      echo "  Attach external storage or a network mount, or set NATIVE_ACCEPT_SAME_DEVICE=1 to" >&2
+      echo "  run knowing that. This is an owner-level property of the campaign, not a slip." >&2
+      [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
+      echo "=== NATIVE_RESULT_MIRROR_SINGLE_DEVICE_HOST filesystems=${_real_filesystems} fsid=$_result_dev (accepted explicitly) ===" >&2
+    else
+      echo "  This host has ${_real_filesystems} filesystems, so a better mirror location EXISTS." >&2
+      echo "  Point it at another volume, or set NATIVE_ACCEPT_SAME_DEVICE=1 to record the" >&2
+      echo "  deviation deliberately." >&2
+      [[ "${NATIVE_ACCEPT_SAME_DEVICE:-0}" == "1" ]] || exit 3
+      echo "=== NATIVE_RESULT_MIRROR_SAME_DEVICE fsid=$_result_dev of ${_real_filesystems} available (accepted explicitly) ===" >&2
+    fi
   fi
 fi
 
@@ -492,18 +562,18 @@ if [[ -n "${NATIVE_HOST_DRY_RUN:-}" ]]; then
   echo
   echo "=== NATIVE_HOST_DRY_RUN: every guard passed; NOT executing ==="
   echo "image:  $IMAGE"
-  echo "gpus:   ${DOCKER_GPUS:-all}"
+  echo "gpus:   ${DOCKER_GPUS}"
   echo "mounts: ${#DOCKER_MOUNT_ARGS[@]} argument(s)"
   printf '        %s\n' "${DOCKER_MOUNT_ARGS[@]}"
   echo "env:    ${#DOCKER_ENV_ARGS[@]} argument(s)"
   printf '        %s\n' "${DOCKER_ENV_ARGS[@]}"
   echo
-  echo "would run: docker run --rm --name $CONTAINER_NAME --gpus ${DOCKER_GPUS:-all} \\"
+  echo "would run: docker run --rm --name $CONTAINER_NAME --gpus ${DOCKER_GPUS} \\"
   echo "             <mounts> <env> -e MUJOCO_GL=egl -w /work $IMAGE bash -c '<bootstrap+probe>'"
   exit 0
 fi
 
-docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS:-all}" \
+docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS}" \
   "${DOCKER_MOUNT_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive -e TZ=Etc/UTC \
   -e MUJOCO_GL=egl \
