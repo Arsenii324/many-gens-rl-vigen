@@ -970,7 +970,19 @@ def _ctrl_train_state(snapshot, n_actions: int = 7):
     # `Shapes must be 1D sequences of concrete values of integer type`. Training was unaffected,
     # which is why it survived to be found by the first ctrl cell that trained to completion.
     cluster_len = int(d["cluster_len"])
-    fake_state = jnp.zeros((1, cluster_len, 64, 64, 3))
+    # [Claude 2026-09-08, A52] The init shape is DERIVED. Flax builds the encoder's kernels from
+    # this array, so the literal `(64, 64, 3)` pinned them at three channels regardless of what the
+    # policy was trained on. `runnable/ctrl/train_ppo.py` had the identical literal and job
+    # bt12q2bfbiih2lb43obp died on it 2:38 into the first three-frame ctrl cell:
+    #
+    #   ScopeParamShapeError: Initializer expected to generate shape (3, 3, 3, 16)
+    #   but got shape (3, 3, 9, 16) for parameter "kernel" in "/encoder//conv2d_0"
+    #
+    # Training failed first only because it runs first; this copy would have failed the same cell
+    # at its endpoint evaluation. `nn.Conv` declares only its OUTPUT features -- which is why the
+    # model itself needed no edit -- but `init` takes the input width from whatever it is handed.
+    image_size, frame_stack = OBSERVATION_GEOMETRY["ctrl"]
+    fake_state = jnp.zeros((1, cluster_len, image_size, image_size, 3 * frame_stack))
     fake_act = jnp.zeros((1, cluster_len, n_actions))
     params = model.init(key, state=fake_state, action=fake_act, reward=fake_act)
     tx_ppo = optax.chain(optax.clip_by_global_norm(float(d["max_grad_norm"])),

@@ -3010,3 +3010,56 @@ independently say so (`source_dirty: false`, written before any submission exist
 disagreeing is itself the evidence, and the one written earlier is the one that was right.
 
 **Status: operational, not ratified.**
+
+---
+
+## A52 — Flax infers the layer, not the init (2026-09-08)
+
+The v197 wave earned its cost in its first hour. `ctrl` failed 2:38 into the first cell that ever
+ran A40 REVISED-2's three-frame stack:
+
+    flax.errors.ScopeParamShapeError: Initializer expected to generate shape (3, 3, 3, 16)
+    but got shape (3, 3, 9, 16) for parameter "kernel" in "/encoder//conv2d_0"
+
+**The claim this falsifies is mine.** A40 REVISED-2 records that `ctrl` "needs no channel change
+(Flax `nn.Conv` infers)", and I verified it by reading `models.py` — `nn.Conv(num_channels, ...)`
+really does declare only its OUTPUT features. That is true of the **layer** and false of **`init`**,
+which takes the input width from whatever array it is handed. Three call sites handed it a literal:
+
+  - `runnable/ctrl/train_ppo.py:208` — `jnp.zeros((1, cluster_len, 64, 64, 3))`
+  - `scripts/eval_grid.py:973` — the identical literal
+  - `runnable/ctrl/evaluate_ppo.py:46` — a third copy
+
+Training failed first only because it runs first. The evaluator copy would have killed the same
+cell at its endpoint evaluation, and a literal wrong in two places is wrong in the third.
+
+**All three now derive the shape** — from `env.observation_space` in the two clone files, and from
+`OBSERVATION_GEOMETRY["ctrl"]` in the evaluator, so trainer and evaluator cannot disagree the next
+time the stack moves. `tests/test_ctrl_init_shape_follows_the_observation.py` builds the real model
+at the declared geometry and asserts the encoder's first kernel was constructed for `3 x
+frame_stack` channels — the exact quantity the failed job violated. It runs on the CPU backend,
+because jax-metal cannot legalize the orthogonal initializer here.
+
+### What it costs, stated rather than absorbed
+
+`scripts/eval_grid.py` is a `CODE_MEMBER`. Fixing it **moves every family's evaluator revision**, so
+`ppg`'s attestation written an hour ago is superseded and the wave must run again: about **5.7
+GPU-hours**, ~0.6% of the campaign.
+
+That is the rule working, not the rule failing. The alternative was to ship an evaluator that
+cannot evaluate `ctrl`, and to discover it during production at 600k frames instead of at 10k. The
+attestation wave exists precisely so a shape error costs 2 minutes 38 seconds of one cell.
+
+**`alda` and `dmc_gb` are left running rather than killed.** Their attestations are superseded the
+moment this lands, but they are already paid for and `dmc_gb` is the first execution of the
+repaired Places365 resolution block (A42) — the validation `rlvigen` is being held back for. Buying
+that knowledge twice would be the waste; letting a running job finish costs nothing.
+
+### The pattern, for the fourth time today
+
+`BOOTSTRAP_SECONDS` (docstring 700, code 200). SGQN's quantile (three reviews, one paper, no
+agreement). A43's `--lr` (declared everywhere, passed nowhere). And now "Flax infers it" — verified
+against the layer's signature, which was the wrong artifact to read. **Reading the thing that
+declares a value is not evidence about the thing that consumes it.**
+
+**Status: operational, not ratified.**
