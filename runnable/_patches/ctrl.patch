@@ -386,7 +386,7 @@ index 67bd632..0459807 100644
          if self.embedding_type == "concat":
              z = ((1 + gamma_a) * z_state + beta_a).reshape(state.shape[0], -1)
 diff --git a/train_ppo.py b/train_ppo.py
-index e18477e..dc4704c 100644
+index e18477e..f8ca7fe 100644
 --- a/train_ppo.py
 +++ b/train_ppo.py
 @@ -15,7 +15,68 @@ from jax.random import PRNGKey
@@ -521,7 +521,7 @@ index e18477e..dc4704c 100644
  
      os.environ["WANDB_API_KEY"] = FLAGS.wandb_key
      group_name = "%s_%s_%s" % (FLAGS.algo, FLAGS.env_name, FLAGS.run_id)
-@@ -121,28 +185,29 @@ def main(argv):
+@@ -121,28 +185,45 @@ def main(argv):
      if "ppo" in FLAGS.algo:
          model = CTRLModel(dims=(256, 256),
                            n_cluster=FLAGS.num_clusters,
@@ -549,14 +549,30 @@ index e18477e..dc4704c 100644
                                n_att_heads=FLAGS.n_att_heads,
                                embedding_type=FLAGS.embedding_type)
  
++    # [OURS 2026-09-08, A52] THE INIT OBSERVATION IS DERIVED, not the literal (64, 64, 3).
++    #
++    # Flax creates the encoder's kernels from the shape of this array, so a hardcoded 3 pins the
++    # parameters at three channels no matter what the environment emits. Job bt12q2bfbiih2lb43obp
++    # died 2:38 into the first cell that ran with A40 REVISED-2's three-frame stack:
++    #
++    #   flax.errors.ScopeParamShapeError: Initializer expected to generate shape (3, 3, 3, 16)
++    #   but got shape (3, 3, 9, 16) for parameter "kernel" in "/encoder//conv2d_0"
++    #
++    # `nn.Conv` declares only its OUTPUT features, which is why the model needed no edit -- but
++    # "Flax infers the input width" is true of the layer and false of `init`, which infers it from
++    # whatever it is handed. The literal 64s were the same trap one axis over.
++    #
++    # `observation_space` is (C, H, W) by this file's own ProcgenVecEnvCustom convention while the
++    # data is (H, W, C); `buffer.py:50-52` permutes it the same way for the same reason.
++    _obs_c, _obs_h, _obs_w = env.observation_space.shape
      fake_args_cluster = (jnp.zeros(
 -        (1, FLAGS.cluster_len, 64, 64, 3)), jnp.zeros((1, FLAGS.cluster_len)))
-+        (1, FLAGS.cluster_len, 64, 64, 3)),
++        (1, FLAGS.cluster_len, _obs_h, _obs_w, _obs_c)),
 +        jnp.zeros((1, FLAGS.cluster_len) + ((_ACT["n_actions"],) if _cont else ())))
      params_model = model.init(key,
                                state=fake_args_cluster[0],
                                action=fake_args_cluster[1],
-@@ -175,7 +240,8 @@ def main(argv):
+@@ -175,7 +256,8 @@ def main(argv):
                    gae_lambda=FLAGS.gae_lambda,
                    n_steps=FLAGS.n_steps + 1,
                    num_envs=FLAGS.num_envs,
@@ -566,7 +582,7 @@ index e18477e..dc4704c 100644
  
      state = env.reset()
      state_id = env_test_ID.reset()
-@@ -183,6 +249,16 @@ def main(argv):
+@@ -183,6 +265,16 @@ def main(argv):
  
      epinfo_buf_id = deque(maxlen=100)
      epinfo_buf_ood = deque(maxlen=100)
@@ -583,7 +599,7 @@ index e18477e..dc4704c 100644
  
      returns_ood_acc = []
  
-@@ -190,33 +266,48 @@ def main(argv):
+@@ -190,33 +282,48 @@ def main(argv):
          train_state, state, batch, key = get_transition(
              train_state, model.ac, env, state, batch, key)
  
@@ -652,7 +668,7 @@ index e18477e..dc4704c 100644
  
          if step % (FLAGS.n_steps + 1) == 0:
              data = batch.get()
-@@ -257,6 +348,17 @@ def main(argv):
+@@ -257,6 +364,17 @@ def main(argv):
              renamed_dict = {}
              for k, v in metric_dict.items():
                  renamed_dict["%s/%s" % (FLAGS.env_name, k)] = v
@@ -670,7 +686,7 @@ index e18477e..dc4704c 100644
              wandb.log(renamed_dict, step=FLAGS.num_envs * step)
  
              wandb.log({
-@@ -277,10 +379,53 @@ def main(argv):
+@@ -277,10 +395,53 @@ def main(argv):
                  returns_ood_acc.append(
                      safe_mean([info['r'] for info in epinfo_buf_ood]))
  
@@ -912,3 +928,21 @@ index 7401df7..0d51989 100644
 +            obs.append(o); rews.append(r); dones.append(d); infos.append(i)
 +        return (np.stack(obs), np.array(rews, dtype=np.float32),
 +                np.array(dones, dtype=bool), infos)
+diff --git a/evaluate_ppo.py b/evaluate_ppo.py
+index 86490e1..4fd2514 100644
+--- a/evaluate_ppo.py
++++ b/evaluate_ppo.py
+@@ -43,7 +43,12 @@ def main(argv):
+     model = TwinHeadModel(action_dim=env.action_space.n,
+                             prefix_critic='vfunction',
+                             prefix_actor="policy")
+-    fake_args_model = jnp.zeros((1, 64, 64, 3))
++    # [OURS 2026-09-08, A52] Derived, not the literal (64, 64, 3): Flax builds the encoder's
++    # kernels from this shape, so a hardcoded 3 pins them at one frame. Same defect as
++    # train_ppo.py's init and eval_grid.py's; this copy is not on the attestation path but a
++    # literal that is wrong in two places is wrong in the third.
++    _c, _h, _w = env.observation_space.shape
++    fake_args_model = jnp.zeros((1, _h, _w, _c))
+     params_model = model.init(rng, fake_args_model)
+     
+     tx = optax.chain(

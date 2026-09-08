@@ -150,7 +150,23 @@ def rebuild(family: str) -> str:
     source = ROOT / SOURCE_OF[family]
     clone = ROOT / "runnable" / family
     patch = PATCHES / f"{family}.patch"
-    return "".join(one_diff(source, clone, name) for name in patched_files(patch))
+    # [Claude 2026-09-08] The path set is the UNION of what the snapshot already covers and what
+    # the clone has actually changed. It used to be `patched_files(patch)` alone -- the paths
+    # already in the stored patch -- so the refresher could update a covered file's diff but could
+    # NEVER pick up a newly edited one. A52 edited `runnable/ctrl/evaluate_ppo.py`, which no
+    # snapshot covered; `refresh_clone_patches.py` then reported ctrl "current" while the exported
+    # patch silently omitted the edit, which is precisely the broken-recovery-path failure the
+    # snapshot exists to prevent. Only the separate coverage check noticed, and it exited 0.
+    #
+    # Existing order first, new paths appended sorted, so a refresh that adds nothing is
+    # byte-identical and a refresh that adds something is deterministic.
+    covered = patched_files(patch)
+    try:
+        changed = clone_changed_files(clone)
+    except RuntimeError:
+        changed = set()   # a clone without git identity keeps the stored coverage
+    names = list(covered) + sorted(changed - set(covered))
+    return "".join(one_diff(source, clone, name) for name in names)
 
 
 def main() -> int:

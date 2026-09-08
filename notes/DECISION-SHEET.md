@@ -3063,3 +3063,37 @@ against the layer's signature, which was the wrong artifact to read. **Reading t
 declares a value is not evidence about the thing that consumes it.**
 
 **Status: operational, not ratified.**
+
+---
+
+## A53 — the clone-snapshot refresher could not add a file (2026-09-08)
+
+Found by the full suite immediately after A52, which edited `runnable/ctrl/evaluate_ppo.py` — a
+clone file no snapshot had ever covered.
+
+`scripts/refresh_clone_patches.py` rebuilt each snapshot from **`patched_files(patch)`: the paths
+already inside the stored patch.** So it could refresh the diff of a file it already knew about and
+could **never pick up a newly edited one.** Running it reported `ctrl current` while the exported
+patch silently omitted the A52 edit entirely.
+
+That is exactly the failure the snapshot exists to prevent. `RECOVERY-HANDOFF.md` claims the clones
+are reproducible from `ext/` plus these patches; a clean reconstruction would have produced a
+`ctrl` whose evaluator still carried the hardcoded `(64, 64, 3)` init, with every hash agreeing that
+this was correct.
+
+**The coverage check caught it and the rebuild ignored it.** The two halves of the same script
+disagreed: `--check` compared the clone's real changed-file set against the patch's coverage and
+printed `ctrl: missing from patch: evaluate_ppo.py`, while the rebuild in the same run wrote a
+patch without it. A check whose finding the writer does not act on is a comment.
+
+**Fixed**: the rebuild's path set is now the **union** of what the snapshot covers and what the
+clone has actually changed — existing order first, new paths appended sorted, so a refresh that
+adds nothing stays byte-identical and one that adds something is deterministic. `ctrl.patch` now
+carries six files (`+552/−85`), and `verify_sources.py` passes on the re-derived hashes.
+
+**One thing checked and found already correct:** `--check` does return 1 on a coverage mismatch.
+My first reading said it exited 0, which was my error — `$?` after a pipe reports `tail`'s status,
+not the script's. Worth recording because the opposite conclusion would have sent me to "fix" a
+gate that was working.
+
+**Status: operational, not ratified.**

@@ -105,8 +105,8 @@
       "destination": "runnable/ctrl",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ctrl.patch",
-      "patch_sha256": "8057bb0d190446d19aa95f887abecc0f358d9d3c3aca7f5c865698e73411f181",
-      "expected_tree_hash": "8d00a10bcb8352baa7a1b8203186af95d8a2c5f442e92d4bc6f48be249124d26",
+      "patch_sha256": "5611648c7761ef2b35a3f0ed07fa17f9ff4eb68d5af51e0fcc3c17b3366b0b0c",
+      "expected_tree_hash": "79ac2235e1b107ee6358584a379ee52bb2374a3a0c55894c00e71b35f58f69ad",
       "exclude": ["results", "logs", "storage", "models", "door.xml", ".egg-info"]
     }
   },

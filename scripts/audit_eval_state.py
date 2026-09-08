@@ -82,7 +82,7 @@ STATE = {
               "running_stats": "none",
               "reusable": "yes in principle -- upstream keeps evaluation in scripts/evaluate.py by design",
               "anchor": "runnable/ibac_sni/torch_rl/scripts/train.py:233", "expect": "if update % args.log_interval == 0:"},
-    "ctrl":  {"policy_mode": "deterministic (pi.mode) -- evaluate_ppo.py:84 calls select_action("
+    "ctrl":  {"policy_mode": "deterministic (pi.mode) -- evaluate_ppo.py:89 calls select_action("
                          "..., greedy=True) and its greedy branch is logits.argmax(1) (:71-72), so "
                          "ctrl's RELEASED EVALUATOR takes the greedy action "
                          "[re-corrected 2026-09-07, external review 24 + owner verification]. "
@@ -99,7 +99,7 @@ STATE = {
                           "returns a DISTRIBUTION and does pi.mode() or pi.sample() for either "
                           "action space. Use algo.py's helper with sample=False: that preserves the "
                           "evaluator's GREEDY RULE while supporting the continuous action space",
-              "anchor": "runnable/ctrl/evaluate_ppo.py:84",
+              "anchor": "runnable/ctrl/evaluate_ppo.py:89",
               "expect": "action, value, rng = select_action(loaded_state, state, rng, greedy=True)"},
 }
 STATE["svea"] = STATE["drq"] = STATE["sgqn"] = STATE["curl"] = STATE["drqv2"]
@@ -151,7 +151,7 @@ def main() -> int:
     print()
     print("ctrl was 4-of-12 until 2026-09-07 and is now on the mode side. The 2026-09-04 entry")
     print("read train_ppo.py:244/:253 -- TRAINING calls -- and concluded ctrl sampled. Its own")
-    print("evaluator is greedy: evaluate_ppo.py:84 passes greedy=True, whose branch is")
+    print("evaluator is greedy: evaluate_ppo.py:89 passes greedy=True, whose branch is")
     print("logits.argmax(1). The earlier reading dismissed that helper as discrete-only and so")
     print("'the wrong function to call', which confuses the helper's action-space support with")
     print("its SELECTION RULE. The rule is greedy; pi.mode() is its continuous analogue.")
