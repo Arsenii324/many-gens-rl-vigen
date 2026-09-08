@@ -73,7 +73,21 @@ def test_ctrl_is_checked_through_jax_not_torch():
 def test_the_guard_runs_after_the_bootstrap_on_the_training_path():
     """It needs torch/jax importable; the family's dependencies install only mid-script."""
     text = RUNNER.read_text()
-    install = text.index("pip install -r /tmp/requirements-for-this-job.txt")
+    # [Claude 2026-09-08] Anchor on the REQUIREMENTS FILE, not on the flags. This used to search
+    # for the literal "pip install -r /tmp/requirements-for-this-job.txt" and broke the moment
+    # `--no-cache-dir` was added between `install` and `-r` -- a change that has nothing to do with
+    # what this test asserts. A test that fails on a legitimate edit to a line it does not care
+    # about trains people to edit the test, which is how a real assertion gets weakened.
+    # The filename appears TWICE: once where filtered-requirements WRITES it, and once where pip
+    # INSTALLS it. Anchoring on the first would assert something weaker than this test claims, so
+    # find the install line specifically -- by what it does, not by the flags it happens to carry.
+    install_lines = [(i, line) for i, line in enumerate(text.splitlines())
+                     if "/tmp/requirements-for-this-job.txt" in line
+                     and "pip install" in line and " -r " in line]
+    assert len(install_lines) == 1, (
+        f"expected exactly one pip install of the job requirements, found {len(install_lines)}: "
+        f"{[l.strip() for _, l in install_lines]}")
+    install = text.index(install_lines[0][1])
     call = text.index('require_accelerator "$cells"')
     assert call > install, (
         "the guard must not run before the dependencies it imports are installed")

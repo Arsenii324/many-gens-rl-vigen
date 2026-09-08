@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+#
+# ============================================================================
+#  CONTAINER JOB BODY -- DO NOT RUN THIS ON A HOST.
+#
+#  This script is the `cmd:`/`${JOB}` body of a remote job. It runs INSIDE a
+#  fresh container, where `apt-get install` and `pip install` mutate that
+#  container's own throwaway filesystem and nothing else.
+#
+#  Run on a host it would attempt to install system packages and pip into the
+#  host's python. On a shared machine that is other people's environment.
+#
+#  The host-side entry point is `datasphere/native/run_on_production_host.sh`,
+#  which starts the container; the DataSphere one is
+#  `datasphere/native/job.sh submit <config>.yaml`.
+# ============================================================================
 # =========================================================================================
 # Box 1 Concurrency, Stutter & Thread Interference Ablation Suite
 # 100% Self-Contained Payload (Zero GitHub Network Clones)
