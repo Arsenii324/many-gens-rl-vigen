@@ -54,7 +54,7 @@
       "destination": "runnable/dmc_gb",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/dmc_gb.patch",
-      "patch_sha256": "faf93e5a76a81907f2ff37a0cb5ec7ff7059a50d94102443a6670f37334b51aa",
+      "patch_sha256": "b6683588dd2e8db892c48638f6e93de19eb9a25f9f57095f45450dd254ac2ed3",
       "expected_tree_hash": "faee77f43e170cfa91a2fec3107bf28b007ff29289c2f200c97a62044d889faf",
       "exclude": [
         "src/env/data",

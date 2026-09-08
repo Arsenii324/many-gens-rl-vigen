@@ -410,3 +410,27 @@ Stop if our attributed VRAM exceeds 4000 MiB, if the card's power stays within 2
 limit with our kernels contributing, or if the neighbour's process disappears (we may have caused
 it). The yield watch handles the arrival of a co-tenant automatically; these are the ones a person
 still has to watch for.
+
+---
+
+## The A2 fix cost one attestation, deliberately — and that is an owner call
+
+Patching `runnable/dmc_gb/src/augmentations.py` moved `dmc_gb`'s evaluator revision from
+`0d060c1b…` to `827f2d85…`, because the clone is a `FAMILY_RUNTIME_MEMBER`. Its attestation is now
+stale and the gate correctly reads **6/7**. The other six families are untouched.
+
+**The trade, stated rather than buried.** What was bought: a `soda` cell no longer spawns 16
+CPU-bound JPEG-decode workers unconditionally on a 16-core machine shared with about twenty people
+— at double the worker count that already produced glibc heap corruption in the RL-ViGen copy and
+prompted P19. What it cost: one `dmc_gb` re-attestation, roughly **1.2 h of DataSphere at ~210
+RUB/h, so ~250 RUB**, based on today's three `dmc_gb` attest jobs.
+
+**Why the trade is right and why it is still yours to time.** A hazard that can corrupt a heap and
+oversubscribe a shared box is worth more than 250 RUB, and it had to be fixed before any Places365
+family ran on `cds2`. But *when* to spend that money is a decision, and the fix does not block the
+`idaac` card-0 cell at all: `idaac` is not a `dmc_gb` family, opens no Places365, and its
+attestation did not move.
+
+**Do not re-attest as a reflex.** `notes/` records the rule this project learned the hard way —
+accumulate fixes and validate once against the final frozen tree, rather than firing a wave per
+change. If more clone edits are coming, this one should ride with them.
