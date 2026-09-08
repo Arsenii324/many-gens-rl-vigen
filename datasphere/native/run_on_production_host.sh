@@ -246,7 +246,16 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
   _dev_of() {
     local out
     out="$(stat -f -c %i "$1" 2>/dev/null)" || { echo "unreadable"; return; }
-    [[ "$out" =~ ^[0-9]+$ ]] || { echo "unreadable"; return; }
+    # [Claude 2026-09-08, second pass] The first version of this validation demanded ^[0-9]+$ and
+    # was WRONG on the only platform that matters. GNU stat prints the filesystem ID of `-f %i` in
+    # HEX -- cds2 returns `c4aaf1bac0c3eb66` -- so every real production run failed the check,
+    # reported "unreadable", and demanded NATIVE_ACCEPT_UNVERIFIED_DEVICE=1. The same-device branch
+    # could then never fire at all, which is the branch that carries the durability finding.
+    #
+    # Found by running the wrapper's dry run on the host rather than reasoning about it. The
+    # original defect (macOS `stat -f` taking a format string, printing garbage that passed) is
+    # still caught: its output contains `(`, spaces and the letters r/n/u/s, none of which are hex.
+    [[ "$out" =~ ^[0-9a-fA-F]+$ ]] || { echo "unreadable"; return; }
     printf '%s' "$out"
   }
   _result_dev="$(_dev_of "$(dirname "$RESULT")")"
