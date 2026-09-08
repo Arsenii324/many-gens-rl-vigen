@@ -156,6 +156,48 @@ measurement.
    an engineering gap no configuration closes), CTRL's raw-vs-executed action in the clustering
    objective (diagnostic wired, comparison never run), and the nine OWNER gates.
 
+
+---
+
+## Addendum — four more, found after the first pass
+
+**A47. IBAC-SNI's VIB latent was a literal, not the unreachable gap four reviews called it.**
+Reviews 17-20 and A37 all record "64-d against CoinRun's 256-d" as part of a gap no configuration
+closes. It is `model.py:212`, a constant — and the constant means opposite things on the two
+branches this port hybridises: in `torch_rl`'s MiniGrid setting the embedding **is** 64, so it
+imposes no dimensional squeeze at all; on CoinRun's 2048-d trunk (which A37 adopted) it became a
+**32x** squeeze against CoinRun's own **8x**. Now 256 on the impala trunk, 64 kept where it is
+correct. The 12-sample half of the reviews' finding stands and is real new code. The two had been
+filed together for weeks and one of them was a one-line change hiding behind the one that is not.
+
+**The reward-normalisation axis, checked on every surface.** It was recorded as
+training-objective-not-units on the strength of the endpoint evaluator, which was already known to
+read raw returns. The training *curve* was unchecked for all three families and is also reported.
+All three are raw: idaac and ctrl read `info['episode']['r']` from a VecMonitor that sits inside
+the normaliser; ppg gathers roller stats at `ppo.py:272`, **before** the normaliser touches
+`seg["reward"]` at `:274`.
+
+**A blocking axis that was correct by coincidence.** `comparison_blocks.py` excluded render size on
+the reasoning that "crop policy already equalises what the network sees at 84" — true of
+`rad`/`soda`, false of the 64-render group, as its own comment admitted. Now blocks on the
+**network input**. It changes no pair, because each mechanism group happens to be internally
+uniform in input size, which is exactly why it is worth adding: the reported set is now correct by
+construction rather than by luck, and a test fails if the axis ever stops being free.
+
+**Two stale prose numbers behind an owner ruling.** `family.py`'s comment said "four sampling
+families … ~29 GPU-h" and `SAME-AXES-VERDICT.md` carried "28.7 GPU-h … about 3%" into the "no
+secondaries" ruling. The code was always right — it derives the set from `FAMILY_EVAL_POLICY_MODE`,
+so review 24 moving `ctrl` to `mode` correctly made it three. Actual cost **~21.6 GPU-h, ~2.4%**, a
+quarter less. And it now buys more: with the frame-stack axis closed, policy mode is the **only**
+confound left in the on-policy group, so that pass would take it from 3 primary pairs to all 6 —
+and it is the only thing standing between `ctrl` and any primary comparison at all. The ruling is
+the owner's and is not overturned; both of its inputs have moved since it was made, in the same
+direction, and neither movement was written down.
+
+This is the same defect shape as the morning's `BOOTSTRAP_SECONDS` (docstring 700, code 200) and
+as SGQN's misquoted 0.90: **prose that disagrees with the thing it describes, where the prose is
+what gets quoted.** Three instances in one day is a pattern, not a coincidence.
+
 ---
 
 ## Addendum — the wave, priced and pre-flighted
