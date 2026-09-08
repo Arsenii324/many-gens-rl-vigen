@@ -23,6 +23,7 @@
     "repository": "RL-ViGen-upstream",
     "launcher": "runnable/_launch/rlvigen.sh",
     "provenance": {
+      "_encoder_note": "The five rlvigen baselines do NOT share one visual encoder. The 'DrQ-v2/DDPG-style backbone' phrasing below refers to the Actor/Critic heads (feature_dim 50, hidden_dim 1024), which ARE identical. The trunks are three different architectures: drqv2 and drq use the 4-layer Encoder (algos/drqv2.py:48-67, repr_dim 39,200); svea builds an 11-layer SharedCNN (algos/svea.py:85-108, repr_dim 14,112) and never instantiates the Encoder copy that also sits in its own file; curl and sgqn each define a CNNEncoder that is drqv2's 4-layer stack plus a Linear(39200, 512) projector the other three do not have. All of it is upstream RL-ViGen code, so none of it is a port deviation -- recorded because svea-vs-drqv2 and curl-vs-drqv2 are comparisons this project reports, and they differ on more than the augmentation their group name names.",
       "drqv2": {
         "source_target": "RL-ViGen released code",
         "source_variant": "DrQ-v2 implementation on RL-ViGen Door with documented replay/protocol adaptation"
@@ -752,7 +753,7 @@
     "provenance": {
       "ibac_sni": {
         "source_target": "IBAC-SNI authors' released code",
-        "source_variant": "authored hybrid of the authors' PyTorch and CoinRun implementations; three-frame observation stack authored for Door (A40 REVISED-2), and lr 5e-4 taken from the CoinRun branch whose architecture this port adopts rather than torch_rl's 7e-4 MiniGrid default (A43), without that branch's linear decay"
+        "source_variant": "the authors' OWN PyTorch implementation (microsoft/IBAC-SNI @ 6b3a58b, the torch_rl branch), run with the authors' own CoinRun visual trunk because Door is pixel-based and torch_rl's native trunks are MiniGrid-shaped. Verified against both branches: softplus, sni_type and use_l2a appear in torch_rl and not in coinrun, and nr_samples appears in coinrun and in NO torch_rl file -- so the 12-sample bottleneck averaging, --l2 and UDA that reviews cite as missing are CoinRun-branch features this PyTorch branch never had, rather than gaps in the port. Authored here for Door: the continuous Gaussian head (torch_rl ships none), the three-frame stack (A40 REVISED-2), and a small-gain orthogonal(0.01) policy-head init replacing initialize_parameters' unit-norm weight rows, which were written for a discrete softmax where output scale is nearly irrelevant. lr 5e-4 from the CoinRun branch whose architecture this port adopts rather than torch_rl's 7e-4 MiniGrid default (A43), without that branch's linear decay"
       }
     },
     "constants": {
@@ -770,12 +771,21 @@
       }
     },
     "constants_note": [
-      "[Claude 2026-09-02 13:00 MSK] procs is 1, and that is now MEASURED rather than assumed. With 2 it",
-      "dies at torch_rl.PPOAlgo's parallel env setup with EOFError -- a worker process that never came",
-      "up. The project's macOS smoke already used 1 because MuJoCo GL contexts do not survive a fork",
-      "there; job bt1q6jd096m3re2n7jp2 shows the same is true on Linux with EGL. So IBAC-SNI's rollout",
-      "is 1 x frames_per_proc = 128, against the repository's default 16 x 128 = 2,048, and that is an",
-      "environment constraint rather than a choice.",
+      "[Claude 2026-09-08] procs is 1 HERE BECAUSE OF THE TIER'S CORE COUNT, not because procs>1 is",
+      "broken. The previous version of this note blamed an EOFError at torch_rl.PPOAlgo's parallel env",
+      "setup (job bt1q6jd096m3re2n7jp2, fork vs MuJoCo/EGL) -- a fault the Door-specific spawn/factory",
+      "repair FIXED, as the v100 constants_reason directly above records. A justification citing a",
+      "repaired fault points at the wrong action: read literally it argues procs must stay 1",
+      "everywhere, and the v100 profile correctly sets 16.",
+      "The real reason for 1 on the DataSphere tiers is that resources.json from retained cells shows",
+      "gt4.1 with 4 logical CPUs and gt4i.1 with 8. Neither has 16. The production host does:",
+      "notes/remote-infra.txt is a captured session on cds2 showing nproc 16, Xeon Gold 6154.",
+      "CONSEQUENCE FOR --batch-size, and it is a tier artifact rather than a defect. torch_rl's",
+      "_get_batches_starting_indexes slices a 128-frame rollout into chunks of batch_size 256, so at",
+      "procs=1 exactly ONE full-batch minibatch forms and --batch-size is inert. At the v100's",
+      "procs=16 the rollout is 2,048 and the same flag yields 8 minibatches of 256 -- which is",
+      "torch_rl's own released rollout shape, reproduced exactly. So production is not running a",
+      "degraded update; only the pre-production tiers are.",
       "frames_per_proc 128 is torch_rl's own PPO default and is unchanged."
     ],
     "environment": {

@@ -1237,7 +1237,7 @@ def gate_v100_schedule_matches_descriptor(schedule_path=None):
         return FAIL, f"V100 schedule generator failed: {proc.stderr.strip()[:180]}"
     if schedule.read_text() != proc.stdout:
         return FAIL, ("V100 schedule is stale or does not match the resolved v100 descriptor; "
-                      "regenerate with plan_production.py --host-profile v100 --sync-schedule")
+                      "regenerate with `python3 datasphere/native/plan_production.py --host-profile v100 --sync-schedule` (the path matters: there is no scripts/plan_production.py)")
     try:
         data = json.loads(proc.stdout)
     except ValueError as error:

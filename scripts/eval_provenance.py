@@ -15,7 +15,19 @@ from pathlib import Path
 
 import numpy as np
 
-from datasphere.native.evaluator_identity import (
+# [Claude 2026-09-08] `datasphere/` has no `__init__.py`, so this import resolves only when the
+# repository root is already on `sys.path`. Every other importer inserts it first
+# (`collect_metrics.py:50`, `eval_grid.py`, `preprod_table.py`); this file did not, so it could not
+# be run or imported standalone -- `ModuleNotFoundError` before argparse.
+#
+# It was never broken in the path that runs: `eval_grid.py` is its only caller and inserts the root
+# before importing it. That is exactly why this sat unfixed for a while -- the cost of touching a
+# CODE_MEMBER is every family's attestation, and paying a re-attestation wave for a latent
+# fragility with no live symptom is the wrong trade. It is fixed here because this batch was
+# already moving those revisions for other reasons, which is the moment such a fix is free.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from datasphere.native.evaluator_identity import (  # noqa: E402
     CODE_MEMBERS,
     CONFIG_MEMBERS,
     EVALUATOR_FAMILIES,
