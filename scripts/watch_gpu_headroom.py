@@ -2,8 +2,9 @@
 """Card headroom: one pre-launch verdict, or a bounded sampling run. Never a daemon.
 
     python3 scripts/watch_gpu_headroom.py --preflight --device 1 --need-mib 4000
-    python3 scripts/watch_gpu_headroom.py --watch --device 1 --seconds 1800 --interval 15 \
+    python3 scripts/watch_gpu_headroom.py --watch --device 0,1 --seconds 1800 --interval 15 \
         --out headroom.jsonl
+    python3 scripts/watch_gpu_headroom.py --watch --device all --seconds 1800
 
 ## What it deliberately does NOT do
 
@@ -23,6 +24,19 @@ A long-lived watcher on a communal host is a process someone else has to wonder 
 would eventually forget. `--watch` samples for a stated number of seconds and exits. If you want
 coverage of a longer window, run it again and say so -- an explicit second measurement is better
 than a process nobody remembers starting.
+
+## Watching a card we are not assigned
+
+`--device` takes a list, and `all` means every card the container can see. Observing a card we may
+not USE is not a contradiction: the schedule governs running work, and a status query allocates no
+memory, creates no CUDA context and runs no kernel. Knowing whether the other card is genuinely
+idle over time is exactly what tells us whether a neighbour might move onto ours.
+
+It does cost one thing, and it should be stated rather than buried: a container can only read a
+device that was attached to it, so watching both cards means `--gpus all` on the OBSERVER
+container. That is the flag this project otherwise refuses, and the reason it is acceptable here
+and nowhere else is that this process cannot consume a GPU -- it shells out to `nvidia-smi` and
+sleeps. Anything that could allocate must still name one card.
 
 ## Why the preflight is separate from the watch
 
@@ -92,16 +106,23 @@ def preflight(device: int, need_mib: int, max_util: int) -> int:
     return verdict
 
 
-def watch(device: int, seconds: float, interval: float, out: str | None) -> int:
+def visible_devices() -> list[int]:
+    out = subprocess.run(["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
+                         capture_output=True, text=True, timeout=30)
+    return [int(l) for l in out.stdout.split() if l.strip().isdigit()]
+
+
+def watch(devices: list[int], seconds: float, interval: float, out: str | None) -> int:
     rows, started, handle = [], time.time(), (open(out, "w") if out else None)
     try:
         while time.time() - started < seconds:
-            row = read(device)
-            if row is not None:
-                rows.append(row)
-                if handle:
-                    handle.write(json.dumps(row) + "\n")
-                    handle.flush()
+            for device in devices:
+                row = read(device)
+                if row is not None:
+                    rows.append(row)
+                    if handle:
+                        handle.write(json.dumps(row) + "\n")
+                        handle.flush()
             time.sleep(interval)
     except KeyboardInterrupt:
         print("\n  interrupted; reporting what was sampled", file=sys.stderr)
@@ -111,6 +132,14 @@ def watch(device: int, seconds: float, interval: float, out: str | None) -> int:
     if not rows:
         print("no samples. Nothing was observed -- which is NOT the same as nothing happening.")
         return 1
+    for device in devices:
+        subset = [r for r in rows if r["index"] == device]
+        if subset:
+            report(subset)
+    return 0
+
+
+def report(rows: list[dict]) -> None:
     used = [r["used_mib"] for r in rows]
     free = [r["free_mib"] for r in rows]
     util = [r["utilization_pct"] for r in rows]
@@ -127,13 +156,17 @@ def watch(device: int, seconds: float, interval: float, out: str | None) -> int:
     print(f"  The number that matters for planning is the MINIMUM free: {min(free)} MiB. Not the "
           f"mean --")
     print("  a co-tenant's peak is what would collide with ours, and a mean hides it.")
-    print(f"  Observed swing in their usage over this window: {max(used)-min(used)} MiB.")
-    return 0
+    print(f"  Observed swing over this window: {max(used)-min(used)} MiB.")
+    if max(used) == 0 and max(util) == 0:
+        print("  IDLE for every sample. That is not the same as unbooked -- the schedule lives in a")
+        print("  spreadsheet this instrument cannot read, and an idle card is still somebody's.")
+    print()
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--device", type=int, required=True)
+    ap.add_argument("--device", required=True,
+                    help="one index, a comma list (0,1), or 'all'")
     ap.add_argument("--preflight", action="store_true")
     ap.add_argument("--watch", action="store_true")
     ap.add_argument("--need-mib", type=int, default=4000)
@@ -145,8 +178,19 @@ def main() -> int:
     if args.preflight == args.watch:
         print("choose exactly one of --preflight (a verdict) or --watch (a description)")
         return 2
-    return (preflight(args.device, args.need_mib, args.max_util) if args.preflight
-            else watch(args.device, args.seconds, args.interval, args.out))
+    if args.preflight:
+        if args.device == "all" or "," in args.device:
+            print("--preflight is a verdict about ONE card: the one we would run on. Name it.")
+            return 2
+        return preflight(int(args.device), args.need_mib, args.max_util)
+    devices = visible_devices() if args.device == "all" else [
+        int(d) for d in args.device.split(",") if d.strip()]
+    if not devices:
+        print("no visible devices to watch")
+        return 1
+    print(f"  watching device(s) {devices} for {args.seconds:.0f}s at {args.interval:.0f}s "
+          f"intervals -- reads only, no allocation")
+    return watch(devices, args.seconds, args.interval, args.out)
 
 
 if __name__ == "__main__":
