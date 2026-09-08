@@ -84,3 +84,43 @@ def test_blocking_on_network_input_does_not_change_the_reported_set():
             assert primary_now == primary_before, (
                 f"{left} vs {right} changed status when `network input` was added: the axis is no "
                 f"longer free, which is a comparability finding rather than a refactor")
+
+
+def test_blocking_is_stated_per_quantity_not_once_for_both():
+    """External review 27 §7, resolved more precisely than the review states it.
+
+    The review says drop `policy mode` as a blocking axis, because the owner ruled a source-native
+    evaluation convention acceptable. The premise is right; the conclusion does not follow as
+    stated. Policy mode is a UNITS axis — `E[return | a=argmax pi]` and `E[return | a~pi]` are
+    different ESTIMANDS, and "acceptable to report each family's own" is not "those are
+    commensurable".
+
+    But the review does find a real error, and it is in the code: there are two reported quantities
+    and one blocking set was applied to both. Retention divides each method by its own train-regime
+    performance, so every per-method axis here cancels to first order — `RESEARCH-FRAME.md` names
+    frame stack, lr and discount as exactly that, and policy mode behaves identically because both
+    regimes use the same native mode.
+
+    So: raw return keeps the full set, retention blocks on nothing, and the caveat that makes
+    retention "usable" rather than "unqualified" stays attached.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_comparison_blocks_quantity", ROOT / "scripts" / "comparison_blocks.py")
+    blocks = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(blocks)
+
+    assert "policy mode" in blocks.RETURN_BLOCKING_AXES, (
+        "raw-return ranking across policy modes compares two different estimands; that does not "
+        "become valid because each is source-native")
+    assert blocks.RETENTION_BLOCKING_AXES == (), (
+        "every axis in the return set is a per-method property present in both regimes of the "
+        "ratio, so the retention set is empty by derivation")
+    assert blocks.BLOCKING_AXES == blocks.RETURN_BLOCKING_AXES, (
+        "the default any other tool imports must be the STRICTER set")
+
+    source = (ROOT / "scripts" / "comparison_blocks.py").read_text()
+    assert "STATED CAVEAT" in source and "C18" in source, (
+        "first-order cancellation is not a licence: the second-order interaction caveat and the "
+        "near-zero-denominator problem must stay attached wherever retention is called less "
+        "restricted")

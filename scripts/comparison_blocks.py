@@ -106,7 +106,46 @@ def axes_of(baseline: str) -> dict[str, object]:
 #:
 #: A reader checking the arithmetic should note that `reward scale` and `time limit` both split
 #: 3/9 over DISJOINT sets of three, so "the three that differ" is ambiguous without naming which.
-BLOCKING_AXES = ("policy mode", "frame stack", "time limit", "network input")
+#: BLOCKING DEPENDS ON THE QUANTITY, which this file used to ignore.
+#:
+#: [Claude 2026-09-08, external review 27 sec.7] Review 27 says to drop `policy mode` as a blocking
+#: axis, because the owner ruled that a source-native evaluation convention is acceptable, so CTRL
+#: being deterministic should not exclude it from primary on-policy comparisons.
+#:
+#: The premise is right and the conclusion does not follow AS STATED. Policy mode is a UNITS axis:
+#: E[return | a = argmax pi] and E[return | a ~ pi] are different ESTIMANDS, not one quantity under
+#: two conditions. "Acceptable to report each family's own estimand" is not "those estimands are
+#: commensurable" -- a correctly measured mean and a correctly measured median are both correct and
+#: still not rankable against each other. `notes/SAME-AXES-VERDICT.md` records exactly that
+#: distinction, and its operative plan is "rank within a block, never across".
+#:
+#: But the review does expose a real error, and it is in this file. There are TWO reported
+#: quantities and one blocking set was applied to both:
+#:
+#:   RAW RETURN   nothing cancels. Every axis below genuinely blocks.
+#:   RETENTION    the study's actual endpoint. `docs/RESEARCH-FRAME.md` establishes that retention
+#:                divides each method by its own train-regime performance, so a per-method confound
+#:                appears in numerator and denominator alike and cancels TO FIRST ORDER -- it names
+#:                frame stack, lr and discount as exactly such confounds. Policy mode is one too:
+#:                a baseline's train-regime and eval-regime returns are both measured under its own
+#:                native mode.
+#:
+#: So blocking retention comparisons on policy mode was wrong for a reason that cancels in
+#: retention, and blocking raw-return comparisons on it remains right. Both sets are reported.
+#:
+#: The first-order cancellation is NOT a licence. RESEARCH-FRAME's second-order caveat stands in
+#: full -- a confound can interact with the regime shift -- and so does C18's near-zero-denominator
+#: problem. Retention pairs are "usable with a stated caveat", which is what that page already
+#: says; they are not promoted to unqualified primaries here.
+RETURN_BLOCKING_AXES = ("policy mode", "frame stack", "time limit", "network input")
+
+#: Everything in RETURN_BLOCKING_AXES is a per-method property that appears in both regimes, so all
+#: of it cancels to first order in a ratio. The set is empty by derivation, not by preference.
+RETENTION_BLOCKING_AXES = ()
+
+#: Kept as the name the rest of the tooling imports; it is the RAW RETURN set, which is the
+#: stricter of the two and the right default for anything that does not say which quantity it means.
+BLOCKING_AXES = RETURN_BLOCKING_AXES
 
 
 def main() -> int:
@@ -116,7 +155,16 @@ def main() -> int:
     args = parser.parse_args()
 
     print("COMPARISON BLOCKS -- a pair is PRIMARY only if it agrees on every blocking axis\n")
-    print(f"  blocking axes: {', '.join(BLOCKING_AXES)}\n")
+    print(f"  RAW RETURN blocks on: {', '.join(RETURN_BLOCKING_AXES)}")
+    print("  RETENTION  blocks on: nothing -- every axis above is a per-method property that")
+    print("             appears in both regimes of the ratio and cancels to first order")
+    print("             (docs/RESEARCH-FRAME.md). Usable WITH ITS STATED CAVEAT, not unqualified:")
+    print("             a confound can still interact with the regime shift, and C18's")
+    print("             near-zero-denominator problem is untouched by any of this.\n")
+    print("  The set below is the RAW RETURN one. Retention is the study's endpoint and is less")
+    print("  restricted; reporting one set for both was the error external review 27 sec.7 found,")
+    print("  though its own prescription -- drop policy mode outright -- would have applied the")
+    print("  retention answer to raw return, where the two estimands do not cancel.\n")
 
     empty = []
     for title, members in GROUPS.items():

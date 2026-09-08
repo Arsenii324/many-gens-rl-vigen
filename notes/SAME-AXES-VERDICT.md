@@ -204,3 +204,48 @@ descriptive, and the caption says why.
 
 Full reasoning, the equalise-to-3 alternative and its price, and what would overturn it:
 `notes/DECISION-SHEET.md` A40.
+
+---
+
+## The blocking axis was stated once for two different quantities (external review 27 §7)
+
+Review 27 says: drop `policy mode` from `BLOCKING_AXES`, because the owner ruled a source-native
+evaluation convention acceptable, so CTRL being deterministic should not exclude it from primary
+on-policy comparisons.
+
+**The premise is right and the conclusion does not follow as stated.** Policy mode is a UNITS axis.
+`E[return | a = argmax π]` and `E[return | a ~ π]` are different **estimands**, not one quantity
+measured under two conditions. "Acceptable to report each family's own estimand" is not "those
+estimands are commensurable" — a correctly measured mean and a correctly measured median are both
+correct and still not rankable against each other. That distinction is this page's whole subject,
+and the ruling recorded above is explicit that the split is *acceptable*, not *absent*.
+
+**But the review finds a real error, and it is in our code, not in the ruling.** There are two
+reported quantities and `scripts/comparison_blocks.py` applied one blocking set to both:
+
+| quantity | does a per-method confound cancel? | blocks on |
+|---|---|---|
+| **raw return** | no — nothing divides it out | policy mode, frame stack, time limit, network input |
+| **retention** — the study's actual endpoint | **yes, to first order** | nothing |
+
+`docs/RESEARCH-FRAME.md` already establishes the retention half: retention divides each method by
+its own train-regime performance, so a per-method confound appears in numerator and denominator
+alike, and it names frame stack, lr and discount as exactly such confounds. **Policy mode is one
+too** — a baseline's train-regime and eval-regime returns are both measured under its own native
+mode. Blocking retention comparisons on it was wrong for a reason that cancels in retention.
+
+So the fix is neither "keep one strict set" nor "drop policy mode": it is to say which quantity is
+being blocked. Both sets are now reported, and `BLOCKING_AXES` remains the raw-return set, since
+anything that does not say which quantity it means should get the stricter answer.
+
+**What this does not license.** First-order cancellation is not permission. RESEARCH-FRAME's
+second-order caveat stands in full — a confound can interact with the regime shift, which is
+precisely why a retention ranking is evidence about *published methods as shipped* rather than
+about algorithmic ideas — and C18's near-zero-denominator problem is untouched. Retention pairs are
+**usable with a stated caveat**, which is what that page already said; they are not promoted to
+unqualified primaries here.
+
+**What it does resolve.** CTRL is not excluded from the study's endpoint comparison by its
+deterministic native evaluation. It remains excluded from *raw-return* primary pairs, correctly,
+and the ~21.6 GPU-h deterministic secondary pass (costed above) remains the only thing that would
+change that — now visibly a raw-return question rather than a study-wide one.
