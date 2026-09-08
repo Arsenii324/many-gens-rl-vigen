@@ -140,8 +140,37 @@ def read_cell(resources: pathlib.Path) -> dict | None:
     if not saw_gpu:
         return None
 
+    # [Claude 2026-09-08] The load profile was in every archive and nothing had read it. Mined from
+    # the seedvar job: drqv2 runs at GPU utilisation mean 45%, median 51%, with 70.6% of 2610
+    # samples in the 50-59% band, memory bandwidth ~43%, and 1.68-1.69 CPU cores -- reproducible to
+    # a tenth across three seeds. That answers "is this family GPU-bound or CPU-bound" from data
+    # already paid for.
+    #
+    # READ `utilization_gpu_percent` CAREFULLY. It is the fraction of time in the sampling window
+    # during which at least one kernel was RESIDENT. It is not occupancy and not throughput: a
+    # single kernel using one SM of eighty for a whole second reads 100%. So these percentages
+    # cannot be added across processes, and two jobs at 50% may interleave perfectly or contend
+    # badly -- nvidia-smi cannot tell you which. Power draw is the channel that is genuinely
+    # additive and physical.
+    util = [int(d.get("utilization_gpu_percent") or 0)
+            for s in samples for d in (s.get("gpu_devices") or [])]
+    bw = [int(d.get("utilization_memory_percent") or 0)
+          for s in samples for d in (s.get("gpu_devices") or [])]
+    cores = None
+    def _cpu_total(sample):
+        return sum(p.get("cpu_seconds") or 0 for p in (sample.get("processes") or []))
+    if len(samples) > 10:
+        a, b = samples[len(samples) // 10], samples[-1]
+        span = (b.get("monotonic_seconds") or 0) - (a.get("monotonic_seconds") or 0)
+        if span > 0:
+            cores = round((_cpu_total(b) - _cpu_total(a)) / span, 2)
+
     family, baseline, frames, profile = _cell_identity(resources.parent)
     return {
+        "gpu_util_mean_pct": round(sum(util) / len(util), 1) if util else None,
+        "gpu_util_max_pct": max(util) if util else None,
+        "membw_mean_pct": round(sum(bw) / len(bw), 1) if bw else None,
+        "cpu_cores_used": cores,
         "cell": resources.parent.name,
         "family": family,
         "baseline": baseline,
@@ -181,6 +210,10 @@ def main() -> int:
         print(f"  {r['cell']:20} {str(r['family']):9} {str(r['frames']):>8} "
               f"{r['ours_peak_mib']:>7} Mi {r['card_peak_mib']:>7} Mi "
               f"{r['card_total_mib']:>5} Mi  {r['attribution']}")
+        if r.get("gpu_util_mean_pct") is not None:
+            print(f"  {'':20} load: gpu-util mean {r['gpu_util_mean_pct']:5.1f}% "
+                  f"(max {r['gpu_util_max_pct']}%)  membw {r['membw_mean_pct']:5.1f}%  "
+                  f"cpu {r['cpu_cores_used']} cores")
         fam = r["family"]
         if fam and (fam not in best or r["ours_peak_mib"] > best[fam]["ours_peak_mib"]):
             best[fam] = r
@@ -201,6 +234,8 @@ def main() -> int:
         print(f"  {len(missing)} family(ies) still without an attributable VRAM measurement: "
               f"{', '.join(missing)}")
     print("  These are OBSERVED PEAKS OF PAST RUNS, not upper bounds on a different configuration.")
+    print("  gpu-util is a DUTY CYCLE -- the fraction of time a kernel was resident, not occupancy.")
+    print("  One kernel on one SM of eighty reads 100%. Do not add these across processes.")
     print("  None was measured at the 600k production budget on a V100. Do not scale them.")
 
     if args.write:
