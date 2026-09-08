@@ -770,3 +770,21 @@ epsilon"*; `algo/ppo.py:33` constructs `torch.optim.Adam(..., eps=eps)`. Vestigi
 OpenAI-baselines' shared A2C/PPO argparse, where A2C really does use RMSprop. `1e-5` is an ordinary
 Adam epsilon and nothing is wrong with the run. Recorded so nobody "corrects" the value while
 reasoning from the wrong optimizer's conventions.
+
+### CTRL's MYOW neighbour index is a literal, and it is upstream's
+
+`runnable/ctrl/algo.py:237`:
+
+    nearby_cluster_idx = jnp.take_along_axis(indx[:, 0 + 1], ...)
+
+`0 + 1` is a literal, so the positive is always drawn from the single nearest neighbour whatever
+`myow_k` says. Byte-identical to `ext/ctrl_public/algo.py:222`, so this is CTRL's released code and
+**not** something this port introduced — changing it would be a deviation, not a fix.
+
+Dormant at the production value: `myow_k` is 1, so "always the first neighbour" and "the k-th of
+k=1 neighbours" are the same thing and nothing is wrong with any number we report. It is recorded
+because it stops being dormant the moment anyone raises `myow_k` toward the paper's `k=3` — at
+which point the knob would appear to work and would not.
+
+Raised as an unverified claim by the Gemini review, which carries its own header warning that its
+confident claims should not be trusted; verified here against both trees directly.
