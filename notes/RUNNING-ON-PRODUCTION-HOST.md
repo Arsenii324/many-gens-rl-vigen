@@ -117,7 +117,7 @@ cd <the repo, or wherever the payload and this script are>
 bash datasphere/native/preflight_production_host.sh --cells drqv2:1 --frames 600000
 ```
 
-**One command, eight checks, exit 0 only if all pass.** It was a hand-run checklist until
+**One command, nine checks, exit 0 only if all pass.** (Check 9, added 2026-09-08, refuses when `DOCKER_GPUS` is unset and verifies the named card has headroom.) It was a hand-run checklist until
 2026-09-07, which is the wrong shape for something whose failure modes are a cell dying six hours
 in — or worse, succeeding while measuring something else. It checks: the Docker daemon is reachable
 *as this user* (being in the group is not the same as the daemon running); `source-lock.json` pins
@@ -171,7 +171,9 @@ cell is the kind of check people switch off.
 Then pass the archive as the FOURTH positional argument and name the split:
 
 ```bash
-NATIVE_PLACES365_SPLIT=train PLACES365_EXPECTED_COUNT=<n> PLACES365_EXPECTED_SHA256=<sha>   bash datasphere/native/run_on_production_host.sh     payload.tgz result.tgz rlvigen-door2-90d8b8c4.tgz places365.tgz
+NATIVE_PLACES365_SPLIT=train PLACES365_EXPECTED_COUNT=<n> PLACES365_EXPECTED_SHA256=<sha> \
+  DOCKER_GPUS='"device=1"' \
+  bash datasphere/native/run_on_production_host.sh     payload.tgz result.tgz rlvigen-door2-90d8b8c4.tgz places365.tgz
 ```
 
 Three things that were wrong here until 2026-09-07, so verify rather than assume if you are on an
@@ -189,6 +191,7 @@ code path, not the dataset.
 
 ```bash
 NATIVE_HOST_DRY_RUN=1 \
+DOCKER_GPUS='"device=1"' \
 FRAMES=600000 NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 \
 CELL_TIMEOUT_SECONDS=170000 CELLS=drqv2:101 \
 NATIVE_RESULT_MIRROR=/mnt/other-volume/rlvigen-results \
@@ -372,15 +375,29 @@ interleaves lines from concurrent cells; the per-cell `training.log` files do no
 <cells> --frames <frames>` prints the breakdown; the runner refuses a job whose target filesystem
 has less (`NATIVE_DISK_FLOOR_GB` overrides with a number you have justified).
 
-| cells at 600k | needs |
-|---|---|
-| `drqv2:1` (any RL-ViGen five) | **44 GiB** |
-| `drqv2:1,drqv2:2` packed | **84 GiB** |
-| `rad:1` / `soda:1` | 26 GiB |
-| `alda:1` | 9 GiB — its buffer is in RAM (15.3 GiB working set), not on disk |
-| `idaac:1`, `ppg:1` | 5 GiB |
-| `ctrl:1` | 7 GiB |
-| `ibac_sni:1` | 6 GiB |
+| cells at 600k, **v100 profile** | copied | mounted `:ro` |
+|---|---|---|
+| `drqv2:1` (any RL-ViGen five) | **48 GiB** | 48 GiB |
+| `drqv2:1,drqv2:2` packed | **87 GiB** | 87 GiB |
+| `rad:1` | **29 GiB** | 29 GiB |
+| `soda:1` (Places365) | **74 GiB** | 29 GiB |
+| `svea:1`/`sgqn:1` (Places365) | **93 GiB** | 48 GiB |
+| `alda:1` | **12 GiB** | 12 GiB |
+| `idaac:1`, `ppg:1` | **9 GiB** | 9 GiB |
+| `ctrl:1` | **10 GiB** | 10 GiB |
+| `ibac_sni:1` | **10 GiB** | 10 GiB |
+
+**[Claude 2026-09-08] Recomputed.** The previous table predated two changes and was wrong in the
+dangerous direction. The margin went 5.0 → 8.0 GiB (measured: site-packages alone is 5.8 GB), so
+every row moved. And `rad` and `soda` were listed together at 26 GiB although **only `soda` opens
+Places365** — `family.py::PLACES365_BASELINES` is `svea, sgqn, soda` — so that single row
+understated `soda` by 45 GiB.
+
+The right-hand column is what the same cell needs with a pre-extracted corpus bind-mounted via
+`NATIVE_PLACES365_DIR_HOST`, which is the difference between 74 and 29 GiB for `soda`.
+
+**Pass `--profile v100`.** Without it `family.py` sizes against the base profile, whose
+`replay_capacity` is 300000 rather than 620000 — 28 GiB instead of 48 for `drqv2:1`.
 
 Three terms, each from a measurement this project holds rather than an estimate:
 

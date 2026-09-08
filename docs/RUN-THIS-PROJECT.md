@@ -140,7 +140,7 @@ it read-only instead of copying and expanding ~45 GiB per job.
 Argument order is `PAYLOAD RESULT [RLVIGEN] [PLACES365]`. Read
 `notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,
 packing, GPU pinning and the arrival checklist, and `datasphere/native/preflight_production_host.sh`
-runs eight mechanical host checks that must all pass first.
+runs nine mechanical host checks that must all pass first.
 
 **Proves it worked:** `result.tgz` and `records.jsonl` land on the host, and the log carries
 `NATIVE_CELL_COMPLETED` for every requested cell.

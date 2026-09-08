@@ -193,3 +193,34 @@ an auditor can see what it is. **Anything that could allocate still names exactl
 **Device numbering.** With `--gpus '"device=1"'` the pinned HOST card 1 appears as **index 0**
 inside the container, and `nvidia-smi -L | grep -c '^GPU '` returns 1 — that count is the check
 that the pin worked. With `--gpus all` the indices match the host's.
+
+
+## `host-run.sh` and the helper container — the two tools no document mentioned
+
+Both were written on 2026-09-08 and neither appeared in any `.md` until now, which is how a tool
+that exists to prevent a class of mistake gets bypassed by the person about to make it.
+
+**`datasphere/native/host-run.sh`** runs a script inside a container with no quoting hazards. The
+body is base64-encoded into an environment variable and decoded inside, so the host shell, ssh and
+`bash -c` never interpret it — a script full of backticks, `$(...)`, quotes and semicolons runs
+exactly as written. It also enforces, in one place: `--rm` always, the mount must be under `$HOME`,
+no GPU unless named (`-g none` omits `--gpus` entirely, since `--gpus none` is invalid docker), a
+`chown` back to the caller, and **the exit status is the container's, never a pipe's**.
+
+```bash
+bash datasphere/native/host-run.sh -n <name> [-g '"device=1"'] [-m DIR] [-r] [-d] <script>
+echo 'du -sh /work' | bash datasphere/native/host-run.sh -      # or from stdin
+```
+
+The "Recipes that worked" section above documents hand-rolling `ssh host "docker run ... bash -c
+'...'"` with three levels of nesting. That is what this replaces, and the mistakes it lists are the
+ones it prevents.
+
+**`NATIVE_HELPER_IMAGE`** (default `python:3.11-slim`) is how `run_on_production_host.sh` and
+`preflight_production_host.sh` do every JSON read and every computation, because the production
+host permits nothing but small python-unrelated actions and docker itself outside a container. Two
+consequences worth knowing before a first run on a new machine: that image must be pullable (it was
+already present on cds2, so it cost nothing there), and **anything the helper needs must be passed
+as a flag, not inherited** — it receives no environment. That is not hypothetical: `check_disk`
+lost `NATIVE_HOST_PROFILE` exactly this way and sized a v100 run against the base profile, 28 GiB
+demanded against 48 needed, until `--profile` was passed explicitly.

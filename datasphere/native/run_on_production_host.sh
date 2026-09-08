@@ -388,8 +388,20 @@ check_disk() {
     required="$NATIVE_DISK_FLOOR_GB"
   else
     # One containerised call, not a host pipeline of two. `--ceil-total` exists for exactly this.
+    # [Claude 2026-09-08, second pass] `--profile` EXPLICITLY. family.py falls back to
+    # os.environ["NATIVE_HOST_PROFILE"] when the flag is absent -- and that read happens INSIDE the
+    # helper container, which `helper_python` gives no `-e` flags at all. So moving this
+    # computation into a container silently dropped the profile with it, and the guard checked the
+    # BASE profile while the run used v100: 28 GiB demanded against 48 GiB actually needed for
+    # drqv2:1 at 600k, a 20 GiB under-count in the dangerous direction on a filesystem at 99%.
+    # The bulk of the difference is replay_capacity 300000 vs 620000.
+    #
+    # Passing the flag rather than forwarding the variable, for the same reason NATIVE_MEMORY_TIER
+    # is a flag: a value that must be inherited through two process boundaries will eventually not
+    # be, and the failure is silent and numerical.
     required="$(helper_python datasphere/native/family.py disk-requirement \
-        --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" --ceil-total 2>/dev/null)" \
+        --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" \
+        --profile "${NATIVE_HOST_PROFILE:-datasphere}" --ceil-total 2>/dev/null)" \
         || required=""
     # [Claude 2026-09-08] The fallback is a generic constant that is right for roughly none of the
     # fleet -- 60 GB is ~10x idaac's real need and ~10 GiB short of soda's. It stays as a floor for

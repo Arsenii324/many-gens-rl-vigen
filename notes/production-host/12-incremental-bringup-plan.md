@@ -159,7 +159,7 @@ first if anything grows:
 - JAX/`ctrl`: `XLA_PYTHON_CLIENT_PREALLOCATE=false` (already set) **plus**
   `XLA_PYTHON_CLIENT_MEM_FRACTION`
 
-**Neither cap is currently set for any family — that is a code change owed before this rung.**
+**[Claude 2026-09-08] The mechanism now exists and is verified; only the per-run value is unset.** `datasphere/native/vram_cap.py` applies `torch.cuda.set_per_process_memory_fraction`, installed as `sitecustomize` by `run_probe.sh` when `NATIVE_VRAM_CAP_MIB` is set, and JAX is bounded by `XLA_PYTHON_CLIENT_MEM_FRACTION`. `scripts/verify_vram_cap.py` exercised it on cds2: a 1024 MiB request past a 512 MiB cap raised `OutOfMemoryError` **with 16.96 GiB free on the card**. What is owed is naming a value per run, not writing code.
 Without it we have no enforcement, only hope, and the whole point of a cap is that a runaway kills
 our run rather than the tenant's.
 

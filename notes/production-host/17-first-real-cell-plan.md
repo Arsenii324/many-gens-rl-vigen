@@ -41,10 +41,11 @@ XLA_PYTHON_CLIENT_ALLOCATOR=platform
 
 The runner prints `NATIVE_GPU_MEMORY_DISCIPLINE ...` so a returned log proves it applied.
 
-**Torch needs no equivalent and has none.** Torch allocates on demand and caches; it does not
-preallocate. A hard per-process cap (`torch.cuda.set_per_process_memory_fraction`) would bound
-transients too, and does not exist here — worth adding before a *large* torch cell, not before
-`idaac` at 1204 MiB.
+**Torch needs no equivalent for PREALLOCATION** — it allocates on demand and caches, so there is
+nothing like JAX's 75% grab to disable. It does need a **cap**, and as of 2026-09-08 it has one:
+`datasphere/native/vram_cap.py`, described in full further down this file. An earlier draft of this
+paragraph said the cap "does not exist here", which was true when written and false by the time the
+file was finished.
 
 ## The ladder
 

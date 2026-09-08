@@ -115,8 +115,15 @@ the bound is enforced:
   `XLA_PYTHON_CLIENT_MEM_FRACTION` to cap the fraction it may reach.
 - **PyTorch / the other six** — `torch.cuda.set_per_process_memory_fraction`, and
   `PYTORCH_CUDA_ALLOC_CONF` to bound the caching allocator's growth.
-- **Neither is currently set for any family.** That is the gap to close before the first shared-GPU
-  run.
+- **[Claude 2026-09-08] The mechanism now exists and is verified; what is unset is the per-run
+  VALUE, not the code.** `datasphere/native/vram_cap.py` applies
+  `torch.cuda.set_per_process_memory_fraction`, installed as `sitecustomize` by `run_probe.sh`
+  when `NATIVE_VRAM_CAP_MIB` is set; JAX is bounded by `XLA_PYTHON_CLIENT_MEM_FRACTION`, and
+  its 75%-preallocation default is now off. `scripts/verify_vram_cap.py` exercised it on cds2:
+  a 1024 MiB request past a 512 MiB cap raised `OutOfMemoryError` **with 16.96 GiB free on the
+  card**, so the cap binds on our own accounting rather than on the driver running out.
+  Measured residual outside it: 308 MiB of CUDA context, plus EGL rendering buffers, which
+  `set_per_process_memory_fraction` cannot bound at all.
 
 A cap turns "we think it stays under N" into "it cannot exceed N, and if it tries, **our** run dies
 rather than someone else's". That asymmetry is the entire point.

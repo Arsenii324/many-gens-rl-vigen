@@ -87,8 +87,11 @@ else
 fi
 
 # 6. Disk, against the DERIVED requirement for these cells rather than a constant.
+# --profile explicitly: the helper container receives no environment, so family.py's fallback to
+# os.environ["NATIVE_HOST_PROFILE"] reads nothing there and would silently size against the base
+# profile. Same defect as run_on_production_host.sh's check_disk, same fix.
 REQUIRED="$(helper_python datasphere/native/family.py disk-requirement \
-  --cells "$CELLS" --frames "$FRAMES" --ceil-total)"
+  --cells "$CELLS" --frames "$FRAMES" --profile "${NATIVE_HOST_PROFILE:-v100}" --ceil-total)"
 FREE="$(df -Pk . 2>/dev/null | awk 'NR==2 {printf "%d", $4 / 1048576}')"
 if [[ -n "$REQUIRED" && -n "$FREE" ]]; then
   if [[ "$FREE" -ge "$REQUIRED" ]]; then
