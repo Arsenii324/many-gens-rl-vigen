@@ -159,3 +159,29 @@ cannot bound how long a DEAD cell takes to notice — job `bt12f5us5h120laajpme`
 frames and then sat until its 7800s timeout fired 105 minutes later, of which roughly 1200 seconds
 were work. The watchdog kills the cell's process group after 1800s without output and reports
 `NATIVE_CELL_STALLED` distinctly from a signal, so it is never misread as an OOM.
+
+## The reporting path, verified end to end 2026-09-08
+
+`scripts/preprod_table.py` takes **extracted archive DIRECTORIES**, not job ids — the docstring says
+so and it is easy to get wrong, which produces a confident "0 of 12 baselines present" rather than
+an error:
+
+```bash
+mkdir -p <dir>/x && tar xzf <dir>/result.tgz -C <dir>/x
+python3 scripts/preprod_table.py <dir1> <dir2> ...
+```
+
+Run against three real attestation archives it produced correct rows — `svea` 16.634, `ppg` 7.946,
+`ibac_sni` 4.540 on eval-easy at ~10k frames, with the right `SAMPLE`/`mode` estimator labels, frame
+stack, time-limit convention and renderer per row, and `3 of 12 baselines present` naming the nine
+absent ones rather than quietly emitting a short table.
+
+Two things worth knowing before production data goes through it:
+
+- **Provenance comes from the ARCHIVE, not the live tree.** A row shows the `families.json`
+  provenance string that shipped in that job's payload, so an old archive shows old wording. That is
+  correct — the row describes the run that produced it — but it means a provenance correction does
+  not retroactively appear in tables built from earlier archives.
+- It was unrunnable until 2026-09-08: it imported `datasphere.native.family` without putting the
+  repository root on `sys.path`, so it raised `ModuleNotFoundError` before argparse and even
+  `--help` failed. Found by running the reporting tools rather than reading them.
