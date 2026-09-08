@@ -3,6 +3,36 @@
 Supplements the workspace `CLAUDE.md` one level up; it does not replace it. Everything here is
 specific to this comparison and should not be read as applying to other projects in the workspace.
 
+## BEFORE ANY ACTION ON THE PRODUCTION HOST — read `notes/production-host/` in full
+
+**`cds2` is a university communal machine with strict GPU and environment control, shared with
+other people's running work.** Before touching it in any way, read
+**[`notes/production-host/`](notes/production-host/)** — **every file, in full.** Not this section,
+which is a pointer and not a substitute; the enforceable specifics live in those files and the
+specifics are where the harm is.
+
+The four that override everything, stated here so they cannot be missed — and still not a
+replacement for reading:
+
+1. **All work happens strictly inside a Docker container.** Install into the container. Never the
+   host.
+2. **Never install, update, change or remove anything on the host.** No `apt-get`, `brew`, `pip`
+   outside a container, conda, or any package manager. **Never touch drivers.**
+3. **Never cause another user's process to fail** — not by OOM, CUDA OOM, a full disk, or taking
+   every core or both GPUs. Assume no resource is free; verify, then keep verifying.
+4. **A block is a stop, not a puzzle.** A busy GPU, a missing permission, an unreadable path: do
+   not work around it. It probably encodes context nobody wrote down.
+
+Two specifics that have already nearly caused harm and are easy to miss:
+
+- `run_on_production_host.sh` defaults to **`--gpus all`**, which takes *both* V100s. Always set
+  `DOCKER_GPUS='"device=N"'` on a card verified free.
+- Run `NATIVE_HOST_DRY_RUN=1` first, every time, and read its `mounts:` and `env:` blocks. It runs
+  every guard without executing anything.
+
+Never write a document that implies a machine may be used, a resource is free, or an action is safe
+by default. Reachability is not permission.
+
 Layout and routing: [`docs/PROJECT-INDEX.md`](docs/PROJECT-INDEX.md). Where the project sits:
 [`docs/STAGES.md`](docs/STAGES.md). What is open: [`docs/CONSTRUCTION.md`](docs/CONSTRUCTION.md).
 Where to resume, and which traps cost time last session:
