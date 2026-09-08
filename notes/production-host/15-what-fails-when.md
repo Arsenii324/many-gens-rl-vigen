@@ -138,7 +138,9 @@ manifest's `exclude` list drops six `models/assets/robots/*` subdirectories, not
 files were **missing, not excluded**.
 
 **No instrument had ever checked this pin, and that was by design rather than by accident.**
-`verify_sources.py` prints `NOT VERIFIED HERE: rlvigen needs a case-sensitive filesystem` and
+`verify_sources.py` prints `NOT VERIFIED HERE: rlvigen needs a case-sensitive filesystem` **on a
+case-insensitive filesystem such as the development laptop** — on cds2 it now prints
+`source reconstruction verified` with no such line, as of the 2026-09-08 repin. The gate
 `gate_source_reconstruction_verifies` reports it as *pending, named not skipped*. Both behaved
 correctly — this is the project's own rule that an instrument which cannot run must never read as
 one that ran. The consequence is simply that the pin sat unverified until a machine existed that

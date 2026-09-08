@@ -48,7 +48,7 @@ disk-full write error, not eviction from page cache, not starvation on the run q
   times over, plus the payload and wheels.
 - **Filling a shared disk breaks every writer on the machine at once**, including jobs mid-write
   that will lose hours. This is the highest-blast-radius mistake available here.
-- Places365 is ~24 GB. Know where it is going and that the space exists first.
+- Places365 is ~21 GiB compressed (~45 GiB modelled, archive plus expanded tree, and that is a LABELLED ESTIMATE from the published asset size, not a measurement -- `family.py:417`). Know where it is going and that the space exists first.
 
 ## Monitoring is continuous, not a precondition
 

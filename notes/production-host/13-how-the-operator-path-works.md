@@ -37,8 +37,11 @@ Read from `datasphere/native/run_on_production_host.sh` and `run_probe.sh`, not 
    arrives.
 2. It takes a **payload tarball** as argv 1 (`code.tgz`), plus optional RL-ViGen and Places365
    archives as argv 3 and 4.
-3. `WORKDIR="$(mktemp -d)"`, `trap 'rm -rf "$WORKDIR"' EXIT`, copies those archives in, and mounts
-   the directory at `/work`.
+3. Stages the archives in a directory **beside `$RESULT`** (`NATIVE_WORKDIR_PARENT` overrides),
+   under an `EXIT` trap that removes it, and mounts it at `/work`. This was `mktemp -d` — i.e.
+   `/tmp` — until 2026-09-08; the problem was not `/tmp` as such but that `check_disk` validated
+   `$NATIVE_WORK_HOST_DIR` and *nothing else*, so the mount taking the single largest write was
+   never checked. It is now checked, and a `tmpfs`/`ramfs` staging directory is refused outright.
 4. `docker run --rm ... "$IMAGE" bash -c 'apt-get install python3 python3-pip git; tar xzf
    code.tgz; bash datasphere/native/run_probe.sh ...'`
 5. `run_probe.sh`, **inside** the container, runs a *second* `apt-get install` (11 packages:

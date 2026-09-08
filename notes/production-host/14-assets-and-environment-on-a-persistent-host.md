@@ -123,8 +123,15 @@ move rather than a copy — but only after checking what else reads the original
 
 ### Where a cell's disk actually goes — computed, not quoted
 
-`python3 datasphere/native/family.py disk-requirement --cells <cell> --frames 600000`, per cell,
-at the production frame budget:
+Per cell, at the production frame budget. **Run it in a container, not on the host** — nothing but
+small python-unrelated actions and docker itself may run outside one, and the wrapper itself was
+changed on 2026-09-08 to obey that:
+
+```
+docker run --rm -v "$PWD:/repo:ro" -w /repo python:3.11-slim \
+  python3 datasphere/native/family.py disk-requirement --cells <cell> --frames 600000
+```
+
 
 | cell | replay | checkpoints ×3 | Places365 | total | +5 GiB margin |
 |---|---:|---:|---:|---:|---:|

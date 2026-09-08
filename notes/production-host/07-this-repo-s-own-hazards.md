@@ -79,7 +79,7 @@ result path in a shared or global location and that location becomes a writable 
 **Give `RESULT` an absolute path inside our own directory**, and read the dry run's `mounts:`
 section (`NATIVE_HOST_DRY_RUN=1`) before the real run. It prints every mount.
 
-## 5. Places365 is ~24 GB
+## 5. Places365 is ~21 GiB compressed, ~45 GiB modelled -- and the figure is an estimate
 
 `setup/fetch_overlay_dataset.sh` fetches the **train** split — the production value, because the
 overlay distribution is the mechanism for `svea`/`sgqn`/`soda`. Know the destination and confirm

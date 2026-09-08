@@ -25,6 +25,7 @@ and the specifics are where the harm is.
 | [`13-how-the-operator-path-works.md`](13-how-the-operator-path-works.md) | what the wrapper actually does, and why the environment is rebuilt every cell |
 | [`14-assets-and-environment-on-a-persistent-host.md`](14-assets-and-environment-on-a-persistent-host.md) | **what is transient and what accumulates** — `--rm` and the EXIT trap free almost everything; the per-cell disk table; the staging directory that was on an unchecked filesystem |
 | [`15-what-fails-when.md`](15-what-fails-when.md) | **the abort ladder, invocation to first gradient step** — what a dry run proves for free, and the memory preflight that used to be skipped for hours |
+| [`16-host-work-log.md`](16-host-work-log.md) | **what was actually run on cds2, what it cost, the container recipes that worked, mistakes made — and the RAM/VRAM/disk contention arithmetic that blocks the GPU steps** |
 
 ## The rule that comes before the others
 
