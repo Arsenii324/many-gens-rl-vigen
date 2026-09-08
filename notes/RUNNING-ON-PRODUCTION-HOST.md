@@ -40,8 +40,19 @@ on the host, and a later change requires a new payload and a new run.
    enough throughput/resource data to set timeouts and decide whether any same-family packing is
    safe. Until this exists, run one cell per container and do not add `--memory`/`--cpus` caps.
 
-   **4a. PIN CTRL's CUDA DRIVER AND RUNTIME TOGETHER WHEN THE IMAGE IS BAKED. NEW 2026-09-08, and
-   it has already cost a cell.** `ctrl` is the one family whose JAX stack pulls the CUDA **12.9**
+   **4a. [CORRECTED 2026-09-08 — the CUDA pairing did NOT cost those cells; my own watchdog did.]**
+   The two `ctrl` failures below were `NATIVE_CELL_STALLED`, and the stall was a false positive:
+   Python block-buffers stdout when it is not a tty, the cell's stdout is a fifo, and the watchdog
+   was reading the log's size. `runnable/ctrl/train_ppo.py` has five `print()` calls and one
+   `flush=True`. `PYTHONUNBUFFERED=1` is now exported for every cell; without it the watchdog would
+   have killed the 45-hour production `ctrl` cell at thirty minutes.
+
+   The evidence that settles it: the 10k `ctrl` cell that SUCCEEDED (`bt1d8jicbkdu1jv87ogp`)
+   printed the same `cuStreamGetGreenCtx` warning, the same 8.27 GiB allocator message and the same
+   buffer-comparator diffs, then ran to 1851 lines. None of those is a failure mode.
+
+   **Still worth doing, on its own merits rather than as a fix for the above: pin ctrl's CUDA
+   driver and runtime together when the image is baked.** `ctrl` is the one family whose JAX stack pulls the CUDA **12.9**
    wheels; every torch family pins **12.1** (measured across 30 archives by
    `scripts/audit_environment_drift.py`, which found no other within-family drift at all). On the
    pre-production tier that landed runtime 12.9.0 on driver 12.2.0, and job

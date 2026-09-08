@@ -75,7 +75,24 @@ run_measured() {
   # Keep a small supervisor alive while the sampler takes its first process-tree sample. Without
   # this handshake, a short but successful command can exit between starting the sampler and its
   # first poll, leaving an empty resources.json and making the runner's evidence depend on timing.
-  local supervisor_script='ready="$1"; shift; while [[ ! -e "$ready" ]]; do sleep 0.01; done; "$@"'
+  # [Claude 2026-09-08] PYTHONUNBUFFERED=1, and the stall watchdog below is UNSOUND without it.
+  #
+  # Python block-buffers stdout when it is not a tty, and the cell's stdout is this function's
+  # fifo. So a cell can be working perfectly and emit nothing for a long time simply because its
+  # 8 KB buffer has not filled -- which is indistinguishable, to a watchdog reading the log's size,
+  # from a hang.
+  #
+  # That is not hypothetical. It killed two healthy `ctrl` cells: `bt1hvkmei18hasgj5bbv` and
+  # `bt17gfr8pq5astv4g3n3`, both NATIVE_CELL_STALLED after 1800s of silence, both diagnosed at the
+  # time as a CUDA driver/runtime problem because their last line was a `cuStreamGetGreenCtx`
+  # warning. The 10k `ctrl` cell that SUCCEEDED (`bt1d8jicbkdu1jv87ogp`) printed that same warning,
+  # the same 8.27 GiB allocator message and the same buffer-comparator diffs, then ran to 1851
+  # lines -- so none of those was the failure. `runnable/ctrl/train_ppo.py` has five `print()`
+  # calls and exactly one passes `flush=True`.
+  #
+  # A watchdog that measures a stdout buffer's flush cadence instead of a process's liveness would
+  # have killed the 45-hour production `ctrl` cell at thirty minutes.
+  local supervisor_script='ready="$1"; shift; while [[ ! -e "$ready" ]]; do sleep 0.01; done; export PYTHONUNBUFFERED=1; "$@"'
   if command -v setsid >/dev/null; then
     setsid bash -c "$supervisor_script" run_probe_supervisor "$sampler_ready" "$@" > "$pipe" 2>&1 &
   else
