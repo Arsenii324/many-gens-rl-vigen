@@ -1660,7 +1660,16 @@ if [[ -n "${NATIVE_VRAM_CAP_MIB:-}" ]]; then
   export PYTHONPATH="$vram_cap_dir${PYTHONPATH:+:$PYTHONPATH}"
   echo "=== NATIVE_VRAM_CAP_REQUESTED ${NATIVE_VRAM_CAP_MIB} MiB via sitecustomize at $vram_cap_dir ===" >&2
 fi
-export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim"
+# [Claude 2026-09-09] `${PYTHONPATH:+:$PYTHONPATH}` -- KEEP what is already there. Without it this
+# line silently discarded the VRAM cap installed ~5 lines above, and the cap has therefore never
+# taken effect on any run. Caught by the first PACKED cell: two processes on card 0 at 2019 MiB and
+# 8207 MiB against a declared 2048 MiB cap. The 2019 was not enforcement -- it is what idaac happens
+# to use -- which is exactly why this survived: the cap appeared to work on the one family whose
+# natural footprint sits near the cap, and every log line said NATIVE_VRAM_CAP_REQUESTED.
+#
+# A safety mechanism that has never once functioned, while reporting that it had. Nothing overwrites
+# PYTHONPATH after this point; anything added later must append the same way.
+export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim${PYTHONPATH:+:$PYTHONPATH}"
 # [Codex 2026-09-01 10:31 MSK: fail before timed calibration when native training imports are incomplete]
 # [Claude 2026-09-02 13:20 MSK: this gate imports RL-ViGen's OWN train.py, which imports
 # torchvision. A family that runs without torch -- CTRL, which is JAX and reaches the robosuite

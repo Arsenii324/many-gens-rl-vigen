@@ -138,7 +138,12 @@ falls back to Mesa's `llvmpipe` CPU rasteriser, and every rendered observation i
 a two-hour bootstrap, with `RuntimeError: software EGL renderer: llvmpipe`. DataSphere set the
 capability for us, so it stayed invisible until the platform changed.
 
-On a **shared** machine also set `NATIVE_VRAM_CAP_MIB` (e.g. `2048`). It bounds PyTorch's
+On a **shared** machine also set `NATIVE_VRAM_CAP_MIB` (e.g. `2048`). **It requires contract 19 or
+later**: before 2026-09-09 the cap was installed on `PYTHONPATH` and then discarded by a later
+assignment in the same script, so it never took effect on any run while every log printed
+`NATIVE_VRAM_CAP_REQUESTED`. Verify it rather than trusting the log line —
+`nvidia-smi --query-compute-apps=pid,used_memory` should show every process of yours at or below the
+cap. It bounds PyTorch's
 reservation so a neighbour's allocation cannot be starved by ours; without it a caching allocator
 grows until something fails, and the process that fails is whichever asks the driver second.
 

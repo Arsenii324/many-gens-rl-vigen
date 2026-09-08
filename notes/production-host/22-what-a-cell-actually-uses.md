@@ -76,3 +76,41 @@ covers a packed cell. Whether it also covers the *disk* triple-copy for several 
 the RL-ViGen-native baselines carry replay buffers that change the RAM picture entirely at 600k.
 Every number above is one family's, and the per-limit table must be recomputed per family before it
 is used to size anything.
+
+
+## Packed, measured 2026-09-09 — and the cap that was not capping
+
+Two cells (`idaac:101,ppg:1`) under `NATIVE_CONCURRENT=1` on card 0:
+
+| | solo (idaac) | packed (idaac + ppg) |
+|---|---|---|
+| GPU utilisation | 5.9% mean | **25.4% mean, 69% max** |
+| GPU memory | 831 MiB | **9296 MiB** |
+| CPU | 1.24 cores | 2.07 cores |
+| RAM | 2.3 GiB | 4.8 GiB |
+
+Packing behaves as the solo figures predicted for CPU and RAM, and better than predicted for GPU
+utilisation. The watchers attributed both processes correctly (`2/2 process(es)`) once
+`--expect-ours` was derived from the cell list.
+
+**But the memory figure exposed a mechanism that had never worked.** Per-process:
+
+```
+243728, 2019 MiB     <- idaac
+243736, 8207 MiB     <- ppg
+```
+
+against a declared `NATIVE_VRAM_CAP_MIB=2048`. `run_probe.sh` installed the cap as a
+`sitecustomize` on `PYTHONPATH` and then **overwrote `PYTHONPATH` five lines later** without
+preserving it. The cap has therefore never applied on any run.
+
+It survived because a solo `idaac` cell sits at ~2019 MiB — just under the declared cap, because
+that is simply what idaac uses. The cap appeared to work on the one family whose natural footprint
+resembles it, and every run printed `NATIVE_VRAM_CAP_REQUESTED 2048 MiB`. **A coincidence that
+looks like enforcement is worse than no enforcement**, because it is quoted as a safety property:
+this one was, by me, in this repo, earlier the same day.
+
+Consequence for packing arithmetic: the GPU-memory column in the table above was computed from an
+*uncapped* `idaac` at 831 MiB and an uncapped `ppg` at 8207 MiB. `ppg` is roughly **10x** `idaac`
+on VRAM, so a packed set must be sized from per-family measurements, not from one family's figure
+multiplied by N.
