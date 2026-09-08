@@ -191,3 +191,60 @@ def test_the_launcher_derives_the_count_from_the_cell_list():
     assert '--expect-ours "$EXPECT_OURS"' in launcher
     assert launcher.count('--expect-ours "$EXPECT_OURS"') == 2, (
         "both card watchers must receive it; the yield daemon was the one that got this wrong")
+
+
+# --- presence is debounced, starvation is not ---------------------------------------------------
+# [Claude 2026-09-09] A 600k production cell was killed ~90 seconds in by `procs -> 6` while 28836
+# MiB of 32494 was FREE and utilisation was 21%. Our two cells declare one process each, so the rest
+# were other people's -- and on a box running a dozen containers, brief GPU touches are normal
+# traffic rather than a claim on the card. What we owe a co-tenant is memory, because the process
+# that asks the driver second is the one that fails.
+
+
+def _run_daemon(monkeypatch, tmp_path, readings, *, expect_ours=2, after=3, floor=4000,
+                max_seconds=5):
+    daemon = _load("yield_gpu_to_neighbour")
+    marker = tmp_path / "cell-active"
+    marker.write_text("")
+    sentinel = tmp_path / "yield.sentinel"
+    seq = iter(readings)
+    last = readings[-1]
+    monkeypatch.setattr(daemon, "card", lambda d: next(seq, last))
+    monkeypatch.setattr(sys, "argv", [
+        "yield_gpu_to_neighbour.py", "--device", "0", "--sentinel", str(sentinel),
+        "--active-file", str(marker), "--expect-ours", str(expect_ours),
+        "--yield-after-checks", str(after), "--floor-mib", str(floor),
+        "--max-seconds", str(max_seconds), "--interval", "0.01"])
+    daemon.main()
+    return sentinel
+
+
+def test_a_transient_cotenant_does_not_kill_a_long_run(tmp_path, monkeypatch, capsys):
+    ours = {"procs": 2, "free_mib": 28000, "util": 8}
+    blip = {"procs": 6, "free_mib": 28836, "util": 21}          # the real 2026-09-09 reading
+    sentinel = _run_daemon(monkeypatch, tmp_path,
+                           [{"procs": 0, "free_mib": 32000, "util": 0}, ours, blip, ours, ours])
+    assert not sentinel.exists(), (
+        "a one-poll blip killed the run:\n" + capsys.readouterr().out)
+
+
+def test_a_persistent_cotenant_still_triggers_a_yield(tmp_path, monkeypatch, capsys):
+    ours = {"procs": 2, "free_mib": 28000, "util": 8}
+    guest = {"procs": 6, "free_mib": 20000, "util": 60}
+    sentinel = _run_daemon(monkeypatch, tmp_path,
+                           [{"procs": 0, "free_mib": 32000, "util": 0}, ours,
+                            guest, guest, guest, guest, guest])
+    assert sentinel.exists(), (
+        "a co-tenant present across several checks did not trigger a yield:\n"
+        + capsys.readouterr().out)
+
+
+def test_memory_starvation_yields_on_the_first_reading(tmp_path, monkeypatch, capsys):
+    """Debouncing presence must not debounce actual harm."""
+    ours = {"procs": 2, "free_mib": 28000, "util": 8}
+    starved = {"procs": 2, "free_mib": 500, "util": 90}
+    sentinel = _run_daemon(monkeypatch, tmp_path,
+                           [{"procs": 0, "free_mib": 32000, "util": 0}, ours, starved])
+    assert sentinel.exists(), (
+        "free memory fell below the floor and the daemon waited:\n" + capsys.readouterr().out)
+    assert "free memory" in sentinel.read_text().lower() or "floor" in sentinel.read_text().lower()

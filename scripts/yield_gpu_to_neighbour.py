@@ -100,6 +100,11 @@ def main() -> int:
                          "are covered. Measured 2026-09-08: apt/pip bootstrap alone ran ~2h on the "
                          "production host, against a 4500s watch -- the GPU phase would have been "
                          "entirely unwatched.")
+    ap.add_argument("--yield-after-checks", type=int, default=3,
+                    help="how many CONSECUTIVE checks must see a co-tenant before yielding. "
+                         "Memory starvation always yields immediately; process count is debounced, "
+                         "because a transient process on a shared box is normal and killing a "
+                         "12-hour run for it is not. Default 3 (~60s at the 20s interval).")
     ap.add_argument("--expect-ours", type=int, default=1,
                     help="how many compute processes OUR cell legitimately puts on the card. ONE "
                          "per cell, so a PACKED run of N cells must pass N. Getting this wrong in "
@@ -136,10 +141,13 @@ def main() -> int:
         print(f"  NOTE: {baseline['procs']} process(es) already on this card. They are the baseline;")
         print(f"        a yield fires only on arrivals BEYOND them, or on the memory floor.")
     print(f"  expecting up to {args.expect_ours} process(es) of our own")
+    print(f"  a co-tenant must persist {args.yield_after_checks} consecutive checks to trigger "
+          f"a yield; memory starvation triggers immediately")
     print(f"  will yield if a process appears beyond ours, or free memory drops below "
           f"{args.floor_mib} MiB")
     ours_seen = False
     saw_active = False
+    consecutive = 0
     baseline_procs = baseline["procs"]
     started = time.time()
     sentinel_dir = pathlib.Path(args.sentinel).parent
@@ -192,8 +200,25 @@ def main() -> int:
         cell_active = (pathlib.Path(args.active_file).exists() if args.active_file else True)
         ours_seen = cell_active and (ours_seen or now["procs"] > baseline_procs)
         expected = baseline_procs + (args.expect_ours if ours_seen else 0)
-        neighbour = now["procs"] > expected
+        # [Claude 2026-09-09] Debounce the PROCESS trigger; never debounce the MEMORY one.
+        #
+        # A 600k production cell was killed ~90 seconds in by `procs -> 6` while only 3.65 GiB of
+        # 32 was in use and utilisation was 21%. Our two cells declare one process each, so four of
+        # those were somebody else's -- and on a box with a dozen containers, brief GPU touches by
+        # other people are normal traffic, not a claim on the card. Yielding a twelve-hour run to
+        # one poll of one such blip makes long runs impossible while preventing no harm at all.
+        #
+        # What we actually owe a co-tenant is memory: the process that asks the driver SECOND is
+        # the one that fails. `free_mib < floor` is that condition measured directly, and it still
+        # fires on the first reading. Presence is debounced; starvation is not.
         starved = now["free_mib"] < args.floor_mib
+        crowded = now["procs"] > expected
+        consecutive = consecutive + 1 if crowded else 0
+        neighbour = crowded and consecutive >= args.yield_after_checks
+        if crowded and not neighbour:
+            print(f"  {now['procs']} process(es) on the card, expected {expected} "
+                  f"({consecutive}/{args.yield_after_checks} checks) -- waiting before yielding",
+                  flush=True)
         if neighbour or starved:
             why = (f"compute processes went {baseline_procs}(+ours) -> {now['procs']}"
                    if neighbour
