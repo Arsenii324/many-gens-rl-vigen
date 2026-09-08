@@ -224,3 +224,37 @@ already present on cds2, so it cost nothing there), and **anything the helper ne
 as a flag, not inherited** — it receives no environment. That is not hypothetical: `check_disk`
 lost `NATIVE_HOST_PROFILE` exactly this way and sized a v100 run against the base profile, 28 GiB
 demanded against 48 needed, until `--profile` was passed explicitly.
+
+## A clone edit invalidates every existing checkout, not just the repo
+
+Editing a `runnable/<family>` tree changes two things a host cannot infer: the family's
+`expected_tree_hash` in `setup/source-reconstruction.json`, and its evaluator revision.
+
+**A `git pull` does not fix the host.** `runnable/*` is gitignored — the trees are *reconstructed*,
+not tracked — so pulling brings the new manifest while leaving the old tree in place, and
+`verify_sources.py` then fails with `source closure hash mismatch`. Observed exactly that on
+2026-09-08 after the Places365 worker fix: the host tree hashed to `1cc5640c…` against a manifest
+expecting `faee77f4…`.
+
+The fix, per family, and it is safe by construction — the target is a reconstructed tree,
+gitignored, rebuildable from the pinned commit plus the patch, by the same tool that made it:
+
+```bash
+rm -rf runnable/dmc_gb
+python3 setup/bootstrap_sources.py --family dmc_gb    # --family exists; without it, _publish
+python3 setup/verify_sources.py                       # refuses every already-present destination
+```
+
+`_publish` refuses to overwrite an existing destination, so the removal is required rather than
+optional, and running bootstrap without `--family` on a populated tree errors on the first one.
+
+**Passing a script to the host without quoting hell.** `host-run.sh` base64-encodes the body, which
+solves the container side. The remaining hazard is getting the file *to* the host: a heredoc nested
+inside `ssh '...'` breaks the moment the script contains a single quote — it happened here, on a
+`python3 -c "...json.load(open('...'))..."` line, and `set -e` aborted before the `rm` ran. Send the
+file over stdin instead, which interprets nothing:
+
+```bash
+ssh HOST "cat > /tmp/script.sh" < local_script.sh
+ssh HOST 'bash ~/rlvigen-work/host-run.sh -n name /tmp/script.sh'
+```
