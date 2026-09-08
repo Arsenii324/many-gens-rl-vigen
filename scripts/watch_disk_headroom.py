@@ -111,7 +111,7 @@ def main() -> int:
                 say(BANNER)
                 say(f"!! DISK FLOOR BREACHED on {args.path}: {free:.1f} GiB free, floor "
                     f"{args.floor_gib:.1f} GiB.")
-                say(f"!! Free space has fallen {used_by_us:.1f} GiB since this watch armed.")
+                say(f"!! {used_by_us:.1f} GiB has been consumed since this watch armed.")
                 say(f"!! This filesystem is SHARED. Stopping our own cell rather than letting it")
                 say(f"!! keep writing -- somebody else's job failing is the outcome that matters.")
                 if args.dry_run:
@@ -130,8 +130,10 @@ def main() -> int:
                     say(f"!! Stop it by hand, now.")
                 say(BANNER)
                 return 1
+            moved = (f"{used_by_us:.1f} GiB consumed since arm" if used_by_us >= 0
+                     else f"{-used_by_us:.1f} GiB freed since arm")
             say(f"    {args.path}: {free:.1f} GiB free (floor {args.floor_gib:.1f}, low water "
-                f"{low_water:.1f}, {used_by_us:+.1f} since arm), {left:.0f}s of watch left")
+                f"{low_water:.1f}); {moved}; {left:.0f}s of watch left")
         time.sleep(args.interval)
 
     say(BANNER)

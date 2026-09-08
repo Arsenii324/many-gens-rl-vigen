@@ -60,7 +60,7 @@ def test_a_breach_during_the_run_writes_the_sentinel(tmp_path, monkeypatch, caps
     body = sentinel.read_text()
     assert "disk floor breached" in body and "10.0 GiB free" in body, body
     # It must say how much WE moved, not only the absolute figure.
-    assert "fallen 490.0 GiB since this watch armed" in err, err
+    assert "490.0 GiB has been consumed since this watch armed" in err, err
 
 
 def test_an_impossible_floor_refuses_to_arm_rather_than_stopping_a_healthy_cell(tmp_path):

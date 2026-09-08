@@ -59,3 +59,43 @@ Places365 three, and the two 16-process families. Those are fleet decisions, not
 VRAM. Only `idaac` (1204 MiB) and `ppg` (1588 MiB) have measured figures; the rest are unmeasured
 and the `NATIVE_VRAM_CAP_MIB` cap is what bounds them in the meantime. A cap is a bound, not a
 measurement, and `notes/production-host/19` §"what is not settled" applies here too.
+
+
+## Revision, 2026-09-09 — at smoke-test scale the disk table does not discriminate
+
+The disk figures above are at **600k frames**. Recomputed at the **10k** these validation runs
+actually use:
+
+| baseline | disk @10k | disk @600k | origin |
+|---|---|---|---|
+| idaac | **9 GiB** | 9 GiB | added |
+| ppg | **9 GiB** | 9 GiB | added |
+| alda | **9 GiB** | 12 GiB | added |
+| drqv2 | **9 GiB** | 48 GiB | RL-ViGen-native |
+| rad | **9 GiB** | 29 GiB | RL-ViGen-native |
+| curl / drq | **9 GiB** | 48 GiB | RL-ViGen-native |
+
+Every one of them is 9 GiB at 10k. The 48 GiB that excluded the replay group is entirely the
+600k-frame checkpoint-and-replay footprint, and it does not exist at this scale. **So disk excludes
+nothing here**, and the exclusions that survive are Places365 (svea/sgqn/soda) and `procs=16`
+(ibac_sni/ctrl) — both of which hold at any scale.
+
+### This changes the order, because a validity check is worth more than a preference
+
+The owner wants run-priority on the added baselines, and *also* wants to see a baseline that
+succeeds on the original RL-ViGen reach real SR/reward here — as evidence that our harness is not
+subtly broken. Those are different questions and the second is the more dangerous one to leave
+unanswered: every added baseline could run cleanly and still tell us nothing about whether our Door
+setup can produce learning at all.
+
+Revised order:
+
+1. **idaac** — added. In progress.
+2. **ppg** — added.
+3. **drqv2** — RL-ViGen-native, and the canonical one. **The validity check.** At 10k it costs the
+   same 9 GiB as everything else, so it is nearly free to run and is the only one of these that
+   comes with an external expectation of what success looks like.
+4. **alda** — added, if there is time.
+
+A non-degenerate result from (3) is what licenses trusting (1) and (2). If `drqv2` learns nothing
+here, the added baselines learning nothing would be uninterpretable.

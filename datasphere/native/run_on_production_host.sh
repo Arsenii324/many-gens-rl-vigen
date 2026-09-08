@@ -866,6 +866,24 @@ docker run --rm --name "$CONTAINER_NAME" ${DOCKER_GPU_ARGS[@]+"${DOCKER_GPU_ARGS
     bash datasphere/native/run_probe.sh $INNER_ARGS
   "
 
+# [Claude 2026-09-09] HAND THE OUTPUTS BACK before copying them. The container runs as root, so
+# everything it writes to the bind mount is root-owned, and some of it is 0600 -- `run_manifest.json`
+# and `records.jsonl` among them. The `cp` below runs on the HOST as an ordinary user and fails with
+# "Permission denied" for exactly those files.
+#
+# Observed 2026-09-09 on the first cell that completed: `result.tgz` (0644) copied, records.jsonl
+# (0600) did not, and the wrapper exited 1 AFTER printing "native probe completed successfully".
+# A successful run reported as a failure, with the records left behind -- the worst combination,
+# because the cell is expensive and the loss is silent until someone looks for the records.
+#
+# chown from a throwaway container, because a non-root host user cannot chown root-owned files and
+# nothing may be installed or changed on the host.
+if [[ -d "$WORKDIR/out" ]]; then
+  docker run --rm -v "$WORKDIR/out:/out" "${NATIVE_HELPER_IMAGE:-python:3.11-slim}" \
+    chown -R "$(id -u):$(id -g)" /out 2>/dev/null \
+    || echo "warning: could not chown the output directory; the copies below may fail" >&2
+fi
+
 cp "$WORKDIR/out/result.tgz" "$RESULT"
 if [[ -f "$WORKDIR/out/records.jsonl" ]]; then
   cp "$WORKDIR/out/records.jsonl" "$(dirname "$RESULT")/records.jsonl"
