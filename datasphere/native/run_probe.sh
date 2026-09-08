@@ -1546,8 +1546,17 @@ if [[ -z "${NATIVE_VENV:-}" ]]; then
 fi
 # Proven, not assumed, and in BOTH paths: a baked pointer aimed at a directory this cell did not
 # populate is an ImportError inside a GPU call, which is the worst place to learn about a mount.
-for _mod in robosuite robosuiteVGB; do
-  if ! python3 -c "import $_mod" 2>/dev/null; then
+# [Claude 2026-09-09] The module names are `robosuite` and `robosuitevgb` -- LOWERCASE. The
+# directory is `envs/robosuiteVGB` and pip reports `Successfully installed robosuitevgb-1.0.0`, and
+# the first version of this check used the directory spelling. It therefore failed on a cell whose
+# install had just succeeded, and killed a healthy run: a check that refuses a correct state is
+# worse than no check, because it is trusted. The names here match what the codebase imports.
+#
+# Checked under the same PYTHONPATH the cell will run with, so this verifies the real condition
+# rather than a stricter one that happens to hold for the pip path only.
+for _mod in robosuite robosuitevgb; do
+  if ! PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/envs/robosuiteVGB:${PYTHONPATH:-}" \
+       python3 -c "import $_mod" 2>/dev/null; then
     echo "=== NATIVE_EDITABLE_IMPORT_FAILED $_mod ===" >&2
     echo "    NATIVE_VENV=${NATIVE_VENV:-<unset>}; the tree is expected at" >&2
     echo "    /tmp/native-work/RL-ViGen-upstream. If a prebuilt env is mounted, its baked pointer" >&2

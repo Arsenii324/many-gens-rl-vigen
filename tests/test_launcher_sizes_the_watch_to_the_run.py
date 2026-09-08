@@ -72,11 +72,15 @@ def _code() -> str:
                       if not l.lstrip().startswith("#"))
 
 
-@pytest.mark.parametrize("flag", ["--must-cover-seconds", "--stop-when-inactive", "--active-file"])
-def test_both_watchers_receive(flag):
+# --must-cover-seconds applies to all three watches (exclusivity, yield, disk); the cell-active
+# flags apply only to the two that watch the CARD, since a disk does not become "ours".
+@pytest.mark.parametrize("flag, expected", [("--must-cover-seconds", 3),
+                                            ("--stop-when-inactive", 2),
+                                            ("--active-file", 2)])
+def test_the_watchers_receive_their_flags(flag, expected):
     code = _code()
-    assert code.count(flag) == 2, (
-        f"{flag} reaches {code.count(flag)} watcher(s) in the executable body, expected both")
+    assert code.count(flag) == expected, (
+        f"{flag} reaches {code.count(flag)} watcher(s) in the executable body, expected {expected}")
 
 
 def test_the_card_index_is_derived_once():

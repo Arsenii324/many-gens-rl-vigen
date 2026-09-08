@@ -28,13 +28,28 @@ constants and profile overrides, and the RAM figures already recorded there.
 Host for scale: **125 GiB RAM (113 available), 16 cores**, two V100-32GB. So alda's 14.73 GiB is
 comfortable and ibac_sni's 16 processes would take the whole machine's CPU.
 
+## Provenance, which turned out to select the same three
+
+The owner is more interested in the baselines **RL-ViGen did not ship** than in the ones it did.
+`families.json` settles which is which: a `repository` of `runnable/<name>` marks a baseline this
+project added; an empty one marks a baseline that comes from RL-ViGen itself.
+
+| added by this project | shipped by RL-ViGen |
+|---|---|
+| `idaac`, `ppg`, `ibac_sni`, `ctrl`, `alda` | `drqv2`, `svea`, `sgqn`, `curl`, `drq`, `rad`, `soda` |
+
+Of the five added baselines, two are excluded on measurement alone — `ibac_sni` and `ctrl` both run
+`procs=16` under the v100 profile. The remaining three are exactly `idaac`, `ppg` and `alda`, which
+is the order below. The preference and the resource constraints happen to agree here; where they
+disagree in future, this table is what makes the disagreement visible.
+
 ## Order, and why this order
 
 1. **idaac** — leanest on RAM of the on-policy three, and already the subject of the renderer work.
 2. **ppg** — same disk and process count, slightly more RAM, and a *different* on-policy family, so
    a second pass tests the runner rather than re-testing one family.
-3. **alda** — off-policy but only 12 GiB, so it exercises the replay path without the 48 GiB the
-   drqv2/curl/drq group needs.
+3. **alda** — 12 GiB, and the third of the added baselines that is runnable within the constraints.
+   It exercises a different code path again without the 48 GiB the drqv2/curl/drq group needs.
 
 If all three complete, the untested remainder is the expensive half: the 48 GiB replay group, the
 Places365 three, and the two 16-process families. Those are fleet decisions, not smoke tests.
