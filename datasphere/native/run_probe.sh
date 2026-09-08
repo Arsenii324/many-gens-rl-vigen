@@ -1151,7 +1151,13 @@ export NATIVE_SAVE_EVERY_FRAMES="$save_every"
 payload_families="$(python3 "$FAMILY_TOOL" families-of-cells --cells "$cells")"
 payload_families="${payload_families//$'\n'/,}"
 payload_families="${payload_families%,}"
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 13 \
+# [Claude 2026-09-08] 13 -> 14 with contract.py::RUNNER_CONTRACT. These are TWO HOMES FOR ONE
+# NUMBER and they must move together: bumping contract.py alone made every payload built
+# afterwards unrunnable against this runner, and job bt1tceje08tpvq8cchhj died on exactly
+# that -- "payload was built for runner contract 14 but this runner needs 13". The check
+# worked; the number was maintained in one place and read in another. Same shape as
+# SAVE_EVERY vs SAVE_EVERY_FRAMES and the curve_eval_episodes duplicate.
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 14 \
   --require-families "$payload_families" \
   --require-evaluator-identity \
   --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'
