@@ -54,9 +54,17 @@ def test_without_the_mount_the_flag_stays(tmp_path):
     assert "NATIVE_PIP_CACHE_DISCIPLINE off" in out, out
 
 
-def test_with_the_mount_the_flag_is_dropped(tmp_path):
+def test_with_the_mount_the_cache_dir_is_passed_explicitly(tmp_path):
+    """Dropping --no-cache-dir is NOT enough: pip in this image has caching disabled outright.
+
+    [Claude 2026-09-09] Two full installs ran with the mount in place and left the host cache at
+    4.0K while the discipline line printed "wheels persist across cells". `pip cache dir` in the
+    image says "cache is disabled"; passing --cache-dir explicitly overrides it.
+    """
     out = _resolve("1", writable=True, tmp_path=tmp_path)
-    assert "FLAGS[]" in out, out
+    assert "--cache-dir" in out, (
+        "only the absence of --no-cache-dir, which this image ignores: " + out)
+    assert "FLAGS[]" not in out, out
     assert "NATIVE_PIP_CACHE_DISCIPLINE on" in out, out
 
 

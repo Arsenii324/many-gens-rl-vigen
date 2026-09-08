@@ -294,3 +294,38 @@ CARD=0 CELLS=idaac:101 FRAMES=10000 CELL_TIMEOUT_SECONDS=3600 \
 - Files a container writes to a bind mount are **root-owned**, and the host user cannot delete them.
   `build-env.sh` now `chown`s its output back to the invoking UID for this reason; found when the
   smoke test could not clean up after itself.
+
+
+## 2026-09-09 — a neighbour took card 0 mid-plan, and what that exercised
+
+The preflight refused, in production, on a real co-tenant rather than a test:
+
+```
+card 0: 16155 MiB used, 16340 MiB free, 100% util, 1 compute process(es)
+REFUSING: the card is at 100% with another process on it.
+ABORTING: preflight refused the card.
+```
+
+The launcher stood everything down (`no watcher leaked`) and nothing of ours touched the card. That
+is the first time the co-tenancy guard has fired against somebody else's actual job.
+
+**Then the card freed, and I relaunched on a single reading.** That was hasty, and the preflight's
+own text says why: *"A single reading is a snapshot, not a bound."* A job that ran once can run
+again. What makes relaunching defensible is not the reading; it is that the yield daemon is armed
+with `baseline: 0 compute process(es)` and *"will yield if a process appears beyond ours"*, so a
+returning neighbour stops our cell automatically — during bootstrap the exclusivity watch also
+alarms, because a process on the card while our `cell-active` marker is absent is by construction
+not ours. **Verify that the daemon is armed before relying on it**; do not rely on the free reading.
+
+**On attributing the neighbour.** `docker ps` names are visible to everyone on the daemon, and
+`rl4vla_cudagl_gpu1` is explicitly named for GPU 1 while an unsuffixed `rl4vla_cudagl` also exists.
+That is inference from a public listing, not identification. Mapping a GPU process to a container
+needs PID inspection of another user's work, which is not ours to do, so the neighbour stays
+unattributed. Worth knowing: `gpu-stats-main-gpu-stats-1` runs on this box, so somebody is
+recording GPU usage independently of us.
+
+**Latent bug found while waiting:** `NATIVE_PIP_CACHE` printed "wheels persist across cells" through
+two complete installs while the host cache stayed at 4.0K. pip in this image reports *"cache
+commands can not function since cache is disabled"*, so merely omitting `--no-cache-dir` does
+nothing; `--cache-dir` must be passed explicitly. A feature that reports success while doing
+nothing — the exact defect class this workspace exists to refuse, shipped by me the same day.

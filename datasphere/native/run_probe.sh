@@ -1409,8 +1409,15 @@ PIP_CACHE_FLAGS=(--no-cache-dir)
 NATIVE_PIP_CACHE_DISCIPLINE="off: --no-cache-dir, wheels re-downloaded every cell"
 if [[ "${NATIVE_PIP_CACHE:-0}" == "1" ]]; then
   if mkdir -p /root/.cache/pip 2>/dev/null && [[ -w /root/.cache/pip ]]; then
-    PIP_CACHE_FLAGS=()
-    NATIVE_PIP_CACHE_DISCIPLINE="on: /root/.cache/pip is a host bind mount, wheels persist across cells"
+    # [Claude 2026-09-09] `--cache-dir` EXPLICITLY, not merely the absence of `--no-cache-dir`.
+    # pip in this image reports "pip cache commands can not function since cache is disabled", so
+    # dropping the flag achieved nothing: two full installs ran with the mount in place and left the
+    # host cache at 4.0K, while this very variable printed "wheels persist across cells". A feature
+    # that reports success while doing nothing is the defect class this project exists to refuse,
+    # and I shipped one. `pip cache dir --cache-dir /root/.cache/pip` returns the path, so an
+    # explicit --cache-dir overrides whatever disabled it.
+    PIP_CACHE_FLAGS=(--cache-dir /root/.cache/pip)
+    NATIVE_PIP_CACHE_DISCIPLINE="on: --cache-dir /root/.cache/pip (host bind mount), wheels persist across cells"
   else
     NATIVE_PIP_CACHE_DISCIPLINE="REQUESTED but /root/.cache/pip is not writable; falling back to --no-cache-dir"
   fi
