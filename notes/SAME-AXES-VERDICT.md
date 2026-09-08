@@ -27,10 +27,30 @@ estimands of different objects. **This alone makes R3 NOT MET.**
 
 ## What would make it MET, and what it costs
 
-Run the deterministic second endpoint pass for the four sampling families —
-`ENDPOINT_EVAL_POLICY_MODES=native,mode`, already implemented and wired, requested by `family.py` for
-exactly those four. **28.7 GPU-h against a campaign near 893, about 3%.** Then every cross-group
-comparison uses the mode-taking pass and the axis is uniform where it is used.
+Run the deterministic second endpoint pass for the sampling families —
+`ENDPOINT_EVAL_POLICY_MODES=native,mode`, already implemented and wired, requested by `family.py`
+for exactly those. Then every cross-group comparison uses the mode-taking pass and the axis is
+uniform where it is used.
+
+> **CORRECTED 2026-09-08, and the correction cuts both ways — it is cheaper AND it now buys more.**
+>
+> **Cheaper.** This said "the four sampling families" and "28.7 GPU-h… about 3%". There are
+> **three**: external review 24 moved `ctrl` from `sample` to `mode`, and `family.py` derives the
+> set from `FAMILY_EVAL_POLICY_MODE` so its behaviour followed correctly while every prose copy of
+> the number did not. Actual scope is `idaac`, `ppg`, `ibac_sni`: **3 x 3 seeds x ~2.4 h = ~21.6
+> GPU-h, about 2.4%** of 893. The four-family figure overstates it by a quarter, and it is the
+> figure the "no secondaries" ruling was made against.
+>
+> **Buys more.** When that ruling was made, the on-policy group was confounded on *two* axes and
+> this pass untangled only one, so it bought a partial repair. A40 REVISED-2 closed the frame-stack
+> axis on 2026-09-08, and **policy mode is now the only confound left in that group**. The pass
+> would take the on-policy primary set from **3 pairs to all 6**, and specifically it is the only
+> thing standing between `ctrl` and any primary comparison at all — `ctrl` currently pairs with
+> none of `idaac`, `ppg`, `ibac_sni`.
+>
+> **This does not overturn the ruling**, which is the owner's and is about spending GPU time. It
+> records that both inputs to it have moved since it was made, in the same direction, and neither
+> movement was written down. Worth re-deciding with the current numbers rather than the stale ones.
 
 Two things must be true and neither is yet:
 

@@ -62,6 +62,13 @@ def _policy_mode(baseline: str) -> str:
     return "?"
 
 
+#: What the NETWORK receives, which is not always what the renderer produces. `rad` and `soda`
+#: render at 100 and crop to 84 -- that crop is RAD's actual augmentation mechanism, so forcing a
+#: native 84 would make it a no-op by RAD's own `crop_max <= 0` guard. Everyone else's network
+#: input equals their render size.
+NETWORK_INPUT_SIZE = {"rad": 84, "soda": 84}
+
+
 def axes_of(baseline: str) -> dict[str, object]:
     image_size, frame_stack = OBSERVATION_GEOMETRY[baseline]
     return {
@@ -70,6 +77,7 @@ def axes_of(baseline: str) -> dict[str, object]:
         "time limit": TIME_LIMIT_HANDLING[baseline],
         "render size": image_size,
         "reward scale": REWARD_NORMALIZATION[baseline],
+        "network input": NETWORK_INPUT_SIZE.get(baseline, image_size),
     }
 
 
@@ -77,9 +85,18 @@ def axes_of(baseline: str) -> dict[str, object]:
 #:
 #: Two axes are deliberately NOT here, each for its own stated reason:
 #:
-#:   `render size`   declared. Unlike the three below it does not change what the agent can infer
-#:                   -- crop policy already equalises what the network sees at 84. (Re-examine
-#:                   this for the 64-render Procgen-origin group, where no crop equalises it.)
+#:   `render size`   declared -- and superseded as an axis by `network input` below, which is the
+#:                   quantity that actually matters. The old justification ("crop policy equalises
+#:                   what the network sees at 84") was true of `rad`/`soda` and false of the
+#:                   64-render group, where nothing equalises anything. Resolved 2026-09-08 by
+#:                   blocking on the network input instead: `rad`/`soda` render 100 and crop to 84,
+#:                   so they are 84 like the RL-ViGen five; the 64 group is genuinely 64.
+#:
+#:                   Adding it changed NOTHING -- both primary sets are identical before and after,
+#:                   because each mechanism group happens to be internally uniform in input size.
+#:                   That is exactly why it is worth adding: the reported set was correct by
+#:                   coincidence, and is now correct by construction. A baseline that moves
+#:                   resolution is caught instead of quietly confounding a pair.
 #:   `reward scale`  declared. `rlgen/protocol.py::REWARD_NORMALIZATION` carries the argument:
 #:                   equalising is less faithful in BOTH directions, the transplanted convention's
 #:                   condition is not violated on Door (a running normaliser is scale-adaptive,
@@ -89,7 +106,7 @@ def axes_of(baseline: str) -> dict[str, object]:
 #:
 #: A reader checking the arithmetic should note that `reward scale` and `time limit` both split
 #: 3/9 over DISJOINT sets of three, so "the three that differ" is ambiguous without naming which.
-BLOCKING_AXES = ("policy mode", "frame stack", "time limit")
+BLOCKING_AXES = ("policy mode", "frame stack", "time limit", "network input")
 
 
 def main() -> int:

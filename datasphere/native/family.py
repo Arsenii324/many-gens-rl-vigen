@@ -514,9 +514,18 @@ def production_env(cells: str, path: Path | None = None) -> dict:
     # a = argmax pi] and E[return | a ~ pi] are different estimands and two of A25's three fixed
     # cross-group pairs straddle that split.
     #
-    # Only these four. Asking a family that already takes the mode for a second `mode` pass would
-    # re-run an identical 800-episode grid at full price for an identical answer. Cost as scoped:
-    # four baselines x three seeds x ~2.4 h = ~29 GPU-h against a campaign near 865.
+    # Only the sampling families. Asking a family that already takes the mode for a second `mode`
+    # pass would re-run an identical 800-episode grid at full price for an identical answer.
+    #
+    # [Claude 2026-09-08] This comment said FOUR and the cost said "~29 GPU-h". Both are stale, and
+    # the code below is not: it derives the set from FAMILY_EVAL_POLICY_MODE, so when external
+    # review 24 moved `ctrl` from `sample` to `mode` the set silently became three -- idaac, ppg,
+    # ibac_sni -- while the prose kept saying four. That is the same defect shape as
+    # audit_job_budgets' BOOTSTRAP_SECONDS (docstring 700, code 200), and the prose number is the
+    # one that gets quoted: `notes/SAME-AXES-VERDICT.md` carries it into an owner ruling.
+    #
+    # Cost as actually scoped: THREE baselines x three seeds x ~2.4 h = ~21.6 GPU-h against a
+    # campaign near 893, about 2.4% -- not the ~3.2% the four-family figure implies.
     import importlib.util as _il
     _spec = _il.spec_from_file_location(
         "_evaluator_identity_for_modes", Path(__file__).resolve().with_name("evaluator_identity.py"))
