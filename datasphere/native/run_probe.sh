@@ -128,10 +128,29 @@ run_measured() {
     stall_pid="$!"
   fi
 
+  # [Claude 2026-09-08] POLICY-HEALTH WATCH, alongside the stall watchdog and deliberately NOT
+  # merged into it: one kills, this one only speaks. PRODUCTION-RUNBOOK lists "an alert on
+  # `log_std` drift rather than post-hoc inspection" as not built and worth having before day one,
+  # because the failure it catches survives every other check -- ibac_sni at sigma ~ 4.3, entropy
+  # climbing 9.95 -> 20.03, success 0.00, and finite the whole way. At 45 hours for the longest
+  # cell, post-hoc means the run is over before anyone knows.
+  #
+  # It never aborts. DECISIONS-IF-PRODUCTION-GOES-WRONG's rule holds here too: a faithfully
+  # implemented method that simply performs badly is a result, not a defect, and a watchdog that
+  # killed on saturation would delete exactly those results -- for whichever baseline struggled
+  # most, which is the worst selection rule available.
+  local health_pid=""
+  if [[ -z "${NATIVE_NO_POLICY_HEALTH_WATCH:-}" ]] && [[ -f datasphere/native/../../scripts/watch_policy_health.py || -f scripts/watch_policy_health.py ]]; then
+    python3 scripts/watch_policy_health.py --log "$output_dir/training.log" --interval 60 \
+      >&2 2>>"$output_dir/training.log" &
+    health_pid="$!"
+  fi
+
   set +e
   wait "$training_pid"
   local training_status="$?"
   if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
+  if [[ -n "$health_pid" ]]; then kill "$health_pid" 2>/dev/null; wait "$health_pid" 2>/dev/null; fi
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"
