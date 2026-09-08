@@ -53,7 +53,16 @@ fi
 # idaac reaches the card through DummyVecEnv/ProcgenEnv, both in-process. It is a variable rather
 # than a literal because the exclusivity watch reads a FALSE BREACH as a real one, so a family that
 # later grows a worker pool must be able to say so instead of being argued with.
-EXPECT_OURS="${NATIVE_EXPECT_OURS:-1}"
+# One process per CELL, so a packed run expects as many as it packs. Derived from the CELLS list
+# rather than typed, because the first packed run yielded to itself: two cells put two processes on
+# the card, the watchers expected one, and both healthy cells were stopped as if a co-tenant had
+# arrived. Serial runs (NATIVE_CONCURRENT unset) execute one cell at a time, so they expect one.
+if [[ "${NATIVE_CONCURRENT:-}" == "1" ]]; then
+  _cell_count="$(printf '%s' "$CELLS" | awk -F, '{print NF}')"
+else
+  _cell_count=1
+fi
+EXPECT_OURS="${NATIVE_EXPECT_OURS:-$_cell_count}"
 SLACK="${NATIVE_WATCH_SLACK_SECONDS:-900}"
 MUST_COVER=$(( CELL_TIMEOUT_SECONDS + BOOTSTRAP_ALLOWANCE ))
 WATCH_SECONDS=$(( MUST_COVER + SLACK ))
@@ -69,6 +78,7 @@ YIELD="cell-c${CARD}-yield-$$"
 mkdir -p "$W/native-work" "$W/native-out" "$W/mirror" || exit 2
 echo "run dir:        $W"
 echo "card:           $CARD"
+echo "cells:          $CELLS  (expecting $EXPECT_OURS process(es) of ours)"
 echo "cell timeout:   ${CELL_TIMEOUT_SECONDS}s"
 echo "bootstrap:      ${BOOTSTRAP_ALLOWANCE}s allowed (${NATIVE_VENV_HOST:+prebuilt env: $NATIVE_VENV_HOST})${NATIVE_VENV_HOST:-, no prebuilt env: this cell will run pip}"
 echo "watch budget:   ${WATCH_SECONDS}s (must cover ${MUST_COVER}s, ${SLACK}s slack)"
@@ -116,6 +126,7 @@ echo "=== STEP 2: yield watch"
 docker run -d --rm --name "$YIELD" \
   -v "$REPO:/repo:ro" -v "$W/native-work:/work" -w /repo --gpus all "$IMAGE" \
   python3 scripts/yield_gpu_to_neighbour.py --device "$CARD" --sentinel /work/yield.sentinel \
+    --expect-ours "$EXPECT_OURS" \
     --active-file /work/cell-active --stop-when-inactive \
     --max-seconds "$WATCH_SECONDS" --must-cover-seconds "$MUST_COVER" \
     --interval 20 --floor-mib "${NATIVE_FLOOR_MIB:-4000}" >/dev/null \

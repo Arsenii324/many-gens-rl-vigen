@@ -127,3 +127,67 @@ def test_the_runner_actually_retracts_the_marker():
         "run_probe.sh must remove the marker when the cell exits, or --stop-when-inactive never "
         "fires and the vacated-card false alarm comes back")
     assert "NATIVE_CELL_ACTIVE_MARKER_CLEARED" in runner
+
+
+# --- packing: "ours" is one process per CELL, not one per RUN --------------------------------
+# [Claude 2026-09-09] The first packed run (idaac+ppg, NATIVE_CONCURRENT=1) yielded to ITSELF. Two
+# cells put two processes on the card; the daemon added a hardcoded 1 to its baseline, read the
+# second as a co-tenant, wrote the sentinel and stopped both healthy cells:
+#     yielded at ...: compute processes went 0(+ours) -> 2
+# Nothing failed. The mechanism worked exactly as written against an expectation that was wrong,
+# which is why no error appeared anywhere -- the run simply stopped and blamed a neighbour who did
+# not exist.
+
+
+def test_the_yield_daemon_does_not_yield_to_its_own_packed_cells(tmp_path, monkeypatch, capsys):
+    daemon = _load("yield_gpu_to_neighbour")
+    marker = tmp_path / "cell-active"
+    marker.write_text("")
+    sentinel = tmp_path / "yield.sentinel"
+
+    # Baseline empty, then TWO processes appear -- both ours, because we packed two cells.
+    seq = iter([{"procs": 0, "free_mib": 30000, "util": 0},
+                {"procs": 2, "free_mib": 29000, "util": 8},
+                {"procs": 2, "free_mib": 29000, "util": 8}])
+    last = {"procs": 2, "free_mib": 29000, "util": 8}
+    monkeypatch.setattr(daemon, "card", lambda d: next(seq, last))
+    monkeypatch.setattr(sys, "argv", [
+        "yield_gpu_to_neighbour.py", "--device", "0", "--sentinel", str(sentinel),
+        "--active-file", str(marker), "--expect-ours", "2",
+        "--max-seconds", "0.4", "--interval", "0.05", "--floor-mib", "1000"])
+    daemon.main()
+    err = capsys.readouterr()
+    assert not sentinel.exists(), (
+        "yielded to our own packed cells:\n" + err.out + err.err)
+
+
+def test_it_still_yields_when_a_real_neighbour_joins_a_packed_run(tmp_path, monkeypatch, capsys):
+    """Raising --expect-ours must not blind the daemon to an actual co-tenant."""
+    daemon = _load("yield_gpu_to_neighbour")
+    marker = tmp_path / "cell-active"
+    marker.write_text("")
+    sentinel = tmp_path / "yield.sentinel"
+
+    seq = iter([{"procs": 0, "free_mib": 30000, "util": 0},
+                {"procs": 2, "free_mib": 29000, "util": 8}])
+    stranger = {"procs": 3, "free_mib": 20000, "util": 60}
+    monkeypatch.setattr(daemon, "card", lambda d: next(seq, stranger))
+    monkeypatch.setattr(sys, "argv", [
+        "yield_gpu_to_neighbour.py", "--device", "0", "--sentinel", str(sentinel),
+        "--active-file", str(marker), "--expect-ours", "2",
+        "--max-seconds", "3", "--interval", "0.05", "--floor-mib", "1000"])
+    daemon.main()
+    assert sentinel.exists(), (
+        "a third process joined a 2-cell packed run and the daemon did not yield:\n"
+        + capsys.readouterr().err)
+    assert "-> 3" in sentinel.read_text(), sentinel.read_text()
+
+
+def test_the_launcher_derives_the_count_from_the_cell_list():
+    launcher = (ROOT / "datasphere" / "native" / "launch-card-cell.sh").read_text()
+    assert 'EXPECT_OURS="${NATIVE_EXPECT_OURS:-$_cell_count}"' in launcher, (
+        "the expected process count is not derived from CELLS")
+    assert "awk -F, '{print NF}'" in launcher, "the cell list is not counted"
+    assert '--expect-ours "$EXPECT_OURS"' in launcher
+    assert launcher.count('--expect-ours "$EXPECT_OURS"') == 2, (
+        "both card watchers must receive it; the yield daemon was the one that got this wrong")

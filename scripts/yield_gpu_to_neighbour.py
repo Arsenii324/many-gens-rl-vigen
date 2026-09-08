@@ -100,6 +100,10 @@ def main() -> int:
                          "are covered. Measured 2026-09-08: apt/pip bootstrap alone ran ~2h on the "
                          "production host, against a 4500s watch -- the GPU phase would have been "
                          "entirely unwatched.")
+    ap.add_argument("--expect-ours", type=int, default=1,
+                    help="how many compute processes OUR cell legitimately puts on the card. ONE "
+                         "per cell, so a PACKED run of N cells must pass N. Getting this wrong in "
+                         "the low direction makes the daemon yield to itself.")
     ap.add_argument("--stop-when-inactive", action="store_true",
                     help="stand down once --active-file has appeared and then been removed. Never "
                          "fires if the marker never appeared.")
@@ -131,6 +135,7 @@ def main() -> int:
     if baseline["procs"]:
         print(f"  NOTE: {baseline['procs']} process(es) already on this card. They are the baseline;")
         print(f"        a yield fires only on arrivals BEYOND them, or on the memory floor.")
+    print(f"  expecting up to {args.expect_ours} process(es) of our own")
     print(f"  will yield if a process appears beyond ours, or free memory drops below "
           f"{args.floor_mib} MiB")
     ours_seen = False
@@ -172,13 +177,21 @@ def main() -> int:
         # where somebody is already working, which is the case this exists for, it would never have
         # fired at the right moment.
         #
-        # baseline = processes present at arm time. Ours adds at most one. Anything above that is
-        # somebody new.
+        # baseline = processes present at arm time. Ours adds `--expect-ours`, one per cell.
+        # Anything above that is somebody new.
+        #
+        # [Claude 2026-09-09] This used to add the constant 1, with a comment asserting "ours adds
+        # at most one". True for a single cell and FALSE for a packed one: the first packed run
+        # (idaac+ppg, NATIVE_CONCURRENT=1) put two processes on the card, the second read as a
+        # co-tenant, and the daemon yielded to itself and killed both healthy cells --
+        # "compute processes went 0(+ours) -> 2". The mechanism worked perfectly against the wrong
+        # expectation, which is the more dangerous kind of bug: nothing failed, the run just
+        # stopped and reported a co-tenant that did not exist.
         # Our cell only counts as present once it SAYS it is on the card. Before that the
         # bootstrap is still running and any process is a stranger's.
         cell_active = (pathlib.Path(args.active_file).exists() if args.active_file else True)
         ours_seen = cell_active and (ours_seen or now["procs"] > baseline_procs)
-        expected = baseline_procs + (1 if ours_seen else 0)
+        expected = baseline_procs + (args.expect_ours if ours_seen else 0)
         neighbour = now["procs"] > expected
         starved = now["free_mib"] < args.floor_mib
         if neighbour or starved:
