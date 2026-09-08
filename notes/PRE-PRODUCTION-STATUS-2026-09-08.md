@@ -240,3 +240,43 @@ never have run for them. That is bounded rather than unsafe — a mismatch fails
 not produce a wrong number, and the gate says so in its own PASS text. Closing it costs roughly
 five short cells (~2.8 GPU-hours). It is the obvious next candidate, and it is worth deciding with
 the wave's real throughput in hand rather than before it.
+
+---
+
+## Addendum 2 — what the v197 wave actually found
+
+Six cells submitted from a clean tree at `1b64c58`. Results: `ppg`, `idaac`, `ibac_sni` SUCCESS;
+`ctrl` ERROR at 2:38; `alda` and `dmc_gb` still running when this was written.
+
+**The wave paid for itself in its first hour** (A52). `ctrl` could not build:
+
+    ScopeParamShapeError: Initializer expected to generate shape (3, 3, 3, 16)
+    but got shape (3, 3, 9, 16) for parameter "kernel" in "/encoder//conv2d_0"
+
+A40 REVISED-2 recorded that `ctrl` "needs no channel change (Flax `nn.Conv` infers)", verified by
+reading `models.py` — where `nn.Conv` genuinely declares only its OUTPUT features. True of the
+layer, false of `init`. Three call sites hardcoded `(64, 64, 3)`, including `eval_grid.py`, which
+would have killed the same cell at its endpoint had training survived. All three now derive it.
+
+**`ibac_sni` is the counter-case, and it confirms four decisions at once.** It succeeded, and its
+own effective config and finite-check output show every change reached the process:
+
+| decision | evidence |
+|---|---|
+| A40 REVISED-2, three-frame stack | `cell_environment: ["RLVIGEN_FRAME_STACK=3", ...]` |
+| A43 + A49, `lr` 5e-4 | `"--lr", "0.0005"` in the emitted argv |
+| A47, VIB latent 256 | `float_values: 1149615`, exactly the count pinned for the 9-channel/256-latent model |
+
+`float_values` is the strong one: it is an independent count taken on the GPU, and it matches the
+number computed locally from the widened head to the digit. Without A49's fix the argv would have
+carried no `--lr` at all, so that run also confirms A49 was both necessary and sufficient.
+
+**`ppg` attested cleanly (1/7) before A52 superseded it**, which validated the whole attestation
+chain end to end on the rebuilt tree — `evaluator_revision` current, pairing physical, diagnostics
+complete. That knowledge survives the re-run even though the ledger entry does not.
+
+**Cost accounting.** The re-run is ~5.7 GPU-hours, 0.6% of the campaign, forced by `eval_grid.py`
+being a `CODE_MEMBER`. That is the closure rule working: the alternative was an evaluator that
+cannot evaluate `ctrl`, found at 600k frames instead of 10k. `alda` and `dmc_gb` were left running
+rather than killed — already paid for, and `dmc_gb` is the first execution of the repaired
+Places365 resolution block.
