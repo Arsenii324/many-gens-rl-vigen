@@ -32,24 +32,48 @@ production budget on the family that is cheapest to run — not on drqv2.
 **This is an owner decision.** More seeds multiply the campaign's cost linearly (36 cells → 48 at
 4 seeds, 60 at 5), and the disk model is per-cell. It is not mine to widen.
 
-## Second finding: the checkpoint-reproduction defect reproduces across every seed
+## RETRACTED: the "checkpoint-reproduction defect reproduces across every seed"
 
-The same checkpoints, scored two ways at the same frame:
+**An earlier version of this file claimed the defect reproduced on all three seeds at 4.44× /
+5.68× / 6.40×. That claim was wrong and is withdrawn.** It compared the training curve on
+**scene 0** against the endpoint grid **aggregated over scenes 0–9**. Those are different
+populations, so the ratio measured a scene difference and attributed it to a reload.
 
-| seed | training curve | endpoint grid | ratio |
-|---|---:|---:|---:|
-| 101 | 196.63 | 44.25 | 4.44× |
-| 102 | 484.52 | 85.29 | 5.68× |
-| 103 | 471.07 | 73.61 | 6.40× |
+Like for like — scene 0 against scene 0, at the same frame:
 
-A stamped checkpoint evaluates **4.4×–6.4× below what its own run logged**, in the same direction,
-in the same magnitude band, across three independent seeds. This project had recorded the defect
-from single observations and had excluded every offline explanation; what was missing was whether
-it was systematic. It is.
+| | s101 | s102 | s103 | mean |
+|---|---:|---:|---:|---:|
+| training curve, scene 0, noisy policy, 1 episode | 196.63 | 484.52 | 471.07 | 384.07 |
+| endpoint grid, scene 0, mode policy, 20 episodes | 180.23 | 426.44 | 455.88 | 354.18 |
 
-Three seeds agreeing this closely rules out a per-run accident. It does not identify the cause —
-the two live candidates remain the exploration-noise difference between a logged training episode
-and a mode-policy evaluation, and an actual reload discrepancy. The first would be *expected* and
-benign; the second would invalidate every reported endpoint. **Nothing here separates them**, and
-the separation is cheap: score one checkpoint with the sampling policy instead of the mode, and
-see whether the ratio collapses. That is worth doing before the fleet runs, not after.
+**1.08×**, with the mode policy slightly *lower* — a small gap in the direction one would expect
+from a single noisy episode versus a 20-episode mode average. **This run gives no evidence of a
+reload discrepancy at all.** The project's original observation (131.5 vs 13.85) is untouched by
+this: it is neither reproduced nor refuted here, because this job did not test it.
+
+Two things made the error easy to make and are worth naming, since the next reader will meet both.
+The curve row and the grid rows share a `frame` and a `regime` and differ only in `scene_set`,
+`episodes` and `phase` — and the frame arrives as `100000.0` from the curve and `100000` from the
+grid, so a naive grouping key silently merges them. My aggregation kept whichever row it saw last.
+An analysis script that groups records **must** key on `scene_set` and `phase`, not on frame and
+regime alone.
+
+## What the scene-0-versus-the-rest gap actually shows, which is a result
+
+Within the **train regime**, mode policy, 20 episodes per scene:
+
+| scene | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| mean return | **354.18** | 9.73 | 112.61 | 6.86 | 37.06 | 69.14 | 17.20 | 3.42 | 13.52 | 53.45 |
+
+Scene 0 is the scene the agent trained on. It scores **354.18** there and **35.89** averaged over
+scenes 1–9 — a **9.9× gap inside the nominally in-distribution regime**. The reported train figure
+of 67.72 is the 200-episode aggregate over all ten, so it is dominated by the nine the agent never
+saw.
+
+This is not a defect; it is the benchmark measuring what it exists to measure. But it does mean
+**"train regime" is not "training performance"**, and a report that presents the aggregate as the
+in-distribution number while the agent trained on one tenth of it would be misleading. Whether the
+production grid should separate the training scene from the other nine — or whether training
+should sample the whole train scene set — is a design question this measurement raises and does
+not answer.
