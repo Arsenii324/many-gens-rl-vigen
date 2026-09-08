@@ -1384,6 +1384,25 @@ fi
 # [Codex 2026-09-01 15:20 MSK: verify the source-hashed exceptional import closure before any wrapper import or timed calibration]
 python3 datasphere/native/contract.py verify-robosuite-closure --source RL-ViGen-upstream --requirements requirements-native.txt --closure datasphere/native/robosuite-import-closure.json
 export MUJOCO_GL=egl PYOPENGL_PLATFORM=egl WANDB_MODE=offline WANDB_DISABLED=true
+
+# [Claude 2026-09-08] JAX PREALLOCATES 75% OF THE CARD BY DEFAULT. Nothing here had ever said
+# otherwise, and on a shared GPU that is the single most antisocial thing this runner could do:
+# `ctrl` is a JAX baseline, and on a 32,768 MiB V100 its first CUDA call would reserve ~24,576 MiB
+# whether it needs it or not. Card 1 on cds2 has 17,268 MiB already held by another user's process,
+# leaving 15,500 -- so that reservation cannot even succeed, and the failure mode is either our
+# cell dying at once or, worse, taking everything left and starving the neighbour.
+#
+# `false` makes JAX allocate on demand like torch does. `MEM_FRACTION` then bounds what it may
+# reach even so, as a fraction of TOTAL card memory: 0.25 of 32 GiB is 8 GiB, comfortably above
+# any measured figure here (the largest in plan_production.ENVELOPE is sgqn at 7,142 MiB, and that
+# is a torch family) and far below what would disturb a co-tenant.
+#
+# Set for every cell, not just the JAX ones: these variables are inert for torch families, and a
+# guard that has to be remembered per family is a guard that will be missed.
+export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
+export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.25}"
+export XLA_PYTHON_CLIENT_ALLOCATOR="${XLA_PYTHON_CLIENT_ALLOCATOR:-platform}"
+echo "=== NATIVE_GPU_MEMORY_DISCIPLINE preallocate=$XLA_PYTHON_CLIENT_PREALLOCATE mem_fraction=$XLA_PYTHON_CLIENT_MEM_FRACTION allocator=$XLA_PYTHON_CLIENT_ALLOCATOR ===" >&2
 export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim"
 # [Codex 2026-09-01 10:31 MSK: fail before timed calibration when native training imports are incomplete]
 # [Claude 2026-09-02 13:20 MSK: this gate imports RL-ViGen's OWN train.py, which imports
@@ -1473,19 +1492,50 @@ if cells_need_places365 "$cells"; then
   # two jobs of the pre-production pass (bt1bciubjre32859p455, bt1hgetjvsf2s56opbv6) whose configs
   # forgot the asset input -- both logs ended at byte-identical length with no error, which is the
   # worst possible diagnostic. A guard that refuses must say what it wants.
-  if [[ -z "$asset_archive" ]]; then
+  # [Claude 2026-09-08] A pre-extracted corpus, bind-mounted READ-ONLY, instead of copying and
+  # expanding the archive per job.
+  #
+  # The archive path below copies ~21 GiB into the staging directory and expands ~24 GiB more into
+  # this job's work root -- every job, for a corpus of 1.8M JPEGs that never changes. Two jobs
+  # running at once do it twice. On a filesystem that is 99% full and shared with about twenty
+  # people, that is the largest avoidable thing this runner does.
+  #
+  # `NATIVE_PLACES365_DIR` names a directory that ALREADY holds the extracted tree. The wrapper
+  # mounts it `:ro`, so a cell cannot corrupt an asset every other cell depends on, and the
+  # existing symlink step below points into it exactly as it would point into a fresh extraction.
+  # Nothing downstream can tell the difference: `check-asset` and the loader verdict both run
+  # against whatever `asset_dir` names.
+  #
+  # It is CHECKED, not trusted. A directory that does not exist, or that holds neither layout this
+  # code understands, refuses here rather than failing later inside the loader.
+  if [[ -n "${NATIVE_PLACES365_DIR:-}" ]]; then
+    asset_dir="$NATIVE_PLACES365_DIR"
+    if [[ ! -d "$asset_dir" ]]; then
+      echo "=== NATIVE_PLACES365_DIR_MISSING $asset_dir is not a directory ===" >&2
+      exit 1
+    fi
+    if [[ ! -d "$asset_dir/places365_standard" && ! -d "$asset_dir/val" ]]; then
+      echo "=== NATIVE_PLACES365_DIR_SHAPE $asset_dir has neither places365_standard/ nor val/ ===" >&2
+      echo "    A pre-extracted corpus must have the same shape the archive expands to." >&2
+      ls -1 "$asset_dir" 2>/dev/null | head -5 | sed 's/^/      /' >&2
+      exit 1
+    fi
+    echo "=== NATIVE_PLACES365_PREEXTRACTED $asset_dir (no copy, no extraction this job) ===" >&2
+  elif [[ -z "$asset_archive" ]]; then
     echo "=== NATIVE_PLACES365_MISSING these cells need the Places365 val set and no asset archive was passed ===" >&2
     echo "    cells: $cells" >&2
     echo "    add a 4th positional argument and a places365-val.tgz job input, plus" >&2
-    echo "    PLACES365_EXPECTED_COUNT and PLACES365_EXPECTED_SHA256 in the environment." >&2
+    echo "    PLACES365_EXPECTED_COUNT and PLACES365_EXPECTED_SHA256 in the environment," >&2
+    echo "    or set NATIVE_PLACES365_DIR to a pre-extracted corpus mounted read-only." >&2
     exit 1
+  else
+    asset_dir="$work/places365-val"
+    mkdir -p "$asset_dir"
+    # -xf, not -xzf: the canonical production asset is `places365standard_easyformat.tar`, which is
+    # NOT gzipped, while the val probe fixture is a .tgz. Both tar implementations auto-detect
+    # compression from the stream, so one flag reads either. -xzf refused the production archive.
+    tar --no-same-owner -xf "$asset_archive" -C "$asset_dir"
   fi
-  asset_dir="$work/places365-val"
-  mkdir -p "$asset_dir"
-  # -xf, not -xzf: the canonical production asset is `places365standard_easyformat.tar`, which is
-  # NOT gzipped, while the val probe fixture is a .tgz. Both tar implementations auto-detect
-  # compression from the stream, so one flag reads either. -xzf refused the production archive.
-  tar --no-same-owner -xf "$asset_archive" -C "$asset_dir"
   dataset_root="$work/places365-root"
   mkdir -p "$dataset_root/places365_standard"
   # [Claude 2026-09-07, DECISION-SHEET A22 DECIDED.] The overlay split is now NAMED rather than

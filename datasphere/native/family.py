@@ -545,7 +545,17 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         # 325 GB free and 99% used, a phantom 90 GiB is the difference between "run it" and
         # "cannot run it", and a guard that refuses valid work gets overridden as a matter of
         # routine. A routinely-overridden guard is not a guard.
-        places = PLACES365_TRAIN_GIB if baseline in PLACES365_BASELINES else 0.0
+        # [Claude 2026-09-08] A pre-extracted corpus mounted READ-ONLY costs this job nothing: it
+        # is neither copied into the staging directory nor expanded into the work root, and it is
+        # already on the disk whether we run or not. Charging 45 GiB for it would make check_disk
+        # refuse jobs that need none of it -- and a guard that refuses valid work is one that gets
+        # overridden as a matter of routine.
+        #
+        # Read from the environment, the same variable run_on_production_host.sh sets when it
+        # mounts one, so the model cannot disagree with the runtime about whether the copy happens.
+        places_mounted = bool(os.environ.get("NATIVE_PLACES365_DIR"))
+        places = 0.0 if places_mounted else (
+            PLACES365_TRAIN_GIB if baseline in PLACES365_BASELINES else 0.0)
         cell_total = replay + 3 * checkpoints + places
         rows[cell] = {"family": family, "replay_gib": round(replay, 2),
                       "checkpoints_written_gib": round(checkpoints, 2),

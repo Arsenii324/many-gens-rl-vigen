@@ -516,9 +516,40 @@ if [[ "${leftovers:-0}" -gt 2 ]]; then
 fi
 
 check_disk "$NATIVE_WORK_HOST_DIR"
+# [Claude 2026-09-08] A pre-extracted Places365 corpus, mounted READ-ONLY and shared by every job.
+#
+# NATIVE_PLACES365_DIR_HOST points at a directory on the host that already holds the expanded tree.
+# It is mounted at a fixed container path and named to run_probe.sh, which then skips the copy and
+# the extraction entirely. One 24 GiB corpus on disk forever, instead of ~21 GiB copied plus
+# ~24 GiB expanded per job -- and `:ro` means no cell can damage an asset every other cell reads.
+#
+# Refused rather than ignored if the path is wrong: a silently-skipped mount would fall back to the
+# archive path and reintroduce the copy without saying so.
+PLACES365_RO_ARGS=()
+# The two names are one letter apart and mean different sides of the mount, so the confusable case
+# is refused rather than left to produce a container path that does not exist. _HOST is the host
+# directory you mount; NATIVE_PLACES365_DIR is what the container sees, and the wrapper sets it.
+if [[ -n "${NATIVE_PLACES365_DIR:-}" && -z "${NATIVE_PLACES365_DIR_HOST:-}" ]]; then
+  echo "refusing: NATIVE_PLACES365_DIR is set but NATIVE_PLACES365_DIR_HOST is not." >&2
+  echo "  NATIVE_PLACES365_DIR names a path INSIDE the container and is set by this script when" >&2
+  echo "  it mounts one. Setting it by hand without a mount forwards a host path into a container" >&2
+  echo "  where it does not exist." >&2
+  echo "  Use: NATIVE_PLACES365_DIR_HOST=/path/to/extracted/places365" >&2
+  exit 2
+fi
+if [[ -n "${NATIVE_PLACES365_DIR_HOST:-}" ]]; then
+  [[ -d "$NATIVE_PLACES365_DIR_HOST" ]] || {
+    echo "refusing: NATIVE_PLACES365_DIR_HOST=$NATIVE_PLACES365_DIR_HOST is not a directory." >&2
+    exit 2; }
+  PLACES365_RO_ARGS=(-v "${NATIVE_PLACES365_DIR_HOST}:/opt/places365:ro")
+  DOCKER_ENV_ARGS+=(-e "NATIVE_PLACES365_DIR=/opt/places365")
+  echo "places365: ${NATIVE_PLACES365_DIR_HOST} -> /opt/places365 (read-only, shared, not copied)" >&2
+fi
+
 DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
                    -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"
-                   -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work")
+                   -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work"
+                   "${PLACES365_RO_ARGS[@]}")
 i=1
 while true; do
   var="EXTRA_MOUNT_$i"
@@ -559,6 +590,8 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     NATIVE_CELL_DEVICES NATIVE_ALLOW_CPU NATIVE_ONLINE_EVAL_DISABLED_SPELLING \
     NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE RLVIGEN_PLACES_WORKERS \
     CELL_STALL_SECONDS NATIVE_NO_POLICY_HEALTH_WATCH XLA_FLAGS NATIVE_MEMORY_TIER \
+    NATIVE_PLACES365_DIR XLA_PYTHON_CLIENT_PREALLOCATE XLA_PYTHON_CLIENT_MEM_FRACTION \
+    XLA_PYTHON_CLIENT_ALLOCATOR \
     OMP_NUM_THREADS MKL_NUM_THREADS; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
