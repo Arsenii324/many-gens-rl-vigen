@@ -39,10 +39,46 @@ on the host, and a later change requires a new payload and a new run.
    retain its `resources.json`; the current 54.28-GiB CTRL value is only an extrapolation. Measure
    enough throughput/resource data to set timeouts and decide whether any same-family packing is
    safe. Until this exists, run one cell per container and do not add `--memory`/`--cpus` caps.
+
+   **4a. PIN CTRL's CUDA DRIVER AND RUNTIME TOGETHER WHEN THE IMAGE IS BAKED. NEW 2026-09-08, and
+   it has already cost a cell.** `ctrl` is the one family whose JAX stack pulls the CUDA **12.9**
+   wheels; every torch family pins **12.1** (measured across 30 archives by
+   `scripts/audit_environment_drift.py`, which found no other within-family drift at all). On the
+   pre-production tier that landed runtime 12.9.0 on driver 12.2.0, and job
+   `bt1hvkmei18hasgj5bbv` deadlocked inside cudnn convolution autotuning:
+
+       conv_algorithm_picker.cc:770  Results mismatch between different convolution algorithms.
+         This is likely a bug/unexpected loss of precision in cudnn.
+       Device: NVIDIA L4   Driver: 12.2.0   Runtime: 12.9.0   cudnn: 9.25.1
+
+   It produced no output for 30 minutes and was killed by the stall watchdog. The 10k attest cell
+   succeeded on the same stack, so this is reached only at length — a 600k `ctrl` cell would meet
+   it. `XLA_FLAGS=--xla_gpu_autotune_level=0` is the diagnostic workaround, **not** the fix; the
+   fix is a driver the installed CUDA runtime supports, decided when the image is baked. Verify
+   with `nvidia-smi` (driver) against `python -c "import jax; print(jax.devices())"` and the
+   `nvidia-*` versions in `resolved_packages.json` before the first `ctrl` cell.
 5. **Run the exact IBAC-SNI competence pilot.** Use the intended production settings (`procs=16`,
    Impala trunk, `beta=1e-4`, entropy `0`) and predeclared internal health/learning criteria.
    Process startup and finite loss are necessary but not sufficient. Do not tune it by comparing
    its return with another baseline after seeing results.
+
+   **5a. READ `action_clip_rate_coordinate`, NOT `boundary_fraction`. NEW 2026-09-08.** Run
+   `python scripts/read_stack_pilot.py --cell <dir>` rather than reading the log by eye. The
+   102400-frame pre-production pilot (`bt1leljqi6n7osmcdb77`) passed every check that existed at
+   the time and should not have: `mean_log_std` gave `sigma 1.073`, so the ANALYTIC clip rate was
+   0.351 and looked healthy, while the evaluator's own measurement was **0.857 of coordinates and
+   1.0000 of vectors** — every action it emitted had a coordinate outside the space, with
+   `action_raw_min` at −10.43. `gaussian_boundary_fraction` assumes a zero mean and cannot see a
+   mean that has run off-centre, which is what was happening.
+
+   Context so this is not over-read: the eight squashed or clamped heads clip exactly **0.000**,
+   and the four unsquashed sit at 0.24–0.44 at 10k, so substantial clipping is a property of the
+   group. `ibac_sni` is the highest of the four and doubled between 10k and 102k. **The control at
+   matching length does not exist yet** — no `idaac` or `ppg` run at 102400 frames — so this is a
+   flag, not a verdict. If the production pilot reproduces it, A43's predeclared disambiguation
+   applies: revert `lr` first, re-pilot, and revert the 2026-09-08 policy-head init alongside it,
+   since that init is a fifth variable in the stack and the 10k evidence moved the clip rate the
+   wrong way by 0.024.
 6. **Run one staged production canary.** Prefer one DrQ-v2 seed at the full budget. Detach the
    whole wrapper with `nohup`/`tmux`; use one container; keep the host output mount. Require the
    complete chain: training, intermediate/terminal checkpoints, fresh-process reload, full
