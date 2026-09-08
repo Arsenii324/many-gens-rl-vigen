@@ -242,3 +242,46 @@ Card 0 is a known-zero baseline, which is the cheapest possible validation of a 
 enriched watcher against it and confirm it reports 0 sm / 0 bandwidth / ~41 W / 135 MHz / 0
 processes. An instrument that cannot report a card that is definitely idle cannot be trusted about
 a card that is definitely busy. Do that before relying on it to watch our own cell.
+
+
+## What the cap does NOT cover — the residual, and why it matters more here than usually
+
+`torch.cuda.set_per_process_memory_fraction` bounds **PyTorch's caching allocator** and nothing
+else. Three things sit outside it:
+
+1. **The CUDA context** — roughly 300 MiB on a V100, created before any tensor exists, invisible to
+   `memory_allocated()`.
+2. **EGL/OpenGL rendering buffers.** `MUJOCO_GL=egl` renders every observation **on the GPU**
+   through the graphics pipeline rather than through CUDA, so `set_per_process_memory_fraction`
+   can neither see nor bound it. For this project that is the significant one: every family renders
+   84×84 observations continuously for the whole run.
+3. Allocations bypassing torch — cuBLAS/cuDNN handle workspaces, and anything calling `cudaMalloc`
+   directly.
+
+**So `NATIVE_VRAM_CAP_MIB=2048` does not mean 2048 MiB on the card.** Expect cap + context +
+rendering. The first and third are measured by `scripts/verify_vram_cap.py`; the rendering share
+only appears once an environment is stepping, which is step 5.
+
+**And the cap binds on RESERVED, not allocated.** PyTorch rounds requests into blocks and caches
+them, so `memory_reserved()` exceeds `memory_allocated()` — under fragmentation, substantially.
+Fragmentation therefore eats the cap, and `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` is
+the lever if the measured gap is large.
+
+## Could we co-run because the profiles complement?
+
+The strongest argument for running alongside the neighbour, and it is testable rather than
+rhetorical. Their job is **compute-bound**: `sm` 83–100% against memory bandwidth 13–15%. If
+`idaac` is environment-stepping-bound rather than GPU-compute-bound, we would use CPU (1.35 cores
+against a load of 1.42 on 16) and memory (1,204 MiB against ~17,900 free) where they have headroom,
+and touch SMs lightly.
+
+Circumstantial support: `idaac` trains at **34.82 fps**, which is slow for a V100 and smells
+environment-bound rather than GPU-bound.
+
+**It cannot be claimed yet, for one specific reason: MuJoCo renders on the GPU via EGL.** Our
+"CPU-bound" environment stepping is partly graphics work on the same SMs and the same power budget
+that the neighbour is already saturating. The complementarity is plausible and unestablished.
+
+**One number settles it** — our process's attributable `sm%` during a short `idaac` run, which is
+exactly what step 5 produces. If it comes back low, co-running becomes defensible on evidence
+instead of hope. Until then the preflight's utilisation refusal stands.
