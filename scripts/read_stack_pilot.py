@@ -85,14 +85,43 @@ def _floats(text: str, pattern: str) -> list[float]:
     return out
 
 
+def _wandb_sink(cell: pathlib.Path) -> dict[str, list[float]]:
+    """`wandb_offline.jsonl`, which for `ctrl` is the ONLY place `mean_log_std` exists.
+
+    [Claude 2026-09-08] Found before the ctrl pilot returned, not after. `train_ppo.py:392-396`
+    folds the C61 policy-health diagnostics into the dict it hands `wandb.log`, and
+    `runnable/_shim/wandb.py` writes those to a jsonl sink -- never to `training.log` and never to
+    a `.csv`. So both of this file's original readers would have missed ctrl's log_std entirely and
+    reported UNREADABLE on the one check the pilot exists for, which reads as "not cleared" rather
+    than "not looked at" only because that distinction was built in deliberately.
+    """
+    out: dict[str, list[float]] = {}
+    for path in cell.glob("**/wandb_offline.jsonl"):
+        for line in path.read_text(errors="replace").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            payload = row.get("data") if isinstance(row.get("data"), dict) else row
+            if not isinstance(payload, dict):
+                continue
+            for key, value in payload.items():
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    # keys are namespaced like `Door/train/mean_log_std`; keep the leaf
+                    out.setdefault(key.rsplit("/", 1)[-1], []).append(float(value))
+    return out
+
+
 def _series(cell: pathlib.Path) -> dict[str, list[float]]:
-    """Pull whatever the family happens to log. ctrl writes a console log, ibac_sni a CSV."""
-    series: dict[str, list[float]] = {}
+    """Pull whatever the family happens to log. ctrl writes a wandb sink, ibac_sni a CSV."""
+    series: dict[str, list[float]] = dict(_wandb_sink(cell))
     csv_path = next(iter(cell.glob("**/log.csv")), None)
     if csv_path is not None:
         with csv_path.open() as handle:
             rows = list(csv.DictReader(handle))
-        for key in (rows[0].keys() if rows else []):
+        for key in (rows[0].keys() if rows else []):  # CSV wins where both exist
             values = []
             for row in rows:
                 try:
@@ -141,14 +170,41 @@ def read(cell: pathlib.Path) -> tuple[list[tuple[str, str, str]], bool]:
     checks: list[tuple[str, str, str]] = []
     indicted = False
 
-    # 1 -- finite
-    bad = sorted(k for k, v in series.items()
-                 if any(math.isnan(x) or math.isinf(x) for x in v))
-    if bad:
-        checks.append(("FINITE", "INDICTED", f"non-finite values in: {', '.join(bad)}"))
+    # 1 -- finite. LOSSES, not every logged series.
+    #
+    # [Claude 2026-09-08] The first version checked everything and indicted a real, healthy ctrl
+    # cell (bt1d8jicbkdu1jv87ogp) on `ep_return_200` and `ep_return_all` -- running episode-return
+    # accumulators that are NaN until the first episode finishes. That is a startup artifact, and
+    # an instrument that indicts every cell for it would have been discarded within a day, taking
+    # the checks that matter with it.
+    #
+    # The criterion in DECISIONS-IF-PRODUCTION-GOES-WRONG is "finite LOSSES". Non-finite values
+    # elsewhere are still reported, as information, because a NaN in a return accumulator LATE in
+    # a run is a different thing from one at step 0 -- and silently dropping them would trade one
+    # wrong answer for another.
+    def _bad(keys):
+        return sorted(k for k in keys
+                      if any(math.isnan(x) or math.isinf(x) for x in series[k]))
+
+    loss_keys = [k for k in series if "loss" in k.lower() or "grad_norm" in k.lower()]
+    other_keys = [k for k in series if k not in loss_keys]
+    bad_losses, bad_other = _bad(loss_keys), _bad(other_keys)
+
+    if bad_losses:
+        checks.append(("FINITE", "INDICTED", f"non-finite LOSS series: {', '.join(bad_losses)}"))
         indicted = True
     else:
-        checks.append(("FINITE", "pass", f"{len(series)} logged series, all finite"))
+        note = f"{len(loss_keys)} loss series, all finite"
+        if bad_other:
+            first_nan = {}
+            for k in bad_other:
+                v = series[k]
+                idx = next(i for i, x in enumerate(v) if math.isnan(x) or math.isinf(x))
+                first_nan[k] = f"{k} (first at row {idx} of {len(v)})"
+            note += ("; non-finite elsewhere, NOT indicted: "
+                     + ", ".join(first_nan[k] for k in bad_other[:3])
+                     + " -- accumulators are NaN before the first episode completes")
+        checks.append(("FINITE", "pass", note))
 
     # 2 -- saturation. The failure that finiteness does not catch.
     log_std = _pick(series, "mean_log_std", "log_std")

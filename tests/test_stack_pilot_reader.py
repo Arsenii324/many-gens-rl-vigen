@@ -10,6 +10,7 @@ this file ever passes it, the instrument has stopped doing the only job it was b
 from __future__ import annotations
 
 import csv
+import json
 import math
 import pathlib
 import sys
@@ -68,3 +69,53 @@ def test_a_missing_log_std_is_not_silently_cleared(tmp_path):
             writer.writerow([i * 2560, 3.0])
     checks, _ = read(cell)
     assert [c for c in checks if c[0] == "NOT SATURATED"][0][1] == "UNREADABLE"
+
+
+def test_a_nan_return_accumulator_does_not_indict(tmp_path):
+    """Real regression, from ctrl cell bt1d8jicbkdu1jv87ogp.
+
+    `ep_return_200` and `ep_return_all` are running accumulators and are NaN until the first
+    episode completes. The first version of this reader checked every logged series and indicted a
+    healthy cell on them. An instrument that indicts every cell for a startup artifact gets
+    discarded, and takes the checks that matter with it.
+    """
+    cell = tmp_path / "nanreturn"
+    cell.mkdir(parents=True)
+    with (cell / "wandb_offline.jsonl").open("w") as handle:
+        for i in range(20):
+            handle.write(json.dumps({
+                "Door/train/mean_log_std": -0.001 * i,
+                "Door/train/policy_loss": -0.01,
+                "Door/ep_return_200": float("nan") if i < 2 else 3.0,
+            }) + "\n")
+    checks, indicted = read(cell)
+    assert not indicted, checks
+    finite = [c for c in checks if c[0] == "FINITE"][0]
+    assert finite[1] == "pass"
+    assert "NOT indicted" in finite[2], "the NaN must still be reported, just not fatal"
+
+
+def test_a_nan_in_an_actual_loss_still_indicts(tmp_path):
+    cell = tmp_path / "nanloss"
+    cell.mkdir(parents=True)
+    with (cell / "wandb_offline.jsonl").open("w") as handle:
+        for i in range(20):
+            handle.write(json.dumps({
+                "Door/train/mean_log_std": -0.001 * i,
+                "Door/train/policy_loss": float("nan") if i > 10 else -0.01,
+            }) + "\n")
+    checks, indicted = read(cell)
+    assert indicted
+    assert [c for c in checks if c[0] == "FINITE"][0][1] == "INDICTED"
+
+
+def test_it_reads_ctrls_wandb_sink_at_all(tmp_path):
+    """ctrl writes mean_log_std ONLY to wandb_offline.jsonl -- not training.log, not a csv."""
+    cell = tmp_path / "sink"
+    cell.mkdir(parents=True)
+    with (cell / "wandb_offline.jsonl").open("w") as handle:
+        for i in range(20):
+            handle.write(json.dumps({"Door/train/mean_log_std": math.log(4.3) / 19 * i}) + "\n")
+    checks, indicted = read(cell)
+    assert indicted, "a saturating ctrl run must be caught through the sink"
+    assert [c for c in checks if c[0] == "NOT SATURATED"][0][1] == "INDICTED"

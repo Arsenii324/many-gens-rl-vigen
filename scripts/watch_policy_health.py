@@ -110,12 +110,18 @@ def main() -> int:
     args = parser.parse_args()
 
     log = pathlib.Path(args.log)
+    # `ctrl` never writes log_std to training.log -- train_ppo.py:392-396 folds the C61
+    # diagnostics into wandb.log, and runnable/_shim/wandb.py sends those to a jsonl sink. Watch
+    # both, or this alert is silent for exactly the family whose head has no squashing at all.
+    sink = log.parent / "wandb_offline.jsonl"
     fired: set[str] = set()
     started, quiet = time.time(), 0.0
     last_size = -1
 
     while True:
-        text = log.read_text(errors="replace") if log.is_file() else ""
+        text = (log.read_text(errors="replace") if log.is_file() else "")
+        if sink.is_file():
+            text += "\n" + sink.read_text(errors="replace")
         for marker in verdicts(values_in(text)):
             name = marker.split()[0]
             if name not in fired:
