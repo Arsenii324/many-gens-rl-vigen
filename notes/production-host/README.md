@@ -23,6 +23,7 @@ and the specifics are where the harm is.
 | [`11-host-state-2026-09-08.md`](11-host-state-2026-09-08.md) | **a read of the actual host, and its live blockers** — re-read before each session |
 | [`12-incremental-bringup-plan.md`](12-incremental-bringup-plan.md) | **the rung-by-rung bring-up plan** — one new risk per step, reviewed before the next |
 | [`13-how-the-operator-path-works.md`](13-how-the-operator-path-works.md) | what the wrapper actually does, and why the environment is rebuilt every cell |
+| [`14-assets-and-environment-on-a-persistent-host.md`](14-assets-and-environment-on-a-persistent-host.md) | **assets copied not mounted (~864 GB of churn), the env rebuild, and triple-stored checkpoints** |
 
 ## The rule that comes before the others
 
