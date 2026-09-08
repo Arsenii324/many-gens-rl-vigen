@@ -1,0 +1,64 @@
+# [Claude 2026-09-08] Evaluator-attestation wave v197.
+#
+# v196 is superseded, and not because it failed: its payloads were built on 2026-09-07 and the
+# tree moved underneath them the next day. Four changes, each of which a v196 payload would have
+# carried the pre-change version of:
+#
+#   - `run_probe.sh`: `check-asset` validated `val/images` UNCONDITIONALLY, so a train-split run
+#     certified 36,500 images it never opened, and the production easyformat archive (which has
+#     no flat `val/images`) would have died at the guard after its 21 GB upload. (A42)
+#   - `families.json`, `rlgen/protocol.py`, `normalize_curves.py`: `ctrl` and `ibac_sni` raised to
+#     `frame_stack=3`, with the stack AUTHORED on both Door paths -- neither had one. (A40 REV-2)
+#   - `families.json`: `ibac_sni` `lr` 7e-4 -> 5e-4, its architecture lineage's rate. (A43)
+#   - `eval_grid.py`: sets `RLVIGEN_FRAME_STACK` from the declaration at both eval sites, because
+#     the family environment reaches the training process and not the offline evaluator.
+#
+# The last two of those are `CODE_MEMBER`/`CONFIG_MEMBER` edits, so every family's evaluator
+# revision moved again. Attesting on v196 payloads would have produced records stale on arrival --
+# the v191 failure, repeated.
+#
+# The only v196 job that ran, `bt1f8b5gb39jgadqngke` (dmc_gb/soda), was killed by its own 3600s
+# budget at S: 8000 of 10000. It is not a failure of the Places365 train path: that path completed
+# for the first time in this project's history in that job. The budget is raised to 9000s here and
+# the audit now models the two costs it was missing. (A42)
+#
+# rlvigen is attested through svea and dmc_gb through soda, NOT through drqv2/rad: those two never
+# enter the Places365 block (family.py needs-places365 is false for them), so attesting through
+# them said nothing about the path svea/sgqn/soda actually run. P21 makes that path revision-stable.
+name: vigen-sgqn-cover-v197
+desc: Schema-2 evaluator identity re-validation for rlvigen, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 9000s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=sgqn:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  CELL_TIMEOUT_SECONDS=7800
+  NATIVE_PLACES365_SPLIT=train
+  PLACES365_EXPECTED_COUNT=1000
+  PLACES365_EXPECTED_SHA256=c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e
+  bash ${JOB} ${CODE} ${RESULT} ${PLACES365_TRAIN}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v197-rlvigen.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+  - places365-train-attest.tgz: PLACES365_TRAIN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
