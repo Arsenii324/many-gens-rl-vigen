@@ -473,3 +473,40 @@ by 0.024 — so it should be reverted alongside `lr`, not held constant.
 recur: 0.318 -> 0.351 over the run, against the 4.3 of the historical failure. `entropy_coef=0` is
 holding. The authored three-frame stack ran 102400 frames without crashing, which is the narrow
 thing the pilot was scheduled to establish.
+
+---
+
+# The ctrl frame-stack pilot HUNG, the watchdog caught it, and the cause is the CUDA pairing
+
+`bt1hvkmei18hasgj5bbv`, 102400 frames. Killed by the stall watchdog built earlier today after
+**1800s of silence** — its first real opportunity, and the only reason this cost 30 minutes rather
+than the full 10933s cell timeout it would otherwise have burned in full.
+
+What it hung in, from its own log:
+
+    Allocator (GPU_0_bfc) ran out of memory trying to allocate 8.27GiB
+    conv_algorithm_picker.cc:770  Results mismatch between different convolution algorithms.
+      This is likely a bug/unexpected loss of precision in cudnn.
+    Device: NVIDIA L4   Driver: 12.2.0   Runtime: 12.9.0   cudnn: 9.25.1
+
+**Driver 12.2.0 against runtime 12.9.0**, and that is not a coincidence. The environment-drift
+audit run a few hours earlier measured that `ctrl` is the ONE family whose JAX stack pulls the CUDA
+**12.9** wheels while every torch family pins **12.1** — the single largest cross-family
+environment difference in the corpus, and at the time it read as a harmless consequence of each
+family's own requirements. It is the risk `gate_environment_manifest` names, and it surfaced as a
+deadlock inside cudnn autotuning rather than as an import error.
+
+**Not caused by anything changed today.** `ctrl`'s 10000-frame attest cell
+(`bt1d8jicbkdu1jv87ogp`) succeeded on the same stack with the same three-frame geometry, so this is
+a path reached only at length. `train_ppo.py`'s fail-closed terminal save runs at the end and was
+never reached.
+
+**Re-submitted as `bt17gfr8pq5astv4g3n3`** with `XLA_FLAGS=--xla_gpu_autotune_level=0`, which skips
+the algorithm benchmarking that deadlocks. That is a **diagnostic, not a production setting**: if
+it completes, the diagnosis is confirmed, and the real fix is the driver/runtime pairing on the
+production image — which is the baked-image work `gate_environment_manifest` already says is
+needed, now with a concrete failure behind it instead of a hypothetical.
+
+**Consequence for the ctrl control.** The comparison that would tell us whether ibac_sni's 0.857
+clip rate is ibac_sni-specific or just what an unsquashed head does at 102k is not available yet.
+Both pilots remain open.

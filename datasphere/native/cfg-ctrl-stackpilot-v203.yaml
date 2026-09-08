@@ -1,0 +1,109 @@
+# [Claude 2026-09-08] v203 = v200 with XLA convolution autotuning DISABLED.
+#
+# v200 (bt1hvkmei18hasgj5bbv) hung and was killed by the new stall watchdog after 1800s of silence
+# -- the watchdog worked, and it is the only reason this cost 30 minutes rather than the full
+# 10933s timeout. What it hung in is specific:
+#
+#   Allocator (GPU_0_bfc) ran out of memory trying to allocate 8.27GiB
+#   conv_algorithm_picker.cc:770 Results mismatch between different convolution algorithms.
+#     This is likely a bug/unexpected loss of precision in cudnn.
+#   Device: NVIDIA L4   Driver: 12.2.0   Runtime: 12.9.0   cudnn: 9.25.1
+#
+# DRIVER 12.2.0 AGAINST RUNTIME 12.9.0. That is not incidental: the environment-drift audit run
+# earlier today measured that ctrl is the one family whose JAX stack pulls the CUDA 12.9 wheels
+# while every torch family pins 12.1 -- the single largest cross-family environment difference in
+# the corpus. It is exactly the risk `gate_environment_manifest` names, surfacing as a deadlock
+# inside cudnn autotuning rather than as an import error.
+#
+# The 10000-frame attest cell (bt1d8jicbkdu1jv87ogp) SUCCEEDED on the same stack, so this is a
+# path reached only at length. `--xla_gpu_autotune_level=0` skips the benchmarking that
+# deadlocks and takes cudnn's default kernel instead. It is a diagnostic, not a production
+# setting: if this run completes, the diagnosis is confirmed and the real fix is the driver/runtime
+# pairing on the production image, not a flag.
+#
+# [Claude 2026-09-08] FRAME-STACK PILOT -- ctrl, 102400 frames.
+#
+# `notes/DECISIONS-IF-PRODUCTION-GOES-WRONG.md` ("Frame stack -- CLOSED") requires this before
+# three production seeds: both ctrl and its sibling now run AUTHORED stacking code on a path that
+# has never trained with it. A40-REVISED-2 raised both from 1 to 3 on 2026-09-08; neither had any
+# stacking mechanism on the Door path before that, so this is not a config flip being re-verified,
+# it is new code being exercised for the first time.
+#
+# READ FOR NON-DEGENERATE LEARNING, NOT FOR A SCORE. The predeclared criterion is finite losses, a
+# non-collapsed action distribution, and some separation from the 1.842 random floor -- a method
+# that is faithfully implemented and simply performs badly is a result, not a defect.
+#
+# `notes/PRODUCTION-RUNBOOK.md:18` names the failure this must actually catch, and it is not NaN:
+# ibac_sni once sat at sigma ~ 4.3 with entropy climbing 9.95 -> 20.03 and success 0.00 throughout,
+# perfectly finite the whole way. Watch `log_std`, not finiteness.
+#
+# 10000 frames cannot show this; the attestation cells are budgeted for evaluator identity, not for
+# learning. 102400 at ctrl's measured 12 fps is ~2.4 h.
+#
+# [Claude 2026-09-08] Evaluator-attestation wave v203.
+#
+# v196 is superseded, and not because it failed: its payloads were built on 2026-09-07 and the
+# tree moved underneath them the next day. Four changes, each of which a v196 payload would have
+# carried the pre-change version of:
+#
+#   - `run_probe.sh`: `check-asset` validated `val/images` UNCONDITIONALLY, so a train-split run
+#     certified 36,500 images it never opened, and the production easyformat archive (which has
+#     no flat `val/images`) would have died at the guard after its 21 GB upload. (A42)
+#   - `families.json`, `rlgen/protocol.py`, `normalize_curves.py`: `ctrl` and `ibac_sni` raised to
+#     `frame_stack=3`, with the stack AUTHORED on both Door paths -- neither had one. (A40 REV-2)
+#   - `families.json`: `ibac_sni` `lr` 7e-4 -> 5e-4, its architecture lineage's rate. (A43)
+#   - `eval_grid.py`: sets `RLVIGEN_FRAME_STACK` from the declaration at both eval sites, because
+#     the family environment reaches the training process and not the offline evaluator.
+#
+# The last two of those are `CODE_MEMBER`/`CONFIG_MEMBER` edits, so every family's evaluator
+# revision moved again. Attesting on v196 payloads would have produced records stale on arrival --
+# the v191 failure, repeated.
+#
+# The only v196 job that ran, `bt1f8b5gb39jgadqngke` (dmc_gb/soda), was killed by its own 3600s
+# budget at S: 8000 of 10000. It is not a failure of the Places365 train path: that path completed
+# for the first time in this project's history in that job. The budget is raised to 9000s here and
+# the audit now models the two costs it was missing. (A42)
+#
+# rlvigen is attested through svea and dmc_gb through soda, NOT through drqv2/rad: those two never
+# enter the Places365 block (family.py needs-places365 is false for them), so attesting through
+# them said nothing about the path svea/sgqn/soda actually run. P21 makes that path revision-stable.
+# BUDGET: 5400s, not the 3600s the other four use. The measured throughput this audit costs
+# `ctrl` at (audit_job_budgets.py MEASURED_TRAIN_FPS) was taken at frame_stack=1. Both
+# Procgen-origin baselines now push three times the observation through their trunks, and no
+# measurement of the stacked rate exists yet -- this cell IS that measurement. An over-long
+# timeout costs nothing because the job exits when it finishes; an optimistic one throws away
+# the run after paying for it.
+name: vigen-ctrl-stackpilot-v203
+desc: Schema-2 evaluator identity re-validation for ctrl, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 12133s env
+  NATIVE_HOST_PROFILE=datasphere
+  XLA_FLAGS=--xla_gpu_autotune_level=0
+  CELLS=ctrl:1
+  CELL_TIMEOUT_SECONDS=10933
+  FRAMES=102400
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10240
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v203-ctrl.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
