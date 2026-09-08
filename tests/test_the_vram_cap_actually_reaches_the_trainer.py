@@ -53,12 +53,15 @@ def test_the_cap_directory_is_prepended_where_it_is_installed():
         "the cap install no longer preserves an inherited PYTHONPATH")
 
 
-def test_the_final_assignment_appends_rather_than_replaces():
-    """Named explicitly so a future edit that drops the suffix fails here, not on a shared GPU."""
-    lines = _pythonpath_assignments()
-    final = lines[-1]
-    assert "${PYTHONPATH:+:$PYTHONPATH}" in final, (
-        f"the last PYTHONPATH assignment replaces instead of appending: {final}")
+def test_the_final_assignment_preserves_the_inherited_path():
+    """Named explicitly so a future edit that drops it fails here, not on a shared GPU.
+
+    [Claude 2026-09-09] It must preserve the inherited PYTHONPATH *and* put it FIRST -- appending
+    was the second version of this bug, because runnable/_shim's sitecustomize then won the name.
+    """
+    final = _pythonpath_assignments()[-1]
+    assert "${PYTHONPATH:+$PYTHONPATH:}" in final, (
+        f"the last PYTHONPATH assignment drops or appends the inherited path: {final}")
 
 
 def test_the_cap_module_is_still_a_payload_member():
@@ -100,3 +103,68 @@ def test_the_cap_module_carries_a_marker_the_check_can_see():
     assert "_rlvigen_vram_cap" in cap, (
         "the verification would fall back to matching a filename, which a rename would silently "
         "defeat")
+
+
+# --- two modules compete for the name `sitecustomize`, and Python takes the first ----------------
+# [Claude 2026-09-09] `runnable/_shim/sitecustomize.py` (the Mac MPS-as-CUDA shim) is on the cell's
+# PYTHONPATH ahead of the cap directory. Python imports the FIRST `sitecustomize` and stops, so the
+# shim won and the cap never loaded -- even after the earlier fix stopped PYTHONPATH being
+# overwritten. Appending was not enough; the cap has to come first, and must then chain to what it
+# displaces so the shim is not silently suppressed in return.
+
+
+def _shim_and_cap(tmp_path):
+    import shutil
+    cap, shim = tmp_path / "cap", tmp_path / "shim"
+    cap.mkdir(); shim.mkdir()
+    shutil.copy(ROOT / "datasphere" / "native" / "vram_cap.py", cap / "sitecustomize.py")
+    shutil.copy(ROOT / "runnable" / "_shim" / "sitecustomize.py", shim / "sitecustomize.py")
+    return cap, shim
+
+
+def test_the_cap_wins_when_a_competing_sitecustomize_is_on_the_path(tmp_path):
+    import os
+    import subprocess
+    import sys as _sys
+    cap, shim = _shim_and_cap(tmp_path)
+    env = dict(os.environ, PYTHONPATH=f"{cap}:{shim}")
+    out = subprocess.run(
+        [_sys.executable, "-c",
+         "import sitecustomize; print(hasattr(sitecustomize,'_rlvigen_vram_cap'))"],
+        capture_output=True, text=True, env=env, timeout=60)
+    assert out.stdout.strip().endswith("True"), (
+        "runnable/_shim's sitecustomize shadowed the VRAM cap:\n" + out.stdout + out.stderr)
+
+
+def test_the_runner_puts_the_cap_directory_first():
+    lines = _pythonpath_assignments()
+    final = lines[-1]
+    assert final.startswith('export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}'), (
+        f"the inherited PYTHONPATH (which carries the cap) is appended, so runnable/_shim's "
+        f"sitecustomize is imported instead: {final}")
+
+
+def test_the_cap_chains_to_the_sitecustomize_it_displaces(tmp_path):
+    """Winning the name must not silently disable the shim."""
+    cap = (ROOT / "datasphere" / "native" / "vram_cap.py").read_text()
+    assert "_chain_to_displaced_sitecustomize" in cap, (
+        "the cap takes the sitecustomize name without running what it replaced")
+    # Check for the real statement, not the docstring that explains why it was removed.
+    code_lines = [l.strip() for l in cap.splitlines()
+                  if l.strip().startswith("import sitecustomize")]
+    assert not code_lines, (
+        f"the old self-import is back: this module IS sitecustomize, so it chained to itself: "
+        f"{code_lines}")
+
+    import os
+    import subprocess
+    import sys as _sys
+    capdir, shim = _shim_and_cap(tmp_path)
+    # A marker the displaced module writes, so we can prove it actually executed.
+    (shim / "sitecustomize.py").write_text(
+        "import pathlib\npathlib.Path(%r).write_text('ran')\n" % str(tmp_path / "shim-ran"))
+    env = dict(os.environ, PYTHONPATH=f"{capdir}:{shim}")
+    subprocess.run([_sys.executable, "-c", "import sitecustomize"],
+                   capture_output=True, text=True, env=env, timeout=60)
+    assert (tmp_path / "shim-ran").exists(), (
+        "the displaced sitecustomize never ran; the cap suppressed it")

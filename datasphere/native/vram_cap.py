@@ -46,10 +46,44 @@ _rlvigen_vram_cap = True
 
 # Chain to any pre-existing sitecustomize before doing anything of our own. Shadowing another
 # module of this name would be a silent, surprising side effect of setting an unrelated variable.
-try:  # pragma: no cover - environment dependent
-    import sitecustomize as _previous  # noqa: F401
-except Exception:
-    pass
+def _chain_to_displaced_sitecustomize() -> None:
+    """Run the `sitecustomize` this module displaces, if there is one.
+
+    [Claude 2026-09-09] Python imports the FIRST `sitecustomize` on `sys.path` and stops. This
+    repo already ships one at `runnable/_shim/sitecustomize.py` (the Mac MPS-as-CUDA shim), and it
+    sits earlier on the cell's PYTHONPATH -- so for as long as the cap directory was appended, the
+    shim won and the cap never loaded. The cap directory is now PREPENDED, which inverts the
+    problem: ours would silently suppress the shim.
+
+    The previous version of this file did `import sitecustomize as _previous`, which -- since this
+    module IS `sitecustomize` -- imported itself out of `sys.modules` and chained to nothing.
+
+    `runnable/_shim` is a contract member, so it cannot be edited to cooperate without moving
+    payload hashes. Chaining from here keeps both behaviours and touches nothing hashed.
+    """
+    import importlib.util
+    import os as _os
+
+    here = _os.path.dirname(_os.path.abspath(__file__))
+    for entry in list(sys.path):
+        try:
+            if not entry or _os.path.abspath(entry) == here:
+                continue
+            candidate = _os.path.join(entry, "sitecustomize.py")
+            if not _os.path.isfile(candidate):
+                continue
+            spec = importlib.util.spec_from_file_location("_rlvigen_displaced_sitecustomize",
+                                                          candidate)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return
+        except Exception as error:  # a broken neighbour must not take the cap down with it
+            print(f"=== NATIVE_VRAM_CAP_CHAIN_FAILED {type(error).__name__}: {error} ===",
+                  file=sys.stderr, flush=True)
+            return
+
+
+_chain_to_displaced_sitecustomize()
 
 
 def _apply() -> None:

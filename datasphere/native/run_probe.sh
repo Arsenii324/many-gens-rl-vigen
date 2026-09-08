@@ -1669,7 +1669,13 @@ fi
 #
 # A safety mechanism that has never once functioned, while reporting that it had. Nothing overwrites
 # PYTHONPATH after this point; anything added later must append the same way.
-export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim${PYTHONPATH:+:$PYTHONPATH}"
+# [Claude 2026-09-09] The inherited PYTHONPATH goes FIRST, not last. Appending it was not enough:
+# `runnable/_shim` ships its own `sitecustomize.py` (the Mac MPS shim) and Python imports the FIRST
+# one it finds, so the shim won and the VRAM cap still never loaded -- caught by the cap
+# verification below refusing a production cell after eight minutes rather than after twelve hours.
+# vram_cap.py chains to whichever sitecustomize it displaces, so putting the cap first costs the
+# shim nothing.
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim"
 
 # [Claude 2026-09-09] VERIFY the cap rather than announcing it. `NATIVE_VRAM_CAP_REQUESTED` was
 # printed on every run for a day while the cap was silently discarded by the PYTHONPATH assignment
