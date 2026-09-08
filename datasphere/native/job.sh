@@ -88,6 +88,24 @@ verify_payload_input() {
   payload_families="${payload_families//$'\n'/,}"
   payload_families="${payload_families%,}"
   runner_contract="$(python3 -c 'import runpy; print(runpy.run_path("datasphere/native/contract.py")["RUNNER_CONTRACT"])')" || return 1
+  # [Claude 2026-09-08] Check the CONSUMING home too, not just the maintained one.
+  #
+  # The verify below compares the payload against contract.py's RUNNER_CONTRACT. The container
+  # compares it against run_probe.sh's own `--require-runner-contract` literal. Those are two
+  # homes for one number, and job bt1tceje08tpvq8cchhj proved the gap: contract.py had been bumped
+  # to 14, the payload was stamped 14, this submit check passed -- and the cell then paid a full
+  # apt-get bootstrap before the runner refused it for still requiring 13.
+  #
+  # The check that was supposed to save eight minutes cost them, because it was reading the number
+  # nobody consumes. Reading both here makes the divergence impossible to submit.
+  local runner_literal
+  runner_literal="$(grep -oE -- '--require-runner-contract[[:space:]]+[0-9]+' datasphere/native/run_probe.sh | grep -oE '[0-9]+$' | sort -u)"
+  if [[ -n "$runner_literal" && "$runner_literal" != "$runner_contract" ]]; then
+    echo "refusing to submit: contract.py stamps runner contract $runner_contract but" >&2
+    echo "  run_probe.sh requires [$runner_literal]. The payload would be built for one and" >&2
+    echo "  refused by the other, after the bootstrap has already been paid for." >&2
+    return 1
+  fi
   python3 datasphere/native/contract.py verify-payload \
     --archive "$code_input" \
     --require-runner-contract "$runner_contract" \
