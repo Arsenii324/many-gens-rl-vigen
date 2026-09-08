@@ -150,8 +150,9 @@ each exists stays attached to it.
   badly is a result, not a defect — means a watchdog killing on saturation would delete exactly
   those results, for whichever baseline struggled most. A test asserts the source contains no kill
   path so the property cannot erode.
-- the fleet-level exporter and schema note (`production-readiness-by-class.md` lists it as PARTIAL)
-  — **still open.**
+- ~~the fleet-level exporter and schema note~~ — **`scripts/export_fleet.py`**, with
+  `--schema` printing the column contract from the same tuple the writer uses. All three of this
+  section's items are now built.
 
 Also new and worth knowing on day one: `run_measured` now carries a **stall watchdog**
 (`CELL_STALL_SECONDS`, default 1800). `CELL_TIMEOUT_SECONDS` bounds how long a cell may RUN and

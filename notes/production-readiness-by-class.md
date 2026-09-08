@@ -56,10 +56,26 @@ the live gate is **0/7**. The **full loop at production scale** — train → st
 → *Ready when the canary demonstrates it, plus the universal round-trip gate (compare distribution
 parameters, not sampled actions).*
 
-**Whole-fleet export.** Records are per job. There is no combined fleet-level table or documented
-schema, so post-processing means knowing the layout.
-→ *Ready with one exporter and a schema note. Cheap, and worth doing before the data exists rather
-than after.*
+**Whole-fleet export. DONE 2026-09-08, and done before the data exists, as this entry asked.**
+`scripts/export_fleet.py` emits one flat table across every `results/records/*.jsonl`, and
+`--schema` prints the column contract from the same tuple the writer iterates, so the note cannot
+drift from what is written. Verified over the current 2,119-record corpus: 12 baselines, and every
+row accounted for.
+
+Two decisions it makes, both pinned by `tests/test_fleet_export.py`, because an exporter written
+after the data would have resolved them in whichever direction made that table come out:
+
+- a row from a **superseded** closure is exported and marked (`closure_current`), never dropped.
+  Dropping would make the export disagree with `results/records/` for a reason no reader can see;
+  keeping silently would pool trees that no longer exist. `--current-only` is the caller's explicit
+  choice.
+- `policy_mode` rides on every row, because `idaac`, `ppg` and `ibac_sni` report a SAMPLED return
+  and the other nine a mode return -- different estimands. A bare `return` column would invite the
+  cross-block ranking `scripts/comparison_blocks.py` refuses.
+
+It deliberately computes no ratios or retention: those carry caveats
+(`docs/RESEARCH-FRAME.md`'s second-order interaction, C18's near-zero denominator), and a column of
+numbers with its caveats stripped is how a caveat gets lost.
 
 ## NOT READY
 
