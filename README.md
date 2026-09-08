@@ -97,7 +97,9 @@ python train.py --list
 | **data-gated** | `svea`, `sgqn`, `soda` need Places365 for their overlay augmentation *to train* (not to evaluate). `bash setup/fetch_overlay_dataset.sh` fetches the **train** split, ~24 GB — the production value, because the overlay distribution IS their mechanism (DECISION-SHEET A22). Pass `val` for a ~2 GB probe asset, which production refuses unless the deviation is stated explicitly. |
 
 Not claimed: that `ppg`, `ibac_sni` or `ctrl` reproduce published returns. Nobody has published either on
-RL-ViGen robosuite, so there is no number to reproduce — see `rlgen/algos/onpolicy_ext.py`.
+RL-ViGen robosuite, so there is no number to reproduce. The four on-policy ports live in
+`rlgen/algos/{idaac,ppg,ibac_sni,ctrl}/`, one directory each — the shared
+`rlgen/algos/onpolicy_ext.py` this line used to cite was split up and no longer exists.
 
 `random` is not decoration. On Lift the shaped reward pays `1 − tanh(10·d)` at every one of 500
 steps, so a random arm can collect a return of 60 without ever lifting the block. Any
