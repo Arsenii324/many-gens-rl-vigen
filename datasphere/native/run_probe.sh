@@ -177,6 +177,40 @@ run_measured() {
   # the "an instrument that cannot run must never read as one that ran" failure this watcher was
   # built to catch, rebuilt inside it. The member is declared and RUNNER_CONTRACT is bumped to 14,
   # so a payload without it is refused at the contract boundary rather than here.
+  # [Claude 2026-09-08] YIELD WATCH. The other half of scripts/yield_gpu_to_neighbour.py, which
+  # observes the card from a separate container and writes a sentinel when a co-tenant appears.
+  #
+  # Why a sentinel and not a signal. Stopping this container from outside would need
+  # /var/run/docker.sock mounted into the observer -- root-equivalent access to the host, a far
+  # worse hazard on a shared machine than the one being solved. So the observer writes a file and
+  # THIS process decides to stop. The cell keeps sole authority over the cell.
+  #
+  # It kills the training process group, exactly as the stall watchdog does, and for the same
+  # reason: checkpoints are already durable on the /tmp/native-out and /tmp/native-work bind
+  # mounts, so a yielded cell loses the remainder of its training and none of its artifacts.
+  #
+  # NATIVE_YIELD_SENTINEL is unset by default, so this costs nothing on a machine we own.
+  local yield_pid=""
+  if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
+    rm -f "$NATIVE_YIELD_SENTINEL"
+    (
+      while kill -0 "$training_pid" 2>/dev/null; do
+        if [[ -e "$NATIVE_YIELD_SENTINEL" ]]; then
+          echo "=== NATIVE_CELL_YIELDED a co-tenant needs the card; stopping this cell ===" >&2
+          cat "$NATIVE_YIELD_SENTINEL" >&2 2>/dev/null || true
+          echo "    Artifacts written so far are durable on the bind mounts." >&2
+          kill -TERM -- "-$training_pid" 2>/dev/null || kill -TERM "$training_pid" 2>/dev/null
+          sleep 30
+          kill -KILL -- "-$training_pid" 2>/dev/null || kill -KILL "$training_pid" 2>/dev/null
+          exit 0
+        fi
+        sleep 15
+      done
+    ) &
+    yield_pid="$!"
+    echo "=== NATIVE_YIELD_WATCH_ARMED sentinel=$NATIVE_YIELD_SENTINEL ===" >&2
+  fi
+
   local health_pid=""
   if [[ -z "${NATIVE_NO_POLICY_HEALTH_WATCH:-}" ]]; then
     python3 scripts/watch_policy_health.py --log "$output_dir/training.log" --interval 60 \
@@ -189,6 +223,7 @@ run_measured() {
   local training_status="$?"
   if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
   if [[ -n "$health_pid" ]]; then kill "$health_pid" 2>/dev/null; wait "$health_pid" 2>/dev/null; fi
+  if [[ -n "$yield_pid" ]]; then kill "$yield_pid" 2>/dev/null; wait "$yield_pid" 2>/dev/null; fi
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"

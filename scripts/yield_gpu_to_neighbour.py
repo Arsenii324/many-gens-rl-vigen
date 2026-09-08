@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Stop OUR cell when someone else needs the card. We yield; they never fail.
+
+    python3 scripts/yield_gpu_to_neighbour.py --device 0 --container rlvigen-result-<stamp>
+    python3 scripts/yield_gpu_to_neighbour.py --device 0 --container <name> --dry-run
+
+## The asymmetry this exists for
+
+A CUDA allocator's reservation is a floor: it never shrinks, and it grows when a high-water mark is
+exceeded. On a shared card the process that asks the driver SECOND is the one that fails. So if we
+are resident and a neighbour's job starts or grows, **their** allocation raises the OutOfMemoryError
+and ours never notices. We would cause a failure we could not see.
+
+`NATIVE_VRAM_CAP_MIB` bounds what we can take. This is the other half: it bounds how long we keep
+it once somebody else wants the card. The rule the production-host notes state is that we must
+never cause another process to fail; the only way to honour that against a co-tenant who arrives
+after us is to leave.
+
+## What it watches, and what it refuses to watch
+
+The COUNT of compute processes on the card, and the card's free memory. Not who they are, not their
+PIDs, not their memory — `notes/production-host/05-privacy-and-non-alarm.md` forbids profiling a
+colleague's work, and a count answers "has someone else arrived" without answering "who and what".
+
+Our own container is identified by NAME, which we chose. Everything else on the card is "someone
+else" by definition, and that is the only distinction this needs.
+
+## What "stop" means
+
+`docker stop`, which sends SIGTERM and then SIGKILL after a grace period. Not `docker kill`. The
+grace matters: `/tmp/native-out` and `/tmp/native-work` are bind-mounted, so every checkpoint
+written so far is already on host storage and survives. A stopped cell loses the remainder of its
+training, not its artifacts.
+
+**It never touches anything but our own named container.** It cannot stop, kill, or signal another
+user's process — the only verb it has is `docker stop <our-name>`.
+"""
+from __future__ import annotations
+
+import argparse
+import pathlib
+import subprocess
+import sys
+import time
+
+
+def card(device: int) -> dict | None:
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", f"--id={device}", "--query-gpu=memory.free,utilization.gpu",
+             "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=30)
+        free, util = [int(x.strip()) for x in out.stdout.strip().splitlines()[0].split(",")]
+        procs = subprocess.run(
+            ["nvidia-smi", f"--id={device}", "--query-compute-apps=pid", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=30)
+        return {"free_mib": free, "util": util,
+                "procs": len([l for l in procs.stdout.splitlines() if l.strip()])}
+    except Exception:
+        return None
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--device", type=int, required=True, help="card index as the HOST sees it")
+    ap.add_argument("--sentinel", required=True,
+                    help="path to write when yielding; run_probe.sh polls for it and exits")
+    ap.add_argument("--interval", type=float, default=30.0)
+    ap.add_argument("--floor-mib", type=int, default=2000,
+                    help="yield if free memory falls below this, whoever caused it")
+    ap.add_argument("--dry-run", action="store_true", help="report the decision, stop nothing")
+    args = ap.parse_args()
+
+    baseline = card(args.device)
+    if baseline is None:
+        print("cannot read the card; refusing to arm a watchdog that cannot see what it guards")
+        return 2
+    # Our own cell counts as one process once it starts. Anything BEYOND our own is a neighbour.
+    print(f"  armed on card {args.device}; sentinel {args.sentinel}")
+    print(f"  baseline: {baseline['procs']} compute process(es), {baseline['free_mib']} MiB free")
+    print(f"  will yield if a process appears beyond ours, or free memory drops below "
+          f"{args.floor_mib} MiB")
+    ours_seen = False
+
+    while True:
+        now = card(args.device)
+        if now is None:
+            time.sleep(args.interval)
+            continue
+        ours_seen = ours_seen or now["procs"] >= 1
+        # Our container contributes at most one compute process. More than that, with ours running,
+        # means somebody else is on the card.
+        neighbour = now["procs"] > (1 if ours_seen else 0)
+        starved = now["free_mib"] < args.floor_mib
+        if neighbour or starved:
+            why = ("another compute process is on the card" if neighbour
+                   else f"free memory {now['free_mib']} MiB is below the {args.floor_mib} MiB floor")
+            print(f"=== NATIVE_YIELDING_TO_NEIGHBOUR {why} ===", file=sys.stderr, flush=True)
+            print(f"    writing the sentinel; the CELL stops itself. Checkpoints already written "
+                  f"survive on the bind mounts.", file=sys.stderr)
+            if args.dry_run:
+                print("    --dry-run: no sentinel written.", file=sys.stderr)
+                return 0
+            try:
+                pathlib.Path(args.sentinel).write_text(
+                    f"yielded at {time.time():.0f}: {why}\n"
+                    f"free_mib={now['free_mib']} procs={now['procs']} util={now['util']}\n")
+            except OSError as error:
+                print(f"    COULD NOT write the sentinel: {error}. The cell will NOT stop.",
+                      file=sys.stderr)
+                return 2
+            print(f"=== NATIVE_YIELD_SENTINEL_WRITTEN {args.sentinel} ===", file=sys.stderr, flush=True)
+            return 0
+        time.sleep(args.interval)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
