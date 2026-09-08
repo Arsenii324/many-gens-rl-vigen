@@ -64,6 +64,9 @@ Each of these shipped, looked fine, and was found later. They are the shape to w
 - **A "diagnostic" run in a regime production never uses.** `procs=1` pilots cannot settle a
   `procs=16` question.
 - **A threshold invented by me, applied under the project's name.** State whose criterion it is.
+- **Data collected and never read.** `resources.json` carried per-process GPU memory for every cell
+  ever run, while the VRAM column of every planning table said "unmeasured". Before concluding a
+  quantity is unknown, check whether something is already recording it.
 
 ## Judgement, when nothing above applies
 
