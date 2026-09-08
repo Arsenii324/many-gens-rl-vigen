@@ -155,3 +155,38 @@ is the one direction that ends with a full shared root filesystem.
 **What this measurement does NOT cover:** one requirement set in one image. `ctrl` pulls its own
 JAX/CUDA stack, excluded from the torch base, and was not measured here. Per-family extras remain
 unmeasured, and `check_disk`'s refusal is what stands between that and the disk.
+
+
+## Observing the cards: what runs, and the one deliberate exception
+
+`scripts/watch_gpu_headroom.py` has two modes and they are kept apart on purpose.
+
+**`--preflight --device N`** is a **verdict** — a non-zero exit, so a launch can be gated on it
+rather than on a person reading a number. It refuses on two separate grounds: free memory below
+what the run needs (a correctness limit) and high utilisation with another process present (a
+**courtesy** limit, overridable with `--max-util 100` once the owner has said that slowing a
+co-tenant is acceptable). It takes one card, because a verdict about two cards answers no question
+anyone asked.
+
+**`--watch --device 0,1|all`** is a **description**, and must not fail merely because a neighbour
+is busy. It is **bounded and self-terminating**, never a daemon: a long-lived watcher on a communal
+host is a process someone else has to wonder about and one we would forget.
+
+**What it refuses to collect.** `nvidia-smi --query-compute-apps` will hand over other users' PIDs
+and their per-process memory. Alerting on that is profiling a colleague's work, which
+`05-privacy-and-non-alarm.md` forbids. It reads the card's aggregate memory and utilisation plus
+the **count** of compute processes — enough to answer "is the card busy, is there room" without
+answering "who, and what". Our own usage is attributable from our own archives, which is
+`measure_vram_bounds.py`'s job.
+
+**The exception, recorded so nobody finds it later and assumes the worst.** A container can only
+read a device attached to it, so watching both cards means **`--gpus all` on the observer**. That
+is the flag this project otherwise refuses outright. It is acceptable for this one container
+because the process demonstrably cannot consume a GPU — it shells out to `nvidia-smi` and sleeps,
+creating no CUDA context and running no kernel. The container is named `rlvigen-cardwatch-both` so
+an auditor can see what it is. **Anything that could allocate still names exactly one card**, and
+`run_on_production_host.sh` still refuses an unnamed one.
+
+**Device numbering.** With `--gpus '"device=1"'` the pinned HOST card 1 appears as **index 0**
+inside the container, and `nvidia-smi -L | grep -c '^GPU '` returns 1 — that count is the check
+that the pin worked. With `--gpus all` the indices match the host's.
