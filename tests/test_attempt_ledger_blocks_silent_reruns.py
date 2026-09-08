@@ -92,3 +92,55 @@ def test_a_single_attempt_per_config_never_blocks(ledger):
     ledger([TWICE[0]])
     OUTCOMES.unlink(missing_ok=True)
     assert _strict().returncode == 0
+
+
+def test_it_agrees_with_the_ledger_populator_about_what_is_current():
+    """The two instruments must not disagree about a record's revision.
+
+    They did, on ppg's first real attestation: `populate_evaluator_ledger.py` asserted the revision
+    was current while this audit reported SUPERSEDED. Two bugs, both here:
+
+      1. it compared EVERY row, including training-curve rows that carry no `evaluator_revision`
+         at all, counting six `None`s as six mismatches;
+      2. `_live_revisions()` called `evaluator_family_revision(family)` against a `(root, family)`
+         signature, and a broad `except Exception: continue` turned the TypeError into an empty
+         map -- so every revision compared against `None` and nothing could ever be current.
+
+    The second is the worse shape: a bare `except` around a call whose signature can drift converts
+    a crash into a wrong answer. The crash would have been visible.
+
+    This pins the agreement rather than either instrument's internals, because agreement is the
+    property that actually matters -- and disagreement is what found both bugs.
+    """
+    import importlib.util
+    import json
+
+    records = sorted((ROOT / "results" / "records").glob("*__records.jsonl"))
+    if not records:
+        pytest.skip("no records in the tree to compare the two instruments on")
+
+    spec = importlib.util.spec_from_file_location(
+        "_attempt_ledger_under_test", ROOT / "scripts" / "audit_attempt_ledger.py")
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+    live = audit._live_revisions()
+    assert live, "the live-revision map is empty; every record would read as superseded"
+
+    import sys
+    sys.path.insert(0, str(ROOT / "datasphere" / "native"))
+    from evaluator_identity import evaluator_family_revision
+
+    for path in records:
+        rows = []
+        for line in path.read_text().splitlines():
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        for row in rows:
+            family = row.get("family")
+            if row.get("evaluator_revision") is None or family not in live:
+                continue
+            assert live[family] == evaluator_family_revision(ROOT, family), (
+                f"the audit's live revision for {family} differs from evaluator_identity's, so it "
+                "and populate_evaluator_ledger.py cannot agree about any record")

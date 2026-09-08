@@ -45,14 +45,20 @@ RECORDS = ROOT / "results" / "records"
 
 
 def _live_revisions() -> dict[str, str]:
+    """The live evaluator revision per family.
+
+    [Claude 2026-09-08] This called `evaluator_family_revision(family)` while the real signature is
+    `(root, family)`, and the `except Exception: continue` swallowed the resulting TypeError. The
+    map therefore came back EMPTY, every recorded revision compared against `None`, and ppg's first
+    genuine attestation reported SUPERSEDED at the same moment `populate_evaluator_ledger.py`
+    asserted the revision was current. Two instruments disagreeing is what exposed it.
+
+    A broad `except` around a call whose signature can drift converts a crash into a wrong answer,
+    which is strictly worse: the crash is visible. It now raises.
+    """
     from evaluator_identity import FAMILY_ALLOWED_BASELINES, evaluator_family_revision
-    out = {}
-    for family in FAMILY_ALLOWED_BASELINES:
-        try:
-            out[family] = evaluator_family_revision(family)
-        except Exception:
-            continue
-    return out
+    return {family: evaluator_family_revision(ROOT, family)
+            for family in FAMILY_ALLOWED_BASELINES}
 
 
 OUTCOMES = ROOT / "results" / "attempt-outcomes.json"
@@ -107,15 +113,28 @@ def _outcome(job_id: str, live: dict[str, str], recorded: dict[str, dict]) -> tu
     delivery = {(r.get("_delivery_provenance") or {}).get("record_delivery") for r in rows}
     if delivery != {"complete"}:
         return "PARTIAL", f"record_delivery {sorted(str(d) for d in delivery)}"
-    families = {r.get("family") for r in rows}
-    stale = [r for r in rows if r.get("evaluator_revision") != live.get(r.get("family"))]
-    kinds = {(r.get("_delivery_provenance") or {}).get("execution_kind") for r in rows}
+    # ONLY rows the evaluator produced can say anything about the evaluator's closure. A records
+    # file also carries training-curve rows (`phase` train/eval) written by the trainer, and those
+    # legitimately have no `evaluator_revision` at all.
+    #
+    # [Claude 2026-09-08] This compared every row, so ppg's first real attestation read SUPERSEDED
+    # -- "4/10 rows carry an evaluator revision the live tree no longer has" -- at the same moment
+    # `populate_evaluator_ledger.py` asserted the revision MATCHED. Two instruments disagreeing is
+    # what exposed it, and the other one was right: 4 offline-eval rows carried the live revision
+    # and 6 curve rows carried None, which this counted as six mismatches.
+    evaluated = [r for r in rows if r.get("evaluator_revision") is not None]
+    if not evaluated:
+        return "NO-EVAL-ROWS", f"{len(rows)} rows, none produced by the evaluator"
+    families = {r.get("family") for r in evaluated}
+    stale = [r for r in evaluated if r.get("evaluator_revision") != live.get(r.get("family"))]
+    kinds = {(r.get("_delivery_provenance") or {}).get("execution_kind") for r in evaluated}
     if stale:
-        return "SUPERSEDED", (f"{len(stale)}/{len(rows)} rows carry an evaluator revision the live "
+        return "SUPERSEDED", (f"{len(stale)}/{len(evaluated)} evaluator rows carry a revision the live "
                               f"tree no longer has ({', '.join(sorted(f or '?' for f in families))})")
     if kinds == {"training_production"}:
-        return "ELIGIBLE", f"{len(rows)} rows, current closure, production"
-    return "DIAGNOSTIC", f"{len(rows)} rows, current closure, kind {sorted(str(k) for k in kinds)}"
+        return "ELIGIBLE", f"{len(evaluated)} evaluator rows, current closure, production"
+    return "DIAGNOSTIC", (f"{len(evaluated)} evaluator rows, current closure, "
+                          f"kind {sorted(str(k) for k in kinds)}")
 
 
 def main() -> int:
