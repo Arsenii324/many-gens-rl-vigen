@@ -24,6 +24,25 @@ is proven; competence at the exact production settings is not.
 Door, C55) across all three seeds, or its losses are non-finite, or its action diagnostics show a
 collapsed or saturated policy.
 
+**[SHARPENED 2026-09-08, and the sharpening is the point.]** "Saturated" now has a number and a
+place to read it, because the vague version would have cleared the pre-production pilot. Job
+`bt1leljqi6n7osmcdb77` at 102400 frames had finite losses, an uncollapsed `sigma` of 1.073, and an
+analytic boundary fraction of 0.351 — every check that existed passed. Its measured
+`policy_action_diagnostics` said **`action_clip_rate_coordinate` 0.857, `action_clip_rate_vector`
+1.0000, `action_raw_min` −10.43**: every emitted action had a coordinate outside the space, and the
+mean was roughly 2.1 action units beyond a [-1, 1] bound. `gaussian_boundary_fraction` is derived
+from `log_std` and assumes a zero mean, so it cannot see that at all.
+
+So the symptom to read is the MEASURED coordinate clip rate, via
+`python scripts/read_stack_pilot.py --cell <dir>`, not the modelled one. Threshold: past **0.60**
+coordinate, or a vector rate at 1.0.
+
+Calibration, so this is not read as an ibac_sni-only fault: the eight squashed or clamped heads
+clip **0.000**; `ctrl` 0.242, `ppg` 0.323, `idaac` 0.346, `ibac_sni` 0.443, all at ~10k. Heavy
+clipping is what an unsquashed head does on Door. What distinguishes `ibac_sni` is the trajectory —
+0.443 → 0.857 between 10k and 102k — and **there is still no `idaac` or `ppg` run at 102400 frames
+to say whether that trajectory is also normal.** Producing one is the cheapest way to settle it.
+
 **Cheapest test.** One `procs=16` cell at the production settings, long enough to show a rising
 train-regime return rather than merely the absence of an explosion. Read the curve records, not the
 endpoint. Predefine the criterion as *non-degenerate learning* — finite losses, non-collapsed
