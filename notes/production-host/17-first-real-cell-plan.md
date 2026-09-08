@@ -327,11 +327,18 @@ measured; nothing here is a placeholder.
 `NATIVE_YIELD_SENTINEL` names **one file seen through three different mounts**. Get this wrong and
 the observer writes a file nobody reads, the cell never yields, and nothing announces the failure:
 
-| seen by | path |
-|---|---|
-| the host | `$WORK/yield.sentinel` |
-| the observer container (`-v $WORK:/work`) | `/work/yield.sentinel` |
-| the training container (`-v $WORK:/tmp/native-work`) | `/tmp/native-work/yield.sentinel` |
+| seen by | mount | path |
+|---|---|---|
+| the host | — | `$WORK/native-work/yield.sentinel` |
+| the observer container | `-v $WORK/native-work:/work` | `/work/yield.sentinel` |
+| the training container | `-v $WORK/native-work:/tmp/native-work` | `/tmp/native-work/yield.sentinel` |
+
+**The observer mounts `$WORK/native-work`, not `$WORK`.** The first version of this recipe mounted
+`$WORK` and wrote `/work/yield.sentinel`, which resolves to `$WORK/yield.sentinel` — while the
+trainer reads `$WORK/native-work/yield.sentinel`. Two different files, and the failure is entirely
+silent: the observer reports a sentinel written, the cell never yields, and nothing says otherwise.
+Caught by reading the wrapper's actual mount list out of a dry run, and confirmed by writing
+through one mount and reading through the other.
 
 So `NATIVE_YIELD_SENTINEL=/tmp/native-work/yield.sentinel` — the **training** container's view,
 because that is the process which reads it. And `$NATIVE_WORK_HOST_DIR` must be set **explicitly**:
@@ -347,7 +354,7 @@ to 0 inside a container, and 0 is already 0 on the host. That coincidence does n
 
 ```bash
 export WORK=$HOME/rlvigen-runs/idaac-c0-$(date +%Y%m%d-%H%M)
-mkdir -p "$WORK" "$WORK/out" "$WORK/mirror"
+mkdir -p "$WORK" "$WORK/native-work" "$WORK/mirror"   # native-work must exist before the observer mounts it
 
 # 0. Verdict, not a glance. Non-zero exit means do not proceed.
 docker run --rm -v "$PWD:/repo:ro" -w /repo --gpus '"device=0"' python:3.11-slim \
@@ -364,7 +371,7 @@ S
 # 2. The observer, in its own container, watching card 0 and writing the sentinel.
 #    It allocates nothing: nvidia-smi and sleep.
 docker run -d --rm --name rlvigen-yield-watch --gpus '"device=0"' \
-  -v "$WORK:/work" -v "$PWD:/repo:ro" -w /repo python:3.11-slim \
+  -v "$WORK/native-work:/work" -v "$PWD:/repo:ro" -w /repo python:3.11-slim \
   python3 scripts/yield_gpu_to_neighbour.py \
     --device 0 --sentinel /work/yield.sentinel --floor-mib 4000 --interval 30
 
