@@ -1363,7 +1363,38 @@ if cells_need_places365 "$cells"; then
   # the same order from the same pool, is the same draw process -- so it is not a fidelity or a
   # comparability defect. It does mean a seed is only bit-reproducible at a FIXED worker count.
   # Pin it and stamp it, so a rerun that differs is visible rather than silent.
-  places_workers="${RLVIGEN_PLACES_WORKERS:-8}"
+  # The DEFAULT is 0, not upstream's 8, and that is a correctness choice rather than a performance
+  # one. P19's own comment in `RL-ViGen-upstream/utils.py` blames 8 for
+  # `malloc_consolidate(): unaligned fastbin chunk detected` -- and every places cfg that ever ran
+  # to completion (`cfg-svea-functional-v118`, `cfg-soda-functional-v121`,
+  # `cfg-preprod-sgqn-v56/v58`) sets 0 explicitly.
+  #
+  # [Claude 2026-09-08] The first version of THIS block defaulted to 8 anyway. It quoted the
+  # reproducibility half of P19's comment and ignored the sentence above it, so
+  # `cfg-rlvigen-attest-v197.yaml`, which sets no dial, ran svea with 8 workers for the first time
+  # and died exactly as P19 predicted: heap corruption in a forked loader worker at ~8500 frames,
+  # `RuntimeError: DataLoader worker (pid 23921) is killed by signal: Aborted.` raised inside
+  # `random_overlay` (job bt12f5us5h120laajpme).
+  #
+  # That job also FALSIFIES P19's stated condition. P19 says "on a 4-CPU container"; this ran on
+  # `gt4i.1`, which `resources.json` records as 8 logical CPUs, and 8 workers corrupted the heap
+  # there too. So the safe value is not "workers <= cores".
+  #
+  # And the failure is NOT deterministic, which is the part that matters for choosing a default:
+  # `bt1utl06n6mqffrt2jdn` (cfg-sgqn-cover-v197) ran the SAME overlay path, the same 10000 frames,
+  # the same absent dial and therefore the same 8 workers, on the same tier in the same hour -- and
+  # exited SUCCESS in 2381s. `malloc_consolidate(): unaligned fastbin chunk detected` is glibc
+  # noticing an already-corrupted heap, so which allocation trips it is a matter of timing. One
+  # clean run at 8 is not evidence that 8 is safe; it is evidence that the corruption is
+  # intermittent, which is worse, because it means a 600k-frame production cell samples the failure
+  # many more times than a 10k smoke does.
+  #
+  # 0 is the only value with a clean-exit HISTORY rather than a clean-exit INSTANCE
+  # (`cfg-svea-functional-v118`, `cfg-soda-functional-v121`, `cfg-preprod-sgqn-v56/v58`), and it
+  # removes the forked worker entirely rather than making it less likely to lose the race. A dial
+  # whose default is the value its own rationale indicts is worse than no dial, because the cfgs
+  # that need it most are the ones that do not set it.
+  places_workers="${RLVIGEN_PLACES_WORKERS:-0}"
   export RLVIGEN_PLACES_WORKERS="$places_workers"
   echo "=== NATIVE_PLACES365_LOADER split=$places_split rlvigen_workers=$places_workers dmc_gb_workers=16 ===" >&2
   python3 datasphere/native/configure_places365_val.py --repo RL-ViGen-upstream --dataset-root "$dataset_root" --split "$places_split"
