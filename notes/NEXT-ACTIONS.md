@@ -8,6 +8,28 @@ At the Codex handoff on 2026-09-05 it reads **27 pass / 2 fail / 11 waiting on t
 failures are the unresolved IBAC forced-fork/worker-reseeding path and the intentionally uncommitted
 shared tree; the latter cannot be closed while concurrent edits are still landing.
 
+
+## Superseding update, 2026-09-08 evening
+
+The gate figures in the paragraph above are from the 2026-09-05 Codex handoff and are stale.
+`production_gates.py` now reads **35 pass / 0 fail / 10 waiting on the owner** once the tree is
+committed (the single failure is the tree-freeze gate, which is uncommitted work by definition).
+
+**The next action is no longer a gate.** It is the renderer, and then the chain:
+
+1. **Re-run one `idaac` cell on card 0.** The 2026-09-08 attempt died at the renderer check with
+   `software EGL renderer: llvmpipe`; `run_on_production_host.sh` now sets
+   `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics`, which was verified on the host to be what
+   makes `libEGL_nvidia` appear. That fix is **unverified end to end** — no cell has run since.
+2. **Build the two environments first, or accept ~2.5 h of `pip` per attempt.**
+   `datasphere/native/build-env.sh`. Its orchestration is smoke-tested; a full build is not.
+3. **Then the chain**: train → durable checkpoint → fresh-process reload → endpoint grid → records
+   → statistics. Still never completed on any host at any length. This is owner-decision item 6 and
+   nothing below it should be trusted until it runs once.
+4. **Then R_A/R_B renderer parity** (`DECISIONS-IF-PRODUCTION-GOES-WRONG.md` §8), for which the
+   cheap first cut — render a few fixed-seed observations on both hosts and diff them — should come
+   before the three-step probe, because it would have caught the `llvmpipe` fallback for nothing.
+
 ---
 
 ## Done this session

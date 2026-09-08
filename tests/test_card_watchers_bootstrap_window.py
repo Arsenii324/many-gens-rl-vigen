@@ -68,3 +68,62 @@ def test_the_marker_is_actually_written_by_the_runner():
         "run_probe.sh must touch the cell-active marker, or --active-file makes both watchers "
         "expect zero processes FOREVER and every run screams")
     assert 'NATIVE_CELL_ACTIVE_MARKER' in runner, "the marker must be announced in the log too"
+
+
+# --- the symmetric blind spot, at the other end of the run -------------------------------------
+# [Claude 2026-09-08] Creating the marker fixed the bootstrap window. Never removing it left the
+# mirror-image defect: once the cell exits, our process count returns to zero while the watcher goes
+# on expecting one of ours, so a neighbour taking the card we have just VACATED reads as a breach.
+# The alarm would fire at precisely the moment the card is legitimately somebody else's.
+
+
+def test_standing_down_when_the_cell_retracts_its_marker(tmp_path, monkeypatch, capsys):
+    watcher = _load("watch_card_exclusivity")
+    marker = tmp_path / "cell-active"
+    marker.write_text("")
+
+    # The marker vanishes after the second check, and a stranger's process arrives at the same
+    # time -- the exact race the false alarm would fire on.
+    calls = {"n": 0}
+
+    def card(device):
+        calls["n"] += 1
+        if calls["n"] >= 2 and marker.exists():
+            marker.unlink()
+        return {"procs": 1, "used": 4000, "free": 28000, "util": 50}
+
+    monkeypatch.setattr(watcher, "card", card)
+    monkeypatch.setattr(sys, "argv", [
+        "watch_card_exclusivity.py", "--device", "0", "--expect-ours", "1",
+        "--max-seconds", "30", "--interval", "0.01", "--stop-when-inactive",
+        "--active-file", str(marker)])
+    rc = watcher.main()
+    err = capsys.readouterr().err
+    assert rc == 0, err
+    assert "STANDING DOWN" in err, err
+    assert "IS NOT OURS ALONE" not in err, "raised a breach on a card we had already vacated:\n" + err
+    # It must not be mistaken for the timer running out, which is an alarm, not a clean end.
+    assert "FROM NOW ON NOBODY IS WATCHING" not in err, err
+
+
+def test_a_marker_that_never_appeared_does_not_stand_the_watch_down(tmp_path, monkeypatch, capsys):
+    """A cell that dies during bootstrap leaves the card unwatched -- when a watch matters most."""
+    watcher = _load("watch_card_exclusivity")
+    marker = tmp_path / "cell-active"          # never created
+    monkeypatch.setattr(watcher, "card", _fake_card(0))
+    monkeypatch.setattr(sys, "argv", [
+        "watch_card_exclusivity.py", "--device", "0", "--expect-ours", "1",
+        "--max-seconds", "0.15", "--interval", "0.05", "--stop-when-inactive",
+        "--active-file", str(marker)])
+    watcher.main()
+    err = capsys.readouterr().err
+    assert "STANDING DOWN" not in err, "stood down without the cell ever having started:\n" + err
+    assert "FROM NOW ON NOBODY IS WATCHING" in err, err
+
+
+def test_the_runner_actually_retracts_the_marker():
+    runner = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
+    assert 'rm -f "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"' in runner, (
+        "run_probe.sh must remove the marker when the cell exits, or --stop-when-inactive never "
+        "fires and the vacated-card false alarm comes back")
+    assert "NATIVE_CELL_ACTIVE_MARKER_CLEARED" in runner

@@ -16,6 +16,26 @@ nothing else, and we add nothing to it.
 4. Let the container exit and be removed (`--rm`). State that must survive lives in our own mounted
    output directory.
 
+## A GPU run needs `graphics`, and `--gpus` does not give it
+
+```
+-e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+```
+
+`--gpus` alone yields `compute,utility`. `graphics` is the capability that installs
+`libEGL_nvidia`; without it a container has CUDA but no NVIDIA EGL, and `MUJOCO_GL=egl` silently
+falls back to Mesa `llvmpipe` — CPU rasterisation. Measured on this host, same image and card:
+
+| capabilities | `libEGL_nvidia` |
+|---|---|
+| `compute,utility` (docker default) | absent |
+| `compute,utility,graphics` | `libEGL_nvidia.so.580.126.09` |
+
+`run_on_production_host.sh` sets it now (override with `NATIVE_DRIVER_CAPABILITIES`). It is here
+because it is a **container-runtime** property, not an image property — pinning the image digest,
+which this project does carefully, does not pin the renderer. Found on 2026-09-08 when the first
+cell to get past `pip` died at the renderer check after a two-and-a-half hour bootstrap.
+
 ## Deleting a container or image
 
 Permitted **only** with positive proof that we created it and that it did not exist beforehand.

@@ -138,7 +138,29 @@ OOM-kill mid-run. Add them once real numbers exist.
 
 ## Still unverifiable from here
 
-Nothing in either document has been executed on `cds2`. Outbound network access, a working
-`nvidia-container-toolkit`, whether the SSH user can reach the Docker socket without `sudo`, and
-host contention with other users are all assumptions the runbook's §1 checks are designed to
-settle on first contact.
+~~Nothing in either document has been executed on `cds2`.~~ **Superseded 2026-09-08:** cells have
+now been launched there, and first contact settled every assumption in this paragraph.
+
+## First contact, 2026-09-08 — what the assumptions turned out to be
+
+| assumption | settled |
+|---|---|
+| outbound network access | works, and is **slow**: 1710 MB of wheels at 162–835 kB/s, the largest slowest (`nvidia_cudnn_cu12`, 731.7 MB, 161.6 kB/s). `pip` ran over two hours against `apt` at 71 s |
+| `nvidia-container-toolkit` | works for compute; **not for rendering by default** — see below |
+| Docker socket without `sudo` | yes; no `sudo` was needed at any point |
+| contention with other users | real and normal. Card 1 carried a neighbour's job at 16 GB / 100% for hours while we used card 0; nobody was disturbed, and our watchers confirmed exclusivity on card 0 at every poll |
+
+**The finding that mattered was none of those.** A GPU container gets
+`NVIDIA_DRIVER_CAPABILITIES=compute,utility` from docker's `--gpus`, and `graphics` — the
+capability that installs `libEGL_nvidia` — was never set anywhere in this repo. The first cell to
+reach the renderer died with `RuntimeError: software EGL renderer: llvmpipe (LLVM 15.0.7, 256
+bits)`. DataSphere had been setting it for us. Fixed in `run_on_production_host.sh`; measured on the
+host both ways before and after.
+
+This is the clearest vindication of the runbook's own premise: the §1 checks are worth running
+because the thing that bites is the assumption nobody wrote down, and it bit at the renderer rather
+than at any of the four items above.
+
+**What is still unexecuted:** the chain itself. No cell has yet trained, checkpointed, reloaded in a
+fresh process, run the endpoint grid and written a record on this host. The 2026-09-08 attempt
+stopped at the renderer check, which is progress on the bootstrap and none on the chain.

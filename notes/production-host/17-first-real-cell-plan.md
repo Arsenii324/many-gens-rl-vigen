@@ -360,12 +360,18 @@ mkdir -p "$WORK" "$WORK/native-work" "$WORK/mirror"   # native-work must exist b
 docker run --rm -v "$PWD:/repo:ro" -w /repo --gpus '"device=0"' python:3.11-slim \
   python3 scripts/watch_gpu_headroom.py --preflight --device 0 --need-mib 4000
 
-# 1. A payload built from THIS tree. Every archive on disk predates RUNNER_CONTRACT 16.
+# [Claude 2026-09-08] SUPERSEDED IN PART by `datasphere/native/launch-card-cell.sh`, which does
+# steps 2-4 with the watch budget DERIVED rather than typed. Keep reading this for the reasoning;
+# run the launcher for the execution. See 18-the-watch-that-would-have-expired-first.md.
+#
+# 1. A payload built from THIS tree. Read the contract number rather than typing it: it has moved
+#    three times in one day (16 -> 17 -> 18) and a stale literal here refuses a good payload.
+C=$(python3 -c 'import sys; sys.path.insert(0, "datasphere/native"); import contract; print(contract.RUNNER_CONTRACT)')
 bash datasphere/native/host-run.sh -m "$PWD" <<'S'
 python3 datasphere/native/contract.py build-payload \
   --source . --output /work/payload-idaac.tgz --families idaac
 python3 datasphere/native/contract.py verify-payload --archive /work/payload-idaac.tgz \
-  --require-runner-contract 16 --require-families idaac --require-evaluator-identity
+  --require-runner-contract "$C" --require-families idaac --require-evaluator-identity
 S
 
 # 2. The observer, in its own container, watching card 0 and writing the sentinel.

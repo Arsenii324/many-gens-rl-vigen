@@ -195,6 +195,21 @@ docker info >/dev/null 2>&1 || {
   exit 2; }
 
 DOCKER_GPU_ARGS=(--gpus "$DOCKER_GPUS")
+# [Claude 2026-09-08] RENDERING CAPABILITY. Found by the first cell that got past `pip` on the
+# production host: it died at the renderer check with
+#   RuntimeError: software EGL renderer: llvmpipe (LLVM 15.0.7, 256 bits)
+# after two hours of bootstrap. `llvmpipe` is Mesa CPU rasterisation -- the container had CUDA but
+# no NVIDIA EGL, so every rendered observation would have come from a software rasteriser: wrong
+# pixels and orders of magnitude too slow. The check refused, correctly and loudly.
+#
+# The cause is a docker default nothing in this repo had ever set. `--gpus` alone gives
+# NVIDIA_DRIVER_CAPABILITIES=compute,utility, and `graphics` is what installs libEGL_nvidia.
+# Measured on the host, same image, same card:
+#   default          NVIDIA_DRIVER_CAPABILITIES=compute,utility   -> no libEGL_nvidia
+#   +graphics        compute,utility,graphics                     -> libEGL_nvidia.so.580.126.09
+# DataSphere set this for us, which is exactly why it surfaced only on the first real host cell and
+# not in any of the jobs this project has already run.
+DOCKER_GPU_ARGS+=(-e "NVIDIA_DRIVER_CAPABILITIES=${NATIVE_DRIVER_CAPABILITIES:-compute,utility,graphics}")
 fi
 
 # [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice
@@ -606,8 +621,17 @@ PLACES365_RO_ARGS=()
 # The two names are one letter apart and mean different sides of the mount, so the confusable case
 # is refused rather than left to produce a container path that does not exist. _HOST is the host
 # directory you mount; NATIVE_PLACES365_DIR is what the container sees, and the wrapper sets it.
-if [[ -n "${NATIVE_PLACES365_DIR:-}" && -z "${NATIVE_PLACES365_DIR_HOST:-}" ]]; then
-  echo "refusing: NATIVE_PLACES365_DIR is set but NATIVE_PLACES365_DIR_HOST is not." >&2
+# [Claude 2026-09-08] The refusal is UNCONDITIONAL, and the previous version was a real bug rather
+# than a missing nicety. It fired only when NATIVE_PLACES365_DIR was set WITHOUT
+# NATIVE_PLACES365_DIR_HOST. Setting BOTH passed the guard -- and then the caller value won,
+# because this script appended its own `-e NATIVE_PLACES365_DIR=/opt/places365` here while the
+# pass-through loop appended the caller's copy a hundred lines LATER, and docker takes the last `-e`
+# for a repeated key. The asset was mounted at /opt/places365 and the runner was told to read
+# somewhere else, which is not a crash: run_probe.sh skips the copy and extract when this variable
+# is set, so svea/sgqn/soda would have looked for Places365 at a path that does not exist. Removed
+# from the pass-through list as well; the caller sets _HOST, this script derives the rest.
+if [[ -n "${NATIVE_PLACES365_DIR:-}" ]]; then
+  echo "refusing: NATIVE_PLACES365_DIR is set by the caller." >&2
   echo "  NATIVE_PLACES365_DIR names a path INSIDE the container and is set by this script when" >&2
   echo "  it mounts one. Setting it by hand without a mount forwards a host path into a container" >&2
   echo "  where it does not exist." >&2
@@ -623,10 +647,74 @@ if [[ -n "${NATIVE_PLACES365_DIR_HOST:-}" ]]; then
   echo "places365: ${NATIVE_PLACES365_DIR_HOST} -> /opt/places365 (read-only, shared, not copied)" >&2
 fi
 
+# [Claude 2026-09-08] PERSISTENT WHEEL CACHE. run_probe.sh passes `--no-cache-dir`, and the comment
+# justifying it is correct as far as it goes: an in-container pip cache costs 3.0 GB in the writable
+# layer and buys nothing, because `docker run --rm` discards that layer the moment the cell ends.
+#
+# What that reasoning missed is that the layer is not the only place a cache can live. The cost it
+# was avoiding is real; the download it was paying instead is much larger and recurs. Measured on
+# the production host 2026-09-08: the torch CUDA stack is ~2.5 GB of wheels and the host pulls them
+# at 162-835 kB/s per wheel -- and the BIGGEST wheels drew the SLOWEST rates, so
+# `nvidia_cudnn_cu12` (731.7 MB) came down at 161.6 kB/s, about 75 minutes on its own, and
+# `nvidia_cublas_cu12` (410.6 MB) took 14m15s and a single cell spent OVER 50 MINUTES in pip and still downloading
+# before touching the GPU. That is per cell, per family, on a shared uplink -- twelve baselines and
+# seven attestation families re-download the same bytes every time.
+#
+# A host-side cache inverts the trade: 0 bytes in the container layer, ~2.5 GB once on a filesystem
+# with 318 GB free, and every later cell resolves from disk. It is opt-in and absent by default, so
+# a host that genuinely cannot spare the space keeps exactly today's behaviour.
+PIP_CACHE_ARGS=()
+if [[ -n "${NATIVE_PIP_CACHE_HOST:-}" ]]; then
+  case "$NATIVE_PIP_CACHE_HOST" in
+    "$HOME"/*) : ;;
+    *) echo "refusing: NATIVE_PIP_CACHE_HOST must live under \$HOME, got $NATIVE_PIP_CACHE_HOST" >&2
+       exit 2 ;;
+  esac
+  mkdir -p "$NATIVE_PIP_CACHE_HOST" || {
+    echo "refusing: cannot create NATIVE_PIP_CACHE_HOST=$NATIVE_PIP_CACHE_HOST" >&2; exit 2; }
+  PIP_CACHE_ARGS=(-v "${NATIVE_PIP_CACHE_HOST}:/root/.cache/pip")
+  DOCKER_ENV_ARGS+=(-e "NATIVE_PIP_CACHE=1")
+  _cache_now="$(du -sh "$NATIVE_PIP_CACHE_HOST" 2>/dev/null | cut -f1)"
+  echo "pip cache: ${NATIVE_PIP_CACHE_HOST} -> /root/.cache/pip (rw, persistent, currently ${_cache_now:-empty})" >&2
+fi
+
+# [Claude 2026-09-08] PREBUILT ENVIRONMENT, mounted READ-ONLY. See
+# notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md. Read-only is not caution, it
+# is the mechanism: `gate_environment_manifest` reads OWNER because the executed environment is not
+# frozen, and an environment a cell CANNOT write is frozen by construction rather than by intention.
+#
+# The container path is fixed at /opt/rlvigen-env and must equal the path the venv was BUILT at --
+# a venv carries absolute paths in `bin/python` and `pyvenv.cfg`, so the two must be the same string.
+#
+# NATIVE_IMAGE_DIGEST is forwarded because only this side knows which image it launched. The venv
+# records the image it was built under; without this the container cannot check that record, and
+# run_probe.sh refuses rather than proceeding unverified.
+VENV_RO_ARGS=()
+if [[ -n "${NATIVE_VENV_HOST:-}" ]]; then
+  [[ -d "$NATIVE_VENV_HOST" ]] || {
+    echo "refusing: NATIVE_VENV_HOST=$NATIVE_VENV_HOST is not a directory." >&2; exit 2; }
+  [[ -f "$NATIVE_VENV_HOST/ENVIRONMENT.json" ]] || {
+    echo "refusing: $NATIVE_VENV_HOST has no ENVIRONMENT.json, so it is not a built environment." >&2
+    echo "  Build one: CELLS=... PAYLOAD=... bash datasphere/native/build-env.sh" >&2
+    exit 2; }
+  VENV_RO_ARGS=(-v "${NATIVE_VENV_HOST}:/opt/rlvigen-env:ro")
+  DOCKER_ENV_ARGS+=(-e "NATIVE_VENV=/opt/rlvigen-env")
+  _img_digest="$(printf '%s' "$IMAGE" | sed -n 's/.*sha256:\([0-9a-f]\{12\}\).*/\1/p')"
+  if [[ -z "$_img_digest" ]]; then
+    echo "refusing: the container image is not digest-pinned, so a prebuilt venv cannot be checked" >&2
+    echo "  against it. A venv keyed to a moving tag goes stale without saying so." >&2
+    exit 2
+  fi
+  DOCKER_ENV_ARGS+=(-e "NATIVE_IMAGE_DIGEST=$_img_digest")
+  echo "prebuilt env: ${NATIVE_VENV_HOST} -> /opt/rlvigen-env (READ-ONLY), image $_img_digest" >&2
+fi
+
 DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
                    -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"
                    -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work"
-                   ${PLACES365_RO_ARGS[@]+"${PLACES365_RO_ARGS[@]}"})
+                   ${PLACES365_RO_ARGS[@]+"${PLACES365_RO_ARGS[@]}"}
+                   ${PIP_CACHE_ARGS[@]+"${PIP_CACHE_ARGS[@]}"}
+                   ${VENV_RO_ARGS[@]+"${VENV_RO_ARGS[@]}"})
 i=1
 while true; do
   var="EXTRA_MOUNT_$i"
@@ -667,7 +755,7 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     NATIVE_CELL_DEVICES NATIVE_ALLOW_CPU NATIVE_ONLINE_EVAL_DISABLED_SPELLING \
     NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE RLVIGEN_PLACES_WORKERS \
     CELL_STALL_SECONDS NATIVE_NO_POLICY_HEALTH_WATCH XLA_FLAGS NATIVE_MEMORY_TIER \
-    NATIVE_PLACES365_DIR XLA_PYTHON_CLIENT_PREALLOCATE XLA_PYTHON_CLIENT_MEM_FRACTION \
+    XLA_PYTHON_CLIENT_PREALLOCATE XLA_PYTHON_CLIENT_MEM_FRACTION \
     NATIVE_VRAM_CAP_MIB NATIVE_YIELD_SENTINEL \
     XLA_PYTHON_CLIENT_ALLOCATOR \
     OMP_NUM_THREADS MKL_NUM_THREADS OPENBLAS_NUM_THREADS NUMEXPR_NUM_THREADS; do

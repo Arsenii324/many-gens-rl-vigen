@@ -25,7 +25,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 PROBE = ROOT / "datasphere" / "native" / "run_probe.sh"
 
 START = 'case "${NATIVE_HOST_PROFILE:-datasphere}" in'
-END = "python3 -m pip install --upgrade pip"
+# [Claude 2026-09-08] END moved from "python3 -m pip install --upgrade pip" to the marker that now
+# immediately follows the preflight. The prebuilt-environment block was added between the two, and
+# it OPENS an `if` that closes further down -- so the extracted fragment ended mid-conditional and
+# every case here failed with exit 2 for a reason that had nothing to do with memory preflighting.
+# The block under test is unchanged; only the boundary moved to stay adjacent to it, which is what
+# this file's own docstring asks a future editor to do rather than delete the test.
+END = "# [Claude 2026-09-08] PREBUILT ENVIRONMENT."
 
 
 def _block() -> str:

@@ -181,12 +181,22 @@ def check_budget(cells: str, frames: int, path: Path | None = None,
 
     [Corrected 2026-09-05, external review 14 section 13.] `min_frames` for idaac and ibac_sni is
     "one full rollout" and was stored as a STATIC number computed from the BASE process count.
-    idaac's V100 profile raises `num_processes` 4 -> 16, so one rollout is 4096 frames, not the
-    stored 1024 -- a canary submitted at, say, 2000 frames would satisfy the stale check while
-    completing ZERO rollouts (`num_updates = frames // num_steps // num_processes == 0`), training
-    nothing and proving nothing about the profile it claims to validate. `profile` now re-derives
-    the floor from ROLLOUT_QUANTUM_CONSTANTS against the profile's RESOLVED constants for the two
-    affected families, instead of trusting the stored number once a profile changes the geometry.
+    A host profile that changes `num_processes` changes the rollout quantum with it, so a floor
+    stored as a static number goes stale the moment a profile moves the geometry: a canary could
+    satisfy the stale check while completing ZERO rollouts
+    (`num_updates = frames // num_steps // num_processes == 0`), training nothing and proving
+    nothing about the profile it claims to validate. `profile` now re-derives the floor from
+    ROLLOUT_QUANTUM_CONSTANTS against the profile's RESOLVED constants for the two affected
+    families, instead of trusting the stored number.
+
+    [Claude 2026-09-08] This paragraph used to cite idaac's V100 override raising `num_processes`
+    4 -> 16 for a 4096-frame rollout. BOTH halves are now stale and are removed rather than
+    updated: `families.json` REMOVED that override under IDAAC-C2 (`num_processes` is 1 on every
+    profile), and the 4096/1024 figures came from a configuration where `num_steps` was 256, not
+    today's 2048. Verified by execution, not by reading -- `expected-endpoint --baseline idaac
+    --frames 10000` returns 8192 under `datasphere` and under `v100` alike, so the two profiles
+    now share one geometry. The hazard the paragraph describes is real and general; the example
+    was specific and no longer true, which is the worse of the two things to leave in place.
     """
     import os
     import re as _re

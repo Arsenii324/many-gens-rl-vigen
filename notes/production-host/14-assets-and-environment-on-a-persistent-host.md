@@ -106,7 +106,33 @@ This gets what the baked image was for, without the build:
 | the gate | `gate_environment_manifest`'s "executed environment is not frozen" is answered — it is frozen because it is not rebuilt |
 | per-family conflicts | solved by one venv per family, which is the natural shape anyway |
 
-**Not implemented. Proposed only**, and it changes how every cell runs, so it belongs to the owner.
+**~~Not implemented. Proposed only~~ — IMPLEMENTED 2026-09-08.** `datasphere/native/build-env.sh`
+builds it; `run_probe.sh` activates it from `NATIVE_VENV` and refuses on any mismatch;
+`run_on_production_host.sh` mounts it read-only from `NATIVE_VENV_HOST`. It still changes how every
+cell runs, so **switching the fleet to it remains the owner's decision** — but the mechanism, its
+refusals and its tests exist, so that decision is now about whether to adopt rather than whether it
+would work.
+
+Two corrections to the proposal above, both from measurement:
+
+- **"one venv per family, which is the natural shape anyway" is wrong — the natural shape is TWO.**
+  Hashing `family.py filtered-requirements` across all twelve baselines gives exactly two distinct
+  sets: eleven share the torch one, `ctrl` alone has the JAX one. No family adds pip packages of its
+  own. Two environments cover the fleet, not seven.
+- **The proposal did not address the two editable installs**, `--no-deps -e` of `robosuite` and
+  `robosuiteVGB`, which are what normally kills a shared read-only venv: `pip install -e` writes an
+  absolute path into site-packages and cannot run against a `:ro` mount. They survive because that
+  path is *stable* — the payload extracts to `/tmp/native-work`, a bind mount whose container-side
+  name is identical on every run. So the editable installs are baked at build time and each cell
+  supplies its own tree behind the same string. The venv holds the pointer; the payload holds the
+  code.
+
+Full design, including why a baked image and `docker commit` were both rejected:
+[`19-environment-lifecycle-vs-run-lifecycle.md`](19-environment-lifecycle-vs-run-lifecycle.md).
+
+**Measured cost of NOT doing it**, which the proposal above could only estimate: `apt` 71 s, `pip`
+**over two hours** — 1710 MB of wheels at 162–835 kB/s, the largest slowest. At 10k frames the
+training is minutes, so a short cell is ~95% bootstrap and none of it survives `--rm`.
 
 ## 3. Checkpoints exist in three copies at once
 

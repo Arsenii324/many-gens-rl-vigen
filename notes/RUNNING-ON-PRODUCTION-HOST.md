@@ -224,6 +224,67 @@ Both print a marker into the log, so a run that took either is identifiable afte
 
 ## 3. Run one cell
 
+### 3.0 On a shared card, use the launcher — added 2026-09-08
+
+```bash
+CARD=0 CELLS=idaac:101 FRAMES=10000 CELL_TIMEOUT_SECONDS=3600 \
+NATIVE_VENV_HOST=$HOME/rlvigen-env/torch-<reqhash>-<digest> \
+  nohup bash datasphere/native/launch-card-cell.sh payload.tgz result.tgz > run.log 2>&1 &
+```
+
+`datasphere/native/launch-card-cell.sh` does the card preflight, arms the exclusivity alarm and the
+yield daemon, bounds the container with a reaper, and stands everything down. It exists because the
+same sequence done by hand got the arithmetic wrong: both watches were armed for 4500 s against a
+bootstrap still running at 51 minutes, so the GPU phase would have been unwatched and both watchers
+would have exited 0 reporting a clean run. The launcher derives the budget from
+`CELL_TIMEOUT_SECONDS + bootstrap allowance + slack`, derives the card index once instead of three
+times, and passes `--must-cover-seconds` so a short watch **refuses to arm** (exit 3) instead of
+arming short. Full account: `production-host/18-the-watch-that-would-have-expired-first.md`.
+
+**Run it under `nohup`.** `run_on_production_host.sh` is foreground and blocking; SIGHUP from an SSH
+drop kills it while dockerd keeps the container running, so the cell continues with nobody
+retrieving its result. Verified on 2026-09-08 — an outer `timeout 5400 ssh` fired mid-bootstrap, the
+script died at STEP 3, and the container ran on for hours.
+
+### 3.0b The environment: build it once, mount it read-only
+
+Every cell otherwise rebuilds its environment inside a container that is then thrown away.
+Measured here: `apt` **71 s**; `pip` **over two hours** for 1710 MB of wheels at 162–835 kB/s, the
+largest ones slowest. At 10k frames the training itself is minutes, so a short cell is ~95 %
+bootstrap and none of it survives.
+
+```bash
+CELLS=idaac:1 PAYLOAD=~/rlvigen-work/payload.tgz \
+NATIVE_IMAGE=<the digest-pinned image from source-lock.json> \
+  bash datasphere/native/build-env.sh          # once per requirement set
+```
+
+There are exactly **two** requirement sets across the twelve baselines: eleven share the torch one,
+`ctrl` has the JAX one (its cuDNN 9 and torch's pinned 8.9.2.26 have no common version). So two
+environments cover the fleet. Pass the built directory as `NATIVE_VENV_HOST`; it is mounted
+**read-only**, which is the mechanism rather than caution — an environment a cell cannot write is
+frozen by construction, which is what `gate_environment_manifest` asks for. `apt` still runs at run
+time, so that is the pip half only, and the gate note says so.
+
+Every mismatch — missing `ENVIRONMENT.json`, missing interpreter, unforwarded image digest, wrong
+digest, wrong requirement hash — **refuses** with exit 3 and never falls back to `pip`. A fallback
+would restore the two-hour bootstrap silently and execute an environment nobody verified. Design:
+`production-host/19-environment-lifecycle-vs-run-lifecycle.md`.
+
+Lighter alternative if you do not want a prebuilt environment:
+`NATIVE_PIP_CACHE_HOST=$HOME/.cache/pip-rlvigen` persists the wheels between cells, so only the
+first pays the download.
+
+### 3.0c Rendering: the container needs `graphics`, and `--gpus` does not give it
+**The container needs the `graphics` driver capability, and `--gpus` does not give it.** The wrapper now sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` (override with
+`NATIVE_DRIVER_CAPABILITIES`). Without it a GPU container has CUDA but no `libEGL_nvidia`, EGL
+falls back to Mesa's `llvmpipe` CPU rasteriser, and every rendered observation is software-produced
+— wrong pixels and far too slow. The first cell on the production host died on exactly this, after
+a two-hour bootstrap, with `RuntimeError: software EGL renderer: llvmpipe`. DataSphere set the
+capability for us, so it stayed invisible until the platform changed.
+
+### 3.1 The wrapper directly
+
 Copy the environment block verbatim from whichever `cfg-*.yaml` is the template for this cell; the
 script forwards an allow-list of exactly those variables and nothing else.
 

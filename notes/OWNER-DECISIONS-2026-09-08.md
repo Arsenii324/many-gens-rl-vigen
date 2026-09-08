@@ -60,5 +60,36 @@ with nobody. Or on `cds2` for free, contending with a co-tenant.
 
 Everything mechanical. The wrapper refuses an unnamed GPU, an uncapped VRAM request, a
 too-small disk, an unverified mirror device, a tmpfs staging directory, a profile with no memory
-tier, and concurrent cells whose peaks would not fit. The payload verifies at contract 16. The
+tier, and concurrent cells whose peaks would not fit. The payload verifies at contract 19. The
 sources reconstruct and verify on Linux. The suite runs. Those were repairs and they are done.
+
+
+## Evidence added 2026-09-08 (late) — no status flipped
+
+Three of the items above now have host evidence they did not have when the table was written. None
+of them changes status; the point of recording this is that the evidence exists and where it is.
+
+**Item 9, production renderer verified.** The ruling was that the host is ours to configure, "which
+makes this tractable by construction rather than a hazard to discover". A hazard was nevertheless
+discovered, and it is the one that matters: the first cell to get past `pip` died with
+`RuntimeError: software EGL renderer: llvmpipe (LLVM 15.0.7, 256 bits)`. Docker's `--gpus` sets
+`NVIDIA_DRIVER_CAPABILITIES=compute,utility`, and nothing in this repo had ever added `graphics` —
+the capability that installs `libEGL_nvidia`. Measured on the host, same image and card: default →
+no `libEGL_nvidia`; `compute,utility,graphics` → `libEGL_nvidia.so.580.126.09`. DataSphere set it
+for us, so no previous job could have revealed it. Fixed in `run_on_production_host.sh`.
+
+This does **not** close item 9. R_A/R_B renderer parity is still unmeasured, and the finding
+sharpens why it matters: the host can render with a *different renderer entirely* and, without
+`run_probe.sh`'s check, would have done so silently. Item 9 is now better founded, not resolved.
+
+**Item 5, environment manifest.** The gap was that `apt-get`/`pip` run inside the job, so the
+executed environment is not frozen. Measured: `apt` 71 s, `pip` over two hours, 1710 MB per cell,
+discarded every time. `datasphere/native/build-env.sh` now builds a per-requirement-set environment
+that is mounted **read-only**, which freezes the pip half by construction rather than by intention;
+every verification failure refuses rather than falling back to `pip`. `apt` still runs at run time,
+so this is half the gap, and `notes/production-host/19` says so rather than claiming closure.
+**Adopting it for the fleet is an owner decision** — it changes how every cell runs.
+
+**Item 6, production canary.** Still never run end to end. The 2026-09-08 attempt reached the
+renderer check and stopped there, which is progress on the bootstrap half and no progress on the
+chain itself.

@@ -93,10 +93,33 @@ def main() -> int:
     # while the cell is still running, short enough that it cannot become furniture.
     ap.add_argument("--max-seconds", type=float, required=True,
                     help="hard lifetime; set just beyond the cell's CELL_TIMEOUT_SECONDS")
+    ap.add_argument("--must-cover-seconds", type=float, default=None,
+                    help="refuse to arm unless --max-seconds is at least this long. Pass the cell "
+                         "timeout PLUS the bootstrap allowance: a watch that expires before the "
+                         "work it covers is worse than none, because the operator believes they "
+                         "are covered. Measured 2026-09-08: apt/pip bootstrap alone ran ~2h on the "
+                         "production host, against a 4500s watch -- the GPU phase would have been "
+                         "entirely unwatched.")
+    ap.add_argument("--stop-when-inactive", action="store_true",
+                    help="stand down once --active-file has appeared and then been removed. Never "
+                         "fires if the marker never appeared.")
     ap.add_argument("--floor-mib", type=int, default=2000,
                     help="yield if free memory falls below this, whoever caused it")
     ap.add_argument("--dry-run", action="store_true", help="report the decision, stop nothing")
     args = ap.parse_args()
+    if args.must_cover_seconds is not None and args.max_seconds < args.must_cover_seconds:
+        bar = "!" * 78
+        print(bar)
+        print(f"!! REFUSING TO ARM: --max-seconds {args.max_seconds:.0f} is shorter than the "
+              f"{args.must_cover_seconds:.0f}s this watch must cover.")
+        print(f"!! The watch would end "
+              f"{args.must_cover_seconds - args.max_seconds:.0f}s before the work does, and "
+              f"nothing would be yielding this card for that window.")
+        print("!! Raise --max-seconds, or lower what you claim it must cover. "
+              "Do not run uncovered. (exit 3: budget too short, distinct from "
+              "exit 2 = cannot read the card)")
+        print(bar, flush=True)
+        return 3
 
     baseline = card(args.device)
     if baseline is None:
@@ -111,6 +134,7 @@ def main() -> int:
     print(f"  will yield if a process appears beyond ours, or free memory drops below "
           f"{args.floor_mib} MiB")
     ours_seen = False
+    saw_active = False
     baseline_procs = baseline["procs"]
     started = time.time()
     sentinel_dir = pathlib.Path(args.sentinel).parent
@@ -125,6 +149,18 @@ def main() -> int:
         if not sentinel_dir.is_dir():
             print(f"  {sentinel_dir} no longer exists; the run it guarded is over. Exiting.")
             return 0
+        # [Claude 2026-09-08] Stand down when the cell retracts its marker. Symmetric with the
+        # exclusivity watcher: once our work is off the card there is nothing left to yield, and a
+        # yield daemon that outlives its cell would sit there ready to write a stop-sentinel for a
+        # run that has already ended. Only fires if the marker was ever seen -- a cell that died in
+        # bootstrap must leave the daemon running, because that is when a neighbour is most likely
+        # to arrive and find the card apparently free.
+        if args.stop_when_inactive and args.active_file:
+            active_now = pathlib.Path(args.active_file).exists()
+            saw_active = saw_active or active_now
+            if saw_active and not active_now:
+                print("  the cell retracted its marker; our work is off this card. Standing down.")
+                return 0
         now = card(args.device)
         if now is None:
             time.sleep(args.interval)

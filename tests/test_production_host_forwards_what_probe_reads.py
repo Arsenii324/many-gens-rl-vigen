@@ -35,6 +35,20 @@ def _read_by_probe() -> set[str]:
     return {name for name in names if name.startswith(PREFIXES)}
 
 
+def _derived_by_wrapper() -> set[str]:
+    """Variables the wrapper COMPUTES and injects, rather than passing through from the caller.
+
+    [Claude 2026-09-08] A second legitimate mechanism, and the distinction is load-bearing. A
+    pass-through variable is set by whoever launches the cell; a derived one is set by the wrapper
+    alongside the mount or the fact that makes it true -- `NATIVE_VENV` with the read-only venv
+    mount, `NATIVE_PIP_CACHE` with the cache mount, `NATIVE_IMAGE_DIGEST` from the image the wrapper
+    itself chose. Letting a caller set those would recreate the places365 defect: an environment
+    variable promising a path that nothing mounted. So they must reach the container (checked here)
+    and must NOT be caller-settable (checked below).
+    """
+    return set(re.findall(r'DOCKER_ENV_ARGS\+=\(-e "([A-Z][A-Z0-9_]+)=', WRAPPER.read_text()))
+
+
 def _forwarded_by_wrapper() -> set[str]:
     text = WRAPPER.read_text()
     match = re.search(r"for name in ([A-Z][\s\S]*?); do", text)
@@ -43,7 +57,8 @@ def _forwarded_by_wrapper() -> set[str]:
 
 
 def test_wrapper_forwards_every_variable_the_runner_reads():
-    missing = sorted(_read_by_probe() - _forwarded_by_wrapper() - NOT_FORWARDED)
+    missing = sorted(_read_by_probe() - _forwarded_by_wrapper() - _derived_by_wrapper()
+                     - NOT_FORWARDED)
     assert not missing, (
         "run_on_production_host.sh does not forward these, so they cannot be set on the "
         f"production host: {missing}")
@@ -142,3 +157,52 @@ def test_concurrent_cuda_cells_fail_closed_without_a_device_map():
         "DataSphere packing that is intended")
     assert "repeats a device index" in text, (
         "a device list with duplicates puts two cells on one GPU silently")
+
+
+def test_a_caller_can_never_override_a_variable_the_wrapper_derives():
+    """docker takes the LAST `-e` for a repeated key, so position decides who wins.
+
+    [Claude 2026-09-08] This found a live bug. `NATIVE_PLACES365_DIR` was derived by the wrapper at
+    line ~622 AND accepted from the caller in the pass-through loop at line ~734. The existing guard
+    only refused the variable when `NATIVE_PLACES365_DIR_HOST` was absent, so setting BOTH passed --
+    and the caller's copy, appended later, won. The asset would be mounted at `/opt/places365` while
+    the runner was told to read somewhere else, and because `run_probe.sh` SKIPS the copy-and-extract
+    when this variable is set, svea/sgqn/soda would have looked for Places365 at a path that does not
+    exist. Not a crash; a wrong answer.
+
+    A derived variable may appear in the pass-through list ONLY if the wrapper re-asserts it after
+    the loop, which is how `RECORDS_OUT` is safe.
+    """
+    text = WRAPPER.read_text()
+    loop_at = text.index("for name in CELLS")
+    offenders = []
+    for name in sorted(_derived_by_wrapper() & _forwarded_by_wrapper()):
+        assign_at = text.index(f'DOCKER_ENV_ARGS+=(-e "{name}=')
+        if assign_at < loop_at:
+            offenders.append(name)
+    assert not offenders, (
+        "the wrapper derives these BEFORE the pass-through loop, so a caller's value is appended "
+        f"afterwards and wins: {offenders}")
+
+
+def test_places365_container_path_is_not_caller_settable():
+    """The specific regression, named so it cannot quietly come back."""
+    text = WRAPPER.read_text()
+    loop = text[text.index("for name in CELLS"):text.index("; do", text.index("for name in CELLS"))]
+    assert "NATIVE_PLACES365_DIR " not in loop and not loop.rstrip().endswith("NATIVE_PLACES365_DIR"), (
+        "NATIVE_PLACES365_DIR is back in the pass-through list; the caller can point the runner "
+        "away from the mount")
+    assert 'if [[ -n "${NATIVE_PLACES365_DIR:-}" ]]; then' in text, (
+        "the refusal is conditional again -- setting DIR *and* _HOST together must also be refused")
+
+
+def test_the_venv_variables_are_derived_rather_than_forwarded():
+    """Named explicitly: a future edit moving them into the pass-through list must fail loudly."""
+    derived = _derived_by_wrapper()
+    for name in ("NATIVE_VENV", "NATIVE_IMAGE_DIGEST", "NATIVE_PIP_CACHE"):
+        assert name in derived, (
+            f"{name} is no longer injected by the wrapper, so run_probe.sh reads something the "
+            f"production host never sets")
+        assert name not in _forwarded_by_wrapper(), (
+            f"{name} became caller-settable; a caller could assert it without the mount that makes "
+            f"it true")

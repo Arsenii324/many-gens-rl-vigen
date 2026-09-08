@@ -258,3 +258,39 @@ file over stdin instead, which interprets nothing:
 ssh HOST "cat > /tmp/script.sh" < local_script.sh
 ssh HOST 'bash ~/rlvigen-work/host-run.sh -n name /tmp/script.sh'
 ```
+
+
+## 2026-09-08 evening — launching a cell on a shared card, and what went wrong
+
+**Launch, in one command, detached.** Everything below is what `launch-card-cell.sh` now does, and
+the reason it exists is that doing it by hand got the arithmetic wrong.
+
+```bash
+CARD=0 CELLS=idaac:101 FRAMES=10000 CELL_TIMEOUT_SECONDS=3600 \
+  nohup bash datasphere/native/launch-card-cell.sh payload.tgz result.tgz > run.log 2>&1 &
+```
+
+**Methods that worked and are worth repeating:**
+
+- **`docker exec` into our own container is the honest progress signal**, not `docker logs`. `pip`
+  detects a non-tty and prints only *completed* progress bars, so the log's last bar belongs to the
+  previous wheel and looks frozen for an hour. Use instead:
+  `docker exec C sh -c "cat /proc/net/dev"` twice, 30 s apart — that showed 126 kB/s and settled
+  whether pip was alive. `docker ps -s` layer growth works as a cross-check.
+- **Redirect long host commands to a file on the host and read it back.** `ssh HOST 'cmd | tail'`
+  under an outer `timeout` returns nothing at all: `tail` buffers and the kill discards it. Use
+  `nohup cmd > /tmp/x.log 2>&1 &` then read `/tmp/x.log`.
+- **The bind mounts are what make a failure diagnosable.** The cell container is `--rm`; it was
+  gone before I looked at it. Everything I learned came from `$W/native-out/job.log` and
+  `resolved_packages.json` on the host.
+
+**Traps hit, so the next session does not:**
+
+- `ssh ... | grep -v WARNING` makes `$?` the grep's. An `scp` that printed `rc=1` had in fact
+  succeeded. Capture first, filter second.
+- A watcher container started with `docker run -d` **survives an SSH drop**; the foreground wrapper
+  does not. So an SSH timeout leaves watchers running and the cell unsupervised — the opposite of
+  what you would guess.
+- Files a container writes to a bind mount are **root-owned**, and the host user cannot delete them.
+  `build-env.sh` now `chown`s its output back to the invoking UID for this reason; found when the
+  smoke test could not clean up after itself.

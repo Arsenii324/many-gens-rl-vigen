@@ -175,6 +175,25 @@ the probe exists to separate. Cheaper still as a first cut: render a few fixed-s
 both hosts and compare them directly, which localizes a mismatch to the renderer before any policy
 is blamed.
 
+**What first contact found, 2026-09-08 — the symptom above nearly happened, and not for the
+expected reason.** The first cell to reach the renderer on `cds2` died with
+`RuntimeError: software EGL renderer: llvmpipe (LLVM 15.0.7, 256 bits)`. The host was not going to
+render with a *different NVIDIA driver*; it was going to render on the **CPU**, via Mesa, because
+docker's `--gpus` grants `NVIDIA_DRIVER_CAPABILITIES=compute,utility` and `graphics` — the
+capability that installs `libEGL_nvidia` — had never been set anywhere in this repo. Measured on the
+host, same image and card: default → no `libEGL_nvidia`; `compute,utility,graphics` →
+`libEGL_nvidia.so.580.126.09`. DataSphere had been setting it for us.
+
+Two things this changes about the section above. First, "tractable by construction" is right but
+was incomplete: the image alone does not determine the renderer — the *container runtime
+capabilities* do, and they are a docker default rather than anything in `source-lock.json`. Second,
+the cheap first cut suggested above ("render a few fixed-seed observations on both hosts and compare
+them directly") would have caught this immediately and for almost nothing, which is an argument for
+doing it before the three-step probe rather than after.
+
+The R_A/R_B measurement is still unrun, and this finding does not substitute for it. It shows the
+hazard is real on this host, not that parity now holds.
+
 **Cost of changing later.** Catastrophic if skipped and wrong: the checkpoints would survive a
 renderer mismatch but **every number computed from them would not**. Do it before the fleet.
 

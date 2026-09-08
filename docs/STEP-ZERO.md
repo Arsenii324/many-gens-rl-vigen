@@ -1,5 +1,54 @@
 # Step zero — the practice before any code, and how claims must be shaped to survive
 
+> ## Handoff, 2026-09-08 — the first cells ran on the production host, and what they found was a platform default nobody had written down
+>
+> ### 0. The blocker: a GPU container had CUDA and no NVIDIA EGL
+>
+> The first cell to get past `pip` on `cds2` died after a two-and-a-half hour bootstrap with
+> `RuntimeError: software EGL renderer: llvmpipe (LLVM 15.0.7, 256 bits)`. `llvmpipe` is Mesa CPU
+> rasterisation: the container would have rendered every observation in software — different pixels
+> from every result this project has, and orders of magnitude slower.
+>
+> **Cause:** docker's `--gpus` sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility`. `graphics` is the
+> capability that installs `libEGL_nvidia`, and nothing in this repo had ever set it. Measured on
+> the host, same image and card: default → no `libEGL_nvidia`; `compute,utility,graphics` →
+> `libEGL_nvidia.so.580.126.09`. DataSphere set it for us, so ~200 prior jobs could not have
+> revealed it.
+>
+> **Why this is the entry worth reading.** It was invisible to every static check in the repo, and
+> the only thing that could have found it was running a cell far enough to render. It was caught by
+> `run_probe.sh`'s renderer check — which is the difference between a stopped job and a campaign of
+> results produced by a CPU rasteriser that would have looked entirely ordinary.
+>
+> ### 1. The instruments were monitoring nothing, and nothing was failing
+>
+> Both card watches were armed for 4500 s against an assumed ten-minute bootstrap. The real
+> bootstrap was still running at 51 minutes. They would have stood down an hour before the GPU
+> phase and **exited 0**. Fixed by making the instrument refuse: `--must-cover-seconds` exits 3
+> when the budget is shorter than the declared cover, and `datasphere/native/launch-card-cell.sh`
+> derives the budget and the card index instead of having them typed three times.
+>
+> Two related defects, same shape: the `cell-active` marker was created but never retracted, so a
+> neighbour taking a card we had *vacated* read as a breach; and `NATIVE_PLACES365_DIR` was both
+> derived by the wrapper and accepted from the caller, where docker's last-`-e`-wins meant the
+> caller's value silently redirected the runner away from the mount.
+>
+> ### 2. The environment is rebuilt every cell and nothing survives it
+>
+> Measured: `apt` **71 s**, `pip` **over two hours** (1710 MB at 162–835 kB/s). Training 10k frames
+> is minutes. There are exactly **two** requirement sets across the twelve baselines.
+> `datasphere/native/build-env.sh` builds them once into read-only environments; every verification
+> failure refuses rather than falling back to `pip`. **Adoption is the owner's call.**
+> `notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md`.
+>
+> ### 3. Method notes, because three of tonight's errors were mine and repeated
+>
+> `grep '^FAILED'` matches nothing on pytest's coloured output — I read a red suite as green four
+> times, and twice nearly discarded good tests as uncatching. Strip ANSI first. And an apostrophe
+> inside `${VAR:?...}` or inside a `bash -c '...'` comment is a quote character, not punctuation;
+> the existing guard for this was scoped to one file, so it missed both. Every `*.sh` under
+> `datasphere/native/` is now parsed by `bash -n` as a test.
+
 > ## Handoff, 2026-08-29 — READ THE FIRST ITEM BEFORE TRUSTING A GREEN SUITE
 >
 > ### 0. RESOLVED — the 25 failures were my own test polluting `sys.modules` ([C90](CONSTRUCTION.md#c90))

@@ -128,7 +128,21 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # requires another payload member it did not require before.
 # Bumped to 17 on 2026-09-08: plan_production.py is now a member, because family.py imports it at
 # runtime and the runner therefore requires it.
-RUNNER_CONTRACT = 17
+# Bumped to 18 on 2026-09-08: `run_probe.sh` changed two runtime behaviours the host side must
+# agree with. It now (a) makes `--no-cache-dir` conditional on NATIVE_PIP_CACHE, which only means
+# anything if the host bind-mounts /root/.cache/pip, and (b) REMOVES the `cell-active` marker when
+# the cell exits, which the card watchers read to decide whether the card is still ours. A payload
+# built before this paired with a host script after it would mount a cache the runner ignores; the
+# reverse would leave the marker set forever and re-create the vacated-card false alarm. Neither
+# fails loudly on its own, which is exactly what the contract number is for.
+# Bumped to 19 on 2026-09-08: `run_probe.sh` can now SKIP the pip bootstrap entirely and run
+# against a prebuilt venv, which it does when NATIVE_VENV is set -- and it refuses outright unless
+# NATIVE_IMAGE_DIGEST is also forwarded, because the venv records the image it was built under and
+# an unverifiable record is not the same as a good one. Both variables are set by
+# run_on_production_host.sh and by nothing else, so a payload from before this paired with a host
+# script from after it would mount a read-only venv the runner never activates and then try to pip
+# install into a container that has one -- slow, confusing, and not a crash.
+RUNNER_CONTRACT = 19
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:

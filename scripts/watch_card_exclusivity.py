@@ -84,17 +84,39 @@ def main() -> int:
                     help="how many compute processes are OURS; anything above is a stranger")
     ap.add_argument("--max-seconds", type=float, required=True,
                     help="hard lifetime -- required, so this can never become furniture")
+    ap.add_argument("--stop-when-inactive", action="store_true",
+                    help="stand down once --active-file has appeared and then been removed, i.e. "
+                         "the cell it was watching has finished. Never fires if the marker never "
+                         "appeared: a cell that died during bootstrap leaves the card unwatched, "
+                         "which is when a watch is most needed.")
     ap.add_argument("--active-file",
                     help="path the CELL touches when it starts using the card. Until it exists we "
                          "expect ZERO processes of ours")
+    ap.add_argument("--must-cover-seconds", type=float, default=None,
+                    help="refuse to arm unless --max-seconds is at least this long. Pass the cell "
+                         "timeout PLUS the bootstrap allowance: a watch that expires before the "
+                         "work it covers is worse than none, because the operator believes they "
+                         "are covered. Measured 2026-09-08: apt/pip bootstrap alone ran ~2h on the "
+                         "production host, against a 4500s watch -- the GPU phase would have been "
+                         "entirely unwatched.")
     ap.add_argument("--interval", type=float, default=20.0)
     ap.add_argument("--quiet-ok", action="store_true",
                     help="print the healthy confirmation only when it CHANGES (default: every check)")
     args = ap.parse_args()
+    if args.must_cover_seconds is not None and args.max_seconds < args.must_cover_seconds:
+        say(BANNER)
+        say(f"!! REFUSING TO ARM: --max-seconds {args.max_seconds:.0f} is shorter than the "
+            f"{args.must_cover_seconds:.0f}s this watch must cover.")
+        say(f"!! The watch would end {args.must_cover_seconds - args.max_seconds:.0f}s before the "
+            f"work does, and nothing would be watching the card for that window.")
+        say("!! Raise --max-seconds, or lower what you claim it must cover. Do not run\n!! uncovered. (exit 3: budget too short; exit 2 = cannot read the card.)")
+        say(BANNER)
+        return 3
 
     started = time.time()
     breaches = 0
     checks = 0
+    saw_active = False
     last_ok = None
     say(f"=== CARD {args.device} EXCLUSIVITY WATCH armed: expecting at most {args.expect_ours} "
         f"process(es) of ours, for {args.max_seconds:.0f}s ===")
@@ -103,13 +125,21 @@ def main() -> int:
         now = card(args.device)
         checks += 1
         left = args.max_seconds - (time.time() - started)
+        active = (not args.active_file
+                  or __import__("pathlib").Path(args.active_file).exists())
+        saw_active = saw_active or active
+        if args.stop_when_inactive and saw_active and not active:
+            # Distinct from the timer expiry below ON PURPOSE. That one is an alarm -- cover ended
+            # while work may still be running. This one is the designed end of the watch, and
+            # conflating them would train the reader to skim past both.
+            say(f"=== CARD {args.device} WATCH STANDING DOWN: the cell retracted its marker, so "
+                f"our work is off this card ({checks} checks, {breaches} breach(es) seen). ===")
+            say(f"=== The card is now free for whoever books it next. ===")
+            return 1 if breaches else 0
         if now is None:
             say(f"{BANNER}\n!! CANNOT READ CARD {args.device}. Not knowing is not the same as fine.\n{BANNER}")
             breaches += 1
-        elif now["procs"] > (args.expect_ours
-                             if (not args.active_file
-                                 or __import__("pathlib").Path(args.active_file).exists())
-                             else 0):
+        elif now["procs"] > (args.expect_ours if active else 0):
             breaches += 1
             say(BANNER)
             say(f"!! CARD {args.device} IS NOT OURS ALONE: {now['procs']} compute processes, "

@@ -232,6 +232,17 @@ run_measured() {
   if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
   if [[ -n "$health_pid" ]]; then kill "$health_pid" 2>/dev/null; wait "$health_pid" 2>/dev/null; fi
   if [[ -n "$yield_pid" ]]; then kill "$yield_pid" 2>/dev/null; wait "$yield_pid" 2>/dev/null; fi
+  # [Claude 2026-09-08] Retract the marker. Creating it closed the bootstrap blind spot; never
+  # removing it opened a symmetric one at the other end. After the cell exits, our count returns to
+  # zero but the observers go on expecting one process of ours -- so a neighbour who takes the card
+  # we have just VACATED reads as a breach. That is a false alarm raised at exactly the moment the
+  # card is legitimately theirs, and an instrument that cries wolf once it has stopped mattering is
+  # one an operator learns to ignore. Marker present means a cell is on the card, and now that is
+  # true in both directions.
+  if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
+    rm -f "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
+    echo "=== NATIVE_CELL_ACTIVE_MARKER_CLEARED ===" >&2
+  fi
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"
@@ -1235,7 +1246,7 @@ payload_families="${payload_families%,}"
 # that -- "payload was built for runner contract 14 but this runner needs 13". The check
 # worked; the number was maintained in one place and read in another. Same shape as
 # SAVE_EVERY vs SAVE_EVERY_FRAMES and the curve_eval_episodes duplicate.
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 17 \
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 19 \
   --require-families "$payload_families" \
   --require-evaluator-identity \
   --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'
@@ -1287,6 +1298,65 @@ else
   echo "  at submit time by scripts/audit_submission_configs.py, which this runner has no" >&2
   echo "  equivalent of. Set NATIVE_MEMORY_TIER to check here as well." >&2
 fi
+# [Claude 2026-09-08] PREBUILT ENVIRONMENT. When NATIVE_VENV names a venv mounted read-only, this
+# cell uses it and does no `pip install` at all. Rationale and measurements:
+# notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md -- `apt` is 71s and `pip` is
+# over two hours, so the environment and the run are different lifecycles and rebuilding the former
+# per cell is the whole cost.
+#
+# EVERY MISMATCH IS FATAL. There is deliberately no fallback to `pip`: a fallback would restore the
+# two-hour bootstrap silently, and the only symptom would be the bandwidth bill. Same rule as
+# RUNNER_CONTRACT -- the value lives in two places, and drift stops the job rather than being
+# absorbed by it.
+NATIVE_VENV_DISCIPLINE="off: this cell builds its own environment with pip"
+if [[ -n "${NATIVE_VENV:-}" ]]; then
+  manifest="$NATIVE_VENV/ENVIRONMENT.json"
+  if [[ ! -f "$manifest" ]]; then
+    echo "=== NATIVE_VENV_UNUSABLE no ENVIRONMENT.json at $manifest ===" >&2
+    echo "    NATIVE_VENV names a directory that is not a built environment. Refusing rather than" >&2
+    echo "    falling back to pip, which would hide a broken mount behind two hours of download." >&2
+    exit 3
+  fi
+  if [[ ! -x "$NATIVE_VENV/bin/python3" ]]; then
+    echo "=== NATIVE_VENV_UNUSABLE no interpreter at $NATIVE_VENV/bin/python3 ===" >&2
+    exit 3
+  fi
+  # The venv is keyed to a base image. Only the HOST knows which image it launched, so it tells us,
+  # and we compare against what the build recorded. A venv built under a different image is wrong in
+  # ways that do not announce themselves.
+  venv_image="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("base_image",""))' "$manifest" 2>/dev/null)"
+  if [[ -z "${NATIVE_IMAGE_DIGEST:-}" ]]; then
+    echo "=== NATIVE_VENV_UNVERIFIABLE NATIVE_IMAGE_DIGEST was not forwarded ===" >&2
+    echo "    The venv records the image it was built under; without the image this container is" >&2
+    echo "    running, that record cannot be checked. Unverifiable is not the same as fine." >&2
+    exit 3
+  fi
+  if [[ "$venv_image" != *"$NATIVE_IMAGE_DIGEST"* ]]; then
+    echo "=== NATIVE_VENV_IMAGE_MISMATCH ===" >&2
+    echo "    venv was built under: $venv_image" >&2
+    echo "    this container runs:  $NATIVE_IMAGE_DIGEST" >&2
+    echo "    Binary wheels are built against the image glibc and CUDA. Refusing." >&2
+    exit 3
+  fi
+  # And the requirement set itself, recomputed here rather than trusted from the directory name.
+  want_hash="$(python3 "$FAMILY_TOOL" filtered-requirements --cells "$cells" \
+      --requirements requirements-native.txt 2>/dev/null | sort | sha256sum | cut -c1-8)"
+  venv_hash="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("requirements_sha256_8",""))' "$manifest" 2>/dev/null)"
+  if [[ "$want_hash" != "$venv_hash" ]]; then
+    echo "=== NATIVE_VENV_REQUIREMENTS_MISMATCH ===" >&2
+    echo "    this cell needs requirement set $want_hash; the venv holds $venv_hash." >&2
+    echo "    $cells cannot run in this environment. Build the matching one with build-env.sh." >&2
+    exit 3
+  fi
+  export VIRTUAL_ENV="$NATIVE_VENV"
+  export PATH="$NATIVE_VENV/bin:$PATH"
+  NATIVE_VENV_DISCIPLINE="on: prebuilt $venv_hash under image $NATIVE_IMAGE_DIGEST, pip is not run"
+  echo "=== NATIVE_VENV_DISCIPLINE $NATIVE_VENV_DISCIPLINE ===" >&2
+  python3 -c "import sys; print('    interpreter:', sys.executable)" >&2
+fi
+echo "NATIVE_VENV_DISCIPLINE $NATIVE_VENV_DISCIPLINE"
+
+if [[ -z "${NATIVE_VENV:-}" ]]; then
 python3 -m pip install --upgrade pip
 # [Claude 2026-09-02 10:50 MSK: a family that cannot share a job may also need a base requirement
 # left out. CTRL is a JAX baseline and never imports torch, and jax[cuda12]'s cudnn 9 and torch's
@@ -1299,7 +1369,25 @@ python3 "$FAMILY_TOOL" filtered-requirements --cells "$cells" --requirements req
 # /dev/sda2 that check_disk measures, and the cache buys nothing here because the layer is
 # discarded by `docker run --rm` the moment the cell ends. Dropping it removes 3.0 GB from the
 # peak of every cell on a filesystem that is 99% full and shared.
-python3 -m pip install --no-cache-dir -r /tmp/requirements-for-this-job.txt
+# [Claude 2026-09-08] The flag is now conditional. Without a cache mount the reasoning above holds
+# exactly and --no-cache-dir stays. With NATIVE_PIP_CACHE=1 the host has bind-mounted a persistent
+# /root/.cache/pip, so the 3.0 GB does NOT land in the container layer -- it lands on the host, once,
+# and every later cell resolves the torch CUDA stack from disk instead of re-pulling ~2.5 GB at the
+# 162-835 kB/s this host actually gets. The two branches are printed, because a run that silently chose
+# the slow one would be indistinguishable from a slow network.
+PIP_CACHE_FLAGS=(--no-cache-dir)
+NATIVE_PIP_CACHE_DISCIPLINE="off: --no-cache-dir, wheels re-downloaded every cell"
+if [[ "${NATIVE_PIP_CACHE:-0}" == "1" ]]; then
+  if mkdir -p /root/.cache/pip 2>/dev/null && [[ -w /root/.cache/pip ]]; then
+    PIP_CACHE_FLAGS=()
+    NATIVE_PIP_CACHE_DISCIPLINE="on: /root/.cache/pip is a host bind mount, wheels persist across cells"
+  else
+    NATIVE_PIP_CACHE_DISCIPLINE="REQUESTED but /root/.cache/pip is not writable; falling back to --no-cache-dir"
+  fi
+fi
+echo "NATIVE_PIP_CACHE_DISCIPLINE $NATIVE_PIP_CACHE_DISCIPLINE"
+python3 -m pip install ${PIP_CACHE_FLAGS[@]+"${PIP_CACHE_FLAGS[@]}"} -r /tmp/requirements-for-this-job.txt
+fi   # end: skip the whole pip bootstrap when NATIVE_VENV supplied one
 # [Claude 2026-09-02 20:05 MSK: EXCLUDING A PACKAGE BY NAME DOES NOT EXCLUDE ITS DEPENDANTS.
 # ctrl declared excluded_base_requirements ["torch","torchvision"], and pip installed torch anyway
 # -- as a dependency of captum and kornia, which stayed in the list. With our pin removed it took
@@ -1417,8 +1505,26 @@ provide_rlvigen() {
   clone_rlvigen
 }
 provide_rlvigen
-python3 -m pip install --no-deps -e RL-ViGen-upstream/third_party/robosuite
-python3 -m pip install --no-deps -e RL-ViGen-upstream/envs/robosuiteVGB
+# [Claude 2026-09-08] Baked into the prebuilt environment when there is one. These write an
+# ABSOLUTE path into site-packages, and that path -- /tmp/native-work/RL-ViGen-upstream/... -- is a
+# bind mount whose container-side name is identical on every run, so the pointer baked at build time
+# resolves to each cell's own tree. Against a read-only venv these would fail outright; run against
+# a writable one they would be redundant. Either way the check below is what proves it worked.
+if [[ -z "${NATIVE_VENV:-}" ]]; then
+  python3 -m pip install --no-deps -e RL-ViGen-upstream/third_party/robosuite
+  python3 -m pip install --no-deps -e RL-ViGen-upstream/envs/robosuiteVGB
+fi
+# Proven, not assumed, and in BOTH paths: a baked pointer aimed at a directory this cell did not
+# populate is an ImportError inside a GPU call, which is the worst place to learn about a mount.
+for _mod in robosuite robosuiteVGB; do
+  if ! python3 -c "import $_mod" 2>/dev/null; then
+    echo "=== NATIVE_EDITABLE_IMPORT_FAILED $_mod ===" >&2
+    echo "    NATIVE_VENV=${NATIVE_VENV:-<unset>}; the tree is expected at" >&2
+    echo "    /tmp/native-work/RL-ViGen-upstream. If a prebuilt env is mounted, its baked pointer" >&2
+    echo "    aims there and this cell did not populate it." >&2
+    exit 3
+  fi
+done
 python3 -m pip check
 # [Codex 2026-09-01 10:51 MSK: preserve resolved versions so remote results remain reproducible despite transitive package resolution]
 python3 - <<'PY' > "$out/resolved_packages.json"

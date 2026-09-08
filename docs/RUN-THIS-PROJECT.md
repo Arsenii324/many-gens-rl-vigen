@@ -130,15 +130,62 @@ is unset. Name the card you are entitled to:
 | `none` | CPU-only; the `--gpus` flag is omitted entirely, since `--gpus none` is invalid docker |
 | `all` | every card — only if you own them all |
 
+**The container needs the `graphics` driver capability, and `--gpus` does not give it.** The
+wrapper now sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` (override with
+`NATIVE_DRIVER_CAPABILITIES`). Without it a GPU container has CUDA but no `libEGL_nvidia`, EGL
+falls back to Mesa's `llvmpipe` CPU rasteriser, and every rendered observation is software-produced
+— wrong pixels and far too slow. The first cell on the production host died on exactly this, after
+a two-hour bootstrap, with `RuntimeError: software EGL renderer: llvmpipe`. DataSphere set the
+capability for us, so it stayed invisible until the platform changed.
+
 On a **shared** machine also set `NATIVE_VRAM_CAP_MIB` (e.g. `2048`). It bounds PyTorch's
 reservation so a neighbour's allocation cannot be starved by ours; without it a caching allocator
 grows until something fails, and the process that fails is whichever asks the driver second.
 
 If you already have Places365 extracted somewhere, `NATIVE_PLACES365_DIR_HOST=/path/to/it` mounts
-it read-only instead of copying and expanding ~45 GiB per job.
+it read-only instead of copying and expanding ~45 GiB per job. Set the `_HOST` variable only — the
+script derives the container-side `NATIVE_PLACES365_DIR` itself and refuses a caller-supplied one.
 
-Argument order is `PAYLOAD RESULT [RLVIGEN] [PLACES365]`. Read
-`notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,
+Argument order is `PAYLOAD RESULT [RLVIGEN] [PLACES365]`.
+
+#### On a shared card, prefer the launcher over calling the wrapper directly
+
+```bash
+CARD=0 CELLS=idaac:101 FRAMES=10000 CELL_TIMEOUT_SECONDS=3600 \
+  nohup bash datasphere/native/launch-card-cell.sh payload.tgz result.tgz > run.log 2>&1 &
+```
+
+It runs the card preflight, arms an exclusivity alarm and a cooperative yield daemon, bounds the
+container, and stands everything down afterwards. Every number it needs is **derived** from `CARD`
+and `CELL_TIMEOUT_SECONDS` rather than typed: on 2026-09-08 the same launch done by hand armed both
+watches for 4500 s against a bootstrap that was still running at 51 minutes, so the entire GPU phase
+would have been unwatched while both instruments exited 0. See
+`notes/production-host/18-the-watch-that-would-have-expired-first.md`.
+
+`nohup` matters. `run_on_production_host.sh` is foreground and blocking; an SSH drop sends SIGHUP
+and kills it, while dockerd keeps the container alive — so the cell runs on with nobody retrieving
+its result.
+
+#### Expect the bootstrap to dominate a short cell, and remove it if you run more than one
+
+Every cell installs its environment from scratch inside a container that is then discarded.
+Measured on the production host: `apt` **71 s**, `pip` **over two hours** — 1710 MB of wheels at
+162–835 kB/s, the largest ones slowest (`nvidia_cudnn_cu12`, 731.7 MB, at 161.6 kB/s). Training
+10k frames takes minutes. Two options, in increasing order of benefit:
+
+| variable | effect |
+|---|---|
+| `NATIVE_PIP_CACHE_HOST=~/.cache/pip-rlvigen` | persists the wheels; the first cell still downloads, later ones resolve from disk |
+| `NATIVE_VENV_HOST=~/rlvigen-env/<stack>-<reqhash>-<digest>` | mounts a prebuilt environment **read-only** and skips `pip` entirely |
+
+Build the second with `datasphere/native/build-env.sh` (`CELLS=... PAYLOAD=... NATIVE_IMAGE=...`).
+There are exactly **two** requirement sets across the twelve baselines — eleven share one, `ctrl`
+has the JAX one — so two environments cover the fleet. A mounted environment is verified against the
+base-image digest and the requirement-set hash, and every mismatch **refuses** rather than falling
+back to `pip`, because a silent fallback costs two hours and executes an environment nobody checked.
+Rationale: `notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md`.
+
+Read `notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,
 packing, GPU pinning and the arrival checklist, and `datasphere/native/preflight_production_host.sh`
 runs nine mechanical host checks that must all pass first.
 

@@ -95,9 +95,26 @@ directly before this line was written: no surface said so. Now one does —
 [`RUNNING-ON-PRODUCTION-HOST.md`](RUNNING-ON-PRODUCTION-HOST.md) (the host-arrival order and
 concrete SSH/scp/docker steps) and `datasphere/native/run_on_production_host.sh` (the wrapper that
 builds the `docker run`
-invocation from the same env-vars every `cfg-*.yaml` already sets). Untested end to end — no SSH
-access to the host from this session — every piece is derived from `run_probe.sh`'s own
-already-exercised contract, not invented fresh.
+invocation from the same env-vars every `cfg-*.yaml` already sets).
+
+**2026-09-08 — that wrapper has now been exercised on the real host, and the exercise changed it.**
+The "untested end to end, no SSH access from this session" caveat that used to close this paragraph
+is retired: cells have been launched on `cds2`, and what they exposed is recorded in
+[`production-host/18-the-watch-that-would-have-expired-first.md`](production-host/18-the-watch-that-would-have-expired-first.md)
+and
+[`production-host/19-environment-lifecycle-vs-run-lifecycle.md`](production-host/19-environment-lifecycle-vs-run-lifecycle.md).
+Three things a reader arriving here should know before launching anything:
+
+- **Use `datasphere/native/launch-card-cell.sh`, not the wrapper directly, on a shared card.** It
+  derives the watch budget and the card index rather than having them typed. Done by hand, both
+  card watches were armed for 4500 s against a bootstrap still running at 51 minutes — the GPU
+  phase would have been unwatched and both instruments would have exited 0.
+- **Run it under `nohup`.** The wrapper is foreground and blocking; SIGHUP from an SSH drop kills
+  it while dockerd keeps the container alive. Observed, not theorised.
+- **Build the environment once.** `apt` is 71 s and `pip` is over two hours, per cell, discarded
+  each time. `datasphere/native/build-env.sh` builds two read-only environments that cover all
+  twelve baselines. **Whether to switch the fleet to them is still the owner's call** — it changes
+  how every cell runs — but the mechanism, its refusals and its tests are in place.
 [`PRODUCTION-HOST-RATIFICATION.md`](PRODUCTION-HOST-RATIFICATION.md) is its companion: why the
 wrapper is shaped this way, the four defects fixed on 2026-09-07 (the first of which would have
 killed the 600k canary after a full bootstrap), and the four decisions implemented at my best that

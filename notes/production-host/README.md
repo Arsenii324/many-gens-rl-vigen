@@ -26,6 +26,8 @@ and the specifics are where the harm is.
 | [`14-assets-and-environment-on-a-persistent-host.md`](14-assets-and-environment-on-a-persistent-host.md) | **what is transient and what accumulates** — `--rm` and the EXIT trap free almost everything; the per-cell disk table; the staging directory that was on an unchecked filesystem |
 | [`15-what-fails-when.md`](15-what-fails-when.md) | **the abort ladder, invocation to first gradient step** — what a dry run proves for free, and the memory preflight that used to be skipped for hours |
 | [`17-first-real-cell-plan.md`](17-first-real-cell-plan.md) | **the plan to the first real cell** — why `idaac`, the JAX 75%-preallocation hazard that threatened the neighbour, and the abort criterion at every step |
+| [`18-the-watch-that-would-have-expired-first.md`](18-the-watch-that-would-have-expired-first.md) | **a near-miss with nothing failing** — both card watches were sized to expire before the cell reached the GPU, and both would have exited 0; plus why `--no-cache-dir` was right in its reasoning and wrong in its option set |
+| [`19-environment-lifecycle-vs-run-lifecycle.md`](19-environment-lifecycle-vs-run-lifecycle.md) | **the structural fix behind 18** — `apt` is 71s and `pip` is over two hours, there are exactly TWO requirement sets across twelve baselines, and a read-only prebuilt venv freezes the environment by construction |
 | [`16-host-work-log.md`](16-host-work-log.md) | **what was actually run on cds2, what it cost, the container recipes that worked, mistakes made — and the RAM/VRAM/disk contention arithmetic that blocks the GPU steps** |
 
 ## The rule that comes before the others

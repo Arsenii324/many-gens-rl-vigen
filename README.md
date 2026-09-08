@@ -30,7 +30,19 @@ Generalization baselines on **RL-ViGen robosuite** (Door, Lift).
 >   Running a cell on the production V100 box is
 >   [`notes/RUNNING-ON-PRODUCTION-HOST.md`](notes/RUNNING-ON-PRODUCTION-HOST.md), with its
 >   rationale and open decisions in
->   [`notes/PRODUCTION-HOST-RATIFICATION.md`](notes/PRODUCTION-HOST-RATIFICATION.md).
+>   [`notes/PRODUCTION-HOST-RATIFICATION.md`](notes/PRODUCTION-HOST-RATIFICATION.md). On a card
+>   shared with other people, launch through
+>   [`datasphere/native/launch-card-cell.sh`](datasphere/native/launch-card-cell.sh) rather than
+>   calling the wrapper by hand: it derives the watch budget and the card index instead of having
+>   them typed, arms an exclusivity alarm and a cooperative yield daemon, and bounds the container.
+>   The two notes behind it are
+>   [`notes/production-host/18-the-watch-that-would-have-expired-first.md`](notes/production-host/18-the-watch-that-would-have-expired-first.md)
+>   — a near-miss in which both card watches were sized to expire before the cell reached the GPU
+>   and both would have exited 0 — and
+>   [`notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md`](notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md),
+>   which measures `apt` at 71 s against `pip` at over two hours and replaces the per-cell rebuild
+>   with two read-only prebuilt environments
+>   ([`datasphere/native/build-env.sh`](datasphere/native/build-env.sh)).
 > - **[`docs/RUNNABLE-ORIGINALS.md`](docs/RUNNABLE-ORIGINALS.md)** — Part 1: what runs, what was
 >   changed to make it run, and what the T4 has and has not proved.
 > - **[`setup/SOURCE-BOOTSTRAP.md`](setup/SOURCE-BOOTSTRAP.md)** — reconstruct every ignored source

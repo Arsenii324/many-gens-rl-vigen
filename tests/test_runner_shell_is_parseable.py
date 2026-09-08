@@ -89,3 +89,50 @@ def test_no_condition_tests_emptiness_of_an_already_defaulted_variable():
     assert not dead, (
         "these conditions can never be true, because the variable is defaulted earlier: "
         + "; ".join(dead) + ". Capture whether the caller set it, before the default runs.")
+
+
+# --- the same guarantees, for every shell script in datasphere/native/ ---------------------------
+# [Claude 2026-09-08] `test_no_apostrophe_inside_a_single_quoted_block` above already encoded this
+# trap -- and did not catch it twice on 2026-09-08, because it was scoped to run_probe.sh alone
+# while the apostrophes went into `build-env.sh`. Once in `${PAYLOAD:?...the payload's own tree}`,
+# where an apostrophe is a quote even inside DOUBLE quotes; once in a comment inside a `bash -c '`
+# block, where a comment is not a comment because the outer shell has not tokenised it yet.
+#
+# A guard that names the right defect and looks in one file is not a guard for the codebase. These
+# widen it to every script, so a new one is covered the day it is written rather than the day it
+# breaks.
+#
+# `bash -n` is the load-bearing one: BOTH 2026-09-08 apostrophes were outright syntax errors, so a
+# per-script parse catches them without needing to reason about where quotes open and close. A
+# first attempt here also tried to extract every `-c` block across all scripts and count quotes;
+# it failed on four scripts that `bash -n` accepts, because that extraction cannot tell a
+# deliberate close-reopen toggle from a stray quote. The naive version was deleted rather than
+# tuned -- a lint that cries wolf on correct code gets suppressed, and then it guards nothing.
+
+NATIVE_DIR = pathlib.Path(__file__).resolve().parents[1] / "datasphere" / "native"
+SHELL_SCRIPTS = sorted(NATIVE_DIR.glob("*.sh"))
+
+
+def test_there_are_shell_scripts_to_check():
+    """A glob that silently matches nothing passes every test below."""
+    assert len(SHELL_SCRIPTS) >= 4, [p.name for p in SHELL_SCRIPTS]
+
+
+@pytest.mark.parametrize("script", SHELL_SCRIPTS, ids=lambda p: p.name)
+def test_every_native_shell_script_parses(script):
+    done = subprocess.run(["bash", "-n", str(script)], capture_output=True, text=True)
+    assert done.returncode == 0, f"{script.name} is not valid shell:\n{done.stderr}"
+
+
+@pytest.mark.parametrize("script", SHELL_SCRIPTS, ids=lambda p: p.name)
+def test_no_apostrophe_inside_a_parameter_expansion_message(script):
+    """`${VAR:?the payload's own tree}` is a syntax error even inside double quotes.
+
+    Bash tokenises the expansion body before quote removal, so the apostrophe is a quote character
+    there regardless of the surrounding double quotes. This one cost a whole file parse.
+    """
+    import re
+    for match in re.finditer(r"\$\{[A-Za-z_][A-Za-z0-9_]*:[?=-]([^}]*)\}", script.read_text()):
+        assert "'" not in match.group(1), (
+            f"{script.name}: apostrophe inside ${{VAR:?...}} message {match.group(1)!r} -- this is "
+            f"a syntax error even within double quotes")
