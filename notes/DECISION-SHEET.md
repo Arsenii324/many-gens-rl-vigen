@@ -3288,3 +3288,43 @@ matters more than its host process's exit should say so in its own words — the
 fired at 45 hours on a production cell, where the same block runs and the same threads exist.
 
 **Status: operational, not ratified.**
+
+---
+
+## A58 — the same bug in a second audit, and why only one of them was loud (2026-09-08)
+
+`scripts/audit_observation_geometry.py` reported `never run` for `drqv2` and `drq` minutes after
+both produced records carrying **exactly** the live `rlvigen` revision — verified by computing it
+and comparing: `a9fe0cbf3b3137eae8ec3ec4` on both sides.
+
+`_live_revisions()` called `evaluator_family_revision(family)` against a `(root, family)`
+signature, and `except Exception: continue` turned the `TypeError` into an **empty map**. Every
+record then compared against `None` and was filed as historical.
+
+**This is the identical bug fixed in `audit_attempt_ledger.py` earlier the same day** (A51). I
+wrote the helper twice, and the second copy went unnoticed for hours. What differed was not the
+defect but its visibility:
+
+- In the attempt ledger it **disagreed with another instrument.** `populate_evaluator_ledger.py`
+  asserted ppg's revision was current at the same moment the ledger called it SUPERSEDED. Two
+  instruments contradicting each other is loud, and it is what found the bug.
+- In the geometry audit there was nothing to contradict. A wrong answer came out as `never run` —
+  which is this audit's *ordinary* verdict for a baseline with no evidence yet, and the single
+  distinction the audit exists to make. It looked exactly like normal operation.
+
+**Both now raise instead of swallowing**, and both are covered by a test asserting the live map is
+non-empty and covers all twelve baselines. The geometry audit's `--strict` test was also
+strengthened as a consequence: it plants a contradicting record carrying the **live** revision,
+because a record without one was never produced by the evaluator and cannot speak for the current
+closure.
+
+**The lesson is about the except, not the signature.** `try: … except Exception: continue` around a
+call whose signature can drift converts a crash into a wrong answer. The crash is visible; the
+wrong answer is not, and here it silently erased the evidence five coverage cells had just been run
+to produce. Wherever an instrument computes a comparison basis, failing to compute it must stop the
+instrument — never quietly widen it.
+
+**Result once fixed:** `drqv2` and `drq` read `observed: yes`. The coverage cells (A55) did what
+they were submitted for; the audit was hiding it.
+
+**Status: operational, not ratified.**

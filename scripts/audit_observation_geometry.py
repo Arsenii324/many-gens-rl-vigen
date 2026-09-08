@@ -79,15 +79,27 @@ def _argv_geometry(family: str, baseline: str) -> str:
 
 
 def _live_revisions() -> dict[str, str]:
-    """The current evaluator revision per family, computed from the tree as it stands now."""
+    """The current evaluator revision per baseline, computed from the tree as it stands now.
+
+    [Claude 2026-09-08] This called `evaluator_family_revision(family)` while the signature is
+    `(root, family)`, and `except Exception: continue` swallowed the TypeError -- so the map came
+    back EMPTY and EVERY record compared against `None`. The audit then reported `never run` for
+    baselines whose records carried exactly the live revision: drqv2 and drq were listed as having
+    only historical evidence minutes after producing current evidence.
+
+    The identical bug was written into `audit_attempt_ledger.py` on the same day and found there
+    first, because that instrument disagreed with `populate_evaluator_ledger.py` and the
+    disagreement was visible. Here there was nothing to disagree with, so it read as a quiet
+    "never run" -- which is exactly what this audit is supposed to distinguish from a real one.
+
+    It raises now. A revision that cannot be computed must stop the audit, not silently become a
+    universal mismatch.
+    """
     sys.path.insert(0, str(ROOT / "datasphere" / "native"))
     from evaluator_identity import FAMILY_ALLOWED_BASELINES, evaluator_family_revision
     revisions = {}
     for family, baselines in FAMILY_ALLOWED_BASELINES.items():
-        try:
-            revision = evaluator_family_revision(family)
-        except Exception:  # a family whose members cannot be read is reported, not fatal
-            continue
+        revision = evaluator_family_revision(ROOT, family)
         for baseline in baselines:
             revisions[baseline] = revision
     return revisions
