@@ -3214,3 +3214,37 @@ is no longer wrong hyperparameters, it is that *what runs, what is later said to
 the attestation certifies* can drift apart.
 
 **Status: operational, not ratified.**
+
+---
+
+## A56 — the `gt4i.1` tier has a concurrent-job cap, and it is a production-planning fact (2026-09-08)
+
+Measured, not inferred from documentation. The twelve-cell v197 wave was submitted in one batch.
+Nine of its cells target `gt4i.1` (alda, ctrl, dmc_gb, rlvigen, and the drqv2/drq/curl/sgqn/rad
+coverage cells); the other three are `gt4.1`.
+
+**Seven gt4i.1 cells started. The eighth and ninth — `curl` (`bt13p2166k3dbgjt4hm5`) and `sgqn`
+(`bt145364k8krqvqu86u6`) — went to ERROR in 4 and 2 seconds respectively**, before any container
+existed. No stdout was produced, so `job.sh diagnose` has nothing to read.
+
+It is not a config defect: `drq`, submitted immediately before `curl` from the byte-identical
+template with only `CELLS=` changed, is executing normally. The failures are the last two in
+submission order, which is the signature of a capacity limit rather than of anything about those
+two baselines.
+
+**Why this matters beyond today.** `plan_production.py` schedules the fleet; nothing in it knows
+that the tier will refuse the eighth concurrent job. A production fan-out that assumes twelve
+parallel cells would silently lose the tail — and lose it in the one way that produces no log to
+diagnose. External review 27 §23 flags V100 throughput as a planning unknown; this is the same
+class of unknown one layer up, on the tier that the pre-production waves actually use.
+
+**Handled here by resubmitting the two as slots free**, which costs nothing but wall-clock. Recorded
+so the production plan treats concurrency as a measured constraint rather than an assumption, and
+so the next batch submission checks for instant-ERROR rather than trusting a returned job id.
+
+**A returned job id is not a started job.** `job.sh submit` correctly reported ids for both; the
+jobs were created and then refused. The submission ledger holds them as attempts, which is right —
+they were attempts. Their outcomes are recorded below rather than left NO-OUTCOME, because a job
+that never produced a container will never produce a record either.
+
+**Status: operational, not ratified.**

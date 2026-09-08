@@ -454,3 +454,23 @@ the escape is visible rather than quiet.
 
 The attempt that is *currently running* is never flagged; only a predecessor's unknown outcome
 blocks. Otherwise the gate would be red for the whole duration of every wave.
+
+## Tier concurrency is a measured limit, not an assumption
+
+The DataSphere `gt4i.1` tier refuses the **eighth** concurrent job. Measured on 2026-09-08: the
+twelve-cell v197 wave put nine cells on that tier, seven started, and the eighth and ninth went to
+ERROR in 4 and 2 seconds — before any container existed, so there is no stdout to diagnose and
+`job.sh diagnose` reports "no stdout.log downloaded".
+
+Two consequences for anyone submitting a batch:
+
+- **A returned job id is not a started job.** `job.sh submit` reports an id for a job that is
+  created and then refused. Check status a minute after a batch; an ERROR with a sub-10-second
+  runtime and no log is this, not a code fault.
+- **Do not plan a fan-out wider than the tier accepts.** `plan_production.py` does not model tier
+  concurrency. Stage submissions, or expect to lose the tail silently.
+
+This is the pre-production tier. The production V100 host is a different machine with its own
+limits, and its concurrency is governed by `NATIVE_CELL_DEVICES` and the GPU count instead — see
+the packing refusal above, which fails closed for the same reason.
+

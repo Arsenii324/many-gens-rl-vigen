@@ -1,6 +1,14 @@
 {
   "bt12q2bfbiih2lb43obp": {
-    "state": "FAILED-TRAIN",
-    "reason": "A52: ctrl's three-frame stack could not build. flax ScopeParamShapeError, kernel (3,3,3,16) vs (3,3,9,16) in /encoder//conv2d_0 -- three call sites initialised Flax parameters from a hardcoded (64,64,3). Died 2:38 into the cell. Superseded by bt1d8jicbkdu1jv87ogp."
+    "reason": "A52: ctrl's three-frame stack could not build. flax ScopeParamShapeError, kernel (3,3,3,16) vs (3,3,9,16) in /encoder//conv2d_0 -- three call sites initialised Flax parameters from a hardcoded (64,64,3). Died 2:38 into the cell. Superseded by bt1d8jicbkdu1jv87ogp.",
+    "state": "FAILED-TRAIN"
+  },
+  "bt13p2166k3dbgjt4hm5": {
+    "reason": "A56: refused by the gt4i.1 concurrency cap 4s after creation, before any container existed; no stdout to diagnose. Eighth concurrent gt4i.1 cell of the v197 batch. Resubmitted when a slot freed.",
+    "state": "CANCELLED"
+  },
+  "bt145364k8krqvqu86u6": {
+    "reason": "A56: refused by the gt4i.1 concurrency cap 2s after creation, ninth concurrent gt4i.1 cell of the v197 batch. Resubmitted when a slot freed.",
+    "state": "CANCELLED"
   }
 }
