@@ -98,7 +98,7 @@ def _launcher_flag(family: str, flag: str) -> str | None:
         return None
     text = path.read_text()
     match = re.search(rf"{re.escape(flag)}[= ]+([^\s\\]+)", text)
-    return match.group(1).strip("'\"") if match else None
+    return match.group(1).strip("'\",;") if match else None
 
 
 def _rlvigen_cfg(baseline: str, key: str) -> str | None:
@@ -144,6 +144,17 @@ def _argparse_default(relpath: str, flag: str) -> str | None:
     match = re.search(rf"add_argument\(\s*['\"]{re.escape(flag)}['\"][^)]*?default\s*=\s*([^,)]+)",
                       text, re.S)
     return match.group(1).strip().strip("'\"") if match else None
+
+
+#: Where a mechanism genuinely does not exist, rather than being unfound. `ppg` has NO gradient
+#: clipping anywhere in `phasic_policy_gradient/` -- grep-verified, zero hits -- while its three
+#: PPO-family siblings all clip at 0.5. Rendering that as a blank would read as "not determined",
+#: which is a different and weaker claim than the true one, and it is exactly the claim this file
+#: exists to stop being made by omission.
+ABSENT = {
+    ("ppg", "max grad norm"): "**none** <sub>no clipping mechanism exists</sub>",
+    ("ppg", "epochs"): "E_pi 1, E_V 1, E_aux 6 <sub>train_fn defaults, not CLI-reachable</sub>",
+}
 
 
 def _cell(value, origin: str) -> str:
@@ -199,6 +210,81 @@ def resolve(baseline: str, key: str) -> tuple[str | None, str]:
     return None, ""
 
 
+
+#: The on-policy four, and the axes `docs/FAITHFULNESS.md` section 4 states wrongly. Each cell says
+#: where the value comes from, because "declared in families.json" and "the clone's own default"
+#: are different claims and section 4 conflates them.
+ONPOLICY = ("idaac", "ppg", "ibac_sni", "ctrl")
+
+#: (label, families.json key or None, launcher flag or None, (relpath, reader, name) fallback)
+ONPOLICY_AXES = (
+    ("entropy coef", {"idaac": "entropy_coef", "ppg": "entcoef"},
+     {"ibac_sni": "--entropy-coef"},
+     {"ctrl": ("runnable/ctrl/train_ppo.py", "absl", "entropy_coeff")}),
+    ("epochs", {"idaac": "ppo_epoch"}, {},
+     {"ibac_sni": ("runnable/ibac_sni/torch_rl/scripts/train.py", "argparse", "--epochs"),
+      "ctrl": ("runnable/ctrl/train_ppo.py", "absl", "epoch_ppo")}),
+    ("minibatches", {"idaac": "num_mini_batch", "ppg": "nminibatch", "ctrl": "n_minibatch"}, {},
+     {"ibac_sni": ("runnable/ibac_sni/torch_rl/scripts/train.py", "argparse", "--batch-size")}),
+    ("max grad norm", {"ctrl": "max_grad_norm"}, {},
+     {"idaac": ("runnable/idaac/ppo_daac_idaac/arguments.py", "argparse", "--max_grad_norm"),
+      "ibac_sni": ("runnable/ibac_sni/torch_rl/scripts/train.py", "argparse", "--max-grad-norm")}),
+)
+
+
+def _rollout(baseline: str) -> str:
+    """procs x per-proc steps, base and v100, because they differ for two families."""
+    fam = FAMILY_OF[baseline]
+    pairs = {"idaac": ("num_processes", "num_steps"), "ppg": ("num_envs", "nstep"),
+             "ibac_sni": ("procs", "frames_per_proc"), "ctrl": ("num_envs", "n_steps")}[baseline]
+    out = []
+    for profile in (None, "v100"):
+        c = (_resolved(fam, profile) if profile else _resolved(fam)).get("constants", {}) or {}
+        try:
+            a, b = int(c[pairs[0]]), int(c[pairs[1]])
+        except (KeyError, ValueError):
+            return "&mdash;"
+        out.append(f"{a}x{b}={a * b}")
+    return out[0] if out[0] == out[1] else f"{out[0]} &rarr; **{out[1]}**"
+
+
+def render_onpolicy() -> list[str]:
+    fams = _families()
+    rows = []
+    for baseline in ONPOLICY:
+        cells = [f"`{baseline}`", _rollout(baseline)]
+        for _label, declared, launcher, fallback in ONPOLICY_AXES:
+            value, origin = None, ""
+            if baseline in declared:
+                entry = fams[FAMILY_OF[baseline]]
+                key = declared[baseline]
+                tpl = json.dumps(entry.get("options", [])) + json.dumps(entry.get("positional", []))
+                if key in (entry.get("constants") or {}):
+                    value = entry["constants"][key]
+                    origin = "descriptor" if "{" + key + "}" in tpl else "declared, inert"
+            if value is None and baseline in launcher:
+                found = _launcher_flag(FAMILY_OF[baseline], launcher[baseline])
+                if found is not None:
+                    value, origin = found, "launcher"
+            if value is None and baseline in fallback:
+                relpath, kind, name = fallback[baseline]
+                found = (_absl_default(relpath, name) if kind == "absl"
+                         else _argparse_default(relpath, name))
+                if found is not None:
+                    value, origin = found, "default"
+            override = ABSENT.get((baseline, _label))
+            cells.append(override if (value is None and override) else _cell(value, origin))
+        rows.append(cells)
+
+    head = ("baseline", "rollout (base &rarr; v100)") + tuple(a[0] for a in ONPOLICY_AXES)
+    return ["", "**The on-policy four.** These are the axes this file's section 4 states wrongly;",
+            "the values there describe the retired `rlgen/` port or a pre-IDAAC-C2 recipe.",
+            "`declared, inert` means the key is in `families.json` and no template references it,",
+            "so the clone's own default is what runs -- a distinction section 4 does not draw.", "",
+            "| " + " | ".join(head) + " |",
+            "|" + "|".join(["---"] * len(head)) + "|"] +            ["| " + " | ".join(r) + " |" for r in rows]
+
+
 def render() -> str:
     fams = _families()
     rows = []
@@ -237,6 +323,7 @@ def render() -> str:
            "| " + " | ".join(head) + " |",
            "|" + "|".join(["---"] * len(head)) + "|"]
     out += ["| " + " | ".join(r) + " |" for r in rows]
+    out += render_onpolicy()
     out += ["", END]
     return "\n".join(out)
 

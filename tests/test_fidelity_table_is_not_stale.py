@@ -44,3 +44,21 @@ def test_the_block_actually_carries_the_values_that_went_stale():
     assert "| `idaac` | `idaac` | 3e-4" in block, "idaac's lr should read 3e-4 (IDAAC-C2), not 5e-4"
     assert "`procs` 1&rarr;16" in block, "ibac_sni's v100 overlay is what production actually runs"
     assert block.count("| 3 |") >= 12, "all twelve stack 3 frames since A40-REVISED-2"
+
+
+def test_the_onpolicy_block_carries_the_values_section_4_states_wrongly():
+    text = (ROOT / "docs" / "FAITHFULNESS.md").read_text()
+    block = text.split("<!-- BEGIN GENERATED")[1].split("<!-- END GENERATED -->")[0]
+    # rollout: section 4 says idaac 256 and ppg 8x256; IDAAC-C2 and A36 made both 1x2048.
+    assert "1x2048=2048" in block
+    # the two v100 overrides must be visible as overrides, not folded into one number
+    assert "16x128=2048" in block, "ibac_sni's production rollout is procs=16, not the base 1x128"
+    assert "64x256=16384" in block, "ctrl's production rollout is num_envs=64"
+    # ABSENT must not render as a blank: 'no mechanism' and 'not determined' are different claims
+    assert "no clipping mechanism exists" in block, (
+        "ppg has NO gradient clipping while its three PPO siblings clip at 0.5; a blank would "
+        "read as 'not determined', which is a weaker and different claim")
+    # a declared-but-unreferenced constant must say so rather than look like an override
+    assert "declared, inert" in block, (
+        "ctrl's max_grad_norm is in families.json and referenced by no template, so the clone's "
+        "own default is what runs -- section 4 does not draw that distinction")

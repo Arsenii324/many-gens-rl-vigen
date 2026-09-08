@@ -31,6 +31,18 @@ rather than compromising it.
 | `ibac_sni` | `ibac_sni` | 0.0005 <sub>descriptor</sub> | 0.99 <sub>default</sub> | 3 | 64 | terminal | raw | `procs` 1&rarr;16 |
 | `ctrl` | `ctrl` | 5e-4 <sub>default</sub> | 0.999 <sub>default</sub> | 3 | 64 | terminal | normalised | `num_envs` 16&rarr;64 |
 
+**The on-policy four.** These are the axes this file's section 4 states wrongly;
+the values there describe the retired `rlgen/` port or a pre-IDAAC-C2 recipe.
+`declared, inert` means the key is in `families.json` and no template references it,
+so the clone's own default is what runs -- a distinction section 4 does not draw.
+
+| baseline | rollout (base &rarr; v100) | entropy coef | epochs | minibatches | max grad norm |
+|---|---|---|---|---|---|
+| `idaac` | 1x2048=2048 | 0 <sub>descriptor</sub> | 10 <sub>descriptor</sub> | 32 <sub>descriptor</sub> | 0.5 <sub>default</sub> |
+| `ppg` | 1x2048=2048 | 0 <sub>descriptor</sub> | E_pi 1, E_V 1, E_aux 6 <sub>train_fn defaults, not CLI-reachable</sub> | 32 <sub>descriptor</sub> | **none** <sub>no clipping mechanism exists</sub> |
+| `ibac_sni` | 1x128=128 &rarr; **16x128=2048** | 0.0 <sub>launcher</sub> | 4 <sub>default</sub> | 256 <sub>default</sub> | 0.5 <sub>default</sub> |
+| `ctrl` | 16x256=4096 &rarr; **64x256=16384** | 0.01 <sub>default</sub> | 3 <sub>default</sub> | 8 <sub>descriptor</sub> | 0.5 <sub>declared, inert</sub> |
+
 <!-- END GENERATED -->
 
 > ## READ §5 FIRST — it is the current triage; §0–§4 are the analysis it triages
