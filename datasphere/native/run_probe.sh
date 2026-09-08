@@ -1381,7 +1381,25 @@ if cells_need_places365 "$cells"; then
   # `train` the loader correctly resolves to the train root and this check then failed it --
   # "loader selected .../train, expected .../val". The check is right to exist; it was asserting
   # the wrong partition.
-  python3 - "$dataset_root/places365_standard/$places_split" <<'PY'
+  # [Claude 2026-09-08, A57] The VERDICT is a printed marker, not the interpreter's exit code.
+  #
+  # Job bt1jmirrveqa3p8lnru5 died here after everything it checks had already passed: the split
+  # resolved, check-asset passed, `NATIVE_PLACES365_LOADER split=train` was stamped and
+  # `Loaded dataset from /tmp/native-work/places365-root` printed. Then:
+  #
+  #   terminate called without an active exception
+  #   Aborted (core dumped)
+  #
+  # That is a C++ std::terminate at interpreter teardown -- a thread from torch/MuJoCo/EGL not
+  # joined at exit -- and it happens AFTER the comparison this block exists to make. The identical
+  # block succeeded in the previous wave (bt1tjqjmpcnicb6ih739), so it is a race, not a regression.
+  #
+  # Killing a completed 100-minute cell over a teardown race is the wrong trade, and simply
+  # ignoring the exit code would also ignore a real mismatch. So the check reports itself: the
+  # RuntimeError below prevents the marker, and the shell requires the marker. A genuine
+  # wrong-split failure still stops the job; a crash during exit no longer does.
+  places_verdict="$work/places365-loader-verdict.txt"
+  python3 - "$dataset_root/places365_standard/$places_split" > "$places_verdict" 2>&1 <<'PY' || true
 import pathlib
 import sys
 import utils
@@ -1391,7 +1409,14 @@ actual = pathlib.Path(utils.places_dataloader.dataset.root).resolve()
 expected = pathlib.Path(sys.argv[1]).resolve()
 if actual != expected:
     raise RuntimeError(f'Places365 loader selected {actual}, expected {expected}')
+print("NATIVE_PLACES365_LOADER_VERIFIED", actual, flush=True)
 PY
+  if ! grep -q "NATIVE_PLACES365_LOADER_VERIFIED" "$places_verdict"; then
+    echo "REFUSING: the Places365 loader did not verify against $places_split." >&2
+    sed -n '1,40p' "$places_verdict" >&2
+    exit 3
+  fi
+  grep -h "NATIVE_PLACES365_LOADER_VERIFIED" "$places_verdict" >&2
 fi
 # [Claude 2026-09-02 00:50 MSK: BASELINES runs several RL-ViGen agents in one job. They share one
 # bootstrap, one dependency closure and one machine, so a three-baseline job costs one bootstrap

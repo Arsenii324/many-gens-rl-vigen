@@ -54,6 +54,27 @@ def test_the_final_assertion_names_the_configured_partition():
     assert '- "$dataset_root/places365_standard/val" <<' not in block
 
 
+def test_the_loader_check_reports_a_verdict_rather_than_an_exit_code():
+    """A57: a teardown crash must not kill a cell whose check already passed.
+
+    Job bt1jmirrveqa3p8lnru5 died here after the split resolved, check-asset passed and the dataset
+    loaded — with `terminate called without an active exception` / `Aborted (core dumped)`. That is
+    std::terminate at interpreter exit, after the comparison this block exists to make, and the
+    identical block had succeeded in the previous wave. Killing a completed cell over a teardown
+    race is the wrong trade; ignoring the exit code outright would also ignore a real mismatch.
+
+    So the check prints its own verdict and the shell requires it: the RuntimeError prevents the
+    marker, a crash during exit does not.
+    """
+    block = _places_block()
+    assert "NATIVE_PLACES365_LOADER_VERIFIED" in block, (
+        "the loader check must state its own result, not rely on the interpreter's exit status")
+    assert "REFUSING: the Places365 loader did not verify" in block, (
+        "an absent verdict must still refuse -- otherwise the check cannot fail at all")
+    assert 'raise RuntimeError(f\'Places365 loader selected' in block, (
+        "the mismatch must still raise, so a wrong split cannot print the marker")
+
+
 def test_both_layouts_are_accepted_for_whichever_split_is_consumed():
     """Generalised from `train` to `$places_split` on 2026-09-08.
 

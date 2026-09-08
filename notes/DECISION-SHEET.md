@@ -3248,3 +3248,43 @@ they were attempts. Their outcomes are recorded below rather than left NO-OUTCOM
 that never produced a container will never produce a record either.
 
 **Status: operational, not ratified.**
+
+---
+
+## A57 — a teardown race killed a cell whose check had already passed (2026-09-08)
+
+`dmc_gb`/`soda`, job `bt1jmirrveqa3p8lnru5`, ERROR. Everything the failing block exists to check
+had already succeeded, in the log, in order:
+
+    === NATIVE_PLACES365_LOADER split=train rlvigen_workers=8 dmc_gb_workers=16 ===
+    Loading train partition of places365_standard...
+    Loaded dataset from /tmp/native-work/places365-root
+    terminate called without an active exception
+    Aborted (core dumped)
+
+The split resolved, `check-asset` passed on the train tree, the loader rooted correctly. Then the
+interpreter aborted at **exit** — `std::terminate` with no active exception is a C++ thread not
+joined at teardown, from torch, MuJoCo or EGL. The comparison this block makes had already
+happened. The identical block succeeded in the previous wave (`bt1tjqjmpcnicb6ih739`), so it is a
+race, not a regression from anything changed since.
+
+**Neither obvious response is right.** Killing a completed cell over a teardown race throws away
+the run; adding `|| true` throws away the check, and this is the check external review 24's finding
+turned into the thing that catches a wrong split.
+
+**So the check states its own verdict.** It prints `NATIVE_PLACES365_LOADER_VERIFIED` on success
+and the shell requires that marker; the `RuntimeError` on a mismatch prevents the marker from ever
+being printed. A genuine wrong-split failure still stops the job. A crash during interpreter exit
+no longer does.
+
+**The general form, which is why this is worth an entry.** An exit code conflates *what a check
+concluded* with *whether the process that ran it exited cleanly*. Those are different facts, and
+where a check runs inside a process with native threads they come apart. Any check whose verdict
+matters more than its host process's exit should say so in its own words — the same reason
+`populate_evaluator_ledger.py` asserts rather than returning a status, and the same reason
+`refresh_clone_patches.py --check` returning 1 mattered.
+
+**Cost**: one soda cell, ~100 minutes, resubmitted. Cheap for a defect that would otherwise have
+fired at 45 hours on a production cell, where the same block runs and the same threads exist.
+
+**Status: operational, not ratified.**
