@@ -233,7 +233,6 @@ RLVIGEN_ARCHIVE_HOST="${3:-}"
 # third argument is then never read.
 PLACES365_ARCHIVE_HOST="${4:-}"
 
-[[ -f "$CODE" ]] || { echo "no such payload archive: $CODE" >&2; exit 2; }
 [[ -z "$RLVIGEN_ARCHIVE_HOST" || -f "$RLVIGEN_ARCHIVE_HOST" ]] || {
   echo "no such RL-ViGen archive: $RLVIGEN_ARCHIVE_HOST" >&2; exit 2; }
 [[ -z "$PLACES365_ARCHIVE_HOST" || -f "$PLACES365_ARCHIVE_HOST" ]] || {
@@ -380,6 +379,13 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
     fi
   fi
 fi
+
+# [Claude 2026-09-08] Argument validation sits HERE: after the zero-cost configuration refusals
+# above and before anything that starts a container. A config error must be reportable without a
+# payload at all -- you should not need a valid archive to be told NATIVE_PRODUCTION is missing --
+# while a missing payload is a stat() and should not wait on `docker info` and a helper container.
+# Put earlier it broke the first property; left where it was it broke the second.
+[[ -f "$CODE" ]] || { echo "no such payload archive: $CODE" >&2; exit 2; }
 
 # Disk. A production cell needs far more than its checkpoints: the RL-ViGen five keep their replay
 # as episode files on disk under the run directory, capped at families.json's replay_capacity of
@@ -607,7 +613,7 @@ fi
 DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
                    -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"
                    -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work"
-                   "${PLACES365_RO_ARGS[@]}")
+                   ${PLACES365_RO_ARGS[@]+"${PLACES365_RO_ARGS[@]}"})
 i=1
 while true; do
   var="EXTRA_MOUNT_$i"
@@ -693,17 +699,17 @@ if [[ -n "${NATIVE_HOST_DRY_RUN:-}" ]]; then
   echo "image:  $IMAGE"
   echo "gpus:   ${DOCKER_GPUS}$([[ "$DOCKER_GPUS" == "none" ]] && echo '  (--gpus omitted entirely; the container sees no /dev/nvidia*)')"
   echo "mounts: ${#DOCKER_MOUNT_ARGS[@]} argument(s)"
-  printf '        %s\n' "${DOCKER_MOUNT_ARGS[@]}"
+  printf '        %s\n' ${DOCKER_MOUNT_ARGS[@]+"${DOCKER_MOUNT_ARGS[@]}"}
   echo "env:    ${#DOCKER_ENV_ARGS[@]} argument(s)"
-  printf '        %s\n' "${DOCKER_ENV_ARGS[@]}"
+  printf '        %s\n' ${DOCKER_ENV_ARGS[@]+"${DOCKER_ENV_ARGS[@]}"}
   echo
   echo "would run: docker run --rm --name $CONTAINER_NAME ${DOCKER_GPU_ARGS[*]} \\"
   echo "             <mounts> <env> -e MUJOCO_GL=egl -w /work $IMAGE bash -c '<bootstrap+probe>'"
   exit 0
 fi
 
-docker run --rm --name "$CONTAINER_NAME" "${DOCKER_GPU_ARGS[@]}" \
-  "${DOCKER_MOUNT_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" \
+docker run --rm --name "$CONTAINER_NAME" ${DOCKER_GPU_ARGS[@]+"${DOCKER_GPU_ARGS[@]}"} \
+  ${DOCKER_MOUNT_ARGS[@]+"${DOCKER_MOUNT_ARGS[@]}"} ${DOCKER_ENV_ARGS[@]+"${DOCKER_ENV_ARGS[@]}"} \
   -e DEBIAN_FRONTEND=noninteractive -e TZ=Etc/UTC \
   -e MUJOCO_GL=egl \
   -w /work \

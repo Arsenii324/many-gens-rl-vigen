@@ -50,7 +50,22 @@ HELPER_IMAGE="${NATIVE_HELPER_IMAGE:-python:3.11-slim}"
 helper_python() {
   docker run --rm -v "$PWD:/repo:ro" -w /repo "$HELPER_IMAGE" python3 "$@" 2>/dev/null
 }
-IMAGE="$(helper_python -c "import json,pathlib; print(json.loads(pathlib.Path('datasphere/native/source-lock.json').read_text())['container_image'])")"
+# [Claude 2026-09-08, second pass] Read with `sed`, not through a container.
+#
+# Routing this through helper_python made a check that is decidable on ANY machine depend on a
+# working docker daemon -- so on a host where docker is down, the preflight could no longer report
+# whether source-lock even pins an image, which is exactly the diagnosis an operator needs at that
+# moment. `test_preflight_script_is_valid_and_fails_closed` caught it.
+#
+# Extracting one string from JSON with sed is a small python-unrelated action, which the host rules
+# permit. The shape is then VALIDATED, because a sed that silently matches nothing would set IMAGE
+# empty and the check below would report "no image pinned" for a parsing failure.
+IMAGE="$(sed -n 's/.*"container_image"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+  datasphere/native/source-lock.json 2>/dev/null | head -1)"
+if [[ -n "$IMAGE" && ! "$IMAGE" =~ @sha256:[0-9a-f]{64}$ ]]; then
+  note "source-lock's container_image does not end in a sha256 digest: ${IMAGE}"
+  note "  a tag is mutable; C95 needs the digest or the comparison is not platform-only"
+fi
 if [[ -n "$IMAGE" ]]; then
   ok "source-lock pins an image: ${IMAGE:0:60}..."
 else
@@ -102,7 +117,20 @@ if [[ -n "$REQUIRED" && -n "$FREE" ]]; then
     note "  python3 datasphere/native/family.py disk-requirement --cells $CELLS --frames $FRAMES"
   fi
 else
-  bad "could not compute the disk requirement"
+  # [Claude 2026-09-08] Say so, and say "disk:" so the line is findable. This read "could not
+  # compute the disk requirement" -- true, but it dropped the label every other disk line carries,
+  # so anyone grepping the output for the disk verdict found nothing and could read that as the
+  # check having passed. REQUIRED now comes from a helper CONTAINER, so on a host where docker is
+  # down this cannot be computed at all; an instrument that cannot run must never look like one
+  # that ran, and must not vanish from the report either. REQUIRED comes from a helper CONTAINER, so on a host where docker
+  # is down this cannot be computed -- and a check that silently disappears from the output reads,
+  # to anyone counting lines, as a check that was not needed. The rule this project keeps
+  # relearning is that an instrument which cannot run must never look like one that ran.
+  bad "disk: NOT CHECKED -- the requirement could not be computed"
+  if [[ -z "$REQUIRED" ]]; then
+    note "family.py disk-requirement runs in a helper container; docker must work first"
+  fi
+  [[ -n "$FREE" ]] || note "df reported no free space for $PWD"
 fi
 
 # 7. RAM, against the same model check_memory enforces at run time.

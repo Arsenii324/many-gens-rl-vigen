@@ -29,6 +29,21 @@ def _stub_docker(tmp_path: pathlib.Path, log_path: pathlib.Path) -> pathlib.Path
     docker = fake_bin / "docker"
     docker.write_text(
         "#!/usr/bin/env bash\n"
+        # [Claude 2026-09-08] The wrapper now makes THREE kinds of docker call, not one, and a stub
+        # that logs argv and returns nothing breaks two of them:
+        #   `docker info`            -- the daemon-reachability check
+        #   `docker run <helper>`    -- helper_python, which must PRINT a value on stdout
+        #   `docker run <image>`     -- the real cell, whose argv is what these tests inspect
+        # Emulate the first two and fall through to the third, so the argv log still holds the run
+        # under test rather than whichever call happened last.
+        'if [[ "$1" == "info" ]]; then exit 0; fi\n'
+        'for arg in "$@"; do\n'
+        '  case "$arg" in\n'
+        '    *source-lock.json*) echo "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:'
+        '94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000"; exit 0;;\n'
+        '    *disk-requirement*)  echo 5; exit 0;;\n'
+        '  esac\n'
+        'done\n'
         f'printf \'%s\\n\' "$@" > "{log_path}"\n'
         'mkdir -p "$(dirname "${@: -1}")" 2>/dev/null || true\n'
         # Find the -v host:/work mount and drop the expected output files there, so the
@@ -62,6 +77,12 @@ def test_builds_correct_docker_invocation_with_extra_mount(tmp_path):
     fake_bin = _stub_docker(tmp_path, log_path)
     env = {
         "PATH": f"{fake_bin}:/usr/bin:/bin",
+        # [Claude 2026-09-08] Both are now MANDATORY before the wrapper reaches any other
+        # guard: an unnamed GPU and an uncapped VRAM request are each refused first, on
+        # purpose, since they cost nothing to check and protect a co-tenant. Each test
+        # below asserts a LATER refusal, so it has to get past these two.
+        "DOCKER_GPUS": '"device=0"',
+        "NATIVE_VRAM_CAP_MIB": "2048",
         "CELLS": "drqv2:2",
         "FRAMES": "100000",
         "TASK": "Door",
@@ -83,7 +104,13 @@ def test_builds_correct_docker_invocation_with_extra_mount(tmp_path):
     joined = " ".join(argv)
 
     assert "run" in argv and "--rm" in argv
-    assert "--gpus" in argv and "all" in argv
+    # [Claude 2026-09-08] This asserted `"all" in argv` -- the default that was REMOVED, because on
+    # a machine under a per-day GPU assignment it claimed every card including a neighbour's. The
+    # test encoded the hazard as the contract. It now asserts the named card reaches docker, and
+    # that the old default is NOT silently back.
+    assert "--gpus" in argv, "the named card must reach docker"
+    assert '"device=0"' in argv, f"DOCKER_GPUS must be passed through verbatim: {argv[:8]}"
+    assert "all" not in argv, "the removed --gpus all default must not reappear"
     assert "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:" in joined
     assert f"{snapshot}:/work/snap.pt:ro" in argv
     assert "OFFLINE_EVAL_SNAPSHOT=/work/snap.pt" in argv
@@ -110,9 +137,16 @@ def test_builds_correct_docker_invocation_with_extra_mount(tmp_path):
 
 def test_refuses_a_missing_payload(tmp_path):
     missing = tmp_path / "no-such-payload.tgz"
+    # [Claude 2026-09-08] The two now-mandatory variables and a docker stub, because the payload
+    # check sits after the configuration refusals and the daemon check. It is still BEFORE anything
+    # that starts a container for real work, which is the property that matters: a typo in a path
+    # is diagnosed as a typo, not as a docker problem.
+    fake_bin = _stub_docker(tmp_path, tmp_path / "argv.txt")
     result = subprocess.run(
         ["bash", str(SCRIPT), str(missing), str(tmp_path / "result.tgz")],
         capture_output=True, text=True, cwd=str(ROOT),
+        env={"PATH": f"{fake_bin}:/usr/bin:/bin",
+             "DOCKER_GPUS": '"device=0"', "NATIVE_VRAM_CAP_MIB": "2048"},
     )
     assert result.returncode != 0
     assert "no such payload archive" in result.stderr
@@ -126,7 +160,10 @@ def test_production_scale_refuses_without_native_production(tmp_path):
     """
     code = tmp_path / "payload.tgz"
     code.write_text("payload")
-    env = {"PATH": "/usr/bin:/bin", "FRAMES": "600000", "NATIVE_HOST_PROFILE": "v100"}
+    env = {"PATH": f"{_stub_docker(tmp_path, tmp_path / 'argv.txt')}:/usr/bin:/bin",
+           "FRAMES": "600000", "NATIVE_HOST_PROFILE": "v100",
+           # Mandatory as of 2026-09-08 and refused FIRST; this test asserts a later refusal.
+           "DOCKER_GPUS": '"device=0"', "NATIVE_VRAM_CAP_MIB": "2048"}
     result = subprocess.run(
         ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
         capture_output=True, text=True, env=env, cwd=str(ROOT),
@@ -138,7 +175,9 @@ def test_production_scale_refuses_without_native_production(tmp_path):
 def test_production_scale_refuses_without_host_profile(tmp_path):
     code = tmp_path / "payload.tgz"
     code.write_text("payload")
-    env = {"PATH": "/usr/bin:/bin", "FRAMES": "600000", "NATIVE_PRODUCTION": "1"}
+    env = {"PATH": f"{_stub_docker(tmp_path, tmp_path / 'argv.txt')}:/usr/bin:/bin",
+           "FRAMES": "600000", "NATIVE_PRODUCTION": "1",
+           "DOCKER_GPUS": '"device=0"', "NATIVE_VRAM_CAP_MIB": "2048"}
     result = subprocess.run(
         ["bash", str(SCRIPT), str(code), str(tmp_path / "result.tgz")],
         capture_output=True, text=True, env=env, cwd=str(ROOT),
@@ -163,6 +202,12 @@ def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_pat
     fake_bin = _stub_docker(tmp_path, log_path)
     env = {
         "PATH": f"{fake_bin}:/usr/bin:/bin",
+        # [Claude 2026-09-08] Both are now MANDATORY before the wrapper reaches any other
+        # guard: an unnamed GPU and an uncapped VRAM request are each refused first, on
+        # purpose, since they cost nothing to check and protect a co-tenant. Each test
+        # below asserts a LATER refusal, so it has to get past these two.
+        "DOCKER_GPUS": '"device=0"',
+        "NATIVE_VRAM_CAP_MIB": "2048",
         "CELLS": "drqv2:1,drqv2:2",
         "FRAMES": "600000",
         "NATIVE_PRODUCTION": "1",
@@ -222,9 +267,35 @@ def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
         'echo "/dev/fake 100000000 89500000 10485760 90% /"\n'
     )
     df.chmod(df.stat().st_mode | stat.S_IEXEC)
+    # [Claude 2026-09-08] A docker stub is now required here, and it must answer THREE call shapes.
+    # `docker info` gates the whole script; `helper_python` computes the disk requirement in a
+    # container and must print a number on stdout -- the wrapper stopped running python3 on the
+    # host, so a bin with only `df` in it now fails at the daemon check instead of reaching the
+    # disk floor this test is about. 48 GB is drqv2:1 at 600k on the v100 profile, against the
+    # 10 GB of free space the fake `df` reports.
+    docker = fake_bin / "docker"
+    docker.write_text(
+        "#!/usr/bin/env bash\n"
+        'if [[ "$1" == "info" ]]; then exit 0; fi\n'
+        'for arg in "$@"; do\n'
+        '  case "$arg" in\n'
+        '    *source-lock.json*) echo "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:'
+        '94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000"; exit 0;;\n'
+        '    *disk-requirement*) echo 48; exit 0;;\n'
+        '  esac\n'
+        'done\n'
+        'exit 0\n'
+    )
+    docker.chmod(docker.stat().st_mode | stat.S_IEXEC)
 
     env = {
         "PATH": f"{fake_bin}:/usr/bin:/bin",
+        # [Claude 2026-09-08] Both are now MANDATORY before the wrapper reaches any other
+        # guard: an unnamed GPU and an uncapped VRAM request are each refused first, on
+        # purpose, since they cost nothing to check and protect a co-tenant. Each test
+        # below asserts a LATER refusal, so it has to get past these two.
+        "DOCKER_GPUS": '"device=0"',
+        "NATIVE_VRAM_CAP_MIB": "2048",
         "FRAMES": "600000",
         "NATIVE_PRODUCTION": "1",
         # Set so the run reaches the DISK check this test is about; the production-scale ceiling
@@ -273,6 +344,7 @@ def test_the_live_run_directory_is_mounted_not_just_the_cell_output(tmp_path):
         ["bash", str(SCRIPT), str(code), str(result_out)],
         capture_output=True, text=True, cwd=str(ROOT),
         env={"PATH": f"{fake_bin}:/usr/bin:/bin", "NATIVE_DISK_FLOOR_GB": "1",
+             "DOCKER_GPUS": '"device=0"', "NATIVE_VRAM_CAP_MIB": "2048",
              "NATIVE_OUT_HOST_DIR": str(out_dir), "NATIVE_WORK_HOST_DIR": str(work_dir)},
     )
     assert result.returncode == 0, result.stderr
@@ -354,4 +426,16 @@ def test_the_filesystem_id_probe_validates_its_output():
     """
     text = (ROOT / "datasphere" / "native" / "run_on_production_host.sh").read_text()
     body = text[text.index("_dev_of()"):text.index("_result_dev=")]
-    assert "=~ ^[0-9]+$" in body, "the fsid must be validated as numeric, not merely non-empty"
+    # [Claude 2026-09-08] This asserted `^[0-9]+$` and was WRONG about the only platform that
+    # matters. GNU stat prints a filesystem ID in HEX -- cds2 returns `c4aaf1bac0c3eb66` -- so a
+    # numeric-only validation rejected every real id, reported "unreadable" on every production
+    # run, and could never reach the same-device branch that carries the durability finding. The
+    # test encoded the bug rather than catching it.
+    assert "=~ ^[0-9a-fA-F]+$" in body, (
+        "the fsid must be validated as HEX: GNU stat prints it that way, and a numeric-only "
+        "pattern rejects every real id while a bare non-empty check accepts macOS's garbage")
+    # The original defect must still be caught: macOS `stat -f` takes a format string and prints
+    # something containing '(' , spaces and the letters r/n/u/s -- none of which are hex.
+    for garbage in ("unreadable", "(fsid -c", "9d3f 1a", ""):
+        import re
+        assert not re.fullmatch(r"[0-9a-fA-F]+", garbage), f"{garbage!r} must not validate"
