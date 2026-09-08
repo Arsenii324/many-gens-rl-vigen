@@ -791,6 +791,24 @@ result="${2:?result archive}"
 require_production_configuration
 asset_archive="${3:-}"
 out="/tmp/native-out"
+# [Claude 2026-09-08] THE UNCONTAINED GUARD, and this is the script that most needs it.
+#
+# run_probe.sh apt-gets eleven system packages and pip-installs torch and the whole CUDA stack. It
+# is meant to run inside a fresh container started by run_on_production_host.sh, where that is
+# free. Run directly on a host -- by someone reading the repo and trying the obvious thing, or by
+# an agent that reasoned "this is containerised" without checking where it was about to execute --
+# it installs into the HOST's python. On a machine shared with about twenty people, into theirs.
+#
+# A banner is a comment and protects a reader. This refuses.
+_rc="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/require_container.sh"
+[[ -f "$_rc" ]] || _rc="datasphere/native/require_container.sh"
+if [[ -f "$_rc" ]]; then
+  . "$_rc"
+else
+  echo "WARNING: require_container.sh is absent, so the uncontained guard did NOT run." >&2
+  echo "  It is a declared payload member (RUNNER_CONTRACT 16); a payload without it is stale." >&2
+fi
+
 work="/tmp/native-work"
 mkdir -p "$out" "$work"
 exec > >(tee -a "$out/job.log") 2>&1
@@ -1174,7 +1192,7 @@ payload_families="${payload_families%,}"
 # that -- "payload was built for runner contract 14 but this runner needs 13". The check
 # worked; the number was maintained in one place and read in another. Same shape as
 # SAVE_EVERY vs SAVE_EVERY_FRAMES and the curve_eval_episodes duplicate.
-python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 15 \
+python3 datasphere/native/contract.py verify-payload --archive "$code" --require-runner-contract 16 \
   --require-families "$payload_families" \
   --require-evaluator-identity \
   --expect 'scripts/eval_grid.py:evaluator_revision=EVALUATOR_REVISION'

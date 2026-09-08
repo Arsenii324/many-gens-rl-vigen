@@ -14,6 +14,16 @@
 #  which starts the container; the DataSphere one is
 #  `datasphere/native/job.sh submit <config>.yaml`.
 # ============================================================================
+
+# Enforcement, not just the banner above: a comment protects a reader, this protects the host.
+# `require_container.sh` refuses if no container is detected, because a job body run on a host
+# apt-gets and pip-installs into that host's python.
+_rc="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)/require_container.sh"
+[[ -f "$_rc" ]] || _rc="$(cd "$(dirname "${BASH_SOURCE[0]}")/../native" 2>/dev/null && pwd)/require_container.sh"
+[[ -f "$_rc" ]] || _rc="datasphere/native/require_container.sh"
+if [[ -f "$_rc" ]]; then . "$_rc"; else
+  echo "WARNING: require_container.sh not found beside this script; the uncontained guard did NOT run." >&2
+fi
 # ==============================================================================
 # STAGE 3: BOX 1 25,000-STEP TIME-SERIES MEMORY CEILING & STABILITY PROBE
 # ==============================================================================

@@ -990,6 +990,13 @@ GATING_AUDIT_ARGS = {"audit_attempt_ledger.py": ("--strict",)}
 #: Inventories. They describe rather than decide, and several are already consumed by the gates
 #: above (`audit_comparability_seam` feeds three of them). Listed so the classification is total.
 DESCRIPTIVE_AUDITS = {
+    # [Claude 2026-09-08] DESCRIPTIVE rather than gating, deliberately. A stale payload is a real
+    # hazard -- submitting one runs code that is not the tree, and `verify-payload` cannot catch it
+    # because its job is that every member is DECLARED, not that it is CURRENT. But a payload that
+    # differs from the tree is not always wrong: one built for a past configuration, or kept to
+    # re-run an old cell, is legitimately different. Gating on it would fail a release for holding
+    # its own history. `--strict` is there for a pre-submission hook that wants the failure.
+    "audit_payload_freshness.py",
     "audit_comparability_seam.py", "audit_dead_knobs.py", "audit_eval_axis.py",
     "audit_eval_state.py", "audit_seed_control.py", "audit_executed_hyperparameters.py",
     "audit_implementations.py", "audit_job_budgets.py", "audit_pairing_evidence.py",

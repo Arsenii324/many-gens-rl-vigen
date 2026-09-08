@@ -50,6 +50,11 @@ BASE_ALLOWED = (
     # it here would have made the cp fail inside the container after the whole bootstrap was paid
     # for, and under `set -e` that ends the job with no useful message. This is the same shape as
     # the watch_policy_health.py omission that cost a job on 2026-09-08.
+    # [Claude 2026-09-08] run_probe.sh sources this before anything else and REFUSES if it is not
+    # running in a container -- the guard that stops a job body apt-getting into a host's python.
+    # A payload without it would make run_probe.sh warn and continue unguarded, so it is a member
+    # and RUNNER_CONTRACT goes to 16.
+    "datasphere/native/require_container.sh",
     "datasphere/native/vram_cap.py",
     "requirements-native.txt",
     # A hash INPUT for scripts/eval_provenance.py's evaluator revision, never an import: the remote
@@ -110,7 +115,10 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # `sitecustomize` when NATIVE_VRAM_CAP_MIB is set, so the runner requires a payload member it did
 # not require before. Same case as 14, and caught the same way -- by asking, before shipping,
 # whether the runner now reads something the payload might not carry.
-RUNNER_CONTRACT = 15
+# Bumped to 16 on 2026-09-08: run_probe.sh sources
+# `datasphere/native/require_container.sh` and refuses to run outside a container, so the runner
+# requires another payload member it did not require before.
+RUNNER_CONTRACT = 16
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:
