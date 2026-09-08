@@ -3,22 +3,42 @@
 Found by reading the code, not by running it. **This list is a floor.** Anything not here is
 unexamined, which is not the same as safe.
 
-## 1. `--gpus all` is the DEFAULT, and it takes both cards
+## 1. `--gpus` used to default to `all` — FIXED 2026-09-08, and the history is the point
 
-`datasphere/native/run_on_production_host.sh:394`:
+The script read:
 
 ```
 docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS:-all}" \
 ```
 
-Unset `DOCKER_GPUS` means **`all`** — both V100s attached to our container, on a machine with
-strict GPU control. This is the single most dangerous default in the repository.
+Unset `DOCKER_GPUS` meant **`all`** — both V100s attached to our container, on a machine under a
+per-day GPU assignment. One forgotten environment variable and a run took a card belonging to
+someone else: silent from our side, a CUDA OOM or an unexplained slowdown from theirs. It was the
+single most dangerous line in the repository.
 
-**Always set it explicitly**, to one card verified free at that moment:
+**There is now no default.** The name must be given, and the refusal fires before anything starts
+a container, because a pure environment test costing nothing must not be diagnosed after a
+container has already launched:
 
 ```
-DOCKER_GPUS='"device=1"'      # quoting matters: docker needs the inner quotes
+DOCKER_GPUS='"device=1"'              # the assigned card; docker needs the inner quotes
+DOCKER_GPUS='"device=GPU-<uuid>"'     # same card, immune to re-enumeration (nvidia-smi -L)
+DOCKER_GPUS=none                      # CPU-only work
+DOCKER_GPUS=all                       # every card -- only if you own them all
 ```
+
+**The index form is not the safest spelling.** `device=1` follows docker's PCI enumeration, which
+matches `nvidia-smi -L` in the ordinary case but is not guaranteed to across a driver reload or a
+hardware change. On a machine where taking a neighbour's card is forbidden, prefer the UUID.
+
+`DOCKER_GPUS=none` omits the flag entirely rather than passing `--gpus none`, which is invalid
+docker — it parses the value as a count and fails with `count must be an integer`. That was found
+by testing an option this script's own refusal message advertises; an unusable escape hatch in a
+refusal is worse than none, because it gets followed under time pressure.
+
+**An image cannot reach a GPU by itself.** Access is granted here, by this flag, through the NVIDIA
+Container Toolkit; a CUDA base image run without `--gpus` sees no `/dev/nvidia*` at all. The danger
+was never in which image was pulled — it was in this one string.
 
 The script's own comment says `CUDA_VISIBLE_DEVICES` is deliberately absent from its forwarded
 variables, and the reason is exactly right: it would *look* like it pinned the run while the

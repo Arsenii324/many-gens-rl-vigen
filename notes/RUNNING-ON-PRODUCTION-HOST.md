@@ -330,8 +330,12 @@ would fail.
 
 > **[SUPERSEDED 2026-09-08 — DO NOT PACK ACROSS BOTH CARDS.]** `cds2` is under a strict GPU
 > assignment schedule and the assignment names **one card**: 8 September is `V100-1`. Card 0 is not
-> ours whether or not it is idle. Two-card packing is therefore not available, and `--gpus all` —
-> which is the script's DEFAULT when `DOCKER_GPUS` is unset — would silently take both.
+> ours whether or not it is idle. Two-card packing is therefore not available, and `--gpus all`
+> would silently take both.
+>
+> **[Claude 2026-09-08] This is no longer a default.** `DOCKER_GPUS` is now mandatory — the script
+> refuses with no card named, before it starts any container. `all` remains available but has to be
+> typed, which is the point.
 >
 > **Always set `DOCKER_GPUS='"device=1"'` explicitly**, and confirm with `nvidia-smi -L` *inside*
 > the container that exactly one GPU is visible. `CUDA_VISIBLE_DEVICES` is not a substitute: a

@@ -138,6 +138,19 @@ if [[ -z "${DOCKER_GPUS:-}" ]]; then
   exit 3
 fi
 
+# [Claude 2026-09-08, second pass] `--gpus none` is NOT valid docker: it parses the value as a
+# count and fails with `count must be an integer: strconv.Atoi: parsing "none"`. The way to give a
+# container no GPU is to OMIT the flag, so `none` becomes an empty argument list rather than being
+# passed through. Caught by testing an option this script itself advertises -- an unusable escape
+# hatch in a refusal message is worse than none, because it gets followed under time pressure.
+# NOT `[[ ... ]] && DOCKER_GPU_ARGS=()`: under `set -e` a false test makes that line return
+# non-zero and abort the script for every caller who DID name a card, which is all of them.
+if [[ "$DOCKER_GPUS" == "none" ]]; then
+  DOCKER_GPU_ARGS=()
+else
+  DOCKER_GPU_ARGS=(--gpus "$DOCKER_GPUS")
+fi
+
 # [Claude 2026-09-08] This script used to run `python3` on the HOST three times: here, and twice
 # more inside check_disk. The production host's rule is that nothing runs outside a container
 # except small python-unrelated actions (mkdir, cp, df, stat), a clone, and docker itself. Reading
@@ -586,18 +599,18 @@ if [[ -n "${NATIVE_HOST_DRY_RUN:-}" ]]; then
   echo
   echo "=== NATIVE_HOST_DRY_RUN: every guard passed; NOT executing ==="
   echo "image:  $IMAGE"
-  echo "gpus:   ${DOCKER_GPUS}"
+  echo "gpus:   ${DOCKER_GPUS}$([[ "$DOCKER_GPUS" == "none" ]] && echo '  (--gpus omitted entirely; the container sees no /dev/nvidia*)')"
   echo "mounts: ${#DOCKER_MOUNT_ARGS[@]} argument(s)"
   printf '        %s\n' "${DOCKER_MOUNT_ARGS[@]}"
   echo "env:    ${#DOCKER_ENV_ARGS[@]} argument(s)"
   printf '        %s\n' "${DOCKER_ENV_ARGS[@]}"
   echo
-  echo "would run: docker run --rm --name $CONTAINER_NAME --gpus ${DOCKER_GPUS} \\"
+  echo "would run: docker run --rm --name $CONTAINER_NAME ${DOCKER_GPU_ARGS[*]} \\"
   echo "             <mounts> <env> -e MUJOCO_GL=egl -w /work $IMAGE bash -c '<bootstrap+probe>'"
   exit 0
 fi
 
-docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS}" \
+docker run --rm --name "$CONTAINER_NAME" "${DOCKER_GPU_ARGS[@]}" \
   "${DOCKER_MOUNT_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" \
   -e DEBIAN_FRONTEND=noninteractive -e TZ=Etc/UTC \
   -e MUJOCO_GL=egl \
