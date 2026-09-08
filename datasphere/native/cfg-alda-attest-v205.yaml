@@ -1,0 +1,70 @@
+# [Claude 2026-09-08] WAVE v205 -- the single re-attestation after the closure batch.
+#
+# Every family's evaluator revision moved together, because the batch touched
+# `scripts/eval_provenance.py` (a CODE_MEMBER, shared by all seven) and
+# `datasphere/native/families.json` (a CONFIG_MEMBER, likewise). That is the whole reason those
+# four changes were held and landed as one: seven cells together, not seven waves apart.
+#
+# Held until the three diagnostic cells settled -- the ctrl autotune retry, the drqv2 seed-variance
+# cell and the idaac clip control -- so that anything they forced would join this wave rather than
+# require a second one. Q47's rule: accumulate fixes, validate once against the final frozen tree.
+#
+# [Claude 2026-09-08] Evaluator-attestation wave v205.
+#
+# v205 is superseded, and not because it failed: its payloads were built on 2026-09-07 and the
+# tree moved underneath them the next day. Four changes, each of which a v205 payload would have
+# carried the pre-change version of:
+#
+#   - `run_probe.sh`: `check-asset` validated `val/images` UNCONDITIONALLY, so a train-split run
+#     certified 36,500 images it never opened, and the production easyformat archive (which has
+#     no flat `val/images`) would have died at the guard after its 21 GB upload. (A42)
+#   - `families.json`, `rlgen/protocol.py`, `normalize_curves.py`: `ctrl` and `ibac_sni` raised to
+#     `frame_stack=3`, with the stack AUTHORED on both Door paths -- neither had one. (A40 REV-2)
+#   - `families.json`: `ibac_sni` `lr` 7e-4 -> 5e-4, its architecture lineage's rate. (A43)
+#   - `eval_grid.py`: sets `RLVIGEN_FRAME_STACK` from the declaration at both eval sites, because
+#     the family environment reaches the training process and not the offline evaluator.
+#
+# The last two of those are `CODE_MEMBER`/`CONFIG_MEMBER` edits, so every family's evaluator
+# revision moved again. Attesting on v205 payloads would have produced records stale on arrival --
+# the v191 failure, repeated.
+#
+# The only v205 job that ran, `bt1f8b5gb39jgadqngke` (dmc_gb/soda), was killed by its own 3600s
+# budget at S: 8000 of 10000. It is not a failure of the Places365 train path: that path completed
+# for the first time in this project's history in that job. The budget is raised to 9000s here and
+# the audit now models the two costs it was missing. (A42)
+#
+# rlvigen is attested through svea and dmc_gb through soda, NOT through drqv2/rad: those two never
+# enter the Places365 block (family.py needs-places365 is false for them), so attesting through
+# them said nothing about the path svea/sgqn/soda actually run. P21 makes that path revision-stable.
+name: vigen-alda-attest-v205
+desc: Schema-2 evaluator identity re-validation for alda, NATIVE_HOST_PROFILE=datasphere explicit.
+cmd: >-
+  timeout --foreground 3600s env
+  NATIVE_HOST_PROFILE=datasphere
+  CELLS=alda:1
+  FRAMES=10000
+  TASK=Door
+  SEED=1
+  RLVIGEN_ARCHIVE=${RLVIGEN}
+  RECORDS_OUT=${RECORDS}
+  CUDA_ROOT=/usr/local/cuda
+  EVAL_EVERY_FRAMES=2147483647
+  EVAL_EPISODES=1
+  SAVE_EVERY_FRAMES=10000
+  ENDPOINT_EVAL=1
+  ENDPOINT_EVAL_REGIMES=train,eval-easy
+  ENDPOINT_EVAL_SCENES=0
+  ENDPOINT_EVAL_EPISODES=5
+  ENDPOINT_EVAL_DEVICE=cuda
+  bash ${JOB} ${CODE} ${RESULT}
+inputs:
+  - datasphere/native/run_probe.sh: JOB
+  - datasphere/native/payload-v205-alda.tgz: CODE
+  - rlvigen-door2-90d8b8c4.tgz: RLVIGEN
+outputs:
+  - result.tgz: RESULT
+  - records.jsonl: RECORDS
+env:
+  docker:
+    image: nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+cloud-instance-type: gt4i.1
