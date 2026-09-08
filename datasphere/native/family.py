@@ -291,6 +291,11 @@ def check_memory(cells: str, tier: str, path: Path | None = None,
     profile = os.environ.get("NATIVE_HOST_PROFILE") or None
     unmeasured: list[str] = []
     estimated: list[str] = []
+    # [Claude 2026-09-08] Per-family requirements, kept so the CONCURRENT case can be summed. The
+    # loop below checks each family against the tier ALONE, which is correct for the default
+    # sequential execution -- run_cell_list runs cells one at a time unless NATIVE_CONCURRENT=1 --
+    # and silently wrong when they run together, because then the peaks coexist.
+    per_family_required: dict[str, float] = {}
     for family in families_of_cells(cells, path):
         entry = resolved_descriptor(family, path, profile=profile)
         settings = entry.get("production", {})
@@ -332,6 +337,38 @@ def check_memory(cells: str, tier: str, path: Path | None = None,
         if required > usable[tier]:
             fail(f"{family}: measured fixed peak plus margin is {required:.2f} GiB, "
                  f"but {tier} has {usable[tier]:.1f} GiB usable")
+        per_family_required[family] = required
+    # [Claude 2026-09-08] CONCURRENCY. Everything above asks "does ONE cell of this family fit",
+    # which is the right question when `run_cell_list` runs cells one after another -- and it does,
+    # unless NATIVE_CONCURRENT=1, in which case it dispatches every cell with `&` and waits. Then
+    # the peaks COEXIST and nothing here added them up.
+    #
+    # The gap was not hypothetical and not caught by the guard below: that one refuses to pack when
+    # a figure is ESTIMATED, which catches ctrl's extrapolated 54.28 GiB. Two `rlvigen` cells have
+    # MEASURED figures, so `NATIVE_CONCURRENT=1 CELLS=drqv2:101,drqv2:102` passed every check at
+    # ~42 GiB each while actually needing ~84 GiB -- on a 125 GB host shared with about twenty
+    # other people, where exhausting RAM evicts their processes, not ours.
+    #
+    # Read from the environment rather than taken as an argument because that is how the runner
+    # already passes it, and a check that has to be told about concurrency separately is a check
+    # that will be called without it.
+    cell_specs = [c.strip() for c in cells.split(",") if c.strip()]
+    if os.environ.get("NATIVE_CONCURRENT") == "1" and len(cell_specs) > 1:
+        total = 0.0
+        breakdown = []
+        for spec in cell_specs:
+            fam = families_of_cells(spec, path)[0]
+            need = per_family_required.get(fam)
+            if need is None:
+                continue
+            total += need
+            breakdown.append(f"{spec} ({fam}) {need:.2f}")
+        if total > usable[tier]:
+            fail(f"refusing to run {len(cell_specs)} cells CONCURRENTLY: their peaks coexist and "
+                 f"sum to {total:.2f} GiB, but {tier} has {usable[tier]:.1f} GiB usable. "
+                 f"Breakdown: {'; '.join(breakdown)}. Run them sequentially (unset "
+                 f"NATIVE_CONCURRENT), or pack fewer.")
+
     # Packing on an estimate is the specific thing external review 21 refused to accept, and it is
     # right: two cells sharing a host on the strength of a linear extrapolation is how a 600k run
     # dies at hour six. One cell against a generous reserve is a different risk from two.
