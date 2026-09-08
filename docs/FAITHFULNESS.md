@@ -1,5 +1,38 @@
 # Faithfulness: each algorithm against its canonical source
 
+<!-- BEGIN GENERATED: scripts/generate_fidelity_table.py -->
+
+**Generated from source by `scripts/generate_fidelity_table.py`. Do not hand-edit.**
+`--check` fails when this block stops matching the tree, which is what stops it going
+stale the way the prose tables below it did.
+
+The `learning rate` and `discount` cells carry their own provenance: `launcher` means an
+explicit flag on the exec line, `descriptor` a `families.json` constant that a template
+actually references, `cfg yaml` an RL-ViGen config, and **`default` means nobody passes
+it** and the clone's own default applies. That last one is not a detail: the IBAC `beta`
+incident was a documented 1e-4 that nobody passed, executing as 1.0.
+
+`v100 overlay` is what PRODUCTION changes relative to the DataSphere tiers. Two entries
+exist in the whole fleet, and both RESTORE each baseline's own upstream parallelism
+rather than compromising it.
+
+| baseline | family | learning rate | discount | frame stack | render | time limit | train reward | v100 overlay |
+|---|---|---|---|---|---|---|---|---|
+| `drqv2` | `rlvigen` | 1e-4 <sub>cfg yaml</sub> | 0.99 <sub>cfg yaml</sub> | 3 | 84 | terminal | raw | &mdash; |
+| `svea` | `rlvigen` | 1e-4 <sub>cfg yaml</sub> | 0.99 <sub>cfg yaml</sub> | 3 | 84 | terminal | raw | &mdash; |
+| `sgqn` | `rlvigen` | 1e-4 <sub>cfg yaml</sub> | 0.99 <sub>cfg yaml</sub> | 3 | 84 | terminal | raw | &mdash; |
+| `curl` | `rlvigen` | 1e-4 <sub>cfg yaml</sub> | 0.99 <sub>cfg yaml</sub> | 3 | 84 | terminal | raw | &mdash; |
+| `drq` | `rlvigen` | 1e-4 <sub>cfg yaml</sub> | 0.99 <sub>cfg yaml</sub> | 3 | 84 | terminal | raw | &mdash; |
+| `rad` | `dmc_gb` | 1e-3 <sub>default</sub> | 0.99 <sub>default</sub> | 3 | 100 | bootstrap | raw | &mdash; |
+| `soda` | `dmc_gb` | 1e-3 <sub>default</sub> | 0.99 <sub>default</sub> | 3 | 100 | bootstrap | raw | &mdash; |
+| `alda` | `alda` | 1e-3 <sub>default</sub> | 0.99 <sub>default</sub> | 3 | 64 | bootstrap | raw | &mdash; |
+| `idaac` | `idaac` | 3e-4 <sub>descriptor</sub> | 0.99 <sub>descriptor</sub> | 3 | 64 | terminal | normalised | &mdash; |
+| `ppg` | `ppg` | 3e-4 <sub>descriptor</sub> | .99 <sub>descriptor</sub> | 3 | 64 | terminal | normalised | &mdash; |
+| `ibac_sni` | `ibac_sni` | 0.0005 <sub>descriptor</sub> | 0.99 <sub>default</sub> | 3 | 64 | terminal | raw | `procs` 1&rarr;16 |
+| `ctrl` | `ctrl` | 5e-4 <sub>default</sub> | 0.999 <sub>default</sub> | 3 | 64 | terminal | normalised | `num_envs` 16&rarr;64 |
+
+<!-- END GENERATED -->
+
 > ## READ §5 FIRST — it is the current triage; §0–§4 are the analysis it triages
 >
 > **This banner replaces two wrong ones written on 2026-08-27** ([C82](CONSTRUCTION.md#c82)). The
@@ -26,6 +59,8 @@
 >   deterministic pass; `runnable/ctrl` ships the clustering. This section is the record of the
 >   port's fidelity debt and of that debt being paid — not a backlog.
 > - **§4's hyperparameter values are PORT-ERA and now inverted.** `idaac` runs **γ 0.999 / rollout
+> **[SUPERSEDED 2026-09-08 — see the generated block at the top of this file.]** This banner is itself two revisions stale. IDAAC-C2 (2026-09-06) moved `idaac` to **γ 0.99 / rollout 2048 / lr 3e-4 / num_processes 1**, and `ppg` to γ .99 / lr 3e-4. Only `ctrl` still runs 0.999. The banner was written to correct an earlier wrong summary and was not revisited when the values it corrected moved again.
+
 >   256 / lr 5e-4** from its own `arguments.py`; `ctrl` and `ppg` also run 0.999. No launcher
 >   overrides any of it, and `configs/vigen.yaml` is read by **nothing live**. **This re-opens two
 >   of §5's own resolutions**: item 2 ("rollout was never 256 — it is 2048") and item 3 ("gamma was
@@ -223,6 +258,8 @@ and it should be recorded as a deviation rather than discovered later.
 > should be said in any write-up rather than left implicit.
 
 **Frame stacking**: released Procgen geometry remains one frame for `ibac_sni` and `ctrl`.
+> **[SUPERSEDED 2026-09-08 — see the generated block at the top of this file.]** All twelve stack **3** frames. A40-REVISED-2 (2026-09-08) authored stacking on the Door path for both — neither had any stacking mechanism there before — so this line is not merely a stale number, it describes an architecture that no longer exists. `rlgen/protocol.py:118-132` is authoritative.
+
 IDAAC uses its authors' DMC continuous-control recipe with three frames. PPG uses that same
 authors' DMC comparator as its selected continuous-control adaptation; this does not claim the
 OpenAI PPG primary source specifies DMC. Both adapters preserve explicit `frame_stack=1` for
@@ -1391,8 +1428,12 @@ moves. What changes a fidelity judgement:
 | `alda` | **mode** (`mu`) | periodic, **three** regimes — and the only baseline that builds `eval-hard` | usable, and the richest |
 | `idaac` | **SAMPLE** (`dist.sample()`) | periodic, one regime, cadence in *updates* | usable |
 | `ppg` | not chosen anywhere | **none** | no eval code at all — a loop is missing, not a policy |
+> **[SUPERSEDED 2026-09-08 — see the generated block at the top of this file.]** `runnable/_launch/ppg_eval.py` exists and measures both `train` and `eval-easy` (`docs/PART2-METRIC-INVENTORY.md:205-219`). `ppg`'s evaluation policy mode is `sample`, recorded in `datasphere/native/evaluator_identity.py`. This row is tagged `[DURABLE]`, which makes it worse rather than better: the tag asserts currency the content does not have.
+
 | `ibac_sni` | see `scripts/evaluate.py` | **none** in training, by upstream's design | usable, separate by design |
 | `ctrl` | discrete-only as shipped | **continuous**, two test envs stepped inside the loop | **must be repointed** |
+> **[SUPERSEDED 2026-09-08 — see the generated block at the top of this file.]** `ctrl`'s evaluation policy mode was corrected to `mode` on 2026-09-07 after review 24 traced `evaluate_ppo.py`'s `select_action(..., greedy=True)`. It is not pending.
+
 
 **Three of these bear directly on fidelity.**
 
