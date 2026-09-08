@@ -18,6 +18,28 @@ processes on it. A count answers "is the card busy" without answering "who and w
 is attributable because our own PIDs are ours; that is what `measure_vram_bounds.py` does from a
 returned archive, and it is the right instrument for that question.
 
+## What `memory.used` means, and what a FLAT reading does not prove
+
+`nvidia-smi` reports what the CUDA caching allocator has **RESERVED from the driver**, not live
+tensor usage. PyTorch and JAX take blocks and recycle them internally, so allocate/free inside a
+training step is invisible here. The number moves only when a framework asks the driver for *more*
+-- when its high-water mark grows.
+
+Measured on cds2's card 1, 2026-09-08: 71 samples over 17.6 min, `used_mib` **constant at 14501**
+while utilisation took 19 distinct values from 0 to 100. The instrument was live; the memory
+genuinely did not move.
+
+**A flat reading is not evidence that the job has no phases.** It says the co-tenant's high-water
+mark was set before our window and has not been exceeded during it. A phase that allocates more --
+a larger eval batch, a different stage, a checkpoint save -- simply has not occurred yet, and
+seventeen minutes says little about a job that may run for hours. Treat the minimum free figure as
+"what is available right now", never as "what will remain available".
+
+**For the safety question this is nevertheless the RIGHT number.** A neighbour cannot use memory
+our allocator has reserved, whether or not our tensors fill it -- so reserved is exactly what one
+process denies another. `max_memory_allocated()` answers a different and narrower question (how big
+is the model's true peak) and would understate what we take from the card.
+
 ## Why bounded rather than a daemon
 
 A long-lived watcher on a communal host is a process someone else has to wonder about, and one we

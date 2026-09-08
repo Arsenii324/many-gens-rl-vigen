@@ -130,6 +130,13 @@ with the full chain exercised. **Watch `nvidia-smi` throughout** and record our 
 `resources.json` — this is the first production-geometry VRAM measurement this project will have.
 **Abort if** our attributed VRAM exceeds 4,000 MiB, or the neighbour's process disappears.
 
+**Step 5a — capture torch's own peak, because `nvidia-smi` cannot.** `measure_resources.py` samples
+`nvidia-smi`, which reports the allocator's RESERVED pool. That is the correct number for "what we
+deny the neighbour", and it is the wrong number for "what the model actually needed". Step 5 is
+this project's first production-geometry VRAM measurement, so it should record both:
+`torch.cuda.max_memory_allocated()` and `max_memory_reserved()` at the end of the cell. Nothing
+reads them today.
+
 **Step 6 — read the artifacts before running anything longer.** Records, curve, endpoint grid,
 `retained.json`, and `measure_vram_bounds.py` over the returned archive. Only then consider a
 600k cell.

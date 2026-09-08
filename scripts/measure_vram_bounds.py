@@ -45,6 +45,26 @@ plainly which families still have no measurement at the production configuration
 evidence toward a bound, not the bound itself**, and the rule is only satisfied when the intended
 configuration has been measured or capped.
 
+## RESERVED, not allocated -- and that is the correct choice here
+
+Both figures come from `nvidia-smi`, so both are what the CUDA caching allocator **reserved from
+the driver**, not what the model's tensors actually held. Nothing in this project reads
+`torch.cuda.max_memory_allocated()`.
+
+That is right for this instrument's purpose and wrong for a different one, so the distinction has
+to be stated rather than assumed:
+
+* **"How much of the card do we deny to a co-tenant?"** -- RESERVED. A neighbour cannot use memory
+  our allocator holds, whether or not our tensors fill it. This is the safety question, it is the
+  question `notes/production-host/10-resource-upper-bound-rule.md` asks, and reserved is the
+  honest answer to it.
+* **"How large is the model's true peak?"** -- ALLOCATED, via `torch.cuda.max_memory_allocated()`.
+  Useful for sizing a cap or a batch, and NOT measured anywhere here. A cap would be set against
+  reserved; a model sizing would use allocated. Confusing them understates what we take.
+
+A corollary that matters when reading a co-tenant's usage: a **flat** reserved figure does not mean
+a job has no phases. It means its high-water mark has not grown during the window observed.
+
 ## Deliberately NOT written into families.json
 
 `families.json` is a `CONFIG_MEMBER` of the evaluator closure: writing to it moves every family's
