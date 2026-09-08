@@ -452,6 +452,30 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         family = family_of(baseline, path) if "family_of" in globals() else None
         family = family or families_of_cells(cell, path)[0]
         settings = (resolved_descriptor(family, path, profile=profile).get("production") or {})
+        # [Claude 2026-09-08] THIS TERM IS THE HOST-RAM MODEL, REUSED AS IF IT WERE DISK, AND IT
+        # IS WRONG FOR BOTH REPLAY FAMILIES. It is left in place because it errs HIGH and the
+        # honest replacement is a measurement nobody has taken, not a smaller number reasoned out
+        # from source. Read before trusting it:
+        #
+        #   * `dmc_gb` (rad, soda) holds replay ENTIRELY IN RAM -- `runnable/dmc_gb/src/utils.py`
+        #     line 107, a plain Python list with `prefill_memory` preallocating `capacity` slots.
+        #     It writes NOTHING to disk. The 16.76 GiB charged here is real memory and zero bytes
+        #     of storage; `check_memory` charges it again, correctly, as RAM.
+        #   * `rlvigen` (drqv2, svea, sgqn, curl, drq) is disk-backed, but disk is a TRANSPORT, not
+        #     a store. `RL-ViGen-upstream/replay_buffer.py` writes one `savez_compressed` .npz per
+        #     episode, and the DataLoader workers DELETE each file as they load it -- line 116,
+        #     `if not self._save_snapshot: eps_fn.unlink(missing_ok=True)`, with line 94 hardcoding
+        #     `self._save_snapshot = False` and discarding the constructor argument entirely. What
+        #     sits on disk is the window between the trainer writing and a worker fetching
+        #     (`fetch_every=1000` samples), not the 620,000-transition buffer.
+        #
+        # The same line 116 is why an interrupted off-policy cell cannot resume even in principle:
+        # the episodes are not merely unloaded, they are gone. That is the mechanism behind
+        # `ai-recommendation-22`, which had recorded the symptom without the cause.
+        #
+        # DO NOT lower this to the true figure from reading alone. Measure `du -sh` on a running
+        # cell's `buffer/` directory first; the guard protects a filesystem that is 99% full and
+        # shared with about twenty other people, and over-refusing is the survivable error.
         replay = _replay_gib(family, settings, frames=frames)
         save_every = settings.get("save_every")
         preserve = settings.get("preserve_snapshots")

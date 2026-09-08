@@ -120,3 +120,42 @@ checkpoint-stamp fallback (`:862`, `:976`), the result-mirror's *secondary* `rec
 (`run_on_production_host.sh:473` — the primary copy is fatal), and the Places365 loader verdict
 (`:1598-1614`), which tolerates a C++ teardown crash *after* the comparison succeeded but still
 `exit 3`s if the verification marker is absent.
+
+---
+
+## The reconstruction pin was wrong, and only the host could show it — 2026-09-08
+
+`setup/bootstrap_sources.py` on cds2 failed with `source closure hash mismatch at .../rlvigen/output`.
+The host was right and the pin was wrong.
+
+| | records | `third_party/robosuite/robosuite/models/` |
+|---|---:|---|
+| Linux reconstruction, in a container on cds2 | **1145** | present |
+| the macOS working copy the pin was computed from | 599 | **absent — 0 files** |
+
+The 546 missing files are the arena, object and robot XML MuJoCo needs to build the Door task. The
+manifest's `exclude` list drops six `models/assets/robots/*` subdirectories, not the tree, so those
+files were **missing, not excluded**.
+
+**No instrument had ever checked this pin, and that was by design rather than by accident.**
+`verify_sources.py` prints `NOT VERIFIED HERE: rlvigen needs a case-sensitive filesystem` and
+`gate_source_reconstruction_verifies` reports it as *pending, named not skipped*. Both behaved
+correctly — this is the project's own rule that an instrument which cannot run must never read as
+one that ran. The consequence is simply that the pin sat unverified until a machine existed that
+could verify it, and the first one to try refused it.
+
+**Cross-validated against an independent artifact** before repinning, rather than trusting one
+Linux run: `rlvigen-door2-90d8b8c4.tgz` — the archive production has actually been running — holds
+1146 files, and the Linux reconstruction agrees with it exactly but for
+`cfgs/task/TwoArmHandOver.yaml` (the case-collision pair, where the archive kept the other spelling
+because it too was built on macOS) and one `results` entry the manifest excludes.
+
+So **production was never running a damaged tree**; the pin and the local working copy were the
+damaged things. Repinned to `96a71cf6…` with the provenance recorded in the manifest itself,
+including the instruction never to regenerate it on macOS — doing so would silently reinstate a
+tree missing 546 files.
+
+**What this says about the bring-up.** Rung 3 (container, no GPU, nothing installed) was supposed
+to be a formality. It found a blocking defect in the documented provisioning path, on a filesystem
+class that no local test could reach. That is the argument for the rung ladder, and it is why the
+next rungs get run rather than reasoned about.

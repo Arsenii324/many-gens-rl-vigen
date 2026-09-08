@@ -8,7 +8,7 @@
       "destination": "RL-ViGen-upstream",
       "patch_kind": "apply_patches_registry",
       "patch_file": "setup/apply_patches.py",
-      "expected_tree_hash": "8a05a45457466c93db710231cc057e8eff97234946dfc5ffcc3cbff58b7b2f32",
+      "expected_tree_hash": "96a71cf67d395ad1d8a84a47fa2a616bd71fd6d20108cf3ae6506a69d87ff8fd",
       "requires_case_sensitive_fs": true,
       "exclude": [
         "envs/DMCVGB",
@@ -22,6 +22,29 @@
         "third_party/robosuite/robosuite/models/assets/robots/iiwa",
         "third_party/robosuite/robosuite/models/assets/robots/kinova3",
         "third_party/robosuite/robosuite/models/assets/robots/jaco"
+      ],
+      "_expected_tree_hash_provenance": [
+        "[Claude 2026-09-08] REPINNED. The previous value, 8a05a454..., was computed on macOS from a",
+        "tree that the filesystem could not hold: the local RL-ViGen-upstream/ is missing ALL 546 files",
+        "under third_party/robosuite/robosuite/models/ -- the arena, object and robot XML MuJoCo needs",
+        "to build the Door task. The exclude list drops only six models/assets/robots/* subdirectories,",
+        "not the tree, so those files were absent, not excluded.",
+        "",
+        "No instrument had ever verified this pin. verify_sources.py correctly ABSTAINS on a",
+        "case-insensitive filesystem ('NOT VERIFIED HERE: rlvigen needs a case-sensitive filesystem')",
+        "and gate_source_reconstruction_verifies reports it as pending rather than passing -- so the",
+        "pin sat unchecked, and the first machine able to check it refused it.",
+        "",
+        "The new value was produced by bootstrap_sources.py's own clone-and-patch path on Linux/ext4,",
+        "inside a container on cds2: 1145 records. It is cross-validated against an INDEPENDENT",
+        "artifact -- rlvigen-door2-90d8b8c4.tgz, the archive production has actually been running,",
+        "1146 files -- and the two agree exactly but for cfgs/task/TwoArmHandOver.yaml (the",
+        "case-collision pair, where the archive kept the other spelling because it too was built on",
+        "macOS) and one 'results' entry the manifest excludes.",
+        "",
+        "So production was never running a damaged tree; only the pin and the local working copy were",
+        "damaged. Do NOT regenerate this hash on macOS -- doing so silently reinstates a tree missing",
+        "546 files. Recompute it only on a case-sensitive filesystem."
       ]
     },
     "dmc_gb": {
