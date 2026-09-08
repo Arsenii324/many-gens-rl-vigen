@@ -100,6 +100,13 @@ def main() -> int:
                          "are covered. Measured 2026-09-08: apt/pip bootstrap alone ran ~2h on the "
                          "production host, against a 4500s watch -- the GPU phase would have been "
                          "entirely unwatched.")
+    ap.add_argument("--yield-on-processes", action="store_true",
+                    help="ALSO yield when more compute processes are on the card than "
+                         "--expect-ours. OFF by default, and that default is measured rather than "
+                         "cautious: our own cells start many interpreters (24 in one packed 600k "
+                         "run), so the count of 'our' processes is not knowable from the cell list "
+                         "and a count-based trigger yields to itself. Memory starvation is the "
+                         "harm that matters and is always armed.")
     ap.add_argument("--yield-after-checks", type=int, default=3,
                     help="how many CONSECUTIVE checks must see a co-tenant before yielding. "
                          "Memory starvation always yields immediately; process count is debounced, "
@@ -141,8 +148,12 @@ def main() -> int:
         print(f"  NOTE: {baseline['procs']} process(es) already on this card. They are the baseline;")
         print(f"        a yield fires only on arrivals BEYOND them, or on the memory floor.")
     print(f"  expecting up to {args.expect_ours} process(es) of our own")
-    print(f"  a co-tenant must persist {args.yield_after_checks} consecutive checks to trigger "
-          f"a yield; memory starvation triggers immediately")
+    if args.yield_on_processes:
+        print(f"  process trigger ON: a co-tenant must persist {args.yield_after_checks} "
+              f"consecutive checks to trigger a yield")
+    else:
+        print(f"  process trigger OFF (our own cells start many interpreters, so the count is not "
+              f"a reliable occupancy signal); memory floor is the trigger")
     print(f"  will yield if a process appears beyond ours, or free memory drops below "
           f"{args.floor_mib} MiB")
     ours_seen = False
@@ -211,8 +222,21 @@ def main() -> int:
         # What we actually owe a co-tenant is memory: the process that asks the driver SECOND is
         # the one that fails. `free_mib < floor` is that condition measured directly, and it still
         # fires on the first reading. Presence is debounced; starvation is not.
+        # [Claude 2026-09-09] The process trigger is OPT-IN, and the reason is measurement rather
+        # than caution. Two 600k cells were killed twice at ~90 seconds by `procs -> 6` with 28794
+        # MiB of 32494 FREE and utilisation at 21%. The same run logged NATIVE_VRAM_CAP_APPLIED
+        # **24 times** -- 24 interpreter starts -- so our own cells spawn far more processes than
+        # the two they declare, and several of those six were ours. No value of --expect-ours
+        # derived from the cell list can be right when the real number is a property of what
+        # robosuite and each trainer happen to fork.
+        #
+        # Counting processes answers "is anyone else here", which on a shared box is usually yes
+        # and is not itself harmful -- the owner's own norm is that people commonly use each
+        # other's cards. Memory answers "am I about to make someone else's job fail", because the
+        # process that asks the driver SECOND is the one that OOMs. That is the question worth
+        # stopping a twelve-hour run for, and it is always armed.
         starved = now["free_mib"] < args.floor_mib
-        crowded = now["procs"] > expected
+        crowded = args.yield_on_processes and now["procs"] > expected
         consecutive = consecutive + 1 if crowded else 0
         neighbour = crowded and consecutive >= args.yield_after_checks
         if crowded and not neighbour:

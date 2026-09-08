@@ -172,9 +172,12 @@ def test_it_still_yields_when_a_real_neighbour_joins_a_packed_run(tmp_path, monk
                 {"procs": 2, "free_mib": 29000, "util": 8}])
     stranger = {"procs": 3, "free_mib": 20000, "util": 60}
     monkeypatch.setattr(daemon, "card", lambda d: next(seq, stranger))
+    # --yield-on-processes explicitly: the trigger is opt-in since 2026-09-09, because our own
+    # cells start many interpreters and a count-based trigger yielded to itself twice.
     monkeypatch.setattr(sys, "argv", [
         "yield_gpu_to_neighbour.py", "--device", "0", "--sentinel", str(sentinel),
-        "--active-file", str(marker), "--expect-ours", "2",
+        "--active-file", str(marker), "--expect-ours", "2", "--yield-on-processes",
+        "--yield-after-checks", "1",
         "--max-seconds", "3", "--interval", "0.05", "--floor-mib", "1000"])
     daemon.main()
     assert sentinel.exists(), (
@@ -202,7 +205,7 @@ def test_the_launcher_derives_the_count_from_the_cell_list():
 
 
 def _run_daemon(monkeypatch, tmp_path, readings, *, expect_ours=2, after=3, floor=4000,
-                max_seconds=5):
+                max_seconds=5, on_processes=False):
     daemon = _load("yield_gpu_to_neighbour")
     marker = tmp_path / "cell-active"
     marker.write_text("")
@@ -214,7 +217,8 @@ def _run_daemon(monkeypatch, tmp_path, readings, *, expect_ours=2, after=3, floo
         "yield_gpu_to_neighbour.py", "--device", "0", "--sentinel", str(sentinel),
         "--active-file", str(marker), "--expect-ours", str(expect_ours),
         "--yield-after-checks", str(after), "--floor-mib", str(floor),
-        "--max-seconds", str(max_seconds), "--interval", "0.01"])
+        "--max-seconds", str(max_seconds), "--interval", "0.01"]
+        + (["--yield-on-processes"] if on_processes else []))
     daemon.main()
     return sentinel
 
@@ -233,7 +237,7 @@ def test_a_persistent_cotenant_still_triggers_a_yield(tmp_path, monkeypatch, cap
     guest = {"procs": 6, "free_mib": 20000, "util": 60}
     sentinel = _run_daemon(monkeypatch, tmp_path,
                            [{"procs": 0, "free_mib": 32000, "util": 0}, ours,
-                            guest, guest, guest, guest, guest])
+                            guest, guest, guest, guest, guest], on_processes=True)
     assert sentinel.exists(), (
         "a co-tenant present across several checks did not trigger a yield:\n"
         + capsys.readouterr().out)
@@ -248,3 +252,32 @@ def test_memory_starvation_yields_on_the_first_reading(tmp_path, monkeypatch, ca
     assert sentinel.exists(), (
         "free memory fell below the floor and the daemon waited:\n" + capsys.readouterr().out)
     assert "free memory" in sentinel.read_text().lower() or "floor" in sentinel.read_text().lower()
+
+
+def test_the_process_trigger_is_off_by_default(tmp_path, monkeypatch, capsys):
+    """Measured, not cautious: our own cells start many interpreters.
+
+    [Claude 2026-09-09] Two 600k cells were killed twice at ~90 seconds by `procs -> 6` while 28794
+    MiB of 32494 was FREE. The same run logged NATIVE_VRAM_CAP_APPLIED **24 times** -- 24
+    interpreter starts -- so several of those six processes were ours, and no --expect-ours derived
+    from the cell list could be right. Counting processes asks "is anyone else here", which on a
+    shared box is usually yes and is not itself harmful.
+    """
+    ours = {"procs": 2, "free_mib": 28000, "util": 8}
+    crowd = {"procs": 6, "free_mib": 28794, "util": 21}      # the real 2026-09-09 reading
+    sentinel = _run_daemon(monkeypatch, tmp_path,
+                           [{"procs": 0, "free_mib": 32000, "util": 0}, ours,
+                            crowd, crowd, crowd, crowd, crowd])
+    assert not sentinel.exists(), (
+        "the process trigger is armed by default and killed a healthy run:\n"
+        + capsys.readouterr().out)
+
+
+def test_memory_still_stops_us_with_the_process_trigger_off(tmp_path, monkeypatch, capsys):
+    """Turning presence off must not turn harm off."""
+    ours = {"procs": 2, "free_mib": 28000, "util": 8}
+    starved = {"procs": 2, "free_mib": 300, "util": 95}
+    sentinel = _run_daemon(monkeypatch, tmp_path,
+                           [{"procs": 0, "free_mib": 32000, "util": 0}, ours, starved])
+    assert sentinel.exists(), (
+        "free memory collapsed and nothing stopped us:\n" + capsys.readouterr().out)
