@@ -53,31 +53,32 @@ def test_end_to_end_on_the_synthetic_backend_produces_a_real_episodes_csv():
     produces (episodes.csv, with the standard schema) exists afterward -- if this script ever
     grew its own logging path, this is what would catch the drift.
 
-    [Claude 2026-09-08] This failed once in a full-suite run with
-    `RuntimeError: linalg_qr: MPS kernel failed with error code 0`, and passed immediately on its
-    own. `nn.init.orthogonal_` calls QR, and that Metal kernel fails under GPU contention -- the
-    run in question had several payload builds and another pytest process competing for the same
-    device. It is an environment fault, not a regression in this script.
+    [Claude 2026-09-08] Runs on CPU deliberately, via an explicit `--device cpu`.
 
-    Retried ONCE, and only for that exact message. A blanket retry would hide real failures; the
-    reason for not fixing it at the source is that initialising on CPU and moving would change the
-    RNG stream, and this path is provenance material rather than production code. Left in the gate
-    because it is a real end-to-end check, but it must not be mistaken for a code fault the next
-    time a wave is blocked by it."""
+    This failed twice in full-suite runs with
+    `RuntimeError: linalg_qr: MPS kernel failed with error code 0` while passing immediately on its
+    own. My first diagnosis was GPU contention from concurrent payload builds, and a retry was
+    added on that basis. **That was wrong**: the second failure came from a suite run with nothing
+    else on the machine, and the retry ran and failed too -- a retry inside the same process cannot
+    help, because whatever MPS state degrades over three thousand preceding tests is still there.
+
+    `nn.init.orthogonal_` calls QR, and `nd_ln_style_train.py` defaults `--device auto`, which
+    selects MPS. But this test asserts the SHAPE OF AN ARTIFACT -- that `episodes.csv` exists with
+    the standard schema after 16 timesteps on the synthetic backend. Nothing about it is a device
+    check, and nothing about the assertion changes on CPU.
+
+    So the device is pinned rather than the failure retried. Fixing it inside the algorithm (CPU
+    init, then move) was rejected for a different reason and still is: it would change the RNG
+    stream, and this path is provenance material rather than production code."""
     from rlgen import tags
 
-    def _run(tmp):
-        return ndln.main(["--total_timesteps", "16", "--eval_frequency", "16",
-                          "--eval_episodes", "1", "--backend", "synthetic",
-                          "--logdir", tmp, "--seed", "0", "--quiet"])
-
     with tempfile.TemporaryDirectory() as tmp:
-        try:
-            rc = _run(tmp)
-        except RuntimeError as error:
-            if "linalg_qr" not in str(error) or "MPS" not in str(error):
-                raise
-            rc = _run(tmp)
+        rc = ndln.main(["--total_timesteps", "16", "--eval_frequency", "16",
+                        "--eval_episodes", "1", "--backend", "synthetic",
+                        "--logdir", tmp, "--seed", "0", "--quiet",
+                        # See the docstring: `auto` selects MPS, whose QR kernel fails after a
+                        # long suite. This assertion is about an artifact's schema, not a device.
+                        "--device", "cpu"])
         assert rc == 0
 
         found = [os.path.join(r, f) for r, _, fs in os.walk(tmp) for f in fs
