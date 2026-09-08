@@ -78,6 +78,10 @@ def main() -> int:
     ap.add_argument("--device", type=int, required=True, help="card index as the HOST sees it")
     ap.add_argument("--sentinel", required=True,
                     help="path to write when yielding; run_probe.sh polls for it and exits")
+    ap.add_argument("--active-file",
+                    help="path the CELL touches when it starts using the card. Until it exists we "
+                         "expect ZERO processes of ours, so a stranger arriving during the "
+                         "bootstrap window cannot be absorbed as ours")
     ap.add_argument("--interval", type=float, default=30.0)
     # [Claude 2026-09-08] REQUIRED, and it is the fix for a leak I would otherwise have shipped.
     # The loop's only exits were "yielded" and "cannot read the card", so with no co-tenant ever
@@ -134,7 +138,10 @@ def main() -> int:
         #
         # baseline = processes present at arm time. Ours adds at most one. Anything above that is
         # somebody new.
-        ours_seen = ours_seen or now["procs"] > baseline_procs
+        # Our cell only counts as present once it SAYS it is on the card. Before that the
+        # bootstrap is still running and any process is a stranger's.
+        cell_active = (pathlib.Path(args.active_file).exists() if args.active_file else True)
+        ours_seen = cell_active and (ours_seen or now["procs"] > baseline_procs)
         expected = baseline_procs + (1 if ours_seen else 0)
         neighbour = now["procs"] > expected
         starved = now["free_mib"] < args.floor_mib

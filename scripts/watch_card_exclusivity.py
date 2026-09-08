@@ -84,6 +84,9 @@ def main() -> int:
                     help="how many compute processes are OURS; anything above is a stranger")
     ap.add_argument("--max-seconds", type=float, required=True,
                     help="hard lifetime -- required, so this can never become furniture")
+    ap.add_argument("--active-file",
+                    help="path the CELL touches when it starts using the card. Until it exists we "
+                         "expect ZERO processes of ours")
     ap.add_argument("--interval", type=float, default=20.0)
     ap.add_argument("--quiet-ok", action="store_true",
                     help="print the healthy confirmation only when it CHANGES (default: every check)")
@@ -103,7 +106,10 @@ def main() -> int:
         if now is None:
             say(f"{BANNER}\n!! CANNOT READ CARD {args.device}. Not knowing is not the same as fine.\n{BANNER}")
             breaches += 1
-        elif now["procs"] > args.expect_ours:
+        elif now["procs"] > (args.expect_ours
+                             if (not args.active_file
+                                 or __import__("pathlib").Path(args.active_file).exists())
+                             else 0):
             breaches += 1
             say(BANNER)
             say(f"!! CARD {args.device} IS NOT OURS ALONE: {now['procs']} compute processes, "

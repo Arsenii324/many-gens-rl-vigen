@@ -208,7 +208,15 @@ run_measured() {
       done
     ) &
     yield_pid="$!"
+    # [Claude 2026-09-08] Announce that a cell is now on the card, into the same shared directory
+    # the sentinel uses. Closes a real blind spot: the observers count compute processes against a
+    # baseline, and during the ~10 minute apt/pip bootstrap OUR count is zero -- so the FIRST
+    # process to appear was credited to us, and a stranger arriving in that window was silently
+    # absorbed as our own. With this marker they expect ZERO processes until the cell says
+    # otherwise, and any process before it is unambiguously somebody else.
+    : > "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
     echo "=== NATIVE_YIELD_WATCH_ARMED sentinel=$NATIVE_YIELD_SENTINEL ===" >&2
+    echo "=== NATIVE_CELL_ACTIVE_MARKER $(dirname "$NATIVE_YIELD_SENTINEL")/cell-active ===" >&2
   fi
 
   local health_pid=""
