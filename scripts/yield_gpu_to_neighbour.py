@@ -65,6 +65,16 @@ def main() -> int:
     ap.add_argument("--sentinel", required=True,
                     help="path to write when yielding; run_probe.sh polls for it and exits")
     ap.add_argument("--interval", type=float, default=30.0)
+    # [Claude 2026-09-08] REQUIRED, and it is the fix for a leak I would otherwise have shipped.
+    # The loop's only exits were "yielded" and "cannot read the card", so with no co-tenant ever
+    # arriving -- the ordinary case -- a detached observer container ran FOREVER on a shared
+    # machine, outliving the cell it was guarding by however long nobody noticed. A watchdog that
+    # outlives its subject is just a process someone else has to wonder about.
+    #
+    # Set it a little beyond the cell's own CELL_TIMEOUT_SECONDS: long enough that it cannot expire
+    # while the cell is still running, short enough that it cannot become furniture.
+    ap.add_argument("--max-seconds", type=float, required=True,
+                    help="hard lifetime; set just beyond the cell's CELL_TIMEOUT_SECONDS")
     ap.add_argument("--floor-mib", type=int, default=2000,
                     help="yield if free memory falls below this, whoever caused it")
     ap.add_argument("--dry-run", action="store_true", help="report the decision, stop nothing")
@@ -77,22 +87,46 @@ def main() -> int:
     # Our own cell counts as one process once it starts. Anything BEYOND our own is a neighbour.
     print(f"  armed on card {args.device}; sentinel {args.sentinel}")
     print(f"  baseline: {baseline['procs']} compute process(es), {baseline['free_mib']} MiB free")
+    if baseline["procs"]:
+        print(f"  NOTE: {baseline['procs']} process(es) already on this card. They are the baseline;")
+        print(f"        a yield fires only on arrivals BEYOND them, or on the memory floor.")
     print(f"  will yield if a process appears beyond ours, or free memory drops below "
           f"{args.floor_mib} MiB")
     ours_seen = False
+    baseline_procs = baseline["procs"]
+    started = time.time()
+    sentinel_dir = pathlib.Path(args.sentinel).parent
 
     while True:
+        if time.time() - started > args.max_seconds:
+            print(f"  reached --max-seconds ({args.max_seconds:.0f}s) without yielding. Exiting "
+                  f"rather than becoming a process nobody remembers starting.")
+            return 0
+        # The run directory is bind-mounted from the host. If it is gone, the run it belonged to is
+        # gone, and guarding it is pointless.
+        if not sentinel_dir.is_dir():
+            print(f"  {sentinel_dir} no longer exists; the run it guarded is over. Exiting.")
+            return 0
         now = card(args.device)
         if now is None:
             time.sleep(args.interval)
             continue
-        ours_seen = ours_seen or now["procs"] >= 1
-        # Our container contributes at most one compute process. More than that, with ours running,
-        # means somebody else is on the card.
-        neighbour = now["procs"] > (1 if ours_seen else 0)
+        # [Claude 2026-09-08] Count against a BASELINE captured before our cell starts, not against
+        # the constant 1. The first version read `procs > (1 if ours_seen else 0)`, which assumes
+        # the card is empty when we arm -- so a co-tenant who was ALREADY resident got counted as
+        # our own process, and a second arrival would have been needed before it noticed. On a card
+        # where somebody is already working, which is the case this exists for, it would never have
+        # fired at the right moment.
+        #
+        # baseline = processes present at arm time. Ours adds at most one. Anything above that is
+        # somebody new.
+        ours_seen = ours_seen or now["procs"] > baseline_procs
+        expected = baseline_procs + (1 if ours_seen else 0)
+        neighbour = now["procs"] > expected
         starved = now["free_mib"] < args.floor_mib
         if neighbour or starved:
-            why = ("another compute process is on the card" if neighbour
+            why = (f"compute processes went {baseline_procs}(+ours) -> {now['procs']}"
+                   if neighbour
                    else f"free memory {now['free_mib']} MiB is below the {args.floor_mib} MiB floor")
             print(f"=== NATIVE_YIELDING_TO_NEIGHBOUR {why} ===", file=sys.stderr, flush=True)
             print(f"    writing the sentinel; the CELL stops itself. Checkpoints already written "
