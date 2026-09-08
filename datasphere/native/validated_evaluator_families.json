@@ -277,17 +277,17 @@
     "validation_kind": "functional_endpoint"
   },
   "rlvigen": {
-    "baseline": "drqv2",
+    "baseline": "svea",
     "code_revision": null,
     "diagnostics_basis": "4 rows carry the required fields",
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/bt1h73oou888t1duau73__records.jsonl",
-    "evaluation_records_sha256": "cd86dae6626ac5896446f52cef0e82017f2e6b7ca0e12495f8cdb0dd6affdff2",
-    "evaluator_measurement_revision": "366b3469bcc1cf799dd7cf420a4af0f4a702dfacb19a085c28d3463ba25f12ac",
-    "evaluator_revision": "3e852ba2c2d18179bfb0c8bf6a2d5e3743e10a894d9485d19a58b89d70d0b3bb",
+    "evaluation_records_path": "results/records/bt1kj79a5o9gs61qkl96__records.jsonl",
+    "evaluation_records_sha256": "c3212b82293463a704dd9d45be7fd2b6cac91f41f52517c3ec65176b1f6235c6",
+    "evaluator_measurement_revision": "53756209a8c45487c94cfb1d420b4799fece564a39ac3e532cb293e74a1a0226",
+    "evaluator_revision": "a9fe0cbf3b3137eae8ec3ec4818b8a800e9eb0bed96814b2203eb5dfa31fa2d2",
     "evaluator_scope": {
       "action_repeat": 1,
-      "baseline": "drqv2",
+      "baseline": "svea",
       "deterministic_setting": {
         "backend": "torch",
         "enabled": true,
@@ -313,10 +313,10 @@
       "seed": 1,
       "task": "Door"
     },
-    "evaluator_scope_revision": "55be489874c41058aeda03037af46def0b1708bb9107c99934ce3b0561b2731d",
-    "family_code_revision": "1b27bc6f31d130dac7bcf026624c3bc9c5faa540e1973f55928b41124f03c377",
+    "evaluator_scope_revision": "19f3afcbabd329c9d0aef5a36441cf9512f0031be4cbd66f8b20b4f04ed71b15",
+    "family_code_revision": "19346a3769455f405de45d83b0ccd90f8c010be768ea43cb982adfc2df0f3572",
     "family_config_revision": "f9ccb57e88d061fed3b17853844b42548dbe983191f46d7fdf913e56811a5d5e",
-    "job": "bt1h73oou888t1duau73",
+    "job": "bt1kj79a5o9gs61qkl96",
     "paired": true,
     "paired_basis": "2 regimes share one placement sequence",
     "runtime_imports_checked": true,

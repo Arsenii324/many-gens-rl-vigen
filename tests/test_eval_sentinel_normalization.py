@@ -57,6 +57,7 @@ normalize_eval_sentinel "svea:1"
 status=$?
 echo "AFTER_EVAL_EVERY=[${{EVAL_EVERY_FRAMES:-}}]"
 echo "AFTER_SPELLING=[${{NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-}}]"
+echo "AFTER_DISABLE=[${{NATIVE_DISABLE_ONLINE_EVAL:-}}]"
 exit $status
 """
     proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True)
@@ -96,3 +97,26 @@ def test_an_unset_cadence_is_untouched():
     code, out, _ = _run(None, "null")
     assert code == 0
     assert "AFTER_EVAL_EVERY=[]" in out
+
+
+def test_it_also_sets_the_disable_flag_the_guarded_branch_reads():
+    """The half the first version missed, found by job bt1kj79a5o9gs61qkl96.
+
+    The branch that resolves the spelling is `NATIVE_DISABLE_ONLINE_EVAL == 1 AND -z
+    EVAL_EVERY_FRAMES`, and that flag is exported only by `apply_production_settings`, which
+    returns immediately unless NATIVE_PRODUCTION is set. No diagnostic cfg sets it. So clearing
+    EVAL_EVERY_FRAMES alone dropped through to `${EVAL_EVERY_FRAMES:-$frames}` -- the whole budget
+    as a cadence. That cell reported eval_every_frames=10000 and evaluated at F: 0 AND F: 10000,
+    which is strictly worse than the sentinel it replaced.
+    """
+    code, out, _ = _run("2147483647", "null")
+    assert code == 0
+    assert "AFTER_DISABLE=[1]" in out, (
+        "without this the guarded branch is unreachable on every non-production cfg, and the "
+        "cadence silently becomes the whole frame budget")
+
+
+def test_a_real_cadence_does_not_get_the_disable_flag():
+    code, out, _ = _run("50000", "null")
+    assert code == 0
+    assert "AFTER_DISABLE=[]" in out, "a run that wants periodic evaluation must keep it"

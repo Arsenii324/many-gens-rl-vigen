@@ -48,6 +48,20 @@ normalize_eval_sentinel() {
   echo "=== NATIVE_EVAL_SENTINEL_NORMALIZED 2147483647 -> ${spelling} ===" >&2
   EVAL_EVERY_FRAMES=""
   export NATIVE_ONLINE_EVAL_DISABLED_SPELLING="$spelling"
+  # ALSO set the disable flag, and this is the half the first version missed.
+  #
+  # Clearing EVAL_EVERY_FRAMES is not enough on its own, because the guarded branch below is
+  # `NATIVE_DISABLE_ONLINE_EVAL == 1 AND -z EVAL_EVERY_FRAMES` -- and that flag is only ever
+  # exported by `apply_production_settings`, which returns immediately unless NATIVE_PRODUCTION is
+  # set. No diagnostic cfg sets it. So for every attest and cover cell the disable path was
+  # unreachable, and clearing the variable alone dropped through to
+  # `eval_every="${EVAL_EVERY_FRAMES:-$frames}"` -- i.e. the whole budget as a cadence.
+  #
+  # Measured, in job bt1kj79a5o9gs61qkl96, which is where this was found: with the sentinel deleted
+  # from the cfg the cell reported `eval_every_frames=10000` and evaluated at F: 0 AND F: 10000.
+  # Deleting the line made it strictly worse than leaving it. Passing the sentinel is a request to
+  # disable; honouring it means saying so to the branch that acts on it.
+  export NATIVE_DISABLE_ONLINE_EVAL=1
 }
 
 run_measured() {
