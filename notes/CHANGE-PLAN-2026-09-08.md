@@ -510,3 +510,27 @@ needed, now with a concrete failure behind it instead of a hypothetical.
 **Consequence for the ctrl control.** The comparison that would tell us whether ibac_sni's 0.857
 clip rate is ibac_sni-specific or just what an unsquashed head does at 102k is not available yet.
 Both pilots remain open.
+
+## One observation on ibac_sni's drifting mean, with its control missing
+
+From its own recorded diagnostics, averaged over the wave:
+
+    grad_norm       13.91      against max_grad_norm 0.5
+    kl               5.29      the VIB bottleneck KL, weighted by beta 1e-4, so ~5e-4 of the loss
+    approx_kl_k3     0.0064    the POLICY KL, and it is normal
+
+So the gradient-norm clip is **fully binding on essentially every update**, at roughly 28x. When a
+clip binds that hard the step direction survives and the magnitude is pinned at 0.5, so the policy
+marches at a constant rate in whatever direction the gradient points — which is a mechanism that
+would move a mean steadily outward over eighty thousand frames.
+
+**This is one number with no control and should not be treated as a diagnosis.** `idaac`, `ppg`
+and `ctrl` do not emit `grad_norm` into the record at all, so there is nothing to compare it
+against, and `max_grad_norm=0.5` is shared by three of the four. A 28x clip ratio might be normal
+for all of them on Door.
+
+Making the on-policy four log comparable optimizer diagnostics is the obvious next step and is
+**deliberately not done now**: those files are family runtime members, so it would move three
+evaluator revisions and void the 7/7 attestation for a hypothesis with a single data point behind
+it. It belongs in the same batch as the `eval_provenance.py` import fix — the next one that already
+touches a closure member.
