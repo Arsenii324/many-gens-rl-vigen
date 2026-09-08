@@ -65,3 +65,38 @@ def test_the_cap_module_is_still_a_payload_member():
     """A cap that is not shipped cannot be installed, however correct the PYTHONPATH is."""
     contract = (ROOT / "datasphere" / "native" / "contract.py").read_text()
     assert "datasphere/native/vram_cap.py" in contract
+
+
+# --- "requested" and "in force" are different claims, and only one is checkable ------------------
+
+
+def test_the_runner_verifies_the_cap_rather_than_announcing_it():
+    """`NATIVE_VRAM_CAP_REQUESTED` printed for a day while the cap was discarded.
+
+    A log line that says a safety property was *asked for* is not evidence it holds. The runner now
+    imports the cap module through the same interpreter the trainer uses, after every PYTHONPATH
+    assignment, and refuses when it is not importable.
+    """
+    text = PROBE.read_text()
+    assert "NATIVE_VRAM_CAP_IN_FORCE" in text, "the cap is announced but never verified"
+    assert "NATIVE_VRAM_CAP_NOT_IN_FORCE" in text
+    verify_at = text.index("NATIVE_VRAM_CAP_IN_FORCE")
+    last_pythonpath = text.rindex("export PYTHONPATH=")
+    assert verify_at > last_pythonpath, (
+        "the cap is verified BEFORE the last PYTHONPATH assignment, which is exactly where it was "
+        "being discarded")
+
+
+def test_an_unenforced_cap_stops_the_cell():
+    text = PROBE.read_text()
+    block = text[text.index("NATIVE_VRAM_CAP_NOT_IN_FORCE"):][:700]
+    assert "exit 3" in block, (
+        "an unenforced cap must stop the cell: it is quoted as a safety property on a shared card, "
+        "and a declared absence is safer than a false presence")
+
+
+def test_the_cap_module_carries_a_marker_the_check_can_see():
+    cap = (ROOT / "datasphere" / "native" / "vram_cap.py").read_text()
+    assert "_rlvigen_vram_cap" in cap, (
+        "the verification would fall back to matching a filename, which a rename would silently "
+        "defeat")

@@ -38,6 +38,12 @@ from __future__ import annotations
 import os
 import sys
 
+#: [Claude 2026-09-09] An explicit marker so the runner can VERIFY this module is importable rather
+#: than inferring it from a filename. The cap was silently discarded from PYTHONPATH for a day while
+#: every run printed that it had been requested; "requested" and "in force" are different claims and
+#: only one of them is checkable. This makes the checkable one exist.
+_rlvigen_vram_cap = True
+
 # Chain to any pre-existing sitecustomize before doing anything of our own. Shadowing another
 # module of this name would be a silent, surprising side effect of setting an unrelated variable.
 try:  # pragma: no cover - environment dependent

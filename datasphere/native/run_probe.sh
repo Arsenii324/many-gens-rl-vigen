@@ -1670,6 +1670,24 @@ fi
 # A safety mechanism that has never once functioned, while reporting that it had. Nothing overwrites
 # PYTHONPATH after this point; anything added later must append the same way.
 export PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim${PYTHONPATH:+:$PYTHONPATH}"
+
+# [Claude 2026-09-09] VERIFY the cap rather than announcing it. `NATIVE_VRAM_CAP_REQUESTED` was
+# printed on every run for a day while the cap was silently discarded by the PYTHONPATH assignment
+# above, and the only reason anyone noticed is that a packed cell put an 8207 MiB process next to a
+# 2048 MiB declaration. "Requested" and "in force" are different claims and the log said the wrong
+# one, so this checks that the module the cap lives in is actually importable by the interpreter the
+# trainer will use -- after every PYTHONPATH assignment, which is where it went wrong.
+if [[ -n "${NATIVE_VRAM_CAP_MIB:-}" ]]; then
+  if python3 -c "import sitecustomize, os, sys; sys.exit(0 if 'vram' in (getattr(sitecustomize,'__file__','') or '') or hasattr(sitecustomize,'_rlvigen_vram_cap') else 1)" 2>/dev/null; then
+    echo "=== NATIVE_VRAM_CAP_IN_FORCE ${NATIVE_VRAM_CAP_MIB} MiB, sitecustomize resolves ===" >&2
+  else
+    echo "=== NATIVE_VRAM_CAP_NOT_IN_FORCE ===" >&2
+    echo "    NATIVE_VRAM_CAP_MIB=${NATIVE_VRAM_CAP_MIB} was requested, but the cap module is NOT" >&2
+    echo "    importable, so nothing bounds this process on a shared card. PYTHONPATH=$PYTHONPATH" >&2
+    echo "    Refusing: an unenforced cap is worse than a declared absence, because it is quoted." >&2
+    exit 3
+  fi
+fi
 # [Codex 2026-09-01 10:31 MSK: fail before timed calibration when native training imports are incomplete]
 # [Claude 2026-09-02 13:20 MSK: this gate imports RL-ViGen's OWN train.py, which imports
 # torchvision. A family that runs without torch -- CTRL, which is JAX and reaches the robosuite
