@@ -2941,3 +2941,38 @@ table is the other half of the same honesty, since a finite-horizon objective ev
 one method's own horizon and 0.375% of another's is not one condition either.
 
 **Status: operational, not ratified.** This is an argument, not a change; nothing in the code moves.
+
+---
+
+## A49 — A43 was recorded and not executed (2026-09-08)
+
+Caught by asking `family.py command` what it actually emits, instead of reading `families.json`.
+
+**A43 set `ibac_sni.lr = 0.0005` and the run would have used `7e-4`.** `constants` become argv only
+where an `options`/`positional` template references them as `{name}`, and `--lr` was not in
+`ibac_sni`'s template. So the value was declared in the config, recorded in the decision sheet,
+carried into `production-schedule-v100.json` and into every payload manifest — and never passed.
+Every artifact would have said 5e-4 while the process ran torch_rl's MiniGrid default.
+
+This is the defect class this session spent the day finding — a declared value that does not reach
+the thing it describes — and I introduced it myself a few hours after writing the entry that names
+the pattern. Worth recording plainly: reading the config is not evidence about the run.
+
+**Fixed**: `"--lr", "{lr}"` added to `ibac_sni.options`; `family.py command` now emits
+`--lr 0.0005`, and `ibac_sni_cell.sh` forwards `"$@"` into `ibac_sni.sh`, which appends it after
+its own flags, so it takes effect.
+
+**Six others were unreferenced and are not defects.** `ctrl`'s `num_clusters`, `n_att_heads`,
+`embedding_type`, `lr`, `lr_ctrl` and `max_grad_norm` all equal `train_ppo.py`'s own `absl.flags`
+defaults — checked, not assumed — so they document what the run uses rather than override it. That
+is consistent with A45, which established that `families.json` overrides only `cluster_len`,
+`n_minibatch_ctrl` and `num_envs` for that family.
+
+**The distinction is invisible in the config, which is why it needs a test.** An unreferenced
+constant that matches the clone's default is documentation; one that does not is a silent lie, and
+the two are written identically. `tests/test_every_constant_reaches_the_process.py` fails on any
+new unreferenced constant, and separately verifies that each exemption really does equal the
+default it claims to record — an exemption that is not checked is just a longer way of not
+checking.
+
+**Status: operational, not ratified.** It makes A43 true; it does not change A43's reasoning.

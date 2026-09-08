@@ -802,7 +802,9 @@
       "--frames-per-proc",
       "{frames_per_proc}",
       "--save_interval_frames",
-      "{save_every}"
+      "{save_every}",
+      "--lr",
+      "{lr}"
     ],
     "artifact_root": "{run_dir}/{model_name}",
     "required_curves": [
