@@ -623,3 +623,56 @@ flat at its 10k value, one doubles and stays at the floor. Whatever drives `ibac
 head type, not the task and not the horizon — which is exactly what gate 1 exists to test at
 `procs=16` on the host, and exactly why tuning it here against a `procs=1` regime would have been
 tuning against the wrong thing.
+
+---
+
+# The ibac_sni re-pilot: the init was half of it, and my estimate of its size was wrong by 8.5x
+
+`bt1ffm60pqc3gfg76m80`, 102400 frames, the 2026-09-08 policy-head init **reverted**, everything
+else held.
+
+| run | coord clip | vector | late return |
+|---|---:|---:|---:|
+| 10112, with init | 0.4925 | 0.9984 | — |
+| 10112, without | 0.4680 | 0.9830 | — |
+| **102400, WITH init** | **0.857** | 1.0000 | 1.80 (at floor) |
+| **102400, WITHOUT init** | **0.649** | 0.9998 | **6.98** |
+| 102400, `idaac` control | 0.384 | 0.962 | — |
+| 102400, `ctrl` control | 0.000 | 0.0000 | 17.36 |
+
+**Reverting the init helped materially**: clip fell 0.857 → 0.649, and the late-window return rose
+from 1.80 — indistinguishable from the 1.842 floor — to 6.98.
+
+**And it exposes an error of mine worth keeping.** I justified the revert by arguing the init
+"contributed at most ~0.02 of the 0.414 growth", reasoning from the 10112-frame pair where it
+measured +0.0245. At 102400 it measured **+0.208** — roughly half the excess, and **8.5× my
+estimate**. The effect had not developed at 10k, so extrapolating a young measurement understated
+it by an order of magnitude. Reverting was the right call for a wrong reason, which is worth
+recording precisely because the outcome was fine: the reasoning was unsound and only luck made the
+conclusion right.
+
+That is the same failure the project has already catalogued — a young measurement treated as a
+bound — and it is now the second instance from this one policy head.
+
+## Still INDICTED, and deliberately not chased further here
+
+0.649 remains above the 0.60 threshold, and against `idaac`'s 0.384 at identical length it is still
+the outlier. A43's next arm would be `lr` 5e-4 → 7e-4.
+
+**It is not run.** The reason stands from the earlier correction: every `ibac_sni` pilot available
+on these tiers is `procs=1` — rollout 128, one full-batch minibatch — while production is
+`procs=16`, rollout 2048, eight minibatches at half the update-to-data ratio. Another 3.6-hour arm
+would isolate a variable in an update structure production never runs.
+
+**The residue belongs to gate 1**, whose test `notes/RUNNING-ON-PRODUCTION-HOST.md` step 5 already
+schedules at `procs=16` on the host, with step 5a saying to read `action_clip_rate_coordinate`
+rather than the analytic `boundary_fraction`.
+
+## What is settled
+
+- **The frame-stack gate is met for `ibac_sni`.** Its authored three-frame stack has now trained
+  102400 frames twice, finite and with `sigma` stable both times. That is what the gate asked.
+- **The saturation is `ibac_sni`-specific**, not a property of unsquashed heads: at matched length,
+  `ctrl` clips 0.000 and learns to 17.36, `idaac` sits flat at 0.384, `ibac_sni` reaches 0.649 even
+  with the init removed.
+- **The 2026-09-08 init stays reverted.** It made things measurably worse at length.
