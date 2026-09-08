@@ -10,5 +10,9 @@
   "bt145364k8krqvqu86u6": {
     "reason": "A56: refused by the gt4i.1 concurrency cap 2s after creation, ninth concurrent gt4i.1 cell of the v197 batch. Resubmitted when a slot freed.",
     "state": "CANCELLED"
+  },
+  "bt1jmirrveqa3p8lnru5": {
+    "reason": "A57: aborted in the Places365 loader verification before NATIVE_CELL_BEGIN. Everything the block checks had passed (split=train resolved, check-asset ok, dataset loaded); the interpreter then hit std::terminate at teardown -- terminate called without an active exception / Aborted (core dumped). A race, not a regression: the identical block succeeded in bt1tjqjmpcnicb6ih739. Fixed by making the check print its own verdict.",
+    "state": "FAILED-TRAIN"
   }
 }
