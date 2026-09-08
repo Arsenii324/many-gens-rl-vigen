@@ -3097,3 +3097,120 @@ not the script's. Worth recording because the opposite conclusion would have sen
 gate that was working.
 
 **Status: operational, not ratified.**
+
+---
+
+## A54 — two provenance statements that were false, from external review 27 (2026-09-08)
+
+Review 27's P0 list contains two claims that are checkable in minutes and were **both correct**.
+They mattered immediately because they would have been baked into the wave being submitted.
+
+### 1. `source-lock.json` described the superseded validation experiment (review 27 §2)
+
+The file carried `places365_validation_asset: {image_count: 36500, content_sha256: 70237503…}` —
+the **val** fixture, the exact count and digest replaced in every train-split config earlier today
+— plus three `accepted_adaptations` strings asserting validation-split selection:
+
+    "SVEA Places365 loader is configured to select validation directly…"
+    "Places365 validation asset is an explicit SVEA-only remote input"
+    "Places365 val pinning is applied to dmc_gb's src/augmentations.py…"
+
+`contract.py::write_payload` copies `accepted_adaptations` **verbatim into every payload manifest**,
+and the manifest is the immutable provenance a result carries. So the reachable outcome was exactly
+as the review states: production correctly trains SODA on Places365 train, the job succeeds, and
+the result's own provenance says it used the validation adaptation. Prose nobody reads is harmless;
+prose the provenance machinery copies is not.
+
+**Fixed.** The three adaptation strings now describe split selection by
+`NATIVE_PLACES365_SPLIT` with train as the production value, and the asset pin is **split-keyed**:
+`val` (36,500, marked probe-fixture-only), `train_attest_fixture` (1,000, marked as exercising the
+code path and *not* the production corpus), and `train_production` (nulls, to be filled when the
+~1.8M-image asset is provisioned on the host). No code read the old key by name, so the rename is
+safe.
+
+### 2. The run manifest claimed the RL-ViGen launcher for all twelve (review 27 §3)
+
+`run_probe.sh` wrote a literal `"command": "runnable/_launch/rlvigen.sh"` into every
+`run_manifest.json`. For `rad`, `soda`, `alda`, `idaac`, `ppg`, `ibac_sni` and `ctrl` — seven of
+twelve — that is simply false. The per-cell `effective_config.json` carries the real resolved argv,
+so nothing ran wrong; what was wrong is what the immutable record **said**, in the one artifact
+whose purpose is to make post-hoc provenance editing unnecessary.
+
+**Fixed** as the review asks, with the entry point and the family launcher as separate fields, each
+true of what it names: `"command": "datasphere/native/run_probe.sh"` (the outer entry point, true
+for every family) plus `"cell_launchers"`, mapping each cell to its family's own launcher from
+`families.json`. The lookup is fail-soft — this block writes the manifest *after* the cells have
+run, and an exception there would destroy a completed job's evidence over a provenance nicety.
+
+### What review 27 independently confirms
+
+Worth recording, because agreement reached separately is evidence and disagreement between reviews
+is what has been productive today. Review 27 arrives independently at: PPG `aux_lr = 5e-4` with
+policy `lr = 3e-4` (A44, same reasoning — the supplement never states an auxiliary rate); three
+frames for all twelve including the "clean up stale 10/2 comments" instruction (A40 REVISED-2);
+reward normalisation as a source-native training difference rather than a reporting-units failure
+(the `REWARD_NORMALIZATION` axis); render size kept source-faithful rather than standardised (the
+`network input` axis); and a source-horizon table essentially identical to A46's, including the
+warning not to renormalise IDAAC's 1M decay to end at 600k.
+
+It also confirms as fixed: CTRL's 64-env RAM planning, SODA's `aux_lr`, and IDAAC's C2 recipe.
+
+**Status: operational, not ratified.**
+
+---
+
+## A55 — three more from review 27, each a check that failed open (2026-09-08)
+
+### GPU packing (review 27 §12)
+
+`NATIVE_CONCURRENT=1` with no `NATIVE_CELL_DEVICES` launched every cell unpinned, so each CUDA
+process saw all GPUs and independently chose `cuda:0`. The launch looks correct; the symptom is one
+device at double memory and the rest idle — the packing buying nothing it was run for. The earlier
+fix made the device list *reachable*; it did not make its absence *refusable*.
+
+**Fixed, and deliberately scoped.** DataSphere tiers have one GPU and packing `co_schedulable`
+families onto it is the intended behaviour with nothing to assign — refusing there would break the
+probe path for no gain. So the refusal fires only when `nvidia-smi -L` reports more than one GPU,
+which is exactly where the collision is real. A device list that repeats an index is refused
+outright: the operator asked for packing and named the same device twice.
+
+### Mirror failure (review 27 §13)
+
+The mirror copy warned and exited 0. Production scale **refuses to start** without
+`NATIVE_RESULT_MIRROR`, so the second copy is a stated requirement of the run — and a requirement
+whose failure is a log line nobody greps is not a requirement. The operator would believe two
+copies existed. Now `exit 4`; the training output is untouched on the primary volume and the
+durability contract is what reports failed.
+
+The review's second point is also right and my runbook text overclaimed. Post-run copying protects
+a *finished* result from later loss of the primary volume. It does **not** protect a 45-hour cell
+from losing that volume at hour 35. Mid-run durability is a different mechanism and is already in
+place — `/tmp/native-out` and `/tmp/native-work` are host-mounted, so checkpoints are durable **as
+written** — but that is durability against container loss, not volume loss. The runbook now says
+which is which, and says plainly that surviving mid-run volume loss is not implemented and not
+claimed.
+
+### Places365 in the disk model (review 27 §4)
+
+`disk_requirement_gib()` accounted for replay, checkpoints, retained copies and the result archive,
+and **not** for the corpus `svea`, `sgqn` and `soda` copy onto the host and expand beside all of it.
+A host could pass the project's own preflight and then run out of space during extraction — the
+failure a preflight exists to make impossible. It reported **20.73 GiB** for a soda cell that needs
+roughly **65**.
+
+**Fixed**, charged per cell to the three baselines that open it, because each extracts into its own
+work root. `PLACES365_TRAIN_GIB = 45.0` is the compressed archive plus the expanded tree, derived
+from DMC-GB's own published ~21 GiB figure — **a stated estimate, not a measurement**, labelled as
+such in the code and in a test, to be replaced by the real number at the first host provisioning.
+An estimate that is present and labelled beats a term that is absent.
+
+### The shape these three share
+
+None of them was a wrong value. Each was a check that **could not fail**: a device map that was
+optional, a copy whose failure was a warning, a preflight with no term for the largest thing on the
+disk. That is the same family as `audit_row_closure` comparing against a string `contract.py`
+cannot emit, and as `--strict` on an audit nothing ran. Review 27's framing is right — the threat
+is no longer wrong hyperparameters, it is that *what runs, what is later said to have run, and what
+the attestation certifies* can drift apart.
+
+**Status: operational, not ratified.**

@@ -110,5 +110,35 @@ def test_the_mirror_is_actually_written_and_reported():
     text = WRAPPER.read_text()
     assert 'cp "$RESULT" "$NATIVE_RESULT_MIRROR/"' in text
     assert "mirrored:" in text, "the operator must be able to see that it happened"
-    assert "NATIVE_RESULT_MIRROR copy FAILED" in text, (
+    # [2026-09-08, external review 27 sec.13] A failed copy must be FATAL, not a warning.
+    # Production scale refuses to start without a mirror, so a requirement whose failure is a log
+    # line nobody greps is not a requirement -- the operator would believe two copies existed.
+    assert "NATIVE_RESULT_MIRROR copy to" in text and "did not succeed" in text, (
         "a mirror that silently did not run is worse than none, because it is believed")
+    block = text[text.index('if [[ -n "${NATIVE_RESULT_MIRROR:-}" ]]; then'):]
+    block = block[:block.index("\nfi\n")]
+    assert "exit 4" in block, (
+        "a failed mirror must leave a non-zero result state; warning and exiting 0 makes the "
+        "production-scale requirement theatre")
+
+
+def test_concurrent_cuda_cells_fail_closed_without_a_device_map():
+    """External review 27 §12: an absent device map is a silent collision on a multi-GPU host.
+
+    With `NATIVE_CONCURRENT=1` and no `NATIVE_CELL_DEVICES`, every cell launches unpinned, so each
+    CUDA process sees all GPUs and independently picks `cuda:0`. The launch looks correct; the
+    symptom is one device at double memory and the rest idle, which is the packing buying nothing
+    it was run for.
+
+    The refusal is deliberately scoped: DataSphere tiers have ONE GPU and packing co_schedulable
+    families onto it is the intended behaviour with nothing to assign. Refusing there would break
+    the probe path for no gain, so the check fires only when more than one GPU is visible.
+    """
+    text = PROBE.read_text()
+    assert "REFUSING: NATIVE_CONCURRENT=1 with" in text, (
+        "concurrent CUDA cells with no device map must refuse on a multi-GPU host")
+    assert "nvidia-smi -L" in text, (
+        "the refusal must be conditioned on the GPUs actually visible, or it breaks single-GPU "
+        "DataSphere packing that is intended")
+    assert "repeats a device index" in text, (
+        "a device list with duplicates puts two cells on one GPU silently")

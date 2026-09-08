@@ -410,6 +410,14 @@ def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float
     return 0.0
 
 
+#: The Places365 train corpus, charged to the three overlay baselines that actually open it.
+#: ~21 GiB compressed (DMC-GB's own README figure for places365standard_easyformat.tar) plus the
+#: expanded tree, which is roughly the same again for JPEGs. A stated estimate, not a measurement:
+#: replace it with the real number at the first host provisioning.
+PLACES365_TRAIN_GIB = 45.0
+PLACES365_BASELINES = ("svea", "sgqn", "soda")
+
+
 def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
                          profile: str | None = None) -> dict:
     """Host disk one job of these cells needs, derived per family rather than assumed.
@@ -452,11 +460,24 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         # THREE copies coexist at peak, not two: the originals the trainer wrote under {run_dir},
         # the set `retain` COPIES (shutil.copy2, not move) into the cell output, and the compressed
         # copy inside result.tgz. The archive is written while both others are still on disk.
-        cell_total = replay + 3 * checkpoints
+        # [Claude 2026-09-08, A55 -- external review 27 sec.4] The Places365 corpus was missing
+        # from this model entirely, so a host could pass this preflight and then run out of space
+        # during extraction. Production copies the ~21 GiB compressed archive onto the host AND
+        # expands the ~1.8M-image train tree beside the normal RL state, and both live on the work
+        # filesystem this number is checked against.
+        #
+        # Charged per CELL because each cell extracts into its own work root. `PLACES365_TRAIN_GIB`
+        # is the compressed archive plus the expanded tree; it is a stated estimate from the
+        # published asset size, NOT a measurement, and the first real provisioning on the host
+        # should replace it with one. An estimate that is present and labelled is worth more than
+        # a term that is absent.
+        places = PLACES365_TRAIN_GIB if baseline in PLACES365_BASELINES else 0.0
+        cell_total = replay + 3 * checkpoints + places
         rows[cell] = {"family": family, "replay_gib": round(replay, 2),
                       "checkpoints_written_gib": round(checkpoints, 2),
                       "checkpoints_retained_copy_gib": round(checkpoints, 2),
-                      "archive_gib": round(checkpoints, 2), "total_gib": round(cell_total, 2)}
+                      "archive_gib": round(checkpoints, 2),
+                      "places365_gib": round(places, 2), "total_gib": round(cell_total, 2)}
         total += cell_total
     margin = 5.0   # payload, pip wheels, apt packages and the extracted RL-ViGen tree
     return {"cells": rows, "margin_gib": margin, "required_gib": round(total + margin, 2)}

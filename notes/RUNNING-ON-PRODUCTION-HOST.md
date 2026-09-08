@@ -154,7 +154,16 @@ NATIVE_RESULT_MIRROR=/mnt/other-volume/rlvigen-results \
 
 **`NATIVE_RESULT_MIRROR` is mandatory at 600k, and it is checked rather than trusted.** Results
 otherwise live on exactly one host volume; a soda cell alone is ~45 hours and the campaign is
-~893 GPU-hours. The script compares the filesystem id of the mirror against the result path's
+~893 GPU-hours.
+
+**What it does and does not protect against** (external review 27 §13 is right to insist on the
+distinction). The mirror copy happens **after** the run completes, so it protects the finished
+result against later loss of the primary volume. It does **not** protect a 45-hour cell against
+losing that volume at hour 35. Mid-run durability comes from a different mechanism and is already
+in place: `/tmp/native-out` and `/tmp/native-work` are both bind-mounted to host directories, so
+checkpoints are durable on the primary volume **as they are written** rather than only when the
+result is packed. Surviving loss of the primary volume mid-run would need periodic mirroring of
+retained checkpoints, which is not implemented and is not claimed. The script compares the filesystem id of the mirror against the result path's
 (`stat -f -c %i`) and **refuses if they match** — a copy beside the original does not survive the
 failure it exists for. It also refuses if either id cannot be read, rather than assuming.
 
@@ -162,9 +171,11 @@ If the host genuinely has one volume, `NATIVE_ACCEPT_SAME_DEVICE=1` records the 
 explicitly and the run proceeds; the marker `NATIVE_RESULT_MIRROR_SAME_DEVICE` then appears in the
 log. Prefer a real second device, including a network mount.
 
-After the run, look for the `mirrored:` line. A `WARNING: NATIVE_RESULT_MIRROR copy FAILED` line
-means the primary result is intact and there is no second copy — the run does not fail for it,
-because by then the training is already done and its output is on disk.
+After the run, look for the `mirrored:` line. If the copy fails the wrapper now **exits 4** rather
+than warning: production scale refuses to start without a mirror, so a requirement whose failure is
+a log line nobody greps is not a requirement. The training output is not lost — `$RESULT`,
+`NATIVE_OUT_HOST_DIR` and `NATIVE_WORK_HOST_DIR` are all intact on the primary volume — but the
+durability contract has failed, so the run reports incomplete and the operator decides.
 
 `NATIVE_PRODUCTION=1` and `NATIVE_HOST_PROFILE` are **mandatory at 600k** — `run_probe.sh` refuses
 without them, because `apply_production_settings` would otherwise apply nothing and train a full

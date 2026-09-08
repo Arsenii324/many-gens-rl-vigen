@@ -371,8 +371,21 @@ if [[ -n "${NATIVE_RESULT_MIRROR:-}" ]]; then
     fi
     echo "mirrored: $NATIVE_RESULT_MIRROR/$(basename "$RESULT")" >&2
   else
-    echo "WARNING: NATIVE_RESULT_MIRROR copy FAILED to $NATIVE_RESULT_MIRROR" >&2
-    echo "  The primary result at $RESULT is intact. There is no second copy." >&2
+    # [Claude 2026-09-08, A55 -- external review 27 sec.13] FATAL, not a warning.
+    #
+    # This was a warning that let the wrapper exit 0. But production scale REFUSES to start without
+    # NATIVE_RESULT_MIRROR, so the second copy is a stated requirement of the run -- and a
+    # requirement whose failure is a log line nobody greps is not a requirement. The operator would
+    # believe two copies existed.
+    #
+    # The training output is not lost: $RESULT, $NATIVE_OUT_HOST_DIR and $NATIVE_WORK_HOST_DIR are
+    # all on the primary volume and intact. What has failed is the durability contract, so the run
+    # reports incomplete and the operator decides.
+    echo "FAILED: NATIVE_RESULT_MIRROR copy to $NATIVE_RESULT_MIRROR did not succeed." >&2
+    echo "  The primary result at $RESULT is intact and so is $NATIVE_OUT_HOST_DIR." >&2
+    echo "  There is NO second copy, which production scale requires. Copy it manually and" >&2
+    echo "  re-check, or re-run with a reachable NATIVE_RESULT_MIRROR." >&2
+    exit 4
   fi
 fi
 echo "cell output (training.log, retained artifacts): $NATIVE_OUT_HOST_DIR" >&2

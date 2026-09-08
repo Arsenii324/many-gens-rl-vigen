@@ -1,12 +1,12 @@
 {
   "accepted_adaptations": [
     "RL-ViGen patch set P1-P20 from setup/apply_patches.py",
-    "SVEA Places365 loader is configured to select validation directly and reject directory fallback",
+    "Places365 loader is configured to select the split named by NATIVE_PLACES365_SPLIT and reject directory fallback; production is the TRAIN split (DECISION-SHEET A22), and run_probe.sh refuses production scale on val without an explicit declared deviation",
     "Native runner accepts conventional tar member prefixes and captures calibration CPU/GPU resource telemetry",
     "Preflight manifests declare zero frames and omit training-only resource claims",
     "Native runner emits explicit completion and result-archive failure diagnostics",
     "Result archive membership is verified with Python tarfile, not tar listing text",
-    "Places365 validation asset is an explicit SVEA-only remote input",
+    "The Places365 asset is an explicit remote input for the three overlay baselines (svea, sgqn, soda); production provisions places365standard_easyformat.tar and consumes its TRAIN split",
     "Calibration bootstrap provisions GNU time before invoking /usr/bin/time",
     "RL-ViGen launcher selects PYTHON_BIN, PYTHON, or remote python3; it never assumes the developer virtualenv",
     "ALDA, IDAAC, and PPG launchers select PYTHON_BIN, PYTHON, or remote python3; they never assume the developer virtualenv",
@@ -35,7 +35,7 @@
     "Payload allowlist is base plus per-family payload_members, and the declaration travels inside the archive so the remote verifier applies the same rule; a dmc_gb job cannot contain another clone",
     "dmc_gb finalize_run adds a terminal evaluation, terminal checkpoint and the exact marker after its unchanged loop; its save_freq default of 100k would otherwise leave a 10k or 100k run with no checkpoint at all",
     "dmc_gb and ALDA's vendored copy of utils.write_info no longer treat `git describe` as a precondition for training; the payload is a tarball, so no DataSphere job is a git checkout",
-    "Places365 val pinning is applied to dmc_gb's src/augmentations.py as well as RL-ViGen's utils.py, because soda overlays from the same dataset and the two would otherwise draw from different splits",
+    "Places365 split pinning is applied to dmc_gb's src/augmentations.py as well as RL-ViGen's utils.py, because soda overlays from the same dataset and the two would otherwise draw from different splits; both are pinned to the SAME split, which is train in production",
     "requirements-native.txt pins kornia, einops, xmltodict and tqdm, declared by dmcontrol-generalization-benchmark's own setup/conda.yaml and installed by nothing here",
     "summarize_result.py derives the per-cell throughput and resource envelope from a returned archive rather than from a hand-read log",
     "P18 writes a step-stamped copy of each intermediate snapshot when RLVIGEN_PRESERVE_SNAPSHOTS is set; upstream saves ten times in a 500k run and keeps one, and the nine it overwrites are a budget curve",
@@ -49,9 +49,23 @@
     "A cell's retained checkpoint is gated on containing finite floating-point values, per docs/CONSTRUCTION.md#c57",
     "RUNNER_CONTRACT is stamped into the payload manifest and checked immediately after extraction, because the runner and the payload are separate job inputs and drifted once"
   ],
-  "places365_validation_asset": {
-    "image_count": 36500,
-    "content_sha256": "70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669"
+  "places365_asset_by_split": {
+    "_note": "[Claude 2026-09-08, A54 -- external review 27 sec.2] Was `places365_validation_asset`, pinning ONLY the 36,500-image val fixture, while production consumes the TRAIN split (A22). contract.py copies this file's accepted_adaptations into every payload manifest, so a correct train-split run carried immutable provenance describing the superseded validation experiment. Split-keyed now, and the count/digest of whichever split a job declares is what run_probe.sh checks via contract.py check-asset.",
+    "val": {
+      "image_count": 36500,
+      "content_sha256": "70237503ec14fba495dd9440ce2901707447a142933773a4441e446788f57669",
+      "role": "probe fixture only; production refuses this split without a declared deviation"
+    },
+    "train_attest_fixture": {
+      "image_count": 1000,
+      "content_sha256": "c08327c5baf66746d2caf2f6f126c297fa421280d90a7d17eb903e7939dfed2e",
+      "role": "attestation fixture; exercises the train code path, NOT the production corpus"
+    },
+    "train_production": {
+      "image_count": null,
+      "content_sha256": null,
+      "role": "places365standard_easyformat.tar, ~1.8M images; count and digest are recorded when the asset is provisioned on the production host"
+    }
   },
   "container_image": "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000",
   "requirements_native_sha256": "43983f2374fa7b6c8598f6586111fa5478a950b1c5caf978a1aa9bcfae04ee8b",

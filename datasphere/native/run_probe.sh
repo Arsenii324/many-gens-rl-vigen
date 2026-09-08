@@ -347,6 +347,40 @@ run_cell_list() {
     devices=(${NATIVE_CELL_DEVICES})
     IFS="$previous_ifs_devices"
   fi
+  # [Claude 2026-09-08, A55 -- external review 27 sec.12] FAIL CLOSED on a multi-GPU host.
+  #
+  # With NATIVE_CONCURRENT=1 and no NATIVE_CELL_DEVICES, every cell launches unpinned, so each
+  # CUDA process sees all GPUs and independently chooses cuda:0. The launch looks correct and the
+  # collision only shows up as one device at double memory and the rest idle -- the packing buying
+  # nothing it was run for.
+  #
+  # The refusal is scoped to where the danger is real. DataSphere tiers have ONE GPU, and packing
+  # co_schedulable families onto it is the intended behaviour with nothing to assign; refusing
+  # there would break the existing probe path for no gain. On a host with more than one GPU an
+  # absent device map is a silent bug, so it stops.
+  if [[ "${NATIVE_CONCURRENT:-}" == "1" && "${#cell_list[@]}" -gt 1 && "${#devices[@]}" -eq 0 ]]; then
+    local visible_gpus
+    visible_gpus="$(nvidia-smi -L 2>/dev/null | grep -c '^GPU ' || echo 0)"
+    if [[ "$visible_gpus" -gt 1 ]]; then
+      echo "REFUSING: NATIVE_CONCURRENT=1 with ${#cell_list[@]} cells and no NATIVE_CELL_DEVICES" >&2
+      echo "  on a host with $visible_gpus GPUs. Every cell would see all of them and pick cuda:0," >&2
+      echo "  so they would collide on one device while the others idle -- a launch that looks" >&2
+      echo "  correct and wastes the packing it was run for." >&2
+      echo "  Set NATIVE_CELL_DEVICES=0,1,... with one index per concurrent cell." >&2
+      exit 3
+    fi
+  fi
+  # Duplicate indices in an explicit list are always a mistake: the operator asked for packing and
+  # named the same device twice.
+  if [[ "${#devices[@]}" -gt 1 ]]; then
+    local unique_devices
+    unique_devices="$(printf '%s\n' "${devices[@]}" | sort -u | wc -l | tr -d ' ')"
+    if [[ "$unique_devices" -ne "${#devices[@]}" ]]; then
+      echo "REFUSING: NATIVE_CELL_DEVICES=${NATIVE_CELL_DEVICES} repeats a device index." >&2
+      echo "  Round-robin over a list with duplicates puts two cells on one GPU silently." >&2
+      exit 3
+    fi
+  fi
   local cell_index=0
   if [[ "${NATIVE_CONCURRENT:-}" == "1" ]]; then
     local pids=() specs=()
@@ -1557,8 +1591,38 @@ for spec in requested:
         cells[identifier]["terminal_status"] = "failed"
         cells[identifier]["failure_marker"] = cell_failure_marker(log)
 
+# [Claude 2026-09-08, A54 -- external review 27 sec.3] `command` was the LITERAL
+# "runnable/_launch/rlvigen.sh" for every family, so the immutable manifest of a rad, soda, alda,
+# idaac, ppg, ibac_sni or ctrl result asserted it was produced by the RL-ViGen launcher. Seven of
+# twelve families carried a false statement about how they were generated -- in the one artifact
+# whose purpose is to make post-hoc provenance editing unnecessary.
+#
+# The effective configuration per cell already carries the real resolved argv, so nothing ran
+# wrong; what was wrong is what the manifest SAID. Recorded now as review 27 asks: the outer entry
+# point and the per-cell family launcher as separate fields, each true of what it names.
+# Fail-soft: this block writes the manifest AFTER the cells have run, so an exception here would
+# destroy a completed job's evidence over a provenance nicety. An unreadable descriptor yields
+# "unknown", which is honest, rather than a traceback.
+try:
+    _FAMILIES = json.loads(Path("datasphere/native/families.json").read_text())
+    _LAUNCHER_OF_BASELINE = {
+        baseline: entry.get("launcher")
+        for name, entry in _FAMILIES.items()
+        if isinstance(entry, dict)
+        for baseline in entry.get("baselines", [])
+    }
+except Exception:
+    _LAUNCHER_OF_BASELINE = {}
+_cell_launchers = {}
+for _spec in requested:
+    _baseline = identify(_spec)[0]
+    _cell_launchers[identify(_spec)[0] + "-s" + identify(_spec)[1]] = _LAUNCHER_OF_BASELINE.get(
+        _baseline, "unknown")
+
 json.dump({
-    "command": "runnable/_launch/rlvigen.sh",
+    # The outer entry point, which is true for every family. The family launcher is per cell.
+    "command": "datasphere/native/run_probe.sh",
+    "cell_launchers": _cell_launchers,
     "cells_requested": requested,
     "cells_failed": failed,
     "cells": cells,
