@@ -94,6 +94,30 @@ back silently), and a decision on per-step reward traces (~10^9 values fleet-wid
 here that genuinely costs something).
 → *This is the only class whose omission cannot be repaired after the fleet finishes.*
 
+**[Claude 2026-09-08] MOSTLY CLOSED — verified against a real record row, not against the gate.**
+`scripts/production_gates.py` now reports `record completeness` and `placement provenance` as PASS,
+and job `bt1ik7krfpjeftl65s3b`'s rows carry all four:
+
+| item | field on the row |
+|---|---|
+| realized placement parameters | `native.placement_witnesses`, `native.placement_condition_seeds`, `native.eval_episode_ids` |
+| vector-level action clip rate | `native.policy_action_diagnostics.action_clip_rate_vector` (alongside `_coordinate`) |
+| determinism actually enabled | `evaluator_scope.deterministic_setting.enabled` + `.backend` + `.mode` |
+| policy scale | `policy_scale` — present per episode, **`null` for drqv2** |
+
+`null` there is correct rather than missing: DrQ-v2's TruncatedNormal takes a **scheduled** stddev
+computed from the step, so there is no stored `log_std` for `eval_provenance.policy_scale` to find.
+
+**What is NOT closed** is whether it resolves for the four families that DO carry a learned
+`log_std` — `idaac`, `ppg`, `ibac_sni`, `ctrl`. The only test covering it
+(`tests/test_eval_provenance.py:43`) hands the walker a synthetic object, which tests our idea of
+the layout rather than the layout. A silent `None` for `ibac_sni` would mean the σ≈4.3 saturation
+detector never fires for the exact family whose failure motivated it. The walker itself is sound —
+it returns `log_std_mean 1.4586` from a real `nn.Parameter` at σ≈4.3 — so what is untested is the
+attribute path into each family's own agent, and that is checkable in a container with no GPU.
+
+Per-step reward traces remain undecided; `reward_min/mean/max` per episode are recorded.
+
 **Reporting/analysis rules are not frozen.** The corrected statistics live in `notes/`, not in
 `EVAL-PROTOCOL.md`: outer unit = training seed (n=3, **not** 600 episode rows), scenes as a fixed
 grid, a numeric competence threshold, a missing-run policy, and the checkpoint-selection rule.
