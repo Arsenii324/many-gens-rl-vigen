@@ -723,3 +723,50 @@ numerical comparison against its own reference.
 (§4's spare-time real-backend coverage, §9's independent re-derivation) taken because they were
 cheap, available, and directly responsive to the standing instruction to keep verifying rather
 than stop at "probably fine."**
+
+---
+
+## 3f. Three mechanism differences absent from this project's entire prose corpus (2026-09-08)
+
+Found by a from-first-principles source walk of all twelve training loops, then checked against
+every `.md` and `.txt` in the tree outside `ext/`, `RL-ViGen-upstream/` and `runnable/` — 247 files.
+Most of what that sweep raised was already recorded somewhere. These three were not recorded
+anywhere at all.
+
+**All three are faithful to upstream.** Nothing below is a change; each is a disclosure, and each
+is here because a reader comparing these baselines would otherwise assume uniformity that does not
+hold.
+
+### ALDA is the only baseline that applies weight decay, and the only one using AdamW
+
+`runnable/alda/trainers/alda_trainer.py:301-303`:
+
+    self.ae_optimizer = torch.optim.AdamW(
+        list(shared_trunk.parameters()) + list(self.decoder.parameters()),
+        lr=1e-3, weight_decay=0.1)
+
+Byte-identical to `ext/ALDA_Official/trainers/alda_trainer.py:264-265`, so this is the authors' own
+choice, not ours. What makes it worth stating is where it lands: `shared_trunk` is the single
+`QuantizedEncoder` that *both* `actor_encoder` and `critic_encoder` wrap (`:239-249`), the
+autoencoder loss reaches it un-detached, and this optimizer steps every update. So the visual
+representation ALDA's actor and critic both read carries a decoupled weight-decay pull toward zero
+on every step that no other baseline's encoder experiences — `weight_decay` and `AdamW` appear
+**zero times** in any project document before this one, and grepping every other baseline's
+optimizer construction finds no `weight_decay` anywhere. (`ibac_sni`'s `torch_rl` PPO *can* pass
+`weight_decay=beta`, but only under `--use_l2w`, which defaults False and is never set.)
+
+### The SAC-lineage three run a two-speed target update the DrQ-v2 lineage has no counterpart for
+
+`rad`, `soda` and `alda` carry `critic_tau=0.01` **and** a separate, slower `encoder_tau=0.05`
+(`runnable/dmc_gb/src/arguments.py:34-35`, `alda_trainer.py:31,45-46`). `drqv2`, `svea`, `sgqn`
+and `curl` Polyak one target at a single rate and have no encoder-specific target at all. The
+matrix discusses `critic_target_tau` only as an undisputed uniform value, which is true and
+incomplete: the value is uniform, the *mechanism* is not.
+
+### `idaac`'s `--eps` is documented as RMSprop's and configures Adam
+
+`runnable/idaac/ppo_daac_idaac/arguments.py:21-25` describes `--eps` as *"RMSprop optimizer
+epsilon"*; `algo/ppo.py:33` constructs `torch.optim.Adam(..., eps=eps)`. Vestigial help text from
+OpenAI-baselines' shared A2C/PPO argparse, where A2C really does use RMSprop. `1e-5` is an ordinary
+Adam epsilon and nothing is wrong with the run. Recorded so nobody "corrects" the value while
+reasoning from the wrong optimizer's conventions.
