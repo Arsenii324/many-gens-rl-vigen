@@ -51,7 +51,20 @@ transients too, and does not exist here — worth adding before a *large* torch 
 Each step states what it may consume before it runs, and what aborts it. **No step begins while
 the previous one is unread.**
 
-**Step 1 — re-read the card, immediately before anything.** Not the figure from earlier today.
+**Step 0 — the automated pre-launch verdict.** `scripts/watch_gpu_headroom.py --preflight` is the
+machine-checkable form of step 1, and it exits non-zero so a launch can be gated on it rather than
+on someone reading a number:
+
+```
+python3 scripts/watch_gpu_headroom.py --preflight --device 0 --need-mib 4000
+```
+
+*Executed 2026-09-08: refused with exit 1 — "the card is at 100% with another process on it".*
+The utilisation half is a courtesy constraint and is overridable with `--max-util 100` once the
+owner has said that slowing a co-tenant is acceptable; the memory half is not.
+
+**Step 1 — re-read the card by hand, and read what the preflight refused to.** Not the figure from
+earlier today.
 ```
 nvidia-smi --query-gpu=index,memory.used,memory.free,utilization.gpu --format=csv,noheader
 free -g | sed -n 2p
@@ -98,6 +111,15 @@ docker run --rm --gpus '"device=1"' <pinned image> nvidia-smi --query-gpu=index,
 ```
 Proves the toolkit works and that we see **one** card, not two. Consumes no VRAM.
 **Abort if** two GPUs are listed — the device pin failed and everything after it is unsafe.
+
+**Device numbering, because it will confuse someone.** `--gpus '"device=1"'` pins the HOST's card
+1, and inside the container it appears as **index 0** — `nvidia-smi` there reports
+`0, Tesla V100-SXM2-32GB, ...` and `nvidia-smi -L | grep -c '^GPU '` returns **1**. That count is
+the check that matters: if it is 2, the pin failed and nothing after it is safe. Anything reading
+the card from inside a cell must therefore say `--device 0`, not `--device 1`.
+
+*Executed 2026-09-08 in the pinned image: count 1, the card unchanged at 14,501/17,994 MiB — our
+container consumed nothing.*
 
 **Step 4 — a bounded CUDA allocation, deliberately tiny.** Allocate ~256 MiB, read it back, free
 it, exit. Proves the driver/runtime pairing works under our image and that we can allocate at all,
