@@ -259,7 +259,35 @@ else. Three things sit outside it:
    directly.
 
 **So `NATIVE_VRAM_CAP_MIB=2048` does not mean 2048 MiB on the card.** Expect cap + context +
-rendering. The first and third are measured by `scripts/verify_vram_cap.py`; the rendering share
+rendering.
+
+### Measured on cds2, 2026-09-08 — the cap binds
+
+`scripts/verify_vram_cap.py` in the container, card 1, cap 512 MiB:
+
+```
+card before this process touched CUDA        14563 MiB   (all the neighbour's)
+card after the CUDA context                  14871 MiB   -> CONTEXT COSTS 308 MiB
+after allocating 256 MiB under the cap       15127 MiB   -> 564 MiB taken in total
+request 1024 MiB, past the cap:  OutOfMemoryError raised IN THIS PROCESS
+  "GPU 0 has a total capacity of 31.73 GiB of which 16.96 GiB is free"
+max_memory_allocated 256   max_memory_reserved 256   over-reserve 0 MiB
+```
+
+**The decisive line is that 16.96 GiB was free and torch refused anyway.** The driver had the
+memory; our own accounting stopped the request before `cudaMalloc` was called. We cannot take what
+we did not declare, whatever the model later asks for — which is the property that protects a
+co-tenant, and the reason a cap beats a headroom ratio.
+
+So the footprint is `cap + ~308 MiB`. At `NATIVE_VRAM_CAP_MIB=2048` expect **~2.36 GiB plus the
+EGL rendering share**, against ~17 GiB free.
+
+**Two caveats on the 0 MiB over-reserve, because it is the weakest number here.** It was measured
+with a single clean allocation, which cannot fragment — it shows the allocator does not round up
+gratuitously, and says nothing about fragmentation under real training, where reserved routinely
+exceeds allocated. And this ran on **torch 2.5.1+cu121**, not the pinned **2.3.1+cu121**: the
+capping API is unchanged between them, but the arithmetic should be re-read from the real cell
+rather than carried over from here. The first and third are measured by `scripts/verify_vram_cap.py`; the rendering share
 only appears once an environment is stepping, which is step 5.
 
 **And the cap binds on RESERVED, not allocated.** PyTorch rounds requests into blocks and caches
