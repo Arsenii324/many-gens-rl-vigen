@@ -248,8 +248,38 @@ check_disk() {
   fi
 }
 
-WORKDIR="$(mktemp -d)"
+# [Claude 2026-09-08] WORKDIR was `mktemp -d` -- $TMPDIR, in practice /tmp -- and the Places365
+# archive is COPIED into it a few lines below: 45 GiB for an svea/sgqn/soda cell, the largest
+# single write this script makes. Two things were wrong with that on a shared host.
+#
+#   1. `check_disk` is called on $NATIVE_WORK_HOST_DIR and on nothing else, so the filesystem
+#      receiving that write was never checked at all. The requirement number already INCLUDES
+#      places365_gib; it was simply being asked of the wrong mount.
+#   2. /tmp is tmpfs on many Linux hosts. A 45 GiB write to tmpfs is a 45 GiB RAM allocation. It
+#      does not fill a disk and it does not fail cleanly -- it evicts other users' processes,
+#      which is precisely the outcome notes/production-host/ forbids outright.
+#
+# So the payload staging directory now defaults beside $RESULT, on the filesystem the disk check
+# validates; NATIVE_WORKDIR_PARENT overrides it for an operator with a better disk; and a
+# memory-backed filesystem is refused loudly here rather than discovered later as somebody else's
+# OOM kill. The EXIT trap still removes it, so this is a transient peak and not accumulation --
+# `docker run --rm` (below) likewise frees the container layer holding the pip install.
+WORKDIR_PARENT="${NATIVE_WORKDIR_PARENT:-$(dirname "$RESULT")}"
+mkdir -p "$WORKDIR_PARENT"
+WORKDIR="$(mktemp -d "$WORKDIR_PARENT/native-payload-XXXXXX")"
 trap 'rm -rf "$WORKDIR"' EXIT
+# `df -T` is GNU-only; on a host without it this reads empty and the case falls through rather
+# than refusing a run for a filesystem type it could not determine.
+WORKDIR_FSTYPE="$(df -PT "$WORKDIR" 2>/dev/null | awk 'NR==2 {print $2}')"
+case "$WORKDIR_FSTYPE" in
+  tmpfs|ramfs)
+    echo "refusing: $WORKDIR is on $WORKDIR_FSTYPE, which is RAM, not disk." >&2
+    echo "  The payload and the Places365 archive (~45 GiB) are copied here. On a memory-backed" >&2
+    echo "  filesystem that is host RAM, and exhausting it evicts other users' processes." >&2
+    echo "  Set NATIVE_WORKDIR_PARENT to a directory on real storage." >&2
+    exit 4 ;;
+esac
+check_disk "$WORKDIR"
 mkdir -p "$WORKDIR/out"
 cp "$CODE" "$WORKDIR/code.tgz"
 CONTAINER_ARGS=(/work/code.tgz /work/out/result.tgz)
@@ -296,6 +326,27 @@ NATIVE_OUT_HOST_DIR="${NATIVE_OUT_HOST_DIR:-$(dirname "$RESULT")/native-out-$STA
 # in the ordinary case, but now visible, and the free-space check below applies to it.
 NATIVE_WORK_HOST_DIR="${NATIVE_WORK_HOST_DIR:-$(dirname "$RESULT")/native-work-$STAMP}"
 mkdir -p "$NATIVE_OUT_HOST_DIR" "$NATIVE_WORK_HOST_DIR"
+
+# [Claude 2026-09-08] These two directories are stamped per run and deliberately NOT removed --
+# that is the whole point of them (a killed container's partial run must survive). The consequence
+# is that they ACCUMULATE: 36 cells leave 36 pairs, and an off-policy cell's native-work holds
+# ~18 GiB of replay episode files. `check_disk` below does catch the result -- it reads real free
+# space, so a disk filled by our own leftovers makes the NEXT run refuse rather than overflow --
+# but a refusal at run 20 means runs 1-19 already consumed a shared disk, and on this host that
+# is other people's headroom. So: report what is already there, by size, every time. Never delete
+# it here. Nothing in this script has proof that a given leftover directory is finished with, and
+# the one under $NATIVE_WORK_HOST_DIR may belong to a run still executing.
+leftovers="$(find "$(dirname "$RESULT")" -maxdepth 1 -type d \
+    \( -name 'native-out-*' -o -name 'native-work-*' \) 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "${leftovers:-0}" -gt 2 ]]; then
+  echo "note: $(( leftovers - 2 )) directory(ies) from previous runs remain under $(dirname "$RESULT"):" >&2
+  du -sh "$(dirname "$RESULT")"/native-out-* "$(dirname "$RESULT")"/native-work-* 2>/dev/null \
+      | sort -h | tail -8 | sed 's/^/    /' >&2
+  echo "  These are kept on purpose (a killed run's partial output lives there) and are NOT" >&2
+  echo "  removed automatically. Collect and delete the finished ones yourself before the disk" >&2
+  echo "  reaches a level that affects other users of this host." >&2
+fi
+
 check_disk "$NATIVE_WORK_HOST_DIR"
 DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
                    -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"

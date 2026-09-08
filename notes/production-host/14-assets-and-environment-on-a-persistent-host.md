@@ -1,26 +1,52 @@
-# Assets and environment on a persistent host — three defects inherited from DataSphere
+# Assets and environment on a persistent host — what is transient, what accumulates
 
 The wrapper was written against DataSphere, where every job got a fresh VM and nothing could
-persist. On `cds2` nothing is fresh, and three of its behaviours become waste rather than necessity.
+persist. On `cds2` nothing is fresh. This page separates the parts of that inheritance that are
+merely wasteful from the one that was a genuine hazard, because the first version of this page
+conflated them and overstated the danger.
 
-## 1. The big assets are COPIED per run, not mounted
+**The correction, stated first.** Almost everything this script writes is *transient*:
+`docker run --rm` (line 394 — verified) frees the container's writable layer at exit, so the
+`pip install` disappears with the container; and the `EXIT` trap on `WORKDIR` removes the staged
+asset copies, on a crash as well as on success. Neither accumulates. The earlier framing of
+"~864 GB against 325 GB free" was **write volume over the campaign, not space held at once** — a
+cost in time and I/O, not a disk that fills up. Only §0 below was a real correctness problem, and
+it is now fixed.
 
-`run_on_production_host.sh:257,260`:
+## 0. The staging directory was on a filesystem nobody checked — FIXED 2026-09-08
+
+`WORKDIR` was `mktemp -d`, i.e. `$TMPDIR`, in practice `/tmp`. The Places365 archive is copied
+into it. `check_disk` was called on `$NATIVE_WORK_HOST_DIR` **and on nothing else**, so the mount
+receiving the single largest write this script makes was never checked at all.
+
+The sharp end of that: **`/tmp` is `tmpfs` on many Linux hosts, and `tmpfs` is RAM.** A ~21 GiB
+archive copy into `tmpfs` is a ~21 GiB host memory allocation. It does not fill a disk and it does
+not fail cleanly — it evicts other users' processes, which is the one outcome the rules on this
+host forbid outright.
+
+Fixed in `run_on_production_host.sh`: the staging directory now defaults beside `$RESULT`, on the
+filesystem `check_disk` validates; `NATIVE_WORKDIR_PARENT` overrides it; `check_disk` is now
+called on it; and a `tmpfs`/`ramfs` staging directory is refused with exit 4 rather than
+discovered later as somebody else's OOM kill. Verified by `NATIVE_HOST_DRY_RUN=1`.
+
+## 1. The big assets are COPIED per run, not mounted — waste, not hazard
+
+`run_on_production_host.sh` (post-fix line numbers shift; the two `cp` calls are unchanged):
 
 ```bash
 cp "$RLVIGEN_ARCHIVE_HOST"   "$WORKDIR/rlvigen.tgz"      # 227 MB
-cp "$PLACES365_ARCHIVE_HOST" "$WORKDIR/places365.tgz"    # ~24 GB at production
+cp "$PLACES365_ARCHIVE_HOST" "$WORKDIR/places365.tgz"    # ~21 GiB compressed at production
 ```
 
-`WORKDIR` is a `mktemp -d`, deleted by the `EXIT` trap. So each cell copies the assets in and throws
-them away.
+`family.py:417` charges `PLACES365_TRAIN_GIB = 45.0` per cell — ~21 GiB compressed archive plus the
+expanded ~1.8M-image tree, roughly the same again. **That is a labelled estimate from DMC-GB's
+published asset size, not a measurement**, and the first host provisioning should replace it.
 
-At production Places365 is the **~24 GB train split**, not the 468 MB attest fixture. Across 36
-cells that is **~864 GB of pure copy churn** on a filesystem with 325 GB free — and each copy needs
-24 GB free *at that moment*, on top of the run's own footprint.
+Each copy is deleted by the `EXIT` trap, so the *space* cost is one copy at a time, and the disk
+check now covers it. What remains is real but ordinary: ~21 GiB read + written per overlay cell,
+nine such cells, for a file that never changes.
 
-**The read-only mount mechanism already exists in the same file.** `EXTRA_MOUNT_N` does exactly
-this at line 313:
+**The read-only mount mechanism already exists in the same file** (`EXTRA_MOUNT_N`):
 
 ```bash
 DOCKER_MOUNT_ARGS+=(-v "$host_path:$container_path:ro")
@@ -28,15 +54,34 @@ DOCKER_MOUNT_ARGS+=(-v "$host_path:$container_path:ro")
 
 The two large assets simply do not use it. **Fix: mount them `:ro` instead of copying.** The
 download happens once into our own directory; every cell then mounts it. Read-only also means no
-cell can corrupt the shared asset.
+cell can corrupt the shared asset. `rlvigen.tgz` at 227 MB is cheap enough that copying is
+survivable, but mounting both is the same change.
 
-`rlvigen.tgz` at 227 MB is cheap enough that copying is survivable — but there is no reason for it
-either, and mounting both is the same change.
+## 1b. What DOES accumulate, and it is deliberate
+
+`native-out-<stamp>` and `native-work-<stamp>` are created per run beside the result and are
+**never removed** — that is their purpose, since a killed container's partial run must survive the
+`EXIT` trap. An off-policy cell's `native-work` holds ~18 GiB of replay episode files. Thirty-six
+cells leave thirty-six pairs.
+
+`check_disk` does bound the consequence: it reads real free space, so leftovers make the *next*
+run refuse rather than overflow. But a refusal at run 20 means runs 1–19 already consumed a shared
+disk. The script now **reports** existing leftovers with `du -sh` before every run and says they
+are the operator's to collect. It does not delete them — nothing here has proof that a given
+directory is finished with, and one of them may belong to a run still executing.
 
 ## 2. The Python environment is rebuilt inside every container
 
-Two `apt-get install` passes and a full `pip install` including torch, per cell, into a container
-layer under `/var/lib/docker` on the shared `/`. See `13-how-the-operator-path-works.md`.
+Two `apt-get install` passes and a full `pip install` including torch, per cell, into the
+container's writable layer. See `13-how-the-operator-path-works.md`.
+
+**This one is self-cleaning and the earlier page was wrong to imply otherwise.** `docker run --rm`
+frees that layer when the container exits, so nothing is left under `/var/lib/docker` afterwards.
+The cost is a **transient** peak (a few GB while the container lives), ~600 s of wall clock per
+cell, and a repeated multi-GB download — pip's HTTP cache lives in the same discarded layer, so
+torch is fetched again every single cell. That is bandwidth and time on a shared network, which is
+worth removing, but it is not a disk that fills up.
+
 
 ### A baked image is the textbook fix and is NOT the easiest one here
 
@@ -72,9 +117,33 @@ This gets what the baked image was for, without the build:
 3. the closing `tar -czf` writes a third, compressed copy into `result.tgz` **while both others are
    still on disk**.
 
-~1.32 GiB per RL-ViGen cell each, so roughly 4 GiB of the ~44 GiB a cell needs is the same
-checkpoints three times over. On a host where space is the binding constraint, step 2 could be a
+`family.py` charges all three (`checkpoints_written` + `checkpoints_retained_copy` + `archive`),
+so the triple copy is already in the requirement rather than a hidden overrun. Step 2 could be a
 move rather than a copy — but only after checking what else reads the originals.
+
+### Where a cell's disk actually goes — computed, not quoted
+
+`python3 datasphere/native/family.py disk-requirement --cells <cell> --frames 600000`, per cell,
+at the production frame budget:
+
+| cell | replay | checkpoints ×3 | Places365 | total | +5 GiB margin |
+|---|---:|---:|---:|---:|---:|
+| soda | 16.76 | 3.96 | 45.00 | 65.73 | 70.73 |
+| svea / sgqn | 17.74 | 2.13 | 45.00 | 64.88 | 69.88 |
+| rad | 16.76 | 3.96 | 0 | 20.73 | 25.73 |
+| drqv2 / curl / drq | 17.74 | 2.13 | 0 | 19.88 | 24.88 |
+| alda | 0 | 3.96 | 0 | 3.96 | 8.96 |
+| idaac / ppg / ibac_sni / ctrl | 0 | 1.52 | 0 | 1.52 | 6.52 |
+
+Two things this table settles. **Replay dominates every off-policy cell** — ~17 GiB of retained
+transitions at 63,504 B each (one 84×84×9 `uint8` observation), which is why "checkpoints are only
+4 GiB" and "a cell needs ~44 GiB" were never in tension. And **Places365 is the single largest
+term wherever it appears**, larger than everything else in the cell combined, which is what makes
+mounting it once instead of copying it nine times the change worth making.
+
+Sequential execution with one cell at a time peaks at **70.73 GiB**. Nothing about the campaign
+needs 325 GB at once — but nothing enforces sequential execution either, and two overlay cells
+packed together would need ~141 GiB before either has trained a step.
 
 ## On "does it abort on every warning?"
 
