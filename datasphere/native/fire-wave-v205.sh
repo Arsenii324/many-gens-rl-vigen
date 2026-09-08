@@ -24,5 +24,10 @@ for fam in rlvigen dmc_gb idaac alda ppg ibac_sni ctrl; do
   bash datasphere/native/job.sh submit "datasphere/native/cfg-${fam}-attest-v205.yaml" | tail -1
 done
 echo
-echo "After they land: pull each job's records into results/records/<job>__records.jsonl,"
-echo "then scripts/populate_evaluator_ledger.py <family> <job>, then production_gates.py."
+echo "When they land:"
+echo "    bash datasphere/native/collect-wave.sh --from-submissions v205"
+echo
+echo "That diagnoses each job, installs its records, populates the evaluator ledger and reports"
+echo "the gate -- and REFUSES rather than skips on a job that is not SUCCESS, emitted no records,"
+echo "or whose records the ledger rejects as describing a superseded tree. It exits non-zero if"
+echo "any family was not collected, so a short ledger cannot be reported as 7/7."
