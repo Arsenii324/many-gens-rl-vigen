@@ -78,6 +78,23 @@ SITES = {
         "if not safe_torch_save(agent, terminal_checkpoint",
         "terminal checkpoint write to",
     ),
+    # [Claude 2026-09-08] ctrl and ppg were NOT in the Q18(b) set, and the omission was invisible
+    # because this dict was the only record of which sites had been done -- a five-entry list that
+    # looked complete next to a seven-family fleet. ctrl's `_save_state` had no `return` at all, so
+    # its terminal caller could not have checked the bool, and printed
+    # NATIVE_FINAL_EVALUATION_COMPLETED unconditionally. ppg's terminal save bypassed the atomic
+    # primitive entirely with a raw `torch.save`, so a kill mid-write left a torn file that
+    # retention accepts (it checks existence and size, never content).
+    "ctrl (sole terminal call)": (
+        "runnable/ctrl/train_ppo.py",
+        "if not _save_state(train_state, _executed, terminal=True):",
+        "terminal checkpoint write to checkpoint_%d.msgpack failed",
+    ),
+    "ppg (terminal save)": (
+        "runnable/ppg/phasic_policy_gradient/train.py",
+        "elif not safe_torch_save(model, _dest, label=\"ppg.terminal\",",
+        "terminal checkpoint write to",
+    ),
 }
 
 

@@ -14,6 +14,42 @@ fi
 export NATIVE_HOST_PROFILE_EXPLICIT
 export NATIVE_HOST_PROFILE="${NATIVE_HOST_PROFILE:-datasphere}"
 
+# [Claude 2026-09-08] THE SENTINEL IS NEVER A DISABLE, WHEREVER IT COMES FROM.
+#
+# The 2026-09-07 fix for external review 21 P0 resolves a per-family spelling of "never evaluate"
+# -- but only on the branch where EVAL_EVERY_FRAMES is UNSET. Twenty attest and cover cfgs set
+# 2147483647 explicitly, which takes the else branch straight back to the value the fix exists to
+# remove, and `0 % 2147483647 == 0` is True, so a full evaluation ran at step 0 under a manifest
+# saying online evaluation was off. Job bt1utl06n6mqffrt2jdn's own log carries the proof:
+# `| eval | F: 0 | S: 0 | E: 0 | L: 500 | R: 7.6385`.
+#
+# Those episodes draw from the process-global NumPy stream Door's placement uses, so training
+# placements were perturbed -- by a different amount per family, since the loops differ.
+#
+# Normalising HERE rather than editing twenty cfgs is deliberate: it fixes every cfg that already
+# exists and every one anyone writes later, including the production ones, which do not exist yet.
+# The value is mapped to the family's own spelling, and the substitution is announced rather than
+# silent, so a run that relied on the sentinel is identifiable in its own log.
+normalize_eval_sentinel() {
+  local cells="$1"
+  [[ "${EVAL_EVERY_FRAMES:-}" == "2147483647" ]] || return 0
+  local spelling="${NATIVE_ONLINE_EVAL_DISABLED_SPELLING:-}"
+  if [[ -z "$spelling" ]]; then
+    spelling="$(python3 "$FAMILY_TOOL" production-env --cells "$cells" 2>/dev/null \
+      | sed -n 's/^NATIVE_ONLINE_EVAL_DISABLED_SPELLING=//p' | head -1)"
+  fi
+  if [[ -z "$spelling" ]]; then
+    # No spelling means the family has no `{eval_every}` option at all -- true of idaac, ppg,
+    # ibac_sni and ctrl, whose loops never receive this value, so the sentinel cannot reach a
+    # `step % cadence` test through it. Leave it alone and say nothing: refusing here would break
+    # four families' cfgs to fix a defect they never had.
+    return 0
+  fi
+  echo "=== NATIVE_EVAL_SENTINEL_NORMALIZED 2147483647 -> ${spelling} ===" >&2
+  EVAL_EVERY_FRAMES=""
+  export NATIVE_ONLINE_EVAL_DISABLED_SPELLING="$spelling"
+}
+
 run_measured() {
   local output_dir="$1"
   shift
@@ -668,6 +704,7 @@ if [[ "${1:-}" == "--run-cells" ]]; then
   require_production_configuration
   require_accelerator "$cells_arg"
   python3 "$FAMILY_TOOL" check-budget --cells "$cells_arg" --frames "${FRAMES:-10000}"
+  normalize_eval_sentinel "$cells_arg"
   if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
     # Same fix as the production path below: a numeric sentinel evaluates at step 0 because
     # `step % cadence == 0` holds there for every cadence (external review 21, P0).
@@ -1015,6 +1052,7 @@ task="${TASK:-Door}"
 # longer do is deviate by omission. A declared setting with no lever prints
 # NATIVE_PRODUCTION_UNAPPLIED rather than being silently dropped.]
 apply_production_settings "$cells"
+normalize_eval_sentinel "$cells"
 if [[ "${NATIVE_DISABLE_ONLINE_EVAL:-0}" == "1" && -z "${EVAL_EVERY_FRAMES:-}" ]]; then
   # [Claude 2026-09-07, external review 21 P0] A very large positive cadence DOES NOT suppress
   # periodic evaluation: every one of these loops gates on `step % cadence == 0` and 0 % anything

@@ -18,6 +18,21 @@
 # A cell that hangs now costs one hour instead of three, and a cell that merely runs long still
 # finishes.
 #
+# EVAL_EVERY_FRAMES is DELETED here, not set. That sentinel does not disable evaluation:
+# `RL-ViGen-upstream/utils.py:85` gates on `step % every == 0`, and `0 % 2147483647 == 0` is True,
+# so a full evaluation ran at step 0 -- visible in job bt1utl06n6mqffrt2jdn's own log as
+# `| eval | F: 0 | S: 0 | E: 0 | R: 7.6385`. Those episodes draw from the process-global NumPy
+# stream Door's placement uses, so training placements were perturbed under a manifest that said
+# online evaluation was off.
+#
+# The project already fixed this class on 2026-09-07 (external review 21 P0): `run_probe.sh:1018`
+# resolves a per-family spelling -- `null` for rlvigen, which Hydra parses to None and
+# `utils.Every` returns False for. But that branch is guarded by `-z "${EVAL_EVERY_FRAMES:-}"`,
+# and every attest and cover cfg set the sentinel EXPLICITLY, taking the else branch straight back
+# to the value the fix exists to remove. Deleting the line is the whole fix; `family.py`
+# production-env already emits NATIVE_DISABLE_ONLINE_EVAL=1 and
+# NATIVE_ONLINE_EVAL_DISABLED_SPELLING=null, and run_probe.sh:641 exports both.
+#
 # FRAMES stays 10000 rather than dropping toward `min_frames` 4001, and the reason is specific:
 # v197 corrupted the heap at ~8500 frames. A 4500-frame budget would attest the evaluator and never
 # enter the region where the fix is under test.
@@ -59,7 +74,6 @@ cmd: >-
   RLVIGEN_ARCHIVE=${RLVIGEN}
   RECORDS_OUT=${RECORDS}
   CUDA_ROOT=/usr/local/cuda
-  EVAL_EVERY_FRAMES=2147483647
   EVAL_EPISODES=1
   SAVE_EVERY_FRAMES=10000
   ENDPOINT_EVAL=1
