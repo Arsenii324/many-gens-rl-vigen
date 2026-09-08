@@ -498,8 +498,14 @@ def gate_environment_manifest():
         return FAIL, "; ".join(missing)
     return OWNER, ("base image pinned by digest and requirements hashed -- but the job still runs "
                    "apt-get/pip inside it, so the EXECUTED environment is not frozen and two jobs "
-                   "from this digest can differ (external review 27 sec.5). Closing it needs a "
-                   "baked final image with no runtime package mutation, on the production host")
+                   "from this digest can differ (external review 27 sec.5). NO LONGER "
+                   "HYPOTHETICAL as of 2026-09-08: scripts/audit_environment_drift.py measured "
+                   "over 30 archives that ctrl's JAX stack pulls CUDA 12.9 wheels while every "
+                   "torch family pins 12.1, and job bt1hvkmei18hasgj5bbv then deadlocked in cudnn "
+                   "conv autotuning with driver 12.2.0 against runtime 12.9.0 -- caught only by "
+                   "the stall watchdog, after 1800s of silence. This has now cost a cell. Closing "
+                   "it needs a baked final image with no runtime package mutation, on the "
+                   "production host, and the driver/runtime pairing is the specific thing to fix")
 
 
 def gate_production_canary():
