@@ -85,6 +85,44 @@ test that reads `train_ppo.py` and fails the moment a declared value stops match
 Simulated A45's proposed `lr_ctrl` edit against it: the test fails, which is the silent no-op I had
 claimed it missed. Reverting kept `families.json` untouched, which is why the wave is 3 cells.
 
+## Later questions, and what followed
+
+**"Do we just wait for the three agents?"** — no. Agent B had already landed; the answer was to
+keep working and fold results in as they arrived.
+
+**"What are the longest remaining chains? Does the eval_frames thing invalidate all?"** —
+ANSWERED: it invalidates nothing, because every record that exists is a 10k attestation cell and
+attestation asks only whether a record's `evaluator_revision` is live. **Followed from it:** the
+chain ranking made clear my own work is a rounding error against a 9-28 day campaign, which
+reframed the rest of the session away from polishing.
+
+**"What's the final set of edits?"** — ANSWERED, and answering it shrank the set twice. Item 10
+(the eval sentinel) turned out to be a cfg-and-runner defect rather than a source one and left the
+voiding batch entirely; the ctrl inert-constants item was reverted outright. The wave went from 7
+cells to 3.
+
+**"Is the policy-head init a real bottleneck?"** — see the entry above, and then FALSIFIED by its
+own cell. Recorded as `CORRECTIONS.md` #103.
+
+**"The GitHub after everything is fixed; take responsibility over the whole horizon."** —
+ANSWERED by treating the repo as a deliverable rather than a snapshot. **Followed from it:**
+`setup/verify_sources.py` was failing with `source closure hash mismatch at runnable/ctrl` while
+every gate passed, because that check was not among the gates. README's bootstrap instructions were
+false. Fixed, and gated (`CORRECTIONS.md` #102).
+
+**"Examples, not the exhaustive list."** — taken as scope, not as a checklist. Produced the
+campaign-status view, the live `log_std` alert, and the comparison-blocks quantity fix.
+
+**"You don't have to write prose in git commits."** — ACTED ON from `a967f01` onward; earlier
+messages in this session were long.
+
+**"Ask a fork what you forgot."** — the highest-yield single instruction of the session. It found
+that `scripts/watch_policy_health.py` was not a payload member and its launch was hidden behind a
+`-f` guard, so the alert would have silently never started in production while the runbook told the
+operator it runs on every cell — this session's own recurring failure, rebuilt inside the
+instrument written to catch it. Also: `CLAIMS-LEDGER.md` still forbade a comparison the project is
+now entitled to make, and the new reconstruction gate had never been observed red. All fixed.
+
 ## Still open
 
 - **`docs/FAITHFULNESS.md` rewrite.** Agent E's recommendation is to regenerate it from

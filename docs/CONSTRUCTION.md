@@ -357,8 +357,14 @@ that the study is about algorithms *under a common protocol* rather than about t
 methods — in which case harmonise to bootstrap-through-truncation, and say so loudly, because it is
 then a different experiment with a different null.
 
-### C2 — Frame stack: 3 frames for ten, 1 frame for two {#c2}
+### C2 — Frame stack: 3 frames for all twelve {#c2}
 
+> **[SUPERSEDED 2026-09-08 — the split is 12/0.]** A40-REVISED-2 raised `ctrl` and
+> `ibac_sni` to three frames by authoring stacking on a Door path that had none; neither
+> had any stacking mechanism there before. `rlgen/protocol.py:118-132` is authoritative.
+> Flagged prominently because the line below is labelled a CORRECTION, which makes it read
+> as more current than ordinary stale prose rather than less.
+>
 > **CORRECTED 2026-09-07 — the current split is 10 stacked / 2 single.** The intermediate
 > 2026-09-06 nine/three wording below is historical and superseded, and `idaac`'s "incoherent"
 > claim is directly contradicted by primary-source evidence this entry itself said didn't exist.**

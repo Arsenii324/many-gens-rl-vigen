@@ -66,6 +66,7 @@ BASE_ALLOWED = (
     "scripts/metrics.py",
     "scripts/preserve_intermediate_snapshot.py",
     "scripts/watch_divergence.py",
+    "scripts/watch_policy_health.py",
     "setup/apply_patches.py",
 )
 DEFAULT_FAMILIES = ("rlvigen",)
@@ -90,7 +91,15 @@ DEFAULT_FAMILIES = ("rlvigen",)
 # archive -- so a payload built before that flag existed would meet a runner that passes it, and
 # argparse would exit 2 after the bootstrap had already been paid for. This is the same drift that
 # cost two jobs over SAVE_EVERY vs SAVE_EVERY_FRAMES; the contract is where it gets caught.
-RUNNER_CONTRACT = 13
+# Bumped to 14 on 2026-09-08: `run_measured` now launches scripts/watch_policy_health.py beside
+# the stall watchdog, so the runner requires a payload member it did not require before. This is
+# the exact case the note above describes, and it was nearly missed in the way that matters most:
+# the first version of the launch was guarded by `[[ -f scripts/watch_policy_health.py ]]`, which
+# would have turned a contract violation the runner refuses loudly into a SILENT no-op -- the
+# `log_std` alert simply never starting on the container, with PRODUCTION-RUNBOOK stating it runs
+# on every cell. An instrument that cannot run must never read as one that ran; building that
+# failure into the instrument written to catch it is how it would have survived.
+RUNNER_CONTRACT = 14
 
 
 def family_members(source: Path, families: tuple[str, ...]) -> tuple[str, ...]:

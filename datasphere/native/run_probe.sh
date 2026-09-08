@@ -139,10 +139,17 @@ run_measured() {
   # implemented method that simply performs badly is a result, not a defect, and a watchdog that
   # killed on saturation would delete exactly those results -- for whichever baseline struggled
   # most, which is the worst selection rule available.
+  # NO `-f` GUARD, deliberately. The first version of this block had one, and it would have made
+  # the watcher a silent no-op on the container: `watch_policy_health.py` was not in
+  # `contract.py::PAYLOAD_MEMBERS`, so the file is absent there, the guard is false, and nothing is
+  # said -- while PRODUCTION-RUNBOOK tells the operator it runs on every cell. That is precisely
+  # the "an instrument that cannot run must never read as one that ran" failure this watcher was
+  # built to catch, rebuilt inside it. The member is declared and RUNNER_CONTRACT is bumped to 14,
+  # so a payload without it is refused at the contract boundary rather than here.
   local health_pid=""
-  if [[ -z "${NATIVE_NO_POLICY_HEALTH_WATCH:-}" ]] && [[ -f datasphere/native/../../scripts/watch_policy_health.py || -f scripts/watch_policy_health.py ]]; then
+  if [[ -z "${NATIVE_NO_POLICY_HEALTH_WATCH:-}" ]]; then
     python3 scripts/watch_policy_health.py --log "$output_dir/training.log" --interval 60 \
-      >&2 2>>"$output_dir/training.log" &
+      2>>"$output_dir/training.log" &
     health_pid="$!"
   fi
 

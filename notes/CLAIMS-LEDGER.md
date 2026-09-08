@@ -34,10 +34,23 @@ Two rules apply to the whole table:
 
 ## Claims the table cannot support, whatever the numbers say
 
-- **"Algorithm A generalizes better than B."** Method identity is perfectly confounded with frame
-  stack (3 vs 1), resolution (84 / 100→84 / 64), γ (0.99 vs 0.999), time-limit treatment (3
-  bootstrap / 9 terminal), reward normalization, action distribution and rollout size. More seeds
-  cannot remove collinearity.
+- **"Algorithm A generalizes better than B."** Method identity is perfectly confounded with
+  resolution (84 / 100→84 / 64), γ (0.99 vs 0.999), time-limit treatment (3 bootstrap / 9
+  terminal), reward normalization, action distribution and rollout size. More seeds cannot remove
+  collinearity.
+
+  > **[CORRECTED 2026-09-08.]** *Frame stack (3 vs 1)* was the first item in that list and is
+  > removed, not struck through in place, because leaving it would keep costing what it was
+  > costing. A40-REVISED-2 raised `ctrl` and `ibac_sni` to three frames; the split is **12/0**
+  > (`rlgen/protocol.py:118-132`).
+  >
+  > This entry had gone stale in the **conservative** direction, which is why it was worth
+  > finding: it forbade a comparison the project is now entitled to make. The unification is
+  > exactly what took the on-policy group from **1** primary pair to **3**
+  > (`scripts/comparison_blocks.py`). A ledger of what may not be claimed is only useful if it is
+  > also right about what may.
+  >
+  > Every other confound in the sentence stands.
 - **"These are the published algorithms."** Five are RL-ViGen's implementations; four are
   continuous-action ports of discrete methods, two of which have no reference implementation for the
   continuous head.
