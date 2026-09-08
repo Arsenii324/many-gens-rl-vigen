@@ -182,6 +182,40 @@ check.
 attestation fixture used by the v196 wave to prove the train branch executes. It certifies the
 code path, not the dataset.
 
+## 2c. Dry-run the wrapper FIRST, before the first real cell
+
+```bash
+NATIVE_HOST_DRY_RUN=1 \
+FRAMES=600000 NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 \
+CELL_TIMEOUT_SECONDS=170000 CELLS=drqv2:101 \
+NATIVE_RESULT_MIRROR=/mnt/other-volume/rlvigen-results \
+bash datasphere/native/run_on_production_host.sh payload.tgz result.tgz rlvigen.tgz places365.tgz
+```
+
+It runs every guard, every path check, the disk-headroom arithmetic, the payload staging, the mount
+assembly and the environment forwarding — then prints the exact `docker run` it would execute and
+exits 0 without executing it. Seconds, no GPU, no container.
+
+**Do this before anything else on the host.** Until 2026-09-08 this script had never been executed
+anywhere: its twenty-nine tests all read the source rather than run it, and with `set -euo pipefail`
+and `${VAR:?}` a missing variable or a swapped positional surfaces as an abort partway through — on
+the host, on the day, with the campaign waiting.
+
+The dry run earns its keep immediately: run here for the first time it surfaced `NATIVE_RESULT_MIRROR`
+as a required variable at production scale in about a second, which is the kind of thing otherwise
+learned by failing.
+
+Expect to set one of these on a host where the filesystem id cannot be read or the mirror shares a
+device — both are refusals by design, and both are deviations the operator accepts explicitly rather
+than the script assuming:
+
+- `NATIVE_ACCEPT_UNVERIFIED_DEVICE=1` — the fsid could not be read, so "different device" is
+  unverified. Marker: `NATIVE_RESULT_MIRROR_DEVICE_UNVERIFIED`.
+- `NATIVE_ACCEPT_SAME_DEVICE=1` — verified same device. Marker:
+  `NATIVE_RESULT_MIRROR_SAME_DEVICE`.
+
+Both print a marker into the log, so a run that took either is identifiable afterwards.
+
 ## 3. Run one cell
 
 Copy the environment block verbatim from whichever `cfg-*.yaml` is the template for this cell; the

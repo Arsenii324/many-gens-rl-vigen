@@ -174,6 +174,10 @@ def test_production_knobs_reach_the_container_and_output_is_host_durable(tmp_pat
         # marker is what keeps these tests about what they are about.
         "NATIVE_RESULT_MIRROR": str(tmp_path / "mirror"),
         "NATIVE_ACCEPT_SAME_DEVICE": "1",
+        # [Claude 2026-09-08] macOS cannot report a GNU fsid, so the mirror device is
+        # unverifiable here. The guard now REFUSES that rather than accepting a garbage value,
+        # which is correct and is why this line is needed.
+        "NATIVE_ACCEPT_UNVERIFIED_DEVICE": "1",
         "NATIVE_CONCURRENT": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(out_dir),
@@ -231,6 +235,10 @@ def test_production_scale_refuses_when_disk_is_below_the_floor(tmp_path):
         # marker is what keeps these tests about what they are about.
         "NATIVE_RESULT_MIRROR": str(tmp_path / "mirror"),
         "NATIVE_ACCEPT_SAME_DEVICE": "1",
+        # [Claude 2026-09-08] macOS cannot report a GNU fsid, so the mirror device is
+        # unverifiable here. The guard now REFUSES that rather than accepting a garbage value,
+        # which is correct and is why this line is needed.
+        "NATIVE_ACCEPT_UNVERIFIED_DEVICE": "1",
         "NATIVE_HOST_PROFILE": "v100",
         "NATIVE_OUT_HOST_DIR": str(tmp_path / "out"),
         "CELLS": "drqv2:1",
@@ -316,3 +324,34 @@ def test_preflight_script_is_valid_and_fails_closed(tmp_path):
     assert "memory model" in result.stdout
     assert "renderer parity" in result.stdout, (
         "a green preflight must not be mistakable for a renderer-parity pass")
+
+
+def test_a_dry_run_exists_and_stops_before_docker():
+    """[Claude 2026-09-08] Until this existed, the operator's FIRST execution of this script on the
+    production host would have been its first execution anywhere. Every other test in this file
+    reads the source; none runs it. With `set -euo pipefail` and `${VAR:?}`, a missing variable, a
+    swapped positional or a typo in the forwarded-variable list surfaces as an abort partway
+    through -- on the host, on the day, with the campaign waiting."""
+    text = SCRIPT.read_text() if "SCRIPT" in globals() else (
+        ROOT / "datasphere" / "native" / "run_on_production_host.sh").read_text()
+    assert "NATIVE_HOST_DRY_RUN" in text
+    dry = text.index('if [[ -n "${NATIVE_HOST_DRY_RUN:-}" ]]; then')
+    docker = text.index("docker run --rm --name")
+    assert dry < docker, "the dry run must stop BEFORE docker, or it is not a dry run"
+    # it must come after the guards, or it proves nothing about them
+    assert text.index("refusing: FRAMES=") < dry
+    assert text.index("DOCKER_ENV_ARGS+=(-e \"RECORDS_OUT=") < dry, (
+        "the dry run must be after env assembly, so it exercises the forwarding")
+
+
+def test_the_filesystem_id_probe_validates_its_output():
+    """A guard whose failure path depends on a command failing CLEANLY is not a guard.
+
+    `stat -f -c %i` is GNU coreutils, where -f means the filesystem. Where -f means a format
+    string instead, the command SUCCEEDS and prints something else -- so the `unreadable` branch
+    never fires and a garbage value reaches the same-device comparison. This gates whether the
+    campaign's only off-device copy is actually on another device.
+    """
+    text = (ROOT / "datasphere" / "native" / "run_on_production_host.sh").read_text()
+    body = text[text.index("_dev_of()"):text.index("_result_dev=")]
+    assert "=~ ^[0-9]+$" in body, "the fsid must be validated as numeric, not merely non-empty"

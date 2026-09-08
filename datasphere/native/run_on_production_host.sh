@@ -167,15 +167,37 @@ if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
   mkdir -p "$NATIVE_RESULT_MIRROR" || {
     echo "refusing: NATIVE_RESULT_MIRROR=$NATIVE_RESULT_MIRROR cannot be created." >&2
     exit 3; }
-  _dev_of() { stat -f -c %i "$1" 2>/dev/null || echo "unreadable"; }
+  # [Claude 2026-09-08] VALIDATE the output, do not just check the exit status. `stat -f -c %i` is
+  # GNU coreutils, where -f means "the filesystem, not the file". On a `stat` where -f means a
+  # format string instead, the command SUCCEEDS and prints something else entirely -- so the
+  # `== "unreadable"` guard below never fires and a garbage value reaches the same-device
+  # comparison. Found by running this script's new dry run on macOS, where it produced
+  # `(fsid -c<newline>unreadable)` in the middle of a refusal message.
+  #
+  # The production host is Linux and would not hit that. The point is that a guard whose failure
+  # path depends on a command failing CLEANLY is not a guard -- it silently degrades wherever the
+  # command fails some other way, and this one gates whether the campaign's only off-device copy
+  # actually lives on another device.
+  _dev_of() {
+    local out
+    out="$(stat -f -c %i "$1" 2>/dev/null)" || { echo "unreadable"; return; }
+    [[ "$out" =~ ^[0-9]+$ ]] || { echo "unreadable"; return; }
+    printf '%s' "$out"
+  }
   _result_dev="$(_dev_of "$(dirname "$RESULT")")"
   _mirror_dev="$(_dev_of "$NATIVE_RESULT_MIRROR")"
   if [[ "$_result_dev" == "unreadable" || "$_mirror_dev" == "unreadable" ]]; then
     echo "refusing: cannot read the filesystem id of the result path or the mirror," >&2
     echo "  so 'a different device' cannot be verified and must not be assumed." >&2
-    exit 3
-  fi
-  if [[ "$_result_dev" == "$_mirror_dev" ]]; then
+    echo "  Set NATIVE_ACCEPT_UNVERIFIED_DEVICE=1 to proceed and record the deviation." >&2
+    # [Claude 2026-09-08] The escape exists for the same reason NATIVE_ACCEPT_SAME_DEVICE does:
+    # "verified same device" and "could not verify" are both deviations, and both belong to the
+    # operator rather than to this script. It is NOT a default -- an unverified mirror silently
+    # accepted is the failure this whole block exists to prevent, and the marker below is what
+    # makes a run that took it identifiable afterwards.
+    [[ "${NATIVE_ACCEPT_UNVERIFIED_DEVICE:-0}" == "1" ]] || exit 3
+    echo "=== NATIVE_RESULT_MIRROR_DEVICE_UNVERIFIED (accepted explicitly) ===" >&2
+  elif [[ "$_result_dev" == "$_mirror_dev" ]]; then
     echo "refusing: NATIVE_RESULT_MIRROR is on the SAME filesystem as the result path" >&2
     echo "  (fsid $_result_dev). A copy beside the original does not survive the failure it" >&2
     echo "  exists for. Point it at another volume, or set NATIVE_ACCEPT_SAME_DEVICE=1 to" >&2
@@ -339,6 +361,35 @@ INNER_ARGS="${CONTAINER_ARGS[*]}"
 # `docker ps` against an image every cell shares.
 CONTAINER_NAME="${NATIVE_CONTAINER_NAME:-rlvigen-$(basename "${RESULT%.tgz}")-$STAMP}"
 echo "container: $CONTAINER_NAME  (docker exec -it $CONTAINER_NAME bash)" >&2
+
+# [Claude 2026-09-08] NATIVE_HOST_DRY_RUN=1 stops here, after every guard, every path check and the
+# whole `docker run` argument vector have been built, and before anything is executed.
+#
+# Why this exists: until now the operator's FIRST execution of this script on the production host
+# would have been its first execution ANYWHERE. Its 29 tests all read the source rather than run
+# it, and `set -euo pipefail` with `${VAR:?}` means a missing variable, a swapped positional or a
+# typo in the forwarded-variable list surfaces as an abort partway through -- on the host, on the
+# day, with the campaign waiting. That is precisely the "bad code delays production at the last
+# moment" case.
+#
+# The dry run exercises: positional handling and the archive existence checks, the production-scale
+# refusals (NATIVE_PRODUCTION, NATIVE_HOST_PROFILE, CELL_TIMEOUT_SECONDS), the disk headroom
+# arithmetic, mount assembly, and the environment forwarding -- everything except Docker and the
+# GPU. It prints the exact command it WOULD run, so the operator can read it before it runs.
+if [[ -n "${NATIVE_HOST_DRY_RUN:-}" ]]; then
+  echo
+  echo "=== NATIVE_HOST_DRY_RUN: every guard passed; NOT executing ==="
+  echo "image:  $IMAGE"
+  echo "gpus:   ${DOCKER_GPUS:-all}"
+  echo "mounts: ${#DOCKER_MOUNT_ARGS[@]} argument(s)"
+  printf '        %s\n' "${DOCKER_MOUNT_ARGS[@]}"
+  echo "env:    ${#DOCKER_ENV_ARGS[@]} argument(s)"
+  printf '        %s\n' "${DOCKER_ENV_ARGS[@]}"
+  echo
+  echo "would run: docker run --rm --name $CONTAINER_NAME --gpus ${DOCKER_GPUS:-all} \\"
+  echo "             <mounts> <env> -e MUJOCO_GL=egl -w /work $IMAGE bash -c '<bootstrap+probe>'"
+  exit 0
+fi
 
 docker run --rm --name "$CONTAINER_NAME" --gpus "${DOCKER_GPUS:-all}" \
   "${DOCKER_MOUNT_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" \
