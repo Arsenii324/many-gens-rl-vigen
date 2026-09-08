@@ -1191,8 +1191,40 @@ python3 "$FAMILY_TOOL" check-co-schedulable --cells "$cells"
 # descriptor -- so a ctrl cell would have been sized by its 16-environment peak while the v100
 # profile restores 64 environments. DataSphere jobs are still checked before submission by
 # scripts/audit_submission_configs.py; this is the equivalent for the host that has no submit step.
-if [[ "${NATIVE_HOST_PROFILE:-}" == "v100" ]]; then
-  python3 "$FAMILY_TOOL" check-memory --cells "$cells" --tier v100
+# [Claude 2026-09-08] Was `if [[ "${NATIVE_HOST_PROFILE:-}" == "v100" ]]`, which made the only
+# memory preflight this runner has conditional on one literal string. The hole that leaves is
+# exact: `NATIVE_HOST_PROFILE=datasphere FRAMES=600000` on the production host satisfies
+# require_production_configuration -- the profile IS named explicitly, which is all that refusal
+# checks -- and then skips check-memory, because the name is not "v100". A production cell then
+# runs with no memory preflight of any kind, in precisely the configuration the refusal above
+# calls "honest and wrong". family.py records what that costs: ctrl was certified for gt4.1 that
+# way and SIGKILLed at 11.07 GiB RSS (bt1lhobnsq5lq4766np6) -- hours into the cell, because
+# nothing had computed the peak for the geometry actually running.
+#
+# check-memory takes a TIER (its usable-RAM table) and reads the PROFILE from the environment for
+# the descriptor. Two vocabularies, which is why one string could not drive both. So map profile
+# to tier here, and at production scale REFUSE when no tier can be derived rather than silently
+# skipping. The tier is not otherwise knowable from inside a container: it lives in the cfg yaml's
+# `cloud-instance-type`, which only scripts/audit_submission_configs.py reads, at submit time.
+case "${NATIVE_HOST_PROFILE:-datasphere}" in
+  v100) memory_tier="v100" ;;
+  *)    memory_tier="${NATIVE_MEMORY_TIER:-}" ;;
+esac
+if [[ -n "$memory_tier" ]]; then
+  python3 "$FAMILY_TOOL" check-memory --cells "$cells" --tier "$memory_tier"
+elif [[ "${FRAMES:-10000}" -ge 600000 ]]; then
+  echo "REFUSING: FRAMES=${FRAMES} is production scale, NATIVE_HOST_PROFILE=${NATIVE_HOST_PROFILE:-datasphere}," >&2
+  echo "  and no memory tier follows from it -- so check-memory would not run at all, and this cell" >&2
+  echo "  would train with no memory preflight. That is how a ctrl cell got sized for the wrong" >&2
+  echo "  geometry and was SIGKILLed hours in (family.py: bt1lhobnsq5lq4766np6, 11.07 GiB RSS)." >&2
+  echo "  Set NATIVE_HOST_PROFILE=v100 on the production host, or NATIVE_MEMORY_TIER to the tier" >&2
+  echo "  this job actually runs on (gt4.1 | gt4i.1 | v100)." >&2
+  exit 3
+else
+  echo "note: NATIVE_HOST_PROFILE=${NATIVE_HOST_PROFILE:-datasphere} yields no memory tier, so" >&2
+  echo "  check-memory did NOT run. Tolerated below production scale: DataSphere jobs are checked" >&2
+  echo "  at submit time by scripts/audit_submission_configs.py, which this runner has no" >&2
+  echo "  equivalent of. Set NATIVE_MEMORY_TIER to check here as well." >&2
 fi
 python3 -m pip install --upgrade pip
 # [Claude 2026-09-02 10:50 MSK: a family that cannot share a job may also need a base requirement

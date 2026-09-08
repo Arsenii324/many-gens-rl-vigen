@@ -466,11 +466,24 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         # expands the ~1.8M-image train tree beside the normal RL state, and both live on the work
         # filesystem this number is checked against.
         #
-        # Charged per CELL because each cell extracts into its own work root. `PLACES365_TRAIN_GIB`
-        # is the compressed archive plus the expanded tree; it is a stated estimate from the
-        # published asset size, NOT a measurement, and the first real provisioning on the host
-        # should replace it with one. An estimate that is present and labelled is worth more than
-        # a term that is absent.
+        # `PLACES365_TRAIN_GIB` is the compressed archive plus the expanded tree; it is a stated
+        # estimate from the published asset size, NOT a measurement, and the first real
+        # provisioning on the host should replace it with one. An estimate that is present and
+        # labelled is worth more than a term that is absent.
+        #
+        # [Claude 2026-09-08] This comment used to read "Charged per CELL because each cell
+        # extracts into its own work root", and that is FALSE. `provide_places365` sits at TOP
+        # LEVEL in run_probe.sh (line 1464, outside run_cell_list), runs ONCE per job, and
+        # extracts into `$work/places365-val` and `$work/places365-root` -- both under the shared
+        # work root, neither under `runs/<cell>`. Every cell in the job reads the same tree.
+        #
+        # The row below still reports what this cell needs STANDALONE, which is the useful number
+        # when planning one cell. The job total subtracts the duplicates afterwards, so a 3-seed
+        # svea job is charged 45 GiB for the corpus rather than 135. The old arithmetic erred
+        # conservatively -- it refused jobs that would have fitted -- but on a filesystem with
+        # 325 GB free and 99% used, a phantom 90 GiB is the difference between "run it" and
+        # "cannot run it", and a guard that refuses valid work gets overridden as a matter of
+        # routine. A routinely-overridden guard is not a guard.
         places = PLACES365_TRAIN_GIB if baseline in PLACES365_BASELINES else 0.0
         cell_total = replay + 3 * checkpoints + places
         rows[cell] = {"family": family, "replay_gib": round(replay, 2),
@@ -479,8 +492,20 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
                       "archive_gib": round(checkpoints, 2),
                       "places365_gib": round(places, 2), "total_gib": round(cell_total, 2)}
         total += cell_total
+    # One shared extraction, charged once. See the note above the `places` term.
+    overlay_cells = sum(1 for row in rows.values() if row["places365_gib"] > 0)
+    duplicated = PLACES365_TRAIN_GIB * max(0, overlay_cells - 1)
+    total -= duplicated
+    # [Claude 2026-09-08] `margin` also covers the RL-ViGen archive (~227 MB) and its extracted
+    # tree, which have no term of their own. That is a judgement, not a measurement, and it is
+    # the only place those two appear -- if the extracted tree ever grows past a couple of GiB
+    # this floor stops covering the pip wheels and apt packages it is also standing in for.
     margin = 5.0   # payload, pip wheels, apt packages and the extracted RL-ViGen tree
-    return {"cells": rows, "margin_gib": margin, "required_gib": round(total + margin, 2)}
+    return {"cells": rows,
+            # Per-cell rows report STANDALONE need; these two say how the job total differs.
+            "places365_charged_once_gib": round(PLACES365_TRAIN_GIB if overlay_cells else 0.0, 2),
+            "places365_duplicates_removed_gib": round(duplicated, 2),
+            "margin_gib": margin, "required_gib": round(total + margin, 2)}
 
 
 def production_env(cells: str, path: Path | None = None) -> dict:

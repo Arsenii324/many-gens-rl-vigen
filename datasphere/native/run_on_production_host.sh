@@ -227,8 +227,23 @@ fi
 # bytes: 43 GiB for one drqv2 cell, 81 for two packed, 5 for idaac, 24 for rad.
 check_disk() {
   local target="$1" free_gb required
-  free_gb="$(df -Pk "$target" 2>/dev/null | awk 'NR==2 {printf "%d", $4 / 1048576}')" || return 0
-  [[ -n "$free_gb" ]] || return 0
+  free_gb="$(df -Pk "$target" 2>/dev/null | awk 'NR==2 {printf "%d", $4 / 1048576}')" || free_gb=""
+  # [Claude 2026-09-08] Both of these used to `return 0` -- the whole disk check silently skipped,
+  # with no output, whenever `df` failed or printed nothing. On a communal host that inverts the
+  # rule this check exists to enforce: not knowing how much space we have is the reason NOT to
+  # run, never a reason to proceed unchecked. Refuse at production scale; below it, say plainly
+  # that nothing was verified rather than reading as a check that passed.
+  if [[ -z "$free_gb" ]]; then
+    if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
+      echo "REFUSING: could not read free space at $target (df failed or returned nothing)." >&2
+      echo "  A production cell writes tens of GiB to this path on a shared host. Running without" >&2
+      echo "  knowing the headroom is the case the upper-bound rule forbids outright." >&2
+      echo "  Set NATIVE_DISK_FLOOR_GB only if you have measured the headroom another way." >&2
+      exit 4
+    fi
+    echo "WARNING: could not read free space at $target; NOTHING was verified about disk headroom." >&2
+    return 0
+  fi
   if [[ -n "${NATIVE_DISK_FLOOR_GB:-}" ]]; then
     required="$NATIVE_DISK_FLOOR_GB"
   else
@@ -236,7 +251,22 @@ check_disk() {
         --cells "${CELLS:-drqv2:1}" --frames "${FRAMES:-10000}" 2>/dev/null \
         | python3 -c 'import json,sys; print(int(json.load(sys.stdin)["required_gib"] + 0.999))' \
         2>/dev/null)" || required=""
-    [[ -n "$required" ]] || required=60
+    # [Claude 2026-09-08] The fallback is a generic constant that is right for roughly none of the
+    # fleet -- 60 GB is ~10x idaac's real need and ~10 GiB short of soda's. It stays as a floor for
+    # probe-scale work, but at production scale a failed requirement computation means the number
+    # being enforced is not this job's, so say so instead of enforcing a stranger's number.
+    if [[ -z "$required" ]]; then
+      if [[ "${FRAMES:-10000}" -ge 600000 ]]; then
+        echo "REFUSING: family.py disk-requirement failed for --cells ${CELLS:-drqv2:1}" >&2
+        echo "  --frames ${FRAMES:-10000}, so this job's real disk need is unknown. The 60 GB" >&2
+        echo "  fallback is not this job's number: soda needs 70.73 GiB and idaac needs 6.52." >&2
+        echo "  Fix the tool, or set NATIVE_DISK_FLOOR_GB to a number you have justified." >&2
+        exit 4
+      fi
+      required=60
+      echo "WARNING: disk-requirement failed; falling back to a generic ${required} GB floor that" >&2
+      echo "  is not derived from these cells." >&2
+    fi
   fi
   echo "free disk at $target: ${free_gb} GB (this job needs ~${required} GB)" >&2
   if [[ "$free_gb" -lt "$required" ]]; then
@@ -274,10 +304,18 @@ WORKDIR_FSTYPE="$(df -PT "$WORKDIR" 2>/dev/null | awk 'NR==2 {print $2}')"
 case "$WORKDIR_FSTYPE" in
   tmpfs|ramfs)
     echo "refusing: $WORKDIR is on $WORKDIR_FSTYPE, which is RAM, not disk." >&2
-    echo "  The payload and the Places365 archive (~45 GiB) are copied here. On a memory-backed" >&2
-    echo "  filesystem that is host RAM, and exhausting it evicts other users' processes." >&2
-    echo "  Set NATIVE_WORKDIR_PARENT to a directory on real storage." >&2
+    echo "  The payload and the Places365 archive (~21 GiB compressed) are copied here. On a" >&2
+    echo "  memory-backed filesystem that is host RAM, and exhausting it evicts other users'" >&2
+    echo "  processes. Set NATIVE_WORKDIR_PARENT to a directory on real storage." >&2
     exit 4 ;;
+  "")
+    # No default arm at all, originally: an unsupported `df -T` fell through in total silence,
+    # which reads identically to a check that ran and passed. Say which it was.
+    echo "note: could not determine the filesystem type of $WORKDIR (\`df -T\` unsupported here)." >&2
+    echo "  The tmpfs refusal did NOT run. On Linux this should not happen; verify by hand that" >&2
+    echo "  $WORKDIR_PARENT is on real storage before a production cell." >&2 ;;
+  *)
+    echo "staging payload on $WORKDIR_FSTYPE at $WORKDIR" >&2 ;;
 esac
 check_disk "$WORKDIR"
 mkdir -p "$WORKDIR/out"
@@ -390,7 +428,7 @@ for name in CELLS FRAMES TASK SEED RECORDS_OUT EVAL_EVERY_FRAMES EVAL_EPISODES S
     CURVE_EVAL_STRICT CURVE_EVAL_DISCARD_WEIGHTS CELL_TIMEOUT_SECONDS CELL_PYTHON \
     NATIVE_CELL_DEVICES NATIVE_ALLOW_CPU NATIVE_ONLINE_EVAL_DISABLED_SPELLING \
     NATIVE_HOST_PROFILE_EXPLICIT RLVIGEN_IMAGE_SIZE RLVIGEN_PLACES_WORKERS \
-    CELL_STALL_SECONDS NATIVE_NO_POLICY_HEALTH_WATCH XLA_FLAGS \
+    CELL_STALL_SECONDS NATIVE_NO_POLICY_HEALTH_WATCH XLA_FLAGS NATIVE_MEMORY_TIER \
     OMP_NUM_THREADS MKL_NUM_THREADS; do
   value="${!name:-}"
   [[ -n "$value" ]] && DOCKER_ENV_ARGS+=(-e "$name=$value")
