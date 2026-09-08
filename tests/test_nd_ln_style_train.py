@@ -51,13 +51,33 @@ def test_end_to_end_on_the_synthetic_backend_produces_a_real_episodes_csv():
     """The whole point under test: this script must not be a second training loop. Run it for a
     few frames on the synthetic backend and confirm the SAME artifact rlgen.trainer.train always
     produces (episodes.csv, with the standard schema) exists afterward -- if this script ever
-    grew its own logging path, this is what would catch the drift."""
+    grew its own logging path, this is what would catch the drift.
+
+    [Claude 2026-09-08] This failed once in a full-suite run with
+    `RuntimeError: linalg_qr: MPS kernel failed with error code 0`, and passed immediately on its
+    own. `nn.init.orthogonal_` calls QR, and that Metal kernel fails under GPU contention -- the
+    run in question had several payload builds and another pytest process competing for the same
+    device. It is an environment fault, not a regression in this script.
+
+    Retried ONCE, and only for that exact message. A blanket retry would hide real failures; the
+    reason for not fixing it at the source is that initialising on CPU and moving would change the
+    RNG stream, and this path is provenance material rather than production code. Left in the gate
+    because it is a real end-to-end check, but it must not be mistaken for a code fault the next
+    time a wave is blocked by it."""
     from rlgen import tags
 
+    def _run(tmp):
+        return ndln.main(["--total_timesteps", "16", "--eval_frequency", "16",
+                          "--eval_episodes", "1", "--backend", "synthetic",
+                          "--logdir", tmp, "--seed", "0", "--quiet"])
+
     with tempfile.TemporaryDirectory() as tmp:
-        rc = ndln.main(["--total_timesteps", "16", "--eval_frequency", "16",
-                        "--eval_episodes", "1", "--backend", "synthetic",
-                        "--logdir", tmp, "--seed", "0", "--quiet"])
+        try:
+            rc = _run(tmp)
+        except RuntimeError as error:
+            if "linalg_qr" not in str(error) or "MPS" not in str(error):
+                raise
+            rc = _run(tmp)
         assert rc == 0
 
         found = [os.path.join(r, f) for r, _, fs in os.walk(tmp) for f in fs
