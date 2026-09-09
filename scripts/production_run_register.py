@@ -81,6 +81,18 @@ def is_summary_row(row: dict) -> bool:
     return "," in str(row.get("scene_set", ""))
 
 
+def unweightable(rows: list[dict]) -> int:
+    """Rows carrying no `episodes`, which any weighted mean silently drops.
+
+    [Claude 2026-09-09] Counted across the collected fleet: `phase=eval` rows exist at **10, 5, 1 and
+    None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- so a one-episode
+    measurement sits in the same stream as a two-hundred-episode one, and 1,440 rows carry no count
+    at all. `r.get("episodes") or 0` drops those from every weighted mean. Dropping them is right;
+    doing it without saying so is not, which is the whole of this function.
+    """
+    return sum(1 for r in rows if not (r.get("episodes") or 0))
+
+
 def regime_stat(rows: list[dict]) -> tuple[float, float | None, int, bool]:
     """(mean, standard error, episodes, exact) for one regime.
 
@@ -249,11 +261,13 @@ def build() -> str:
                 ret, se, eps, exact = regime_stat(g)
                 sr = _weighted(g, "success_rate")
                 scenes = len([x for x in g if not is_summary_row(x)])
+                dropped = unweightable(g)
                 se_txt = ("± %.2f" % se) if se else "—"
                 if se and not exact:
                     se_txt += " ⚠"          # per-scene floor: omits between-scene variance
+                eps_txt = f"{eps}" + (f" (+{dropped} unweightable)" if dropped else "")
                 add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | {se_txt} | {sr:.3f} | "
-                    f"{eps} | {scenes} |")
+                    f"{eps_txt} | {scenes} |")
         add("")
 
     host = ROOT / "results" / "host-runs.jsonl"
@@ -340,13 +354,19 @@ def build() -> str:
     add("5. **Returns are not comparable across `policy_mode`.** `idaac`, `ppg` and `ibac_sni` "
         "report a sampled return; the other nine report a mode return. Different estimands. "
         "`scripts/comparison_blocks.py` adjudicates; this register never pools them.")
-    add("6. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at "
+    add("6. **Episode counts are NOT uniform, and rows without one are dropped from every "
+        "weighted mean.** Across the collected fleet, `phase=eval` rows exist at 10, 5, 1 and "
+        "**None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- a "
+        "one-episode measurement in the same stream as a two-hundred-episode one. A row with no "
+        "`episodes` cannot be weighted and is excluded; where that happens the episode cell above "
+        "says `(+N unweightable)` rather than staying silent about it.")
+    add("7. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at "
         "generation time: of the rows here, only those carrying "
         "`evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported "
         "without that distinction and contribute to no curve or endpoint summary. **No currently "
         "collected run has curve-scoped rows at all**, so the curve line below appears only for "
         "runs collected after that field existed.")
-    add("7. **A superseded evaluator revision is still listed.** Whether a revision is current is "
+    add("8. **A superseded evaluator revision is still listed.** Whether a revision is current is "
         "`scripts/audit_row_closure.py`'s question, not this file's.")
     add("")
     add("## Overwrite safety")

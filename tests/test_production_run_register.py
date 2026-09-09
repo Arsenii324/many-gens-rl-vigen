@@ -212,3 +212,33 @@ def test_is_summary_row_identifies_the_combined_scene_set():
     assert mod.is_summary_row({"scene_set": "0,1,2,3,4,5,6,7,8,9"})
     assert not mod.is_summary_row({"scene_set": "7"})
     assert not mod.is_summary_row({"scene_set": 0})
+
+
+def test_rows_without_an_episode_count_are_reported_not_silently_dropped(tmp_path, monkeypatch):
+    """1,440 collected rows carry no `episodes`; `r.get("episodes") or 0` drops them from any mean.
+
+    Dropping is right -- a row with no count cannot be weighted. Doing it silently is the defect.
+    """
+    import importlib.util, json
+    spec = importlib.util.spec_from_file_location("_reg5", SCRIPT)
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    recs = tmp_path / "records"; recs.mkdir()
+    base = {"baseline": "b", "cell": "c", "seed": 1, "regime": "train", "frame": 1,
+            "phase": "offline-eval", "episode_return_mean": 10.0, "episode_return_sd": 5.0,
+            "evaluator_scope": {"eval_scope": "endpoint", "eval_policy_mode": "sample"}}
+    rows = [dict(base, scene_set=str(i), episodes=20) for i in range(3)]
+    rows += [dict(base, scene_set=str(9 + i), episodes=None) for i in range(2)]
+    (recs / "j__records.jsonl").write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+    monkeypatch.setattr(mod, "RECORDS", recs); monkeypatch.setattr(mod, "LOGS", tmp_path / "logs")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    text = mod.build()
+    assert "(+2 unweightable)" in text, f"dropped rows must be counted in the open:\n{text[-800:]}"
+    assert "| 60 (+2 unweightable) |" in text
+
+
+def test_unweightable_counts_only_rows_with_no_episodes():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_reg6", SCRIPT)
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    assert mod.unweightable([{"episodes": 20}, {"episodes": None}, {}, {"episodes": 0}]) == 3
+    assert mod.unweightable([{"episodes": 1}]) == 0
