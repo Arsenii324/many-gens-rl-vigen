@@ -169,3 +169,25 @@ nohup env NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_ACCEPT_UNVERIFIED_DEVICE=1 \
 
 **Do not carry `ENDPOINT_EVAL_REGIMES`, `ENDPOINT_EVAL_SCENES` or `ENDPOINT_EVAL_EPISODES` into any
 of these.** The production freeze rejects a smoke config's two-regime eval, and correctly.
+
+
+## Runs 2-4 are payload-verified, 2026-09-09
+
+Built and verified against contract 19 with `--require-evaluator-identity`, ahead of time, so a
+launch three hours from now does not fail on something checkable today:
+
+| family | build | verify | trainer in payload |
+|---|---|---|---|
+| `ppg` | OK | OK | `runnable/ppg` present |
+| `alda` | OK | OK | `runnable/alda` present |
+| `rlvigen` (for `drqv2`) | OK | OK | **no `runnable/rlvigen`, and that is correct** |
+
+The last row is worth stating because a size check invites the wrong conclusion: the `rlvigen`
+payload is 277 KB against `alda`'s 38 MB, and contains no `runnable/rlvigen` directory at all. There
+is none in the repo either. The family runs **RL-ViGen's own trainer**, cloned from upstream at run
+time and driven by `runnable/_launch/rlvigen.sh`, which the payload does ship — the same reason
+`drqv2` carries `repository: None` and counts as RL-ViGen-native rather than added.
+
+`alda` was also checked for runnability rather than assumed: `scripts/state.py` reports it as
+`parses ABSENT`, which refers to its descent analysis and not to a missing tree. `runnable/alda` and
+`third_party/alda/models` are both present and the payload verifies.
