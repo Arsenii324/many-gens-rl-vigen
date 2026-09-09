@@ -275,3 +275,24 @@ the standalone endpoint grid at the same frame reports train 33.69 and eval-easy
 per regime**. The in-cell path ranks eval-easy ABOVE train; the standalone ranks it below. Ten
 episodes cannot separate regimes whose returns differ by less than a standard error, so the in-cell
 number is a smoke signal and never a result. The standalone grid is the authority.
+
+**"Is the watch budget big enough for evaluation?"** — ANSWERED, **no, and the live cell is one
+minute inside its reaper.** `EVAL_ALLOWANCE` defaulted to `CELL_TIMEOUT_SECONDS` — the *training*
+budget — while the same file's comment said evaluation is 1.6x training. Measured to completion:
+training 4.95h, curve 4.60h, endpoint **5.52h**, because `ENDPOINT_EVAL_POLICY_MODES` defaults to
+`native,mode` and sweeps the whole 44-row grid **twice**. Evaluation is 10.12h against a 6h
+allowance, 69% short, and the policy-mode count was the term nobody had multiplied by.
+
+**The failure this causes is not a truncated evaluation.** `collect_record_delivery` runs *after*
+evaluation, so a reaped cell never reaches it — every row written and none bundled, for a
+twelve-hour cell. `card0-20260909-035152`'s second endpoint pass is projected to finish **18:36
+against a reaper at 18:37**.
+
+Fixed forward: the allowance is now derived from episodes actually scheduled (including policy
+modes) at a measured 12 s/episode x1.5, floored at the old default, and the launcher prints the
+workload so a wrong number is visible before the cell starts. For today's configuration it derives
+62,568s against the 21,600s used. Six tests, `tests/test_eval_allowance_is_derived.py`.
+
+Mitigation for the cell already running, since the reaper cannot be moved without removing the
+instrument: its `*.jsonl`, `*.csv` and `job.log` are pulled locally every ten minutes, so a reaping
+costs at most one row rather than the bundle. Rows are appended as produced.
