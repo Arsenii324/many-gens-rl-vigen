@@ -970,8 +970,24 @@ ppg_checkpoint_frame() {
   if [[ -n "$actual" ]]; then
     printf '%s\n' "$actual"
   else
-    # Keep old archives usable when their training log predates the save-line instrumentation.
-    printf '%s\n' "$(( (10#$stamp + 1) * save_every ))"
+    # [Claude 2026-09-09] REFUSE rather than reconstruct. This used to fall back to
+    # `(stamp + 1) * save_every`, which is wrong in two independent ways, measured against a live
+    # ppg cell on 2026-09-09:
+    #
+    #   actual IC=   0, 51200, 100352, 151552, 200704   (ppg saves on its rollout quantum, 25x2048)
+    #   fallback     50000, 100000, 150000, 200000, 250000
+    #
+    # The cadence is wrong (51200, not the requested 50000) AND it is off by one save, because
+    # `model000.jd` is written at IC=0. So every curve row would carry a frame wrong by up to 50k,
+    # shifted systematically, and nothing would say so -- a checkpoint evaluated at one frame and
+    # recorded at another is exactly the mislabelling `eval_grid.py --frame` exists to prevent.
+    #
+    # An unmapped checkpoint is skipped and named. A skipped checkpoint is visible in the record
+    # count; a mislabelled one is not visible at all.
+    echo "=== NATIVE_PPG_FRAME_UNMAPPABLE stamp=$stamp: no 'Saving to ... IC=' line for it in" \
+         "$cell_out/training.log, so its frame is unknown. Skipping rather than reconstructing a" \
+         "cadence that is measurably off by one save and by the rounding to the rollout quantum. ===" >&2
+    printf '%s\n' ""
   fi
 }
 
@@ -1084,6 +1100,13 @@ run_curve_eval() {
     [[ -n "$stamp" ]] || { echo "=== NATIVE_CURVE_EVAL_UNSTAMPED $base ===" >&2; continue; }
     if [[ "$family" == "ppg" ]]; then
       frame="$(ppg_checkpoint_frame "$cell_out" "$stamp" "$save_every")"
+      # ppg_checkpoint_frame returns empty when it cannot map a save index to an interaction count.
+      # Evaluating anyway would attach a real measurement to a wrong frame, which is worse than not
+      # measuring it: the row would be indistinguishable from a correct one.
+      if [[ -z "$frame" ]]; then
+        echo "=== NATIVE_CURVE_EVAL_SKIPPED $baseline file=$base (frame unmappable) ===" >&2
+        continue
+      fi
     else
       frame="$stamp"
     fi
