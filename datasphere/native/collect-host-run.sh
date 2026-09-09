@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Install a HOST run's records and populate the evaluator ledger, refusing rather than skipping.
 #
-#     bash datasphere/native/collect-host-run.sh idaac ~/rlvigen-runs/card0-20260909-025431
+#     bash datasphere/native/collect-host-run.sh idaac ./fetched/card0-20260909-035152
 #
 # [Claude 2026-09-09] `collect-wave.sh` is the DataSphere equivalent and cannot be used here: it
 # calls `datasphere project job get` to check the job reached SUCCESS, and a host run has no job at
@@ -11,15 +11,48 @@
 # The `job_id` the ledger keys on becomes the run directory's basename (`card0-<timestamp>`), which
 # is unique per launch and carries the date, so a record can always be traced back to the directory
 # it came from.
+#
+# ## RUN_DIR IS A LOCAL COPY, not a path on the production host
+#
+# This script writes into `results/records/` and runs repo Python. Neither may happen on the host:
+# the standing rule there is docker operations and trivial shell only. Fetch first, collect here:
+#
+#     rsync -a --exclude 'native-work' \
+#       varaksin_as@100.98.2.11:'~/rlvigen-runs/card0-20260909-035152' ./fetched/
+#
+# `native-work` is excluded because it holds the checkpoints -- gigabytes, and not what the ledger
+# needs. `scripts/audit_record_frame_provenance.py` DOES need them, so fetch that subtree separately
+# when auditing frame labels rather than dragging it through every collection.
+#
+# ## The source file, which the first version of this script got wrong
+#
+# [Claude 2026-09-09] It read `native-out/records.jsonl`. **No completed host run has that file.**
+# `normalize_curves.py` writes training rows to `records.jsonl` only when the job HAS training
+# cells to normalise, and the delivered bundle -- training rows plus every offline evaluation row
+# from `cells/<cell>/offline_eval_*.jsonl` -- is assembled by `collect_record_delivery` into
+# `records_delivery.jsonl`. Verified against three completed runs on 2026-09-09: `records.jsonl` is
+# absent, `records_delivery.jsonl` is the bundle.
+#
+# The failure was fail-closed by luck rather than by design: an absent file trips the `-s` test and
+# refuses, so nothing would have been silently lost. Had `records.jsonl` merely been *incomplete*
+# instead of absent, this collector would have installed training rows, dropped 528 evaluation rows,
+# and printed success. `run_probe.sh` carries a comment about that exact failure one directory level
+# down; it recurred here because a collector's source is a claim about the runner, and claims about
+# other components go stale.
+#
+# So the two checks below do not just read the right file -- they check the choice of file against
+# evidence this script does not control. That is the only version of the fix that survives the
+# runner changing again.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 BP="${BP:-python3}"
+RECORDS_DIR="${RECORDS_DIR:-results/records}"
 
 FAMILY="${1:?usage: collect-host-run.sh <family> <run-dir>}"
 RUN_DIR="${2:?usage: collect-host-run.sh <family> <run-dir>}"
 JOB_ID="$(basename "${RUN_DIR%/}")"
-SRC="$RUN_DIR/native-out/records.jsonl"
-DEST="results/records/${JOB_ID}__records.jsonl"
+SRC="$RUN_DIR/native-out/records_delivery.jsonl"
+DEST="$RECORDS_DIR/${JOB_ID}__records.jsonl"
 
 echo "=== $FAMILY  $JOB_ID"
 
@@ -57,17 +90,50 @@ else
   echo "   NOTE: no egl.json; the renderer is unverified for this run." >&2
 fi
 
-# 3. Records must exist and be non-empty. SUCCESS with no records is itself a finding.
+# 3. The bundle must exist and be non-empty. SUCCESS with no records is itself a finding.
 if [[ ! -s "$SRC" ]]; then
   echo "   REFUSING: $SRC is absent or empty. A completed cell that produced no records is a" >&2
   echo "   finding, not an empty result to file away." >&2
+  if [[ -s "$RUN_DIR/native-out/records.jsonl" ]]; then
+    echo "   records.jsonl IS present. That file is normalize_curves.py's TRAINING rows, not the" >&2
+    echo "   delivered bundle -- it carries no offline evaluation rows. Collecting it would install" >&2
+    echo "   a fraction of the run and report success. Find out why collect_record_delivery did not" >&2
+    echo "   run; do not point this script at records.jsonl." >&2
+  fi
   exit 1
 fi
-mkdir -p results/records
-cp "$SRC" "$DEST"
-echo "   installed $(wc -l < "$SRC" | tr -d ' ') record rows -> $DEST"
 
-# 4. The ledger REFUSES a stale evaluator revision, and that refusal is the most valuable thing it
+# 4. THE SOURCE CHOICE IS CHECKED AGAINST THE LOG. If the runner evaluated anything, the bundle must
+#    carry offline-eval rows. This is what makes reading the wrong file loud instead of quiet, and it
+#    is anchored on markers this script does not write.
+if grep -qE "NATIVE_(CURVE_EVAL_COMPLETED|ENDPOINT_EVAL_BEGIN)" "$LOG"; then
+  offline="$(grep -cE '"phase"[[:space:]]*:[[:space:]]*"offline-eval"' "$SRC")"
+  if [[ "$offline" -eq 0 ]]; then
+    echo "   REFUSING: the log says this run evaluated checkpoints, but $(basename "$SRC") carries" >&2
+    echo "   ZERO offline-eval rows. Either the delivery step missed them or this script is reading" >&2
+    echo "   the wrong file. Both mean the evaluation -- the expensive half of the cell -- would be" >&2
+    echo "   filed as if it had never happened." >&2
+    exit 1
+  fi
+  echo "   offline-eval rows: $offline"
+fi
+
+# 5. THE RUNNER STATES HOW MANY ROWS IT WROTE. A disagreement means the file changed between the
+#    runner emitting it and this script reading it -- a truncated fetch is the likely cause, and a
+#    truncated fetch installs a silently short result.
+emitted="$(grep -oE 'NATIVE_RECORDS_EMITTED [0-9]+ rows' "$LOG" | tail -1 | awk '{print $2}')"
+have="$(wc -l < "$SRC" | tr -d ' ')"
+if [[ -n "$emitted" && "$emitted" != "$have" ]]; then
+  echo "   REFUSING: the runner emitted $emitted rows; this copy has $have. The file is not the one" >&2
+  echo "   the runner wrote -- most likely an interrupted fetch. Re-fetch rather than collect." >&2
+  exit 1
+fi
+
+mkdir -p "$RECORDS_DIR"
+cp "$SRC" "$DEST"
+echo "   installed $have record rows -> $DEST${emitted:+ (runner emitted $emitted)}"
+
+# 6. The ledger REFUSES a stale evaluator revision, and that refusal is the most valuable thing it
 #    does. Capture the status explicitly: piping it through `tail` would discard the exit code and
 #    print "Do NOT write this entry" while exiting 0.
 out="$("$BP" scripts/populate_evaluator_ledger.py "$FAMILY" "$JOB_ID" 2>&1)"
@@ -78,5 +144,16 @@ if [[ $status -ne 0 ]] || printf '%s' "$out" | grep -q "Do NOT write this entry"
   exit 1
 fi
 
+# 7. The gate line is a SUMMARY, and a summary must not decide this script's exit status. As the
+#    last command, a `grep` that matches nothing made the collector exit 1 after installing the
+#    bundle and passing the ledger -- indistinguishable, to a caller, from a refusal. The collection
+#    either happened or it did not, and by this line it has.
 echo
-"$BP" scripts/production_gates.py 2>&1 | grep -iE "shared evaluator validated" | cut -c1-200
+gate="$("$BP" scripts/production_gates.py 2>&1 | grep -iE "shared evaluator validated" | cut -c1-200)"
+if [[ -n "$gate" ]]; then
+  printf '%s\n' "$gate"
+else
+  echo "   NOTE: production_gates.py printed no 'shared evaluator validated' line. The collection" >&2
+  echo "   SUCCEEDED -- this is about the summary, not the result. Check the gate separately." >&2
+fi
+exit 0

@@ -93,4 +93,14 @@ if [[ ${#failed[@]} -gt 0 ]]; then
   echo "The ledger is short by that many families. It is not 7/7 and must not be reported as such."
   exit 1
 fi
-"$BP" scripts/campaign_status.py 2>&1 | tail -3
+# [Claude 2026-09-09] Same class as the refusal-status capture above, one step milder and found in
+# collect-host-run.sh first: a summary piped through `tail` exits 0 whatever the summary did, so a
+# crashed campaign_status.py prints three lines of traceback and reads as a clean finish. The
+# collection itself already succeeded by this point, so the status is reported rather than returned.
+summary="$("$BP" scripts/campaign_status.py 2>&1)"
+summary_status=$?
+printf '%s\n' "$summary" | tail -3
+if [[ $summary_status -ne 0 ]]; then
+  echo "   NOTE: campaign_status.py exited $summary_status. The collection SUCCEEDED; the summary" >&2
+  echo "   above is the failing command's output, not a campaign state." >&2
+fi
