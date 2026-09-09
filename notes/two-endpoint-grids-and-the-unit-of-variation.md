@@ -54,9 +54,14 @@ The frames differ because IDAAC floors a requested budget and PPG ceils it; both
 
 **Zero successes in 1,600 episodes.** Every number above is shaping reward. That is a fact about
 what these policies do, not a scale artefact, and it is the first thing any reader of the table
-needs. Whether 33.69 is *above random* remains unanswerable: `learning_over_random.py` reports the
-floor as unknown for both, because no frame-0 row exists in `results/records` for either family —
-checked, not assumed. It correctly refuses to borrow ppg's ≈2 pilot figure across families.
+needs. **Corrected 2026-09-10:** an earlier version of this paragraph said whether 33.69 is above random
+was unanswerable. It is answerable. `learning_over_random.py` does report the floor as unknown, and
+correctly — it wants a **frame-0 row of the same family** and neither family has one — but the
+project also holds a canonical **random-action** floor for Door (C55, `rlvigen_reference.py:87`:
+mean 1.842, sd 2.839, max 28.755). Both policies are **6.2×–18.3× that floor** in every regime, and
+no training episode of either fell at or below its 95% upper bound. The two controls answer
+different questions and only the frame-0 one is missing. See
+[`both-endpoint-grids-against-the-random-floor.md`](both-endpoint-grids-against-the-random-floor.md).
 
 ## 3. The two defects
 
