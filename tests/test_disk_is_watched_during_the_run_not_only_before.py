@@ -119,3 +119,29 @@ def test_it_uses_the_same_sentinel_the_cell_polls():
     code = LAUNCHER.read_text()
     assert code.count("/work/yield.sentinel") >= 2, (
         "the disk watch must write the SAME sentinel run_probe.sh polls for")
+
+
+def test_the_allowance_is_derived_from_what_the_cell_needs():
+    """A typed allowance was about to yield a drqv2 run partway through.
+
+    [Claude 2026-09-09] `family.py disk-requirement` gives 9 GiB for idaac/ppg at 600k and **48**
+    for drqv2, while the allowance defaulted to 40. The floor is `free_at_arm - allowance`, so a
+    drqv2 cell writing what it legitimately needs would breach a floor sized for a smaller job and
+    stop itself hours in. The allowance states how much THIS cell may consume, so it must be at
+    least what this cell needs.
+    """
+    code = "\n".join(l for l in LAUNCHER.read_text().splitlines()
+                     if not l.lstrip().startswith("#"))
+    assert "disk-requirement" in code, "the allowance is not derived from the cell's own need"
+    assert "--cells \"$CELLS\"" in code, "the requirement is not computed for THIS cell list"
+    assert "_derived=$(( _need_gib * 2 ))" in code, "no margin over the bare requirement"
+    assert 'DISK_ALLOWANCE_GIB="${NATIVE_DISK_ALLOWANCE_GIB:-$_derived}"' in code, (
+        "the derived value is not used as the default, or the override was removed")
+
+
+def test_an_uncomputable_requirement_falls_back_rather_than_aborting():
+    """family.py failing must not stop a launch; the floor still protects the machine."""
+    code = LAUNCHER.read_text()
+    block = code[code.index("_need_gib="):code.index("DISK_ABS_FLOOR_GIB")]
+    assert "could not be computed" in block, "no fallback path"
+    assert ":-40}" in block, "the fallback lost its own default"

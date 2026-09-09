@@ -177,7 +177,28 @@ reaper_pid="$!"
 # failing because we filled a shared disk is the outcome this exists to prevent, and by the time a
 # human reads a warning the space is already gone.
 _free_gib="$(df -PBG "$W" 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}')"
-DISK_ALLOWANCE_GIB="${NATIVE_DISK_ALLOWANCE_GIB:-40}"
+# [Claude 2026-09-09] DERIVE the allowance from what this cell actually needs, do not type it.
+# `family.py disk-requirement` gives 9 GiB for idaac/ppg at 600k and **48** for drqv2, while this
+# defaulted to 40 -- so a drqv2 cell writing what it legitimately needs would breach a floor sized
+# for a smaller job and yield partway through a multi-hour run. The allowance is a statement about
+# how much this cell may consume, so it has to be at least what the cell needs. Same principle as
+# the watch budget: a number that must match the run should be computed from the run.
+_need_gib="$(docker run --rm -v "$REPO:/repo:ro" -w /repo "$IMAGE" \
+  python3 datasphere/native/family.py disk-requirement --cells "$CELLS" \
+    --frames "${FRAMES:-600000}" --profile "${NATIVE_HOST_PROFILE:-datasphere}" --ceil-total \
+  2>/dev/null | tr -dc '0-9')"
+if [[ -n "$_need_gib" && "$_need_gib" -gt 0 ]]; then
+  # Twice the requirement, not 1.5x: the live idaac cell consumed 8.2 GiB against a computed
+  # need of 9, so the measured margin between "what family.py predicts" and "what the container
+  # layer plus staging actually costs" is thin, and a floor that fires on a healthy cell is worse
+  # than one that fires slightly late.
+  _derived=$(( _need_gib * 2 ))
+  DISK_ALLOWANCE_GIB="${NATIVE_DISK_ALLOWANCE_GIB:-$_derived}"
+  echo "disk need:      ${_need_gib} GiB for $CELLS at ${FRAMES:-600000} frames -> allowance ${DISK_ALLOWANCE_GIB} GiB"
+else
+  DISK_ALLOWANCE_GIB="${NATIVE_DISK_ALLOWANCE_GIB:-40}"
+  echo "disk need:      could not be computed; falling back to a ${DISK_ALLOWANCE_GIB} GiB allowance" >&2
+fi
 DISK_ABS_FLOOR_GIB="${NATIVE_DISK_ABS_FLOOR_GIB:-50}"
 if [[ -n "$_free_gib" ]]; then
   DISK_FLOOR_GIB=$(( _free_gib - DISK_ALLOWANCE_GIB ))
