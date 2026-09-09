@@ -315,3 +315,22 @@ its `clip_fraction` reads 0.83.
 
 Guarded: `audit_training_diagnostics.py` now reports trainer warnings **above** the range checks.
 See [`ppg-took-256-gradient-steps-not-8192.md`](ppg-took-256-gradient-steps-not-8192.md).
+
+**"Which reward number is the result — the training log's or the record's?"** — ANSWERED, **always
+the record's**, and the confusion has now cost time twice in one day. Three families normalise
+TRAINING reward (`REWARD_NORMALIZATION` in `rlgen/protocol.py`: `idaac`, `ppg`, `ctrl`), and their
+training logs report on that normalised scale while **every record reports raw return regardless**.
+The two are not the same quantity and need not even move in the same direction:
+
+| | training log | offline record (raw) |
+|---|---|---|
+| `idaac` @ ~545k | `train/mean_episode_reward` **50.1** | curve train regime **24.7** |
+| `ppg` @ ~524k | `EpRewMean` **28.3**, rising | `Misc/FrameRewMean × EpLenMean` = **8.3**, falling |
+
+They also measure different things even before normalisation: the training figure is the on-policy
+rollout return *while learning*, the record is an offline evaluation of a fixed checkpoint. **A
+summary that quotes a training-log reward is not reporting a result**, and for `ppg` it would have
+reported a 22x improvement on a run whose raw return may be falling.
+
+`scripts/audit_training_diagnostics.py` flags the inconsistency directly, using the identity
+`EpRewMean = EpLenMean x FrameRewMean` that must hold when both are raw.
