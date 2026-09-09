@@ -1,0 +1,76 @@
+# The first complete endpoint grid: `idaac` on Door at 598,016 frames
+
+**2026-09-09**, `card0-20260909-035152`, cell `idaac-s101`, seed 101. Pass 1 of 2
+(`policy_mode=native`, which for `idaac` is **sample**) finished at 44 rows: 4 regimes x 11 scene
+sets x 20 episodes = **880 episodes**. This is the first complete endpoint grid this project has
+produced on any host.
+
+| regime | return | sd | **SE** | success rate | episodes |
+|---|---|---|---|---|---|
+| train | **33.69** | 24.91 | 1.25 | 0.000 | 400 |
+| eval-easy | **31.58** | 26.05 | 1.30 | 0.000 | 400 |
+| eval-medium | **11.55** | 8.35 | 0.42 | 0.000 | 400 |
+| eval-hard | **18.47** | 15.14 | 0.76 | 0.000 | 400 |
+
+Standard errors of 0.4-1.3 on 400 episodes: every gap below is many SE wide and none of this is
+noise.
+
+## Retention
+
+Against the train denominator, which `C43` exists to provide and which nothing before this project
+built:
+
+| regime | retention |
+|---|---|
+| eval-easy | **93.7 %** |
+| eval-medium | **34.3 %** |
+| eval-hard | **54.8 %** |
+
+Visual perturbation costs `idaac` very little on `eval-easy` and roughly two thirds of its return on
+`eval-medium`. **That is a real generalisation gap measured on a real grid**, and it is the kind of
+number the whole benchmark exists to produce.
+
+## `eval-hard` scores ABOVE `eval-medium`, and that is expected
+
+18.47 against 11.55 is about 8 SE apart, and the same inversion appears at **every one of the eleven
+curve stamps**, so it is systematic rather than a fluke of the endpoint.
+
+**It is not a defect and not a mislabelling.** `rlgen/protocol.py:30-35` already says so, and said so
+before this run:
+
+> the eval modes differ in **WHICH** effects are switched on, not in the magnitude of any single
+> effect — the magnitudes are shared constants upstream. So `easy < medium < hard` is a statement
+> about the number of active nuisance factors, and it does **NOT** imply the returns are
+> rank-ordered. In the sibling project only 3 of 12 checkpoints came out ordered
+> `easy >= medium >= hard`.
+
+Our run adds one data point in the same direction: **1 of 1 checkpoints not rank-ordered.**
+
+*(I nearly filed this as a discovery. It is the third time today I have nearly written up as new
+something the codebase already documented — the other two were the single-filesystem mirror
+distinction, already argued in `run_on_production_host.sh:405-437`, and a claim about a plan item
+that `families.json` already covered. Running `scripts/where_is_this_decided.py` before asserting an
+absence costs seconds. **An agent writing from its own context cannot check breadth**, which is
+exactly what `CONSOLIDATION-DESIGN-2026-09-09.md` D6 says and what I keep re-learning.)*
+
+## Against the floor
+
+A randomly initialised policy scores **≈ 2** on this axis (`ppg`'s frame-0 stamp, 60 episodes per
+regime). `idaac`'s train 33.69 is therefore roughly **17x random**.
+
+That comparison is caveated and deliberately not put in the table: the floor is `ppg`'s
+initialisation, and **`idaac` has no frame-0 checkpoint at all** — its earliest retained checkpoint
+is 51,200. `scripts/learning_over_random.py` reports `NO frame-0 row -- floor unknown` for this cell
+rather than borrowing `ppg`'s number, which is the correct behaviour.
+
+## What this grid does NOT establish
+
+- **Nothing about RL-ViGen's own Door numbers.** They exist only inside Figures 22 and 19 and are
+  not reported numerically anywhere in either vendored PDF. No "gap to the benchmark" claim is
+  available from these documents.
+- **Nothing comparable to the nine mode-policy families.** These rows are `sample`. Pass 2
+  (`policy_mode=mode`) is what would be comparable, and it is the pass the reaper is expected to cut
+  short at 18:37.
+- **Nothing about IDAAC as an algorithm at its best.** This is IDAAC at faithful configuration, whose
+  optimiser diagnostics show it updating far outside the trust region
+  ([`idaac-on-door-is-a-trust-region-blowout.md`](idaac-on-door-is-a-trust-region-blowout.md)).
