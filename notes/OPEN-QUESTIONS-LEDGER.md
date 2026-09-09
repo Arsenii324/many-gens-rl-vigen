@@ -236,3 +236,20 @@ loudly: `run_probe.sh` skips the editable installs under `NATIVE_VENV` and its i
 `third_party/robosuite` prepended, a path **no** `runnable/_launch/*.sh` keeps. Now guarded —
 `PYTHONPATH="" python3 -c "import robosuite"`, refusing with `NATIVE_EDITABLE_NOT_INSTALLED`. Neither
 running cell uses the prebuilt env at all; both take `NATIVE_PIP_CACHE=1`, and `drqv2` will too.
+
+**"The curve and endpoint eval paths have no stated authority between them — do they disagree?"** —
+ANSWERED, **they are the same closure at two sample sizes**, measured on the live `idaac` cell
+2026-09-09. Both rows carry `evaluator_revision=16e960b1f446` and an `evaluator_scope` identical in
+every field — task, regimes, scenes `[0..9]`, `episode_seed=20260903`, `action_repeat=1`,
+`frame_stack=3`, `image_size=64`, `episode_length=500`, `eval_policy_mode=sample`, deterministic
+torch — **except `eval_scope` (curve/endpoint), `frame`, and `episodes` (3 vs 20)**. So there is no
+authority question between them: one is the other at 3 episodes per scene instead of 20.
+
+Their regime orderings agree. Endpoint at 598016 over 400 episodes per regime: train 33.69,
+eval-easy 31.58, eval-medium 11.93 (4 of 11 scene sets so far). Curve at 550912 over 60: train 24.74,
+eval-easy 21.12, eval-medium 7.16, eval-hard 11.65.
+
+**The caveat that survives:** the curve runs **3 episodes per scene**, so a single curve point is
+thin and should not be read as a level — only the regime aggregate and the trend across stamps carry
+weight. RL-ViGen's own Robosuite protocol is 10 per environment (supplement §B); the endpoint's 20 is
+richer, the curve's 3 is not.
