@@ -194,3 +194,23 @@ See [`production-host/26-the-vram-cap-never-reached-a-trainer.md`](production-ho
 ppg names by save index, so frames come from its `IC=` log lines; the fallback reconstructed
 `(stamp+1) * save_every`, which measured **off by one save and on the wrong cadence** (actual
 0/51200/100352… against 50000/100000/150000…). It now refuses and skips rather than mislabelling.
+
+**"Is `success_rate` the right axis to judge a Door run on?"** — ANSWERED, **no**. RL-ViGen's
+supplement §B states the Robosuite metric is aggregated **return**; success rate is Adroit's metric
+and Habitat's. Figure 22 plots Robosuite episode return on a 0-500 axis. Today's `idaac` endpoint
+reports `success_rate: 0.0`, which read as the headline says the run failed and on the benchmark's
+own axis is not the claim being made. See
+[`rlvigen-reports-return-not-success-rate-for-robosuite.md`](rlvigen-reports-return-not-success-rate-for-robosuite.md).
+
+**"Is 600k frames a reduced budget for Door?"** — ANSWERED, no. RL-ViGen **Table 6** gives Robosuite
+Door `int(6e5)`; **Table 2** gives `Action repeat — Robosuite: 1`. Ours is the paper's budget, so
+"it needed longer" is not available as an explanation for a null. Note the trap: **Table 5 is Adroit
+and also has a Door**, at `int(1e6)` and scored by success rate. A grep for "Door" returns both.
+
+**"Did `idaac` learn Door in 598,016 frames?"** — ANSWERED, **no**, and the harness is fine. Train
+return wanders 12-50 across 11 stamps with no monotone trend and **ends at 24.74 having started at
+24.66**; against Figure 22's 0-500 axis that is under 10% of the range. The same curve shows the
+evaluator working: regimes separate as `train ≈ eval-easy` >> `eval-medium ≈ eval-hard` at nearly
+every stamp, with 60 episodes per cell. **This does NOT answer whether IDAAC's own hyperparameters,
+tuned at action repeat 4-8, transfer to repeat 1** — same words, different question, and a null is
+exactly the evidence that tempts an untested answer.
