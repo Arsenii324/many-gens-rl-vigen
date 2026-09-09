@@ -47,6 +47,30 @@ frames, which is easy to read as "the scale head is just stable".
 
 The one instrument that *did* report it printed a warning 291 times into a log nobody grepped.
 
+## The auxiliary phase is NOT affected, and that completes the account
+
+`minibatch_gen`'s other branch (`minibatch_optimize.py:88`) takes `batch_size` instead of
+`nminibatch`: `nminibatch = max(ntrain // batch_size, 1)`. The auxiliary phase runs over
+`seg_buf` — **`n_pi = 32` stored segments** — with `aux_mbsize = 4`, so `ntrain = 32` and it gets
+**8 minibatches**. It optimises normally.
+
+So the run trained its **value and auxiliary heads properly and barely trained its policy**:
+
+| head | minibatches per pass | evidence |
+|---|---|---|
+| value / auxiliary | 8 | `VFStats/EV` 0.011 → **0.81** |
+| policy | **1** | σ 1.000 → 1.006, `clipfrac` 0.000 |
+
+That asymmetry is exactly what the metrics showed and what made the run confusing: a critic that
+plainly learns beside a policy that plainly does not. It is one defect, not two, and the split falls
+precisely on which `minibatch_gen` branch each phase takes.
+
+**Checked, not assumed:** `grep -rn 'nminibatch|num_mini_batch|mini_batch' runnable/` finds this
+clamp **only** in `runnable/ppg/`. `idaac` and `ibac_sni` share the `pytorch-a2c-ppo-acktr` lineage,
+which flattens `num_processes × num_steps` before splitting; `ctrl` is a separate JAX implementation
+at `num_envs=64`; the remaining families are off-policy and replay-based. **`ppg` is the only
+baseline of the twelve with this exposure.**
+
 ## Why the configuration is not obviously wrong
 
 `num_processes = 1` is a **fidelity** decision, sourced and deliberate: IDAAC's supplement specifies
