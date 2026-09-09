@@ -421,3 +421,24 @@ supports competence; landing near 34 with SR 0.000 alongside `idaac` would point
 configuration, action space or observation rather than at either algorithm. And `success_rate = 0`
 and `return <= 250` are the **same statement**, so they must not be reported as two independent
 observations. See [`what-a-door-return-number-means.md`](what-a-door-return-number-means.md).
+
+**"Did the first production cell collect, and is it certified?"** — **Collected, not certified**, and
+the refusal is right. `card0-20260909-035152` was stopped by its own watch budget at 18:37 MSK during
+endpoint pass 2. **569 rows are installed** at `results/records/card0-20260909-035152__records.jsonl`
+— 484 curve, 44 endpoint `native`/sample, **41 of 44** endpoint `mode` — via
+`assemble_reaped_delivery.py` and `NATIVE_ACCEPT_WATCH_STOP=1`, every row marked
+`_assembled_after_reaping` and `_run_provenance_missing`.
+
+**`populate_evaluator_ledger.py` REFUSED**, exactly as it should:
+`paired=False (regime eval-hard does not share the reference placement sequence)`. The mode pass is
+missing precisely **3 rows: `eval-hard` at scene sets `8`, `9`, and the aggregate
+`0,1,2,3,4,5,6,7,8,9`**. An incomplete grid cannot be certified as a paired evaluation, and writing
+`paired=True` unchecked is what the ledger exists to prevent.
+
+**The recovery is specified and deliberately deferred.** Those 3 rows are reproducible from the
+retained `snapshot.pt` with one `eval_grid.py` invocation at `--policy-mode mode --eval-scope
+endpoint --frame 598016 --regimes eval-hard --scenes 8,9`. It needs a GPU and the render stack, so it
+runs on the host — and card 0 is running `ppg`'s evaluation until roughly 01:20. **Three rows do not
+justify contending with a live production evaluation**, so this waits, and it doubles as the
+standalone-evaluation-from-a-previous-cell experiment
+[`production-host/28`](production-host/28-eval-is-sixty-percent-of-a-cell.md) wants proven.

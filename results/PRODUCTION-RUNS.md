@@ -5,16 +5,16 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**70 job(s), 2280 record row(s), 12 baseline(s).**
+**71 job(s), 2849 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
 | `ibac_sni` | 1377 |
+| `idaac` | 645 |
 | `drqv2` | 323 |
 | `rad` | 147 |
 | `soda` | 85 |
 | `ppg` | 79 |
-| `idaac` | 76 |
 | `ctrl` | 56 |
 | `alda` | 44 |
 | `svea` | 36 |
@@ -1000,27 +1000,51 @@ Every run whose records this repository holds, with the circumstances each recor
   | `mode` | eval-easy | 1.00 | 0.000 | 10 |
   | `mode` | train | 1.01 | 0.000 | 10 |
 
+### `card0-20260909-035152` — idaac
+
+- **cells** `idaac-s101` · **seeds** `101` · **rows** 569
+- **frames** 51,200 → 598,016 (12 distinct)
+- **phases** {'offline-eval': 569}
+- **policy mode(s)** `mode`, `sample`
+- **evaluator revision(s)** `16e960b1f446`
+- **records** [`results/records/card0-20260909-035152__records.jsonl`](results/records/card0-20260909-035152__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+- ⚠ **569 row(s) were ASSEMBLED after a reaping**, not delivered by the runner (`scripts/assemble_reaped_delivery.py`). Each carries `_assembled_after_reaping`.
+- ⚠ **569 row(s) carry no run provenance** — auditable for content, not for the job that produced them.
+- **curve** (train regime, 11 stamp(s)): first 24.66 @51,200 · **peak 50.32 @350,208** · last 24.74 @550,912  — ends below its peak
+
+  | policy mode | regime | return | success rate | episodes |
+  |---|---|---:|---:|---:|
+  | `mode` | eval-easy | 30.31 | 0.000 | 400 |
+  | `mode` | eval-hard | 18.10 | 0.000 | 160 |
+  | `mode` | eval-medium | 14.32 | 0.000 | 400 |
+  | `mode` | train | 34.00 | 0.000 | 400 |
+  | `sample` | eval-easy | 31.58 | 0.000 | 400 |
+  | `sample` | eval-hard | 18.47 | 0.000 | 400 |
+  | `sample` | eval-medium | 11.55 | 0.000 | 400 |
+  | `sample` | train | 33.69 | 0.000 | 400 |
+
 ## Runs on the production host not yet collected
 
 Recorded when launched, from each cell's own `effective_config.json`, so a run's existence does not depend on anyone's memory. Source: [`host-runs.jsonl`](host-runs.jsonl). **These have no records in this repository yet** — that is the point of listing them.
 
-### `card0-20260909-035152` — idaac — **not yet collected**
+### `card0-20260909-035152` — idaac — **COLLECTED**
 
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete; curve complete (11 stamps, 484 rows); endpoint pass 1 (native) complete, 44 rows; pass 2 (mode) in progress — status recorded under an hour ago
-- ⚠ First complete production cell on any host. Watch budget 53100s from 03:52 expires ~18:37 MSK; pass 2 projects to ~18:53 at 3.84 min/row, so ~4 of 44 mode rows expected lost and collect_record_delivery not to run. Collect with: assemble_reaped_delivery.py then NATIVE_ACCEPT_WATCH_STOP=1 collect-host-run.sh.
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — status recorded under an hour ago
+- ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
 
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — status recorded under an hour ago
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 1h ago**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
-**2 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
+**1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
 ## Caveats — what this register cannot see
 
