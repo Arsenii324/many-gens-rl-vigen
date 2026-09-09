@@ -169,3 +169,61 @@ def test_recollecting_the_identical_run_is_idempotent(tmp_path):
     code, out = _collect(run, tmp_path, RECORDS_DIR=str(records))
     assert code == 0, out
     assert "byte-identical" in out
+
+
+def _assembled(phase="offline-eval"):
+    r = _row(phase)
+    d = json.loads(r)
+    d["_assembled_after_reaping"] = {"reason": "watch budget", "source": "x", "tool": "y"}
+    return json.dumps(d)
+
+
+def test_a_watch_stopped_cell_is_refused_by_default_and_names_the_path(tmp_path):
+    """NATIVE_CELL_COMPLETED prints after evaluation, so a stopped cell never has it."""
+    run = _run_dir(tmp_path, log="=== NATIVE_CELL_BEGIN idaac-s101 ===\n" + EVALUATED,
+                   bundle=[_row("offline-eval")])
+    (run / "native-out" / "cells" / "idaac-s101").mkdir(parents=True, exist_ok=True)
+    (run / "native-out" / "cells" / "idaac-s101" / "offline_eval_endpoint.jsonl").write_text("{}\n")
+    code, out = _collect(run, tmp_path)
+    assert code == 1, out
+    assert "did not report completion" in out
+    assert "assemble_reaped_delivery.py" in out, "the refusal must name the recovery path"
+    assert "NATIVE_ACCEPT_WATCH_STOP=1" in out
+
+
+def test_the_flag_collects_an_assembled_bundle_and_marks_it(tmp_path):
+    rows = [_assembled("train")] + [_assembled() for _ in range(3)]
+    run = _run_dir(tmp_path, log="=== NATIVE_CELL_BEGIN idaac-s101 ===\n" + EVALUATED,
+                   bundle=rows, egl={"renderer": "Tesla V100-SXM2-32GB/PCIe/SSE2"})
+    code, out = _collect(run, tmp_path, NATIVE_ACCEPT_WATCH_STOP="1")
+    assert code == 0, out
+    assert "NATIVE_COLLECTED_AFTER_WATCH_STOP" in out
+    assert "must not be read as one that finished" in out
+    assert "all 4 row(s) marked" in out
+
+
+def test_the_flag_refuses_a_bundle_that_was_not_assembled(tmp_path):
+    """The flag opens the assembler's path, not a general override for incomplete runs."""
+    run = _run_dir(tmp_path, log="=== NATIVE_CELL_BEGIN idaac-s101 ===\n" + EVALUATED,
+                   bundle=[_row("train")] + [_row("offline-eval")] * 3,
+                   egl={"renderer": "Tesla V100-SXM2-32GB/PCIe/SSE2"})
+    code, out = _collect(run, tmp_path, NATIVE_ACCEPT_WATCH_STOP="1")
+    assert code == 1, out
+    assert "_assembled_after_reaping" in out
+    assert "not to wave through an arbitrary incomplete run" in out
+
+
+def test_the_flag_still_refuses_a_log_with_no_cell_begin(tmp_path):
+    run = _run_dir(tmp_path, log="nothing useful here\n", bundle=[_assembled()])
+    code, out = _collect(run, tmp_path, NATIVE_ACCEPT_WATCH_STOP="1")
+    assert code == 1, out
+    assert "nothing a watch stop would explain" in out
+
+
+def test_the_flag_does_not_override_a_failed_cell(tmp_path):
+    run = _run_dir(tmp_path,
+                   log="=== NATIVE_CELL_BEGIN x ===\n=== NATIVE_CELL_FAILED x rc=1 ===\n",
+                   bundle=[_assembled()])
+    code, out = _collect(run, tmp_path, NATIVE_ACCEPT_WATCH_STOP="1")
+    assert code == 1, out
+    assert "NATIVE_CELL_FAILED" in out

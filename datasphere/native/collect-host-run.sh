@@ -78,11 +78,39 @@ if grep -q "NATIVE_CELL_FAILED" "$LOG"; then
   echo "   put a partial result beside complete ones with nothing to tell them apart." >&2
   exit 1
 fi
+WATCH_STOP=0
 if ! grep -q "NATIVE_CELL_COMPLETED" "$LOG"; then
-  echo "   REFUSING: no NATIVE_CELL_COMPLETED marker. The cell did not report completion." >&2
-  exit 1
+  # [Claude 2026-09-09] `NATIVE_CELL_COMPLETED` is printed at the end of the WHOLE cell, after
+  # evaluation. A cell stopped by its own watch budget mid-evaluation never prints it -- so this
+  # refusal, which is right, made `scripts/assemble_reaped_delivery.py` unusable: that tool exists
+  # to rebuild exactly such a cell's bundle, and its output could not then be collected. Two tools
+  # for one case, meeting at a wall, and neither refusal wrong on its own.
+  #
+  # So there is an explicit path, never a silent one. It requires evidence that the stop was OURS
+  # and that the bundle was rebuilt rather than found.
+  if [[ "${NATIVE_ACCEPT_WATCH_STOP:-0}" == "1" ]]; then
+    grep -q "NATIVE_CELL_BEGIN" "$LOG" || {
+      echo "   REFUSING: no NATIVE_CELL_COMPLETED and no NATIVE_CELL_BEGIN either. This log does" >&2
+      echo "   not show a cell that started, so there is nothing a watch stop would explain." >&2
+      exit 1; }
+    WATCH_STOP=1
+    echo "   === NATIVE_COLLECTED_AFTER_WATCH_STOP: no NATIVE_CELL_COMPLETED, accepted explicitly"
+    echo "       The cell began and was stopped before finishing. Its rows are collected; the run"
+    echo "       is NOT complete and must not be read as one that finished."
+  else
+    echo "   REFUSING: no NATIVE_CELL_COMPLETED marker. The cell did not report completion." >&2
+    if compgen -G "$RUN_DIR/native-out/cells/*/offline_eval_*.jsonl" >/dev/null 2>&1; then
+      echo "   Per-cell evaluation rows DO exist. If this cell was stopped by its own watch budget," >&2
+      echo "   rebuild the bundle and collect it deliberately:" >&2
+      echo "     python scripts/assemble_reaped_delivery.py $RUN_DIR --out $RUN_DIR/native-out/records_delivery.jsonl" >&2
+      echo "     NATIVE_ACCEPT_WATCH_STOP=1 bash datasphere/native/collect-host-run.sh $FAMILY $RUN_DIR" >&2
+      echo "   Every row will carry _assembled_after_reaping and the records will be marked." >&2
+    fi
+    exit 1
+  fi
+else
+  echo "   completed: $(grep -c 'NATIVE_CELL_COMPLETED' "$LOG") cell(s)"
 fi
-echo "   completed: $(grep -c 'NATIVE_CELL_COMPLETED' "$LOG") cell(s)"
 
 # 2. The renderer must have been real. A record produced by llvmpipe is not comparable with any
 #    other record this project holds, and on 2026-09-08 that was one missing capability away.
@@ -118,6 +146,21 @@ if [[ ! -s "$SRC" ]]; then
     echo "   run; do not point this script at records.jsonl." >&2
   fi
   exit 1
+fi
+
+# 3b. A watch-stopped collection must be an ASSEMBLED bundle, not a found one. Without this the
+#     flag would let any incomplete cell through on the operator's say-so; with it, the flag only
+#     opens the path that `assemble_reaped_delivery.py` marks every row on.
+if [[ "$WATCH_STOP" == "1" ]]; then
+  total_rows="$(wc -l < "$SRC" | tr -d ' ')"
+  marked="$(grep -c '_assembled_after_reaping' "$SRC" || true)"
+  if [[ "$marked" -eq 0 || "$marked" -ne "$total_rows" ]]; then
+    echo "   REFUSING: NATIVE_ACCEPT_WATCH_STOP=1 but only $marked of $total_rows rows carry" >&2
+    echo "   _assembled_after_reaping. This flag exists to collect a bundle rebuilt by" >&2
+    echo "   scripts/assemble_reaped_delivery.py, not to wave through an arbitrary incomplete run." >&2
+    exit 1
+  fi
+  echo "   all $total_rows row(s) marked _assembled_after_reaping"
 fi
 
 # 4. THE SOURCE CHOICE IS CHECKED AGAINST THE LOG. If the runner evaluated anything, the bundle must

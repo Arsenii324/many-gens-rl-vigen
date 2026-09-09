@@ -279,6 +279,28 @@ drop kills it while dockerd keeps the container running, so the cell continues w
 retrieving its result. Verified on 2026-09-08 — an outer `timeout 5400 ssh` fired mid-bootstrap, the
 script died at STEP 3, and the container ran on for hours.
 
+### 3.0a Record the launch, locally, immediately — one command, and it is not optional
+
+The register in [`../results/PRODUCTION-RUNS.md`](../results/PRODUCTION-RUNS.md) is generated from
+`results/records/`, so **a cell that ran and was never collected does not appear in it at all**. On
+2026-09-09 the two most important runs this project had produced existed only on the host and in one
+session's memory; if that session had ended, nothing in the repository would have said they happened.
+
+So, from the laptop, as soon as the run directory exists on the host:
+
+```bash
+rsync -a --exclude 'native-work' varaksin_as@100.98.2.11:'~/rlvigen-runs/<run-id>' ./fetched/
+python scripts/record_host_run.py ./fetched/<run-id> --status "launched"
+python scripts/production_run_register.py        # regenerate the register
+```
+
+It reads the cell's own `effective_config.json` — nothing is typed — and **refuses to overwrite an
+existing entry** for the same run id. Update a status later with `--update-status`; every entry
+carries `status_as_of`, and the register prints the age beside it.
+
+**This is a procedure, not a guarantee.** Skipping it makes the run invisible to the register. There
+is no structural backstop: the launcher runs on the host and the ledger is a file in this repo.
+
 ### 3.0b The environment: build it once, mount it read-only
 
 > **[Claude 2026-09-09] A PREBUILT ENVIRONMENT IS FAMILY-SPECIFIC, and its directory name does not

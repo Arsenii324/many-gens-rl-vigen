@@ -63,3 +63,38 @@ def test_it_records_the_door_reward_ceiling():
     """SR=0 and return<=250 are the same statement; the register must not present them as two."""
     text = REGISTER.read_text()
     assert "cannot exceed 250" in text
+
+
+def test_the_curve_summary_appears_when_curve_rows_exist(tmp_path, monkeypatch):
+    """No collected run has eval_scope=curve yet, so this is proven synthetically.
+
+    Without it the curve line would be dead code that looks alive: for `idaac` the curve is 484 of
+    528 rows and it is what makes a plateau visible.
+    """
+    import importlib.util, json
+    spec = importlib.util.spec_from_file_location("_reg", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    recs = tmp_path / "records"
+    recs.mkdir()
+    def row(frame, mean):
+        return json.dumps({"baseline": "idaac", "cell": "idaac-s101", "seed": 101,
+                           "regime": "train", "frame": frame, "episodes": 60,
+                           "episode_return_mean": mean, "phase": "offline-eval",
+                           "evaluator_scope": {"eval_scope": "curve"}})
+    (recs / "card0-x__records.jsonl").write_text(
+        "\n".join(row(f, m) for f, m in [(51200, 24.7), (350208, 50.3), (598016, 24.7)]) + "\n")
+    monkeypatch.setattr(mod, "RECORDS", recs)
+    monkeypatch.setattr(mod, "LOGS", tmp_path / "logs")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    text = mod.build()
+    assert "**curve** (train regime, 3 stamp(s))" in text, text[:400]
+    assert "peak 50.30 @350,208" in text
+    assert "ends below its peak" in text, "a run that falls back must say so"
+
+
+def test_the_register_states_which_half_check_covers():
+    text = REGISTER.read_text()
+    assert "Derived versus asserted" in text
+    assert "says nothing about the second" in text

@@ -32,7 +32,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `bd58a0a38e55`
 - **records** [`results/records/bt1037211b64e17auo88__records.jsonl`](results/records/bt1037211b64e17auo88__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -47,7 +47,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `2770875f4de3`
 - **records** [`results/records/bt116j2650ohtkj8ev7q__records.jsonl`](results/records/bt116j2650ohtkj8ev7q__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -62,7 +62,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `1aaed80f2adb`
 - **records** [`results/records/bt11o1l70msqkc4d2qnr__records.jsonl`](results/records/bt11o1l70msqkc4d2qnr__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -77,7 +77,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `4923f70de323`
 - **records** [`results/records/bt11qhufomconlujompu__records.jsonl`](results/records/bt11qhufomconlujompu__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -92,7 +92,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `7dcd6943a405`
 - **records** [`results/records/bt1262ms5icvlmo5v8ar__records.jsonl`](results/records/bt1262ms5icvlmo5v8ar__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -107,7 +107,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `1a6bba90e042`
 - **records** [`results/records/bt13r293fit1pbt7ah4p__records.jsonl`](results/records/bt13r293fit1pbt7ah4p__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -122,7 +122,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `2be1bc763799`
 - **records** [`results/records/bt13vlerk8p1vop3bmep__records.jsonl`](results/records/bt13vlerk8p1vop3bmep__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -137,7 +137,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `48290f27af56`
 - **records** [`results/records/bt14gjjdtoa5j54dr2n6__records.jsonl`](results/records/bt14gjjdtoa5j54dr2n6__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -152,7 +152,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `2fe1ee0956d3`
 - **records** [`results/records/bt1596tjbdu1rv5senim__records.jsonl`](results/records/bt1596tjbdu1rv5senim__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -167,7 +167,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `dc201a558bb6`
 - **records** [`results/records/bt15dm9j6vm5r9m4cdri__records.jsonl`](results/records/bt15dm9j6vm5r9m4cdri__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -192,7 +192,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `57ed05c916b6`
 - **records** [`results/records/bt162oh478g2biv5efb9__records.jsonl`](results/records/bt162oh478g2biv5efb9__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -207,7 +207,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `37bd76ed23e7`
 - **records** [`results/records/bt169vanpqh4u7no7n8c__records.jsonl`](results/records/bt169vanpqh4u7no7n8c__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -222,7 +222,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `d00a2b1e4684`
 - **records** [`results/records/bt16kl6q356klkg1v3vv__records.jsonl`](results/records/bt16kl6q356klkg1v3vv__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -237,7 +237,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `9ec56e449a3f`
 - **records** [`results/records/bt17hai4org559f794t0__records.jsonl`](results/records/bt17hai4org559f794t0__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -254,7 +254,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `2306f138e6f4`
 - **records** [`results/records/bt18gmov8nbfkkd117s6__records.jsonl`](results/records/bt18gmov8nbfkkd117s6__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -269,7 +269,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `527f5293da65`
 - **records** [`results/records/bt19u2koj34i168otpkg__records.jsonl`](results/records/bt19u2koj34i168otpkg__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -284,7 +284,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `a8664a7f98dc`
 - **records** [`results/records/bt1ag9egnoj6n8qvsdkj__records.jsonl`](results/records/bt1ag9egnoj6n8qvsdkj__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1aj1snkvadphens74o` — idaac
 
@@ -294,7 +294,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `8d5c1dd0b4b3`
 - **records** [`results/records/bt1aj1snkvadphens74o__records.jsonl`](results/records/bt1aj1snkvadphens74o__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1apmmvvtfvjveil6ko` — ppg
 
@@ -313,7 +313,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `4ad7d3b878ad`
 - **records** [`results/records/bt1aseskh66dnv9i3qe5__records.jsonl`](results/records/bt1aseskh66dnv9i3qe5__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1baht74a35e6uq582c` — idaac
 
@@ -323,7 +323,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `4ad7d3b878ad`
 - **records** [`results/records/bt1baht74a35e6uq582c__records.jsonl`](results/records/bt1baht74a35e6uq582c__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1c4setfkq5ltaeog24` — soda
 
@@ -333,7 +333,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `f73ea91df759`
 - **records** [`results/records/bt1c4setfkq5ltaeog24__records.jsonl`](results/records/bt1c4setfkq5ltaeog24__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -358,7 +358,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `221eb86c1574`
 - **records** [`results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl`](results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -373,7 +373,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `d3c8b96aaac7`
 - **records** [`results/records/bt1d8jicbkdu1jv87ogp__records.jsonl`](results/records/bt1d8jicbkdu1jv87ogp__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -388,7 +388,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `4ad7d3b878ad`
 - **records** [`results/records/bt1dpq4tnemmkvp3sccg__records.jsonl`](results/records/bt1dpq4tnemmkvp3sccg__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1e78hbs4s946aje3q9` — idaac
 
@@ -398,7 +398,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `4ad7d3b878ad`
 - **records** [`results/records/bt1e78hbs4s946aje3q9__records.jsonl`](results/records/bt1e78hbs4s946aje3q9__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1e81rq286p23d3l4l9` — idaac
 
@@ -408,7 +408,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `4ad7d3b878ad`
 - **records** [`results/records/bt1e81rq286p23d3l4l9__records.jsonl`](results/records/bt1e81rq286p23d3l4l9__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1efkde2vj17k5i1ptr` — ppg
 
@@ -418,7 +418,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `afb08ef39aac`
 - **records** [`results/records/bt1efkde2vj17k5i1ptr__records.jsonl`](results/records/bt1efkde2vj17k5i1ptr__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -433,7 +433,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a59369ad1809`
 - **records** [`results/records/bt1f2sh036f97n55972v__records.jsonl`](results/records/bt1f2sh036f97n55972v__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -448,7 +448,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `f73ea91df759`
 - **records** [`results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl`](results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -463,7 +463,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `7d1a7bfe31d9`
 - **records** [`results/records/bt1felsu3m2p4q3rolnd__records.jsonl`](results/records/bt1felsu3m2p4q3rolnd__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -478,7 +478,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a9fe0cbf3b31`
 - **records** [`results/records/bt1fjub0768p8bovh2n8__records.jsonl`](results/records/bt1fjub0768p8bovh2n8__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -493,7 +493,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `3e852ba2c2d1`
 - **records** [`results/records/bt1h73oou888t1duau73__records.jsonl`](results/records/bt1h73oou888t1duau73__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -508,7 +508,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `f1508942a8d4`
 - **records** [`results/records/bt1hmjrbg4711e4nl32d__records.jsonl`](results/records/bt1hmjrbg4711e4nl32d__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -523,7 +523,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a9fe0cbf3b31`
 - **records** [`results/records/bt1hndutvnkl7mhc2njh__records.jsonl`](results/records/bt1hndutvnkl7mhc2njh__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -538,7 +538,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `a213fa620486`
 - **records** [`results/records/bt1ih8krm2glsh2tqd43__records.jsonl`](results/records/bt1ih8krm2glsh2tqd43__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -553,7 +553,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `none`
 - **records** [`results/records/bt1ip5f8c6mqqm7fd2bn__offline_eval_cuda.jsonl`](results/records/bt1ip5f8c6mqqm7fd2bn__offline_eval_cuda.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1jb9bpfb469s1l9602` — ibac_sni
 
@@ -563,7 +563,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `a8664a7f98dc`
 - **records** [`results/records/bt1jb9bpfb469s1l9602__records.jsonl`](results/records/bt1jb9bpfb469s1l9602__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1k600n8r2e4divs2dk` — rad
 
@@ -573,7 +573,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `19bf295ddfd9`
 - **records** [`results/records/bt1k600n8r2e4divs2dk__records.jsonl`](results/records/bt1k600n8r2e4divs2dk__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -588,7 +588,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a9fe0cbf3b31`
 - **records** [`results/records/bt1kj79a5o9gs61qkl96__records.jsonl`](results/records/bt1kj79a5o9gs61qkl96__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -603,7 +603,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `d4c73a87c0c3`
 - **records** [`results/records/bt1kvirgvn7bq6271rtj__records.jsonl`](results/records/bt1kvirgvn7bq6271rtj__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -618,7 +618,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `184329928b51`
 - **records** [`results/records/bt1l6pjcb6ak5u17rmci__records.jsonl`](results/records/bt1l6pjcb6ak5u17rmci__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -633,7 +633,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `0d060c1be599`
 - **records** [`results/records/bt1leokcca12vda1enck__records.jsonl`](results/records/bt1leokcca12vda1enck__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -648,7 +648,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `2c1c7cd5888e`
 - **records** [`results/records/bt1lj7qk3vofb21r6k6m__records.jsonl`](results/records/bt1lj7qk3vofb21r6k6m__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -663,7 +663,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `9ec56e449a3f`
 - **records** [`results/records/bt1lmtfcqafcpbh02ai7__records.jsonl`](results/records/bt1lmtfcqafcpbh02ai7__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -688,7 +688,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `204992902a6e`
 - **records** [`results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl`](results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -703,7 +703,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `4006036846a6`
 - **records** [`results/records/bt1m638bct3b2rs1g844__records.jsonl`](results/records/bt1m638bct3b2rs1g844__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -718,7 +718,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `763de034c4ec`
 - **records** [`results/records/bt1mg9ens1di936htjc7__records.jsonl`](results/records/bt1mg9ens1di936htjc7__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -733,7 +733,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `49158cd2e03a`
 - **records** [`results/records/bt1n0in75mc91n6btmpv__records.jsonl`](results/records/bt1n0in75mc91n6btmpv__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -748,7 +748,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `92b3ace464e7`
 - **records** [`results/records/bt1o6tli53fmgvh4elag__records.jsonl`](results/records/bt1o6tli53fmgvh4elag__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -763,7 +763,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a9fe0cbf3b31`
 - **records** [`results/records/bt1ouf9igefipsh0lfm8__records.jsonl`](results/records/bt1ouf9igefipsh0lfm8__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -778,7 +778,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `408acdb7ca58`
 - **records** [`results/records/bt1plfp98967v0ouud7h__records.jsonl`](results/records/bt1plfp98967v0ouud7h__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -793,7 +793,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `e081b32ebf63`
 - **records** [`results/records/bt1q6a427c9dnvucblr4__records.jsonl`](results/records/bt1q6a427c9dnvucblr4__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -808,7 +808,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a546b36a0b5a`
 - **records** [`results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl`](results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -823,7 +823,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `0b389baf520b`
 - **records** [`results/records/bt1qqsiccu983njs8fsl__records.jsonl`](results/records/bt1qqsiccu983njs8fsl__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -838,7 +838,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `35f79dc39a15`
 - **records** [`results/records/bt1r29b6em0m0cs74v70__records.jsonl`](results/records/bt1r29b6em0m0cs74v70__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -853,7 +853,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `a8664a7f98dc`
 - **records** [`results/records/bt1s4q60d8nsvd4771l5__records.jsonl`](results/records/bt1s4q60d8nsvd4771l5__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1s71ot06mfqmei9qi5` — drqv2
 
@@ -863,7 +863,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `06dd8fef0520`
 - **records** [`results/records/bt1s71ot06mfqmei9qi5__records.jsonl`](results/records/bt1s71ot06mfqmei9qi5__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -878,7 +878,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `13a3225bba79`
 - **records** [`results/records/bt1s807o5pbap8ir3knl__records.jsonl`](results/records/bt1s807o5pbap8ir3knl__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -893,7 +893,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `d2a0f6254a07`
 - **records** [`results/records/bt1tjqjmpcnicb6ih739__records.jsonl`](results/records/bt1tjqjmpcnicb6ih739__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -908,7 +908,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `c1da1ce07f0f`
 - **records** [`results/records/bt1tjsrd6oglrsq2g92m__records.jsonl`](results/records/bt1tjsrd6oglrsq2g92m__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -923,7 +923,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `not recorded`
 - **evaluator revision(s)** `none`
 - **records** [`results/records/bt1ums2q8170s3cq5p9l__records.jsonl`](results/records/bt1ums2q8170s3cq5p9l__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
 ### `bt1utl06n6mqffrt2jdn` — sgqn
 
@@ -933,7 +933,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `a9fe0cbf3b31`
 - **records** [`results/records/bt1utl06n6mqffrt2jdn__records.jsonl`](results/records/bt1utl06n6mqffrt2jdn__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -948,7 +948,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `99b8332fcb5c`
 - **records** [`results/records/bt1v89sh2c00bc1iop0j__records.jsonl`](results/records/bt1v89sh2c00bc1iop0j__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -963,7 +963,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `2fe1ee0956d3`
 - **records** [`results/records/bt1vcs013fq6lk17crou__records.jsonl`](results/records/bt1vcs013fq6lk17crou__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -978,7 +978,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `sample`
 - **evaluator revision(s)** `16e960b1f446`
 - **records** [`results/records/bt1vo9iqoht83l9q8hun__records.jsonl`](results/records/bt1vo9iqoht83l9q8hun__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -993,7 +993,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **policy mode(s)** `mode`
 - **evaluator revision(s)** `688bd766c049`
 - **records** [`results/records/bt1vtciqmrt5m4jklupk__records.jsonl`](results/records/bt1vtciqmrt5m4jklupk__records.jsonl)
-- **logs** none in `results/logs/` for this job
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
   | policy mode | regime | return | success rate | episodes |
   |---|---|---:|---:|---:|
@@ -1009,16 +1009,16 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete; curve complete (11 stamps, 484 rows); endpoint pass 1 (native) complete, 44 rows; pass 2 (mode) in progress
-- ⚠ First complete production cell on any host. Watch budget 53100s from 03:52 expires ~18:37 MSK; pass 2 projects to ~18:53 at 3.84 min/row, so ~4 of 44 mode rows are expected to be lost and collect_record_delivery not to run.
+- **status** training complete; curve complete (11 stamps, 484 rows); endpoint pass 1 (native) complete, 44 rows; pass 2 (mode) in progress — status recorded under an hour ago
+- ⚠ First complete production cell on any host. Watch budget 53100s from 03:52 expires ~18:37 MSK; pass 2 projects to ~18:53 at 3.84 min/row, so ~4 of 44 mode rows expected lost and collect_record_delivery not to run. Collect with: assemble_reaped_delivery.py then NATIVE_ACCEPT_WATCH_STOP=1 collect-host-run.sh.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
 
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress
-- ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. This cell cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
+- **status** training complete at IC=600064 (293 iterations); curve in progress — status recorded under an hour ago
+- ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 **2 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
@@ -1026,12 +1026,15 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 
 Listed rather than omitted, because a catalogue that silently drops what it cannot see teaches its reader that absence means fine.
 
+**Derived versus asserted, because `--check` does not cover both.** Everything under *Runs* is generated from `results/records/` and `--check` fails when it drifts. The *not yet collected* section is **asserted** — statuses are snapshots written by hand at a recorded time, and nothing here can verify that those run directories still exist on the host. `--check` proves the first half current and says nothing about the second.
+
 1. **Checkpoints are not COMMITTED here, but they are not all remote either — the distinction matters.** `docs/EVAL-PROTOCOL.md` §6 (checkpoints stay remote, records come back) is about the multi-hundred-MB job archives. A host run's `native-out/` does retain intermediate checkpoints: measured on `card0-20260909-035152`, **53 MB across 11 files at 4.8 MB each**, inside a 78 MB `native-out` whose sibling `native-work` is 1.9 GB and is never fetched. So a run CAN be re-evaluated — from a fetched `native-out`, not from this repository, which holds only the `.jsonl` records below.
 2. **Runs not yet collected do not appear at all.** A cell that ran on the host and was never fetched is invisible here, not marked absent. `results/submissions.jsonl` and `results/attempt-outcomes.json` are the attempt-side record; this file is the records-side one, and they are not the same set.
 3. **Circumstances come from what each row carries.** Renderer, container digest, resolved packages and source commit live in `_run_provenance`. `collect_record_delivery` does exactly two things — concatenate the training rows with `cells/*/offline_eval_*.jsonl`, and stamp that provenance onto the offline rows from `run_manifest.json`. **It computes no metric**; `eval_grid.py` did that. When a cell is stopped by its watch budget before that step runs, the rows exist and the bundle does not, and `scripts/assemble_reaped_delivery.py` performs the same two operations on a fetched copy — marking every row, and marking provenance as missing rather than inventing it. Rows without provenance are flagged above.
 4. **`success_rate` and `return` are not independent for Door.** Its reward is 1.0 on success and at most 0.25+0.25 otherwise, so over a 500-step horizon a policy that never opens the door cannot exceed 250 and any return above 250 proves a success step. See [`../notes/what-a-door-return-number-means.md`](../notes/what-a-door-return-number-means.md).
 5. **Returns are not comparable across `policy_mode`.** `idaac`, `ppg` and `ibac_sni` report a sampled return; the other nine report a mode return. Different estimands. `scripts/comparison_blocks.py` adjudicates; this register never pools them.
-6. **A superseded evaluator revision is still listed.** Whether a revision is current is `scripts/audit_row_closure.py`'s question, not this file's.
+6. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at generation time: of the rows here, only those carrying `evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported without that distinction and contribute to no curve or endpoint summary. **No currently collected run has curve-scoped rows at all**, so the curve line below appears only for runs collected after that field existed.
+7. **A superseded evaluator revision is still listed.** Whether a revision is current is `scripts/audit_row_closure.py`'s question, not this file's.
 
 ## Overwrite safety
 

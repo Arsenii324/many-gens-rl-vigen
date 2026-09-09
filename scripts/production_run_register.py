@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import datetime
 import json
 import pathlib
 import sys
@@ -127,7 +128,11 @@ def build() -> str:
         if log_hits:
             add("- **logs** " + ", ".join(f"[`{p.name}`]({p.relative_to(ROOT)})" for p in log_hits[:4]))
         else:
-            add("- **logs** none in `results/logs/` for this job")
+            # [review B5] "none" conflated "not installed here" with "does not exist". A host run's
+            # curve lives at native-out/cells/<cell>/progress-*.csv in its run directory and is
+            # never copied into results/logs/, so every host run read as having no curve at all.
+            add("- **logs** none installed in `results/logs/`. For a host run the curve is at "
+                "`native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.")
 
         assembled = sum(1 for r in rows if "_assembled_after_reaping" in r)
         if assembled:
@@ -138,6 +143,24 @@ def build() -> str:
         if noprov:
             add(f"- ⚠ **{noprov} row(s) carry no run provenance** — auditable for content, not for "
                 "the job that produced them.")
+
+        # [review B6] The curve was reported only as a frame count, though for `idaac` it is 484 of
+        # 528 rows and it is what makes a plateau visible. First / peak / last on the train regime.
+        curve = [r for r in rows
+                 if (r.get("evaluator_scope") or {}).get("eval_scope") == "curve"
+                 and r.get("regime") == "train" and r.get("frame") is not None]
+        if curve:
+            byf = collections.defaultdict(list)
+            for r in curve:
+                byf[int(float(r["frame"]))].append(r)
+            pts = [(f, _weighted(byf[f], "episode_return_mean")) for f in sorted(byf)]
+            pts = [(f, v) for f, v in pts if v is not None]
+            if pts:
+                peak = max(pts, key=lambda kv: kv[1])
+                add(f"- **curve** (train regime, {len(pts)} stamp(s)): "
+                    f"first {pts[0][1]:.2f} @{pts[0][0]:,} · "
+                    f"**peak {peak[1]:.2f} @{peak[0]:,}** · last {pts[-1][1]:.2f} @{pts[-1][0]:,}"
+                    + ("  — ends below its peak" if pts[-1][1] < 0.8 * peak[1] else ""))
 
         # headline numbers, endpoint scope only, split by policy mode so nothing is pooled
         end = [r for r in rows if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
@@ -181,7 +204,19 @@ def build() -> str:
             add(f"- **eval** curve {e.get('curve_eval_episodes')} ep/scene, endpoint "
                 f"{e.get('endpoint_eval_episodes')} ep/scene, policy modes "
                 f"`{e.get('endpoint_policy_modes')}`")
-            add(f"- **status** {e.get('status')}")
+            asof = e.get("status_as_of")
+            age = ""
+            if asof:
+                try:
+                    dt = datetime.datetime.fromisoformat(asof)
+                    hrs = (datetime.datetime.now(datetime.timezone.utc) - dt).total_seconds() / 3600
+                    age = (f" — **status recorded {hrs:.0f}h ago**" if hrs >= 1
+                           else " — status recorded under an hour ago")
+                    if hrs >= 24:
+                        age += " ⚠ **likely stale**"
+                except ValueError:
+                    age = f" — recorded {asof}"
+            add(f"- **status** {e.get('status')}{age}")
             if e.get("note"):
                 add(f"- ⚠ {e['note']}")
             add("")
@@ -195,6 +230,12 @@ def build() -> str:
     add("")
     add("Listed rather than omitted, because a catalogue that silently drops what it cannot see "
         "teaches its reader that absence means fine.")
+    add("")
+    add("**Derived versus asserted, because `--check` does not cover both.** Everything under "
+        "*Runs* is generated from `results/records/` and `--check` fails when it drifts. The "
+        "*not yet collected* section is **asserted** — statuses are snapshots written by hand at a "
+        "recorded time, and nothing here can verify that those run directories still exist on the "
+        "host. `--check` proves the first half current and says nothing about the second.")
     add("")
     add("1. **Checkpoints are not COMMITTED here, but they are not all remote either — the "
         "distinction matters.** `docs/EVAL-PROTOCOL.md` §6 (checkpoints stay remote, records come "
@@ -223,7 +264,13 @@ def build() -> str:
     add("5. **Returns are not comparable across `policy_mode`.** `idaac`, `ppg` and `ibac_sni` "
         "report a sampled return; the other nine report a mode return. Different estimands. "
         "`scripts/comparison_blocks.py` adjudicates; this register never pools them.")
-    add("6. **A superseded evaluator revision is still listed.** Whether a revision is current is "
+    add("6. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at "
+        "generation time: of the rows here, only those carrying "
+        "`evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported "
+        "without that distinction and contribute to no curve or endpoint summary. **No currently "
+        "collected run has curve-scoped rows at all**, so the curve line below appears only for "
+        "runs collected after that field existed.")
+    add("7. **A superseded evaluator revision is still listed.** Whether a revision is current is "
         "`scripts/audit_row_closure.py`'s question, not this file's.")
     add("")
     add("## Overwrite safety")

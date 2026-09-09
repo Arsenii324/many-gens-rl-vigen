@@ -28,6 +28,7 @@ how a launch disappears.
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import pathlib
 import sys
@@ -81,6 +82,11 @@ def entry_from(run_dir: pathlib.Path, host: str, status: str, note: str | None) 
         "cells_declared": env.get("CELLS"),
         "run_dir": f"~/rlvigen-runs/{run_dir.name}",
         "status": status,
+        # [Claude 2026-09-09, review B3] A status is a SNAPSHOT. Without a timestamp beside it a
+        # reader next week sees a confident present-tense claim about a run that finished or died
+        # hours later. It cannot stop a stale status misleading, but it stops it doing so silently.
+        "status_as_of": datetime.datetime.now(datetime.timezone.utc)
+                        .replace(microsecond=0).isoformat(),
         "recorded_by": "scripts/record_host_run.py, from the cell's own effective_config.json",
         **({"note": note} if note else {}),
     }
