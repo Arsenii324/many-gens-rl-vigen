@@ -288,8 +288,13 @@ Per-process capture from the concurrent `ppg` + `idaac`-eval pair on 2026-09-09:
 895931   837 MiB   idaac eval
 ```
 
-`ppg` reaches 8207 MiB and **stops there**; the buffer is bounded at `n_pi=32` and does not trend
-toward the card. Two cells training should therefore be roughly `2644 + 8823 = 11467 MiB`, and the
+~~`ppg` reaches 8207 MiB and **stops there**; the buffer is bounded at `n_pi=32` and does not trend
+toward the card.~~ **WRONG, corrected 2026-09-09 by per-process capture.** 8207 MiB is the
+*policy-phase* footprint. At the **auxiliary phase** it jumps to **26653 MiB in under a minute**
+(12:24:14 → 12:25:14, +18444 MiB) and holds there. That single figure is the ~18 GiB this note
+earlier called unexplained in the packed run. The owner predicted exactly this -- "we assume it'll
+peak towards whole card at the phasic stage" -- while I asserted a plateau from thirty minutes of
+samples taken entirely within one phase. **`ppg` is a whole-card job: 26653 of 32494 MiB.** Two cells training should therefore be roughly `2644 + 8823 = 11467 MiB`, and the
 packed run showed **29910**. About 18 GiB is unaccounted for.
 
 No per-process capture exists from that run, so this is open. Candidates: eager reservation during
