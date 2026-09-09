@@ -164,3 +164,35 @@ Cost: one extra 4.8 MB file per cell, against 53 MB of retained checkpoints alre
 the checkpoint hash is recorded, but *which frame produced them* is asserted by the runner rather
 than corroborated by a second producer. The curve, which is 484 of the 553 rows, is fully
 corroborated.
+
+---
+
+# Both policy modes landed, and they agree — which the diagnostics predicted
+
+The `mode` pass completed 41 of 44 rows before the stop, so for the first time this project has the
+same checkpoint scored under both estimands:
+
+| regime | `sample` | `mode` | difference | episodes (sample / mode) |
+|---|---:|---:|---:|---:|
+| train | 33.69 | **34.00** | +0.9 % | 400 / 400 |
+| eval-easy | 31.58 | **30.31** | −4.0 % | 400 / 400 |
+| eval-hard | 18.47 | **18.10** | −2.0 % | 400 / **160** |
+| eval-medium | 11.55 | **14.32** | **+24 %** | 400 / 400 |
+
+**Three of four regimes agree to within 4 %, and that is what the optimiser diagnostics predicted.**
+σ collapsed from 0.996 to **0.167** over the run, so the policy is very nearly deterministic and
+sampling from it lands close to its mode. Two independent measurements — the training log's σ, and
+an offline evaluation of the saved weights under two estimands — pointing at the same fact.
+
+**The exception is `eval-medium` at +24 %, and it is not noise.** Standard errors here are around
+0.4, so 11.55 against 14.32 is many SE apart. I do not have an explanation, and one run does not
+supply one. Recorded as an open observation rather than folded into the agreement claim.
+
+**What this does NOT license.** `scripts/comparison_blocks.py` refuses to rank across `policy_mode`
+because sampled and mode returns are different estimands. That two of them happen to be close for a
+policy that has stopped exploring is a property of **this** run, not a reason to relax the rule —
+a healthy run with σ near 1.0 would separate them, which is precisely why the rule exists.
+
+*(The `mode`/`eval-hard` row rests on 160 episodes rather than 400: the three rows lost to the stop
+are all `eval-hard`. Its number is the weakest in the table and the evaluator ledger refuses the cell
+for exactly that reason.)*
