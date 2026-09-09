@@ -149,3 +149,106 @@ The owner referenced `docs/anthropic-prompting.md`. I did not read it before wri
 at ~99% context reading it risked triggering compaction mid-task and losing the pending launcher fix.
 That is a judgement call and it may be the wrong one; the next agent should read it and revise this
 design accordingly.
+
+---
+
+# Blockers, and a workflow — the part that decides whether any of the above works
+
+Section 1-9 is the design. This is what I would raise in a review, and several of these are reasons
+to *not proceed* rather than things to work around.
+
+## B1. The agent that can do it well cannot do it, structurally
+
+Consolidation needs both **broad context** (to know what a document omits) and **fresh context** (to
+read the material being merged). These are mutually exclusive in practice. An agent with fresh
+context merging N documents produces a merge weighted toward whatever it read last; an agent with
+the understanding is, by then, near compaction — I am writing this at ~99%.
+
+**Implication for the workflow, not a thing to solve:** never one big pass. Area-scoped passes small
+enough that the material fits with room to spare, each one's output checked against primary sources
+rather than against the other documents in the pass.
+
+## B2. No test can catch a bad consolidation
+
+Everything else in this repo is mutation-testable: break it, watch a check fail. **A merge that
+silently drops a conditional passes every test in the suite.** The project's primary quality
+mechanism does not apply to the one operation whose failure is invisible.
+
+**Implication:** consolidation output needs a different review mode — an adversarial reader given
+*both* the before and after, whose only question is "what did this drop, and was dropping it a
+decision?" If that review cannot be arranged, the phase should not run. This is the strongest single
+argument for pointers over rewrites: a pointer cannot drop a conditional.
+
+## B3. There is no neutral presentation of a contested axis
+
+Several axes are genuinely two-sided — `action_repeat` 1 vs 4-8, time-limit handling, whether
+packing is viable, whether `ppg` may share a card. A map forces choices about ordering, emphasis, and
+what sits in the summary versus the detail, and **every one of those encodes a verdict** even when
+the text states none. "Presented neutrally" is not available.
+
+**Implication:** for any axis the ledger marks OPEN or REVERSED, the map presents both positions at
+the same depth, or links out without summarizing. Not because it is fairer — because a reader who
+sees one position at depth and the other in a clause will act on the first.
+
+## B4. Do not consolidate ground that is still moving
+
+Today alone, live runs invalidated six documents, voided one published finding, and forced three
+reversals of positions **I had written hours earlier**. Consolidating an area under active
+investigation guarantees re-staling, and worse, launders fresh uncertainty into settled-looking prose.
+
+**Implication:** rank areas by how quiescent they are. **Host operations is the worst candidate right
+now** and will be until the production runs finish. Fidelity, comparability and the evaluator closure
+are better: their evidence is vendored papers and hashed trees, which do not move.
+
+## B5. The cost this is meant to fix has never been measured
+
+I asserted that navigation is expensive. **I never measured it.** The counter-evidence is that a
+subagent answered "why `num_processes=1`" — including six stale contradictions — in about three
+minutes, and `where_is_this_decided.py` now does the same sweep in seconds.
+
+**This is the blocker I would raise first in a review.** If Phase 0 shows the existing entry points
+answer real questions acceptably, then the honest conclusion is that the problem was smaller than the
+remedy, and the correct action is to stop. A consolidation justified by an unmeasured cost, carrying
+an unbounded and uncheckable risk, is a bad trade regardless of how well it is executed.
+
+## B6. Order the phases by reversibility, not by value
+
+Adding a pointer map is reversible: delete it. Merging is reversible only in theory — nobody
+reconstructs a dropped conditional from a diff six months later, and they will not know one was
+dropped. **Irreversible steps go last, after the reversible ones have shown whether they suffice.**
+
+## B7. The two trees must be measured before anything, and it is cheap
+
+`ccm-intro` and the recovery workspace differ, and neither is a subset. Any consolidation that
+picks one as canonical silently discards the other's unique content. **I do not know what is unique
+in each** — I have worked exclusively in the recovery workspace this session.
+
+A document-set diff costs minutes and is pure measurement. It should happen before any other phase,
+because it can change the whole shape of the problem: if the trees have diverged substantially, the
+first question is not "how do we consolidate" but "which tree is the subject".
+
+## The workflow I would actually recommend
+
+Not a project. A loop, which is what found everything today:
+
+1. **A question arises** (from a run, a review, an owner ask).
+2. **`python scripts/where_is_this_decided.py <term>`** — every position, newest first, supersession
+   flagged.
+3. **Read the two or three newest, plus anything marked superseded.** Not the whole set.
+4. **If a primary source exists under `ext/`, read it.** This step alone produced the
+   `num_processes` answer *and* the `action_repeat` question, and it is the only step with a record
+   of finding things nobody was looking for.
+5. **Write the answer into `OPEN-QUESTIONS-LEDGER.md`** with status OPEN / ANSWERED / REVERSED — and
+   mark contradicting documents in place rather than deleting them.
+6. **If the claim can become a check, make it one.** A check is the only artifact here that cannot
+   go quietly stale.
+
+Steps 2 and 5 exist as of today. **The plausible conclusion is that this loop plus Phase 0 is the
+whole deliverable**, and that the rest of the design should stay unbuilt until something measured
+says otherwise.
+
+## What would change my mind
+
+If Phase 0 shows an agent taking wrong turns on real questions — reading a stale document and acting
+on it, or missing a contested axis entirely — then the per-area maps earn their risk. That is a
+measurable outcome and it should be measured before, not asserted after.
