@@ -242,3 +242,32 @@ def test_unweightable_counts_only_rows_with_no_episodes():
     mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
     assert mod.unweightable([{"episodes": 20}, {"episodes": None}, {}, {"episodes": 0}]) == 3
     assert mod.unweightable([{"episodes": 1}]) == 0
+
+
+def test_each_regime_row_states_whether_a_paired_claim_is_available():
+    """A reader comparing eval-medium across passes is comparing pixels as well as policies.
+
+    Measured on two families: train and eval-easy resets are 100% reproducible, eval-medium 62%/67%
+    are not. The finding belongs beside the numbers, not only in a note.
+    """
+    text = REGISTER.read_text()
+    assert "| paired? |" in text
+    for line in text.splitlines():
+        if line.startswith("  | `") and "|" in line:
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) >= 8:
+                regime, verdict = cells[1], cells[7]
+                if regime in ("train", "eval-easy"):
+                    assert "paired" in verdict and "not paired" not in verdict, line
+                elif regime in ("eval-medium", "eval-hard"):
+                    assert "not paired" in verdict, line
+
+
+def test_the_pairing_table_covers_every_regime_the_protocol_declares():
+    import importlib.util, sys, pathlib as _p
+    spec = importlib.util.spec_from_file_location("_reg7", SCRIPT)
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    sys.path.insert(0, str(ROOT))
+    from rlgen.protocol import MODES
+    missing = [m for m in MODES if m not in mod.PAIRING]
+    assert not missing, f"regimes with no pairing verdict: {missing}"

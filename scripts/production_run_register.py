@@ -81,6 +81,24 @@ def is_summary_row(row: dict) -> bool:
     return "," in str(row.get("scene_set", ""))
 
 
+#: Whether a regime's reset observation is reproducible, and therefore whether a PAIRED claim about
+#: it is available. Measured on two independent families and two cells (`idaac` card0-20260909-035152,
+#: `ppg` card0-20260909-115331): the fraction of (regime, scene, episode) slots whose reset
+#: observation differs across frames or passes was 0 % / 0 % for `train` and `eval-easy` in both, and
+#: 62 % / 67 % for `eval-medium`, 10 % / 23 % for `eval-hard`.
+#:
+#: The cause is upstream and deliberate (`robosuitevgb/utils.py:67-90`: `moving_light`,
+#: `except_robot=False`), so this is a property of the benchmark rather than a fault. It is carried
+#: into the table because the numbers are read here, and a reader comparing an `eval-medium` figure
+#: across passes or frames is comparing different pixels as well as different policies.
+PAIRING = {
+    "train": "**paired**",
+    "eval-easy": "**paired**",
+    "eval-medium": "not paired ⚠",
+    "eval-hard": "not paired ⚠",
+}
+
+
 def unweightable(rows: list[dict]) -> int:
     """Rows carrying no `episodes`, which any weighted mean silently drops.
 
@@ -250,8 +268,8 @@ def build() -> str:
         end = [r for r in rows if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
         if end:
             add("")
-            add("  | policy mode | regime | return | **SE** | success rate | episodes | scenes |")
-            add("  |---|---|---:|---:|---:|---:|---:|")
+            add("  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |")
+            add("  |---|---|---:|---:|---:|---:|---:|---|")
             grouped = collections.defaultdict(list)
             for r in end:
                 grouped[((r.get("evaluator_scope") or {}).get("eval_policy_mode"),
@@ -267,7 +285,7 @@ def build() -> str:
                     se_txt += " ⚠"          # per-scene floor: omits between-scene variance
                 eps_txt = f"{eps}" + (f" (+{dropped} unweightable)" if dropped else "")
                 add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | {se_txt} | {sr:.3f} | "
-                    f"{eps_txt} | {scenes} |")
+                    f"{eps_txt} | {scenes} | {PAIRING.get(key[1], '?')} |")
         add("")
 
     host = ROOT / "results" / "host-runs.jsonl"
@@ -354,19 +372,26 @@ def build() -> str:
     add("5. **Returns are not comparable across `policy_mode`.** `idaac`, `ppg` and `ibac_sni` "
         "report a sampled return; the other nine report a mode return. Different estimands. "
         "`scripts/comparison_blocks.py` adjudicates; this register never pools them.")
-    add("6. **Episode counts are NOT uniform, and rows without one are dropped from every "
+    add("6. **`paired?` says whether a difference involving that regime is attributable to the "
+        "regime.** `train` and `eval-easy` replay identical initial conditions AND identical pixels, "
+        "so a gap between them is the regime alone. `eval-medium` and `eval-hard` **resample their "
+        "visual perturbation between passes** -- 62 %/67 % of slots on two independent families -- "
+        "so their numbers carry perturbation variance on top of episode variance and **no paired "
+        "claim is available for them**, including the two policy-mode passes on one checkpoint. "
+        "Measured by `scripts/audit_eval_validity.py`; upstream and deliberate, not a fault.")
+    add("7. **Episode counts are NOT uniform, and rows without one are dropped from every "
         "weighted mean.** Across the collected fleet, `phase=eval` rows exist at 10, 5, 1 and "
         "**None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- a "
         "one-episode measurement in the same stream as a two-hundred-episode one. A row with no "
         "`episodes` cannot be weighted and is excluded; where that happens the episode cell above "
         "says `(+N unweightable)` rather than staying silent about it.")
-    add("7. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at "
+    add("8. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at "
         "generation time: of the rows here, only those carrying "
         "`evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported "
         "without that distinction and contribute to no curve or endpoint summary. **No currently "
         "collected run has curve-scoped rows at all**, so the curve line below appears only for "
         "runs collected after that field existed.")
-    add("8. **A superseded evaluator revision is still listed.** Whether a revision is current is "
+    add("9. **A superseded evaluator revision is still listed.** Whether a revision is current is "
         "`scripts/audit_row_closure.py`'s question, not this file's.")
     add("")
     add("## Overwrite safety")

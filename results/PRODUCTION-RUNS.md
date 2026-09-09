@@ -34,10 +34,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1037211b64e17auo88__records.jsonl`](results/records/bt1037211b64e17auo88__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.86 | ± 0.10 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.83 | ± 0.10 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.86 | ± 0.10 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.83 | ± 0.10 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt116j2650ohtkj8ev7q` — ibac_sni
 
@@ -49,10 +49,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt116j2650ohtkj8ev7q__records.jsonl`](results/records/bt116j2650ohtkj8ev7q__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 9.64 | ± 4.46 | 0.000 | 5 | 1 |
-  | `sample` | train | 9.62 | ± 3.38 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 9.64 | ± 4.46 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 9.62 | ± 3.38 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt11o1l70msqkc4d2qnr` — ppg
 
@@ -64,10 +64,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt11o1l70msqkc4d2qnr__records.jsonl`](results/records/bt11o1l70msqkc4d2qnr__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 3.93 | ± 0.37 ⚠ | 0.000 | 5 | 1 |
-  | `sample` | train | 6.32 | ± 1.85 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 3.93 | ± 0.37 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 6.32 | ± 1.85 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt11qhufomconlujompu` — ppg
 
@@ -79,10 +79,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt11qhufomconlujompu__records.jsonl`](results/records/bt11qhufomconlujompu__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 14.56 | ± 5.73 | 0.000 | 5 | 1 |
-  | `sample` | train | 7.34 | ± 0.51 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 14.56 | ± 5.73 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 7.34 | ± 0.51 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1262ms5icvlmo5v8ar` — ppg
 
@@ -94,10 +94,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1262ms5icvlmo5v8ar__records.jsonl`](results/records/bt1262ms5icvlmo5v8ar__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 5.24 | ± 1.40 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.18 | ± 1.54 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 5.24 | ± 1.40 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.18 | ± 1.54 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt13r293fit1pbt7ah4p` — rad
 
@@ -109,10 +109,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt13r293fit1pbt7ah4p__records.jsonl`](results/records/bt13r293fit1pbt7ah4p__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 2.73 | ± 0.09 | 0.000 | 5 | 1 |
-  | `mode` | train | 2.71 | ± 0.09 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 2.73 | ± 0.09 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 2.71 | ± 0.09 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt13vlerk8p1vop3bmep` — ctrl
 
@@ -124,10 +124,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt13vlerk8p1vop3bmep__records.jsonl`](results/records/bt13vlerk8p1vop3bmep__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 3.50 | ± 1.00 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.97 | ± 1.99 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 3.50 | ± 1.00 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.97 | ± 1.99 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt14gjjdtoa5j54dr2n6` — rad
 
@@ -139,10 +139,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt14gjjdtoa5j54dr2n6__records.jsonl`](results/records/bt14gjjdtoa5j54dr2n6__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 2.28 | ± 0.07 | 0.000 | 5 | 1 |
-  | `mode` | train | 2.28 | ± 0.07 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 2.28 | ± 0.07 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 2.28 | ± 0.07 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1596tjbdu1rv5senim` — idaac
 
@@ -154,10 +154,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1596tjbdu1rv5senim__records.jsonl`](results/records/bt1596tjbdu1rv5senim__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.72 | ± 0.01 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.72 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt15dm9j6vm5r9m4cdri` — ibac_sni
 
@@ -169,10 +169,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt15dm9j6vm5r9m4cdri__records.jsonl`](results/records/bt15dm9j6vm5r9m4cdri__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 21.18 | ± 7.94 ⚠ | 0.000 | 5 | 1 |
-  | `sample` | train | 28.15 | ± 8.66 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 21.18 | ± 7.94 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 28.15 | ± 8.66 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt15e9v1k2ngmb71hnjn` — drqv2
 
@@ -194,10 +194,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt162oh478g2biv5efb9__records.jsonl`](results/records/bt162oh478g2biv5efb9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 11.22 | ± 3.33 | 0.000 | 5 | 1 |
-  | `sample` | train | 9.95 | ± 2.31 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 11.22 | ± 3.33 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 9.95 | ± 2.31 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt169vanpqh4u7no7n8c` — ibac_sni
 
@@ -209,10 +209,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt169vanpqh4u7no7n8c__records.jsonl`](results/records/bt169vanpqh4u7no7n8c__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 6.17 | ± 2.38 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.10 | ± 1.28 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 6.17 | ± 2.38 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.10 | ± 1.28 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt16kl6q356klkg1v3vv` — drqv2
 
@@ -224,10 +224,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt16kl6q356klkg1v3vv__records.jsonl`](results/records/bt16kl6q356klkg1v3vv__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 2.12 | ± 0.07 ⚠ | 0.000 | 5 | 1 |
-  | `mode` | train | 3.53 | ± 0.54 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 2.12 | ± 0.07 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 3.53 | ± 0.54 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt17hai4org559f794t0` — drqv2
 
@@ -239,12 +239,12 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt17hai4org559f794t0__records.jsonl`](results/records/bt17hai4org559f794t0__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 4.73 | ± 1.76 | 0.000 | 100 | 10 |
-  | `mode` | eval-hard | 0.71 | ± 0.01 | 0.000 | 100 | 10 |
-  | `mode` | eval-medium | 1.08 | ± 0.19 | 0.000 | 100 | 10 |
-  | `mode` | train | 96.21 | ± 17.65 | 0.270 | 100 | 10 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 4.73 | ± 1.76 | 0.000 | 100 | 10 | **paired** |
+  | `mode` | eval-hard | 0.71 | ± 0.01 | 0.000 | 100 | 10 | not paired ⚠ |
+  | `mode` | eval-medium | 1.08 | ± 0.19 | 0.000 | 100 | 10 | not paired ⚠ |
+  | `mode` | train | 96.21 | ± 17.65 | 0.270 | 100 | 10 | **paired** |
 
 ### `bt18gmov8nbfkkd117s6` — alda
 
@@ -256,10 +256,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt18gmov8nbfkkd117s6__records.jsonl`](results/records/bt18gmov8nbfkkd117s6__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.14 | ± 0.03 ⚠ | 0.000 | 5 | 1 |
-  | `mode` | train | 1.09 | ± 0.02 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.14 | ± 0.03 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.09 | ± 0.02 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt19u2koj34i168otpkg` — ibac_sni
 
@@ -271,10 +271,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt19u2koj34i168otpkg__records.jsonl`](results/records/bt19u2koj34i168otpkg__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 15.97 | ± 5.94 | 0.000 | 5 | 1 |
-  | `sample` | train | 19.43 | ± 7.09 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 15.97 | ± 5.94 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 19.43 | ± 7.09 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1ag9egnoj6n8qvsdkj` — ppg
 
@@ -335,10 +335,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1c4setfkq5ltaeog24__records.jsonl`](results/records/bt1c4setfkq5ltaeog24__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 9.77 | ± 0.79 | 0.000 | 5 | 1 |
-  | `mode` | train | 9.81 | ± 0.79 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 9.77 | ± 0.79 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 9.81 | ± 0.79 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1cj6rgeptsu9f3v0o6` — ibac_sni
 
@@ -360,10 +360,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl`](results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 2.72 | ± 0.79 | 0.000 | 5 | 1 |
-  | `sample` | train | 3.31 | ± 0.78 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 2.72 | ± 0.79 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 3.31 | ± 0.78 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1d8jicbkdu1jv87ogp` — ctrl
 
@@ -375,10 +375,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1d8jicbkdu1jv87ogp__records.jsonl`](results/records/bt1d8jicbkdu1jv87ogp__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 54.60 | ± 2.17 | 0.000 | 5 | 1 |
-  | `mode` | train | 42.48 | ± 2.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 54.60 | ± 2.17 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 42.48 | ± 2.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1dpq4tnemmkvp3sccg` — idaac
 
@@ -420,10 +420,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1efkde2vj17k5i1ptr__records.jsonl`](results/records/bt1efkde2vj17k5i1ptr__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 9.37 | ± 4.13 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.38 | ± 1.74 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 9.37 | ± 4.13 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.38 | ± 1.74 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1f2sh036f97n55972v` — alda
 
@@ -435,10 +435,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1f2sh036f97n55972v__records.jsonl`](results/records/bt1f2sh036f97n55972v__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.07 | ± 0.02 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.08 | ± 0.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.07 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.08 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1f6t7lggvmuo5eg2b0` — rad
 
@@ -450,10 +450,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl`](results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 3.04 | ± 0.10 | 0.000 | 5 | 1 |
-  | `mode` | train | 3.04 | ± 0.10 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 3.04 | ± 0.10 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 3.04 | ± 0.10 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1felsu3m2p4q3rolnd` — idaac
 
@@ -465,10 +465,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1felsu3m2p4q3rolnd__records.jsonl`](results/records/bt1felsu3m2p4q3rolnd__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.77 | ± 0.04 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.77 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1fjub0768p8bovh2n8` — drq
 
@@ -480,10 +480,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1fjub0768p8bovh2n8__records.jsonl`](results/records/bt1fjub0768p8bovh2n8__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.16 | ± 0.10 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.42 | ± 0.23 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.16 | ± 0.10 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.42 | ± 0.23 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1h73oou888t1duau73` — drqv2
 
@@ -495,10 +495,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1h73oou888t1duau73__records.jsonl`](results/records/bt1h73oou888t1duau73__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 5.14 | ± 1.98 | 0.000 | 5 | 1 |
-  | `mode` | train | 5.94 | ± 3.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 5.14 | ± 1.98 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 5.94 | ± 3.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1hmjrbg4711e4nl32d` — rad
 
@@ -510,10 +510,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1hmjrbg4711e4nl32d__records.jsonl`](results/records/bt1hmjrbg4711e4nl32d__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 2.34 | ± 0.08 ⚠ | 0.000 | 5 | 1 |
-  | `mode` | train | 2.33 | ± 0.08 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 2.34 | ± 0.08 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 2.33 | ± 0.08 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1hndutvnkl7mhc2njh` — curl
 
@@ -525,10 +525,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1hndutvnkl7mhc2njh__records.jsonl`](results/records/bt1hndutvnkl7mhc2njh__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 5.28 | ± 1.16 | 0.000 | 5 | 1 |
-  | `mode` | train | 7.07 | ± 2.55 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 5.28 | ± 1.16 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 7.07 | ± 2.55 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1ih8krm2glsh2tqd43` — ibac_sni
 
@@ -540,10 +540,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1ih8krm2glsh2tqd43__records.jsonl`](results/records/bt1ih8krm2glsh2tqd43__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 8.79 | ± 2.86 | 0.000 | 5 | 1 |
-  | `sample` | train | 8.35 | ± 2.14 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 8.79 | ± 2.86 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 8.35 | ± 2.14 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1ip5f8c6mqqm7fd2bn` — idaac
 
@@ -575,10 +575,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1k600n8r2e4divs2dk__records.jsonl`](results/records/bt1k600n8r2e4divs2dk__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 3.29 | ± 0.18 | 0.000 | 5 | 1 |
-  | `mode` | train | 3.29 | ± 0.18 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 3.29 | ± 0.18 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 3.29 | ± 0.18 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1kj79a5o9gs61qkl96` — svea
 
@@ -590,10 +590,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1kj79a5o9gs61qkl96__records.jsonl`](results/records/bt1kj79a5o9gs61qkl96__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 48.00 | ± 19.76 | 0.000 | 5 | 1 |
-  | `mode` | train | 10.29 | ± 1.93 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 48.00 | ± 19.76 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 10.29 | ± 1.93 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1kvirgvn7bq6271rtj` — svea
 
@@ -605,10 +605,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1kvirgvn7bq6271rtj__records.jsonl`](results/records/bt1kvirgvn7bq6271rtj__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 16.86 | ± 2.87 | 0.000 | 5 | 1 |
-  | `mode` | train | 32.09 | ± 4.67 | 0.200 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 16.86 | ± 2.87 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 32.09 | ± 4.67 | 0.200 | 5 | 1 | **paired** |
 
 ### `bt1l6pjcb6ak5u17rmci` — ppg
 
@@ -620,10 +620,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1l6pjcb6ak5u17rmci__records.jsonl`](results/records/bt1l6pjcb6ak5u17rmci__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 6.25 | ± 1.65 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.98 | ± 1.49 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 6.25 | ± 1.65 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.98 | ± 1.49 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1leokcca12vda1enck` — soda
 
@@ -635,10 +635,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1leokcca12vda1enck__records.jsonl`](results/records/bt1leokcca12vda1enck__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 13.65 | ± 0.49 | 0.000 | 5 | 1 |
-  | `mode` | train | 8.69 | ± 0.75 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 13.65 | ± 0.49 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 8.69 | ± 0.75 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1lj7qk3vofb21r6k6m` — ctrl
 
@@ -650,10 +650,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1lj7qk3vofb21r6k6m__records.jsonl`](results/records/bt1lj7qk3vofb21r6k6m__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 5.58 | ± 2.45 | 0.000 | 5 | 1 |
-  | `sample` | train | 6.01 | ± 1.45 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 5.58 | ± 2.45 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 6.01 | ± 1.45 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1lmtfcqafcpbh02ai7` — drqv2
 
@@ -665,10 +665,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1lmtfcqafcpbh02ai7__records.jsonl`](results/records/bt1lmtfcqafcpbh02ai7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.56 | ± 0.19 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.18 | ± 0.05 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.56 | ± 0.19 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.18 | ± 0.05 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1lnh6b11u231cvh4ho` — idaac
 
@@ -690,10 +690,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl`](results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 4.45 | ± 0.36 ⚠ | 0.000 | 5 | 1 |
-  | `sample` | train | 3.70 | ± 0.70 ⚠ | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 4.45 | ± 0.36 ⚠ | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 3.70 | ± 0.70 ⚠ | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1m638bct3b2rs1g844` — alda
 
@@ -705,10 +705,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1m638bct3b2rs1g844__records.jsonl`](results/records/bt1m638bct3b2rs1g844__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.00 | ± 0.02 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.03 | ± 0.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.00 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.03 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1mg9ens1di936htjc7` — ctrl
 
@@ -720,10 +720,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1mg9ens1di936htjc7__records.jsonl`](results/records/bt1mg9ens1di936htjc7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 3.92 | ± 1.04 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.75 | ± 2.15 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 3.92 | ± 1.04 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.75 | ± 2.15 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1n0in75mc91n6btmpv` — ctrl
 
@@ -735,10 +735,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1n0in75mc91n6btmpv__records.jsonl`](results/records/bt1n0in75mc91n6btmpv__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 41.46 | ± 0.71 | 0.000 | 5 | 1 |
-  | `mode` | train | 29.07 | ± 1.09 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 41.46 | ± 0.71 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 29.07 | ± 1.09 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1o6tli53fmgvh4elag` — ppg
 
@@ -750,10 +750,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1o6tli53fmgvh4elag__records.jsonl`](results/records/bt1o6tli53fmgvh4elag__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 4.74 | ± 1.07 | 0.000 | 5 | 1 |
-  | `sample` | train | 4.78 | ± 1.36 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 4.74 | ± 1.07 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 4.78 | ± 1.36 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1ouf9igefipsh0lfm8` — drqv2
 
@@ -765,10 +765,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1ouf9igefipsh0lfm8__records.jsonl`](results/records/bt1ouf9igefipsh0lfm8__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.58 | ± 0.16 | 0.000 | 5 | 1 |
-  | `mode` | train | 3.72 | ± 0.58 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.58 | ± 0.16 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 3.72 | ± 0.58 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1plfp98967v0ouud7h` — ppg
 
@@ -780,10 +780,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1plfp98967v0ouud7h__records.jsonl`](results/records/bt1plfp98967v0ouud7h__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 6.08 | ± 1.49 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.63 | ± 2.51 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 6.08 | ± 1.49 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.63 | ± 2.51 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1q6a427c9dnvucblr4` — alda
 
@@ -795,10 +795,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1q6a427c9dnvucblr4__records.jsonl`](results/records/bt1q6a427c9dnvucblr4__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.24 | ± 0.04 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.29 | ± 0.04 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.24 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.29 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1qnn6kkfrqpj0gvrk5` — alda
 
@@ -810,10 +810,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl`](results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 49.60 | ± 3.92 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.23 | ± 0.17 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 49.60 | ± 3.92 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.23 | ± 0.17 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1qqsiccu983njs8fsl` — ibac_sni
 
@@ -825,10 +825,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1qqsiccu983njs8fsl__records.jsonl`](results/records/bt1qqsiccu983njs8fsl__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 4.21 | ± 1.46 | 0.000 | 5 | 1 |
-  | `sample` | train | 4.31 | ± 1.25 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 4.21 | ± 1.46 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 4.31 | ± 1.25 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1r29b6em0m0cs74v70` — idaac
 
@@ -840,10 +840,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1r29b6em0m0cs74v70__records.jsonl`](results/records/bt1r29b6em0m0cs74v70__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.69 | ± 0.00 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.69 | ± 0.00 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1s4q60d8nsvd4771l5` — rad
 
@@ -865,10 +865,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1s71ot06mfqmei9qi5__records.jsonl`](results/records/bt1s71ot06mfqmei9qi5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 9.81 | ± 2.12 | 0.000 | 5 | 1 |
-  | `mode` | train | 19.56 | ± 4.68 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 9.81 | ± 2.12 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 19.56 | ± 4.68 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1s807o5pbap8ir3knl` — alda
 
@@ -880,10 +880,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1s807o5pbap8ir3knl__records.jsonl`](results/records/bt1s807o5pbap8ir3knl__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.06 | ± 0.01 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.04 | ± 0.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.06 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.04 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1tjqjmpcnicb6ih739` — soda
 
@@ -895,10 +895,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1tjqjmpcnicb6ih739__records.jsonl`](results/records/bt1tjqjmpcnicb6ih739__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 2.25 | ± 0.08 | 0.000 | 5 | 1 |
-  | `mode` | train | 2.26 | ± 0.07 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 2.25 | ± 0.08 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 2.26 | ± 0.07 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1tjsrd6oglrsq2g92m` — idaac
 
@@ -910,10 +910,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1tjsrd6oglrsq2g92m__records.jsonl`](results/records/bt1tjsrd6oglrsq2g92m__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 3.07 | ± 0.89 | 0.000 | 5 | 1 |
-  | `sample` | train | 1.95 | ± 0.47 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 3.07 | ± 0.89 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 1.95 | ± 0.47 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1ums2q8170s3cq5p9l` — ctrl
 
@@ -935,10 +935,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1utl06n6mqffrt2jdn__records.jsonl`](results/records/bt1utl06n6mqffrt2jdn__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 0.90 | ± 0.02 | 0.000 | 5 | 1 |
-  | `mode` | train | 0.92 | ± 0.01 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 0.90 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 0.92 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1v89sh2c00bc1iop0j` — ppg
 
@@ -950,10 +950,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1v89sh2c00bc1iop0j__records.jsonl`](results/records/bt1v89sh2c00bc1iop0j__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 3.62 | ± 0.23 | 0.000 | 5 | 1 |
-  | `sample` | train | 5.79 | ± 1.40 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 3.62 | ± 0.23 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.79 | ± 1.40 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1vcs013fq6lk17crou` — idaac
 
@@ -965,10 +965,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1vcs013fq6lk17crou__records.jsonl`](results/records/bt1vcs013fq6lk17crou__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.70 | ± 0.01 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1vo9iqoht83l9q8hun` — idaac
 
@@ -980,10 +980,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1vo9iqoht83l9q8hun__records.jsonl`](results/records/bt1vo9iqoht83l9q8hun__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `sample` | eval-easy | 0.69 | ± 0.00 | 0.000 | 5 | 1 |
-  | `sample` | train | 0.69 | ± 0.00 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.69 | ± 0.00 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.69 | ± 0.00 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1vtciqmrt5m4jklupk` — alda
 
@@ -995,10 +995,10 @@ Every run whose records this repository holds, with the circumstances each recor
 - **records** [`results/records/bt1vtciqmrt5m4jklupk__records.jsonl`](results/records/bt1vtciqmrt5m4jklupk__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 1.00 | ± 0.02 | 0.000 | 5 | 1 |
-  | `mode` | train | 1.01 | ± 0.02 | 0.000 | 5 | 1 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.00 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.01 | ± 0.02 | 0.000 | 5 | 1 | **paired** |
 
 ### `card0-20260909-035152` — idaac
 
@@ -1014,16 +1014,16 @@ Every run whose records this repository holds, with the circumstances each recor
 - **curve** (train regime, 11 stamp(s)): first 24.66 @51,200 · **peak 50.32 @350,208** · last 24.74 @550,912 · **SE ≈ 3.6 per point**  — ends below its peak by 7.0 SE
   <br/>*A move smaller than about 7.3 between stamps is inside 2 SE and is not a trend.*
 
-  | policy mode | regime | return | **SE** | success rate | episodes | scenes |
-  |---|---|---:|---:|---:|---:|---:|
-  | `mode` | eval-easy | 30.31 | ± 2.13 | 0.000 | 200 | 10 |
-  | `mode` | eval-hard | 18.10 | ± 1.22 ⚠ | 0.000 | 160 | 8 |
-  | `mode` | eval-medium | 14.32 | ± 0.96 | 0.000 | 200 | 10 |
-  | `mode` | train | 34.00 | ± 1.80 | 0.000 | 200 | 10 |
-  | `sample` | eval-easy | 31.58 | ± 1.98 | 0.000 | 200 | 10 |
-  | `sample` | eval-hard | 18.47 | ± 1.25 | 0.000 | 200 | 10 |
-  | `sample` | eval-medium | 11.55 | ± 0.63 | 0.000 | 200 | 10 |
-  | `sample` | train | 33.69 | ± 1.86 | 0.000 | 200 | 10 |
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 30.31 | ± 2.13 | 0.000 | 200 | 10 | **paired** |
+  | `mode` | eval-hard | 18.10 | ± 1.22 ⚠ | 0.000 | 160 | 8 | not paired ⚠ |
+  | `mode` | eval-medium | 14.32 | ± 0.96 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `mode` | train | 34.00 | ± 1.80 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-easy | 31.58 | ± 1.98 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-hard | 18.47 | ± 1.25 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | eval-medium | 11.55 | ± 0.63 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | train | 33.69 | ± 1.86 | 0.000 | 200 | 10 | **paired** |
 
 ## Runs on the production host not yet collected
 
@@ -1042,7 +1042,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 3h ago**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 4h ago**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 **1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
@@ -1058,9 +1058,10 @@ Listed rather than omitted, because a catalogue that silently drops what it cann
 3. **Circumstances come from what each row carries.** Renderer, container digest, resolved packages and source commit live in `_run_provenance`. `collect_record_delivery` does exactly two things — concatenate the training rows with `cells/*/offline_eval_*.jsonl`, and stamp that provenance onto the offline rows from `run_manifest.json`. **It computes no metric**; `eval_grid.py` did that. When a cell is stopped by its watch budget before that step runs, the rows exist and the bundle does not, and `scripts/assemble_reaped_delivery.py` performs the same two operations on a fetched copy — marking every row, and marking provenance as missing rather than inventing it. Rows without provenance are flagged above.
 4. **`success_rate` and `return` are not independent for Door.** Its reward is 1.0 on success and at most 0.25+0.25 otherwise, so over a 500-step horizon a policy that never opens the door cannot exceed 250 and any return above 250 proves a success step. See [`../notes/what-a-door-return-number-means.md`](../notes/what-a-door-return-number-means.md).
 5. **Returns are not comparable across `policy_mode`.** `idaac`, `ppg` and `ibac_sni` report a sampled return; the other nine report a mode return. Different estimands. `scripts/comparison_blocks.py` adjudicates; this register never pools them.
-6. **Episode counts are NOT uniform, and rows without one are dropped from every weighted mean.** Across the collected fleet, `phase=eval` rows exist at 10, 5, 1 and **None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- a one-episode measurement in the same stream as a two-hundred-episode one. A row with no `episodes` cannot be weighted and is excluded; where that happens the episode cell above says `(+N unweightable)` rather than staying silent about it.
-7. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at generation time: of the rows here, only those carrying `evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported without that distinction and contribute to no curve or endpoint summary. **No currently collected run has curve-scoped rows at all**, so the curve line below appears only for runs collected after that field existed.
-8. **A superseded evaluator revision is still listed.** Whether a revision is current is `scripts/audit_row_closure.py`'s question, not this file's.
+6. **`paired?` says whether a difference involving that regime is attributable to the regime.** `train` and `eval-easy` replay identical initial conditions AND identical pixels, so a gap between them is the regime alone. `eval-medium` and `eval-hard` **resample their visual perturbation between passes** -- 62 %/67 % of slots on two independent families -- so their numbers carry perturbation variance on top of episode variance and **no paired claim is available for them**, including the two policy-mode passes on one checkpoint. Measured by `scripts/audit_eval_validity.py`; upstream and deliberate, not a fault.
+7. **Episode counts are NOT uniform, and rows without one are dropped from every weighted mean.** Across the collected fleet, `phase=eval` rows exist at 10, 5, 1 and **None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- a one-episode measurement in the same stream as a two-hundred-episode one. A row with no `episodes` cannot be weighted and is excluded; where that happens the episode cell above says `(+N unweightable)` rather than staying silent about it.
+8. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at generation time: of the rows here, only those carrying `evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported without that distinction and contribute to no curve or endpoint summary. **No currently collected run has curve-scoped rows at all**, so the curve line below appears only for runs collected after that field existed.
+9. **A superseded evaluator revision is still listed.** Whether a revision is current is `scripts/audit_row_closure.py`'s question, not this file's.
 
 ## Overwrite safety
 
