@@ -161,3 +161,33 @@ Nothing here has been run on the host yet. The migration order above is delibera
 `resolved_packages.json` byte for byte against a pip-built run BEFORE the venv becomes the default,
 because a prebuilt environment that differs from the one every result so far was produced in is a
 finding, not a speedup.
+
+
+## Validated end to end, 2026-09-09
+
+The prebuilt environment now works, and the last blocker was not the venv but the path.
+
+`build-env.sh` could not bake the two editable installs, because the payload carries no RL-ViGen
+tree — it is cloned at run time — so `ENVIRONMENT.json` recorded `editable: []` and a cell with
+`NATIVE_VENV` set would have failed its own import check. The fix was to put **both** package roots
+on `PYTHONPATH`: `envs/robosuiteVGB` was already there (which is why `robosuitevgb` imported and
+`robosuite` did not), and `third_party/robosuite` was not. With both present the editable installs
+become an optimisation rather than a requirement.
+
+Verified against the **live payload tree, read-only, with no GPU**, so it disturbed nothing:
+
+```
+torch OK          <- from the prebuilt venv
+robosuite OK      <- from PYTHONPATH, no editable install
+robosuitevgb OK   <- from PYTHONPATH
+```
+
+**What this is worth.** The pip cache turned out to be unachievable on this image (Debian patches
+pip's caching out and `--cache-dir` is accepted but ignored — measured, 0 entries after a real
+install), so removing pip from the cell is the *only* remaining way to make a bootstrap cheap. A
+cell currently spends ~8 minutes in `pip`; with `NATIVE_VENV` it spends ~70 seconds in `apt` and
+none in pip.
+
+Still not exercised: an actual cell run against `NATIVE_VENV`. The imports are proven and the
+refusals are proven; what has not happened is a training run that used one. That is the next cheap
+thing to do once card 0 is free.
