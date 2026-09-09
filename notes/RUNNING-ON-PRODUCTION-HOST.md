@@ -109,6 +109,39 @@ IBAC failure of the predeclared competence criteria; missing checkpoint/reload/g
 or a changed source/config after the canary payload was built. Preserve the partial host output and
 rerun a failed off-policy seed from zero rather than resuming it against an empty replay buffer.
 
+## 0b. What a cell actually costs — measured end to end, 2026-09-09
+
+The first complete production cell, `card0-20260909-035152` (`idaac-s101`, 600k frames, sharing card
+0 with a `ppg` cell for its last four hours). Every figure is from the job log.
+
+| phase | wall time | detail |
+|---|---|---|
+| training | **4.95 h** | 600,064 frames at 33.7 frames/s |
+| curve evaluation | **4.60 h** | 11 stamps x 44 rows x 3 episodes = 1,452 episodes |
+| endpoint grid | **5.52 h** | 44 rows x 20 episodes x **2 policy-mode passes** |
+| **total** | **≈15 h** | evaluation is **twice** the training that precedes it |
+
+**Budget the whole thing, not the training.** `CELL_TIMEOUT_SECONDS` wraps training only. The
+allowance that covers evaluation used to default to the training budget and was **69 % short**;
+`launch-card-cell.sh` now derives it from episodes actually scheduled — including
+`ENDPOINT_EVAL_POLICY_MODES`, which defaults to `native,mode` and sweeps the endpoint grid **twice**
+— and prints the workload before the cell starts. Read that line; a wrong number there is visible in
+seconds, and the failure it prevents is not a truncated evaluation but a **lost delivery**, since
+`collect_record_delivery` runs after evaluation and a reaped cell never reaches it.
+
+**Disk, not VRAM, caps how much runs at once.** One filesystem, 278 GiB free on a 20 TB at 99 %. Two
+armed disk watches left **10 GiB** of headroom, so a `drqv2` cell (27.88 GiB required, ~56 GiB
+allowance) could not be co-scheduled at all. The on-policy pair packs only because neither writes a
+replay buffer: ~2 GiB each after eleven hours. See
+[`production-host/27-disk-not-vram-is-what-caps-parallelism.md`](production-host/27-disk-not-vram-is-what-caps-parallelism.md)
+and [`production-host/28-eval-is-sixty-percent-of-a-cell.md`](production-host/28-eval-is-sixty-percent-of-a-cell.md).
+
+**Collect with the collector, and read what it prints.**
+`datasphere/native/collect-host-run.sh <family> <local-copy-of-run-dir>` now runs
+`audit_record_frame_provenance.py` (refusing on a mismatch) and `audit_training_diagnostics.py`
+(reporting) on every result. The second exists because both cells of 2026-09-09 produced nulls whose
+cause was invisible in every artifact the pipeline checked.
+
 ## 1. Preconditions, checked on the host every time
 
 ```bash
@@ -247,6 +280,22 @@ retrieving its result. Verified on 2026-09-08 — an outer `timeout 5400 ssh` fi
 script died at STEP 3, and the container ran on for hours.
 
 ### 3.0b The environment: build it once, mount it read-only
+
+> **[Claude 2026-09-09] A PREBUILT ENVIRONMENT IS FAMILY-SPECIFIC, and its directory name does not
+> say so.** `build-env.sh` bakes the `robosuite` / `robosuitevgb` editable installs only when the
+> payload it was built from carries `RL-ViGen-upstream/` — and **payloads never do**, because
+> `run_probe.sh` git-clones that tree at run time. The host's only prebuilt environment reads
+> `"cells": "idaac:1"`, `"editable": []`, with both packages **absent**, while its directory name
+> carries only the requirements hash, which is **identical for all twelve baselines**.
+>
+> Using it for an `rlvigen` cell would have failed *after* the import check passed, because that
+> check ran with `third_party/robosuite` prepended and no `runnable/_launch/*.sh` keeps that entry.
+> `run_probe.sh` now refuses with `NATIVE_EDITABLE_NOT_INSTALLED`.
+>
+> **Check `ENVIRONMENT.json` before reusing one**: `"editable": []` means it cannot run `rlvigen`.
+> Both production cells of 2026-09-09 used `NATIVE_PIP_CACHE=1` instead, which is minutes with a
+> warm cache rather than the two hours below.
+
 
 Every cell otherwise rebuilds its environment inside a container that is then thrown away.
 Measured here: `apt` **71 s**; `pip` **over two hours** for 1710 MB of wheels at 162–835 kB/s, the
