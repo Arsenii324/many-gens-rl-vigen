@@ -224,3 +224,43 @@ return now says too.
 return keeps climbing to the end rather than flattening, the run is update-limited rather than
 converged — which would mean the re-run after the minibatch fix should be expected to go
 substantially higher, not merely to look tidier.
+
+## Refinement: the clamp changes the KIND of update, not only the count
+
+The curve at three stamps, train regime, against `idaac` at the same frames:
+
+| frame | `ppg` | `idaac` | `ppg` policy updates so far |
+|---|---|---|---|
+| 0 | 2.24 | — | 0 |
+| 51,200 | 4.68 | 24.66 | 25 |
+| 100,352 | **10.05** | 12.21 | **49** |
+
+**`ppg` is still climbing and accelerating** — roughly doubling per stamp — which answers the
+question this note left open: the run is **update-limited, not converged**, so the re-run after the
+fix should be expected to go materially higher rather than merely look tidier.
+
+**But it reaches 10.05 on 49 updates where `idaac` reaches 12.21 on roughly 15,700**, and that
+forces a correction to how I framed the defect above. "320x fewer updates" is arithmetically true
+and misleading as an account of the damage:
+
+> `nminibatch` clamped to 1 does not delete 31 of 32 updates. It replaces **32 minibatch steps of
+> 64 samples each** with **one full-batch step over all 2,048** — far fewer steps, but each one a
+> much lower-variance gradient estimate.
+
+So the clamp trades step count for gradient quality, and PPG's auxiliary phase — which is
+**unaffected**, getting its 8 minibatches over 32 stored segments — keeps fitting the value function
+throughout. That combination is why the run learns respectably instead of collapsing, and it is the
+honest reason the diagnostics looked calm rather than broken.
+
+**What this does not change:** the executed optimisation is still not the configured one, `clipfrac`
+and `approxkl` are still structurally uninformative at one minibatch, and the run still cannot be
+compared with the other eleven as a representative of PPG.
+
+**What it does change:** I should not predict the size of the improvement from the fix. Thirty-two
+noisy steps are not simply thirty-two times one clean step, and claiming they are would be the same
+error as reading an axis as a result. The prediction that stands is directional — more steps per
+batch, `clipfrac` in 0.1-0.3, `approxkl` near 0.01-0.05 — and the magnitude is what the re-run is
+for.
+
+*(These are different algorithms with different networks; the `idaac` column is context for update
+counts, not an algorithm comparison. `scripts/comparison_blocks.py` would refuse to rank them.)*
