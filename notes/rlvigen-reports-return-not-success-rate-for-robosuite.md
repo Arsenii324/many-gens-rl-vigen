@@ -110,11 +110,24 @@ run that tells us whether a null on Door is the harness or the algorithm. Predef
 adjusted after seeing the number:
 
 - **Judge it on episode return, not success rate.**
-- **Non-degenerate:** the train curve rises above its own first stamp by more than a few standard
-  errors and *stays* there — the property `idaac` lacks, having returned to its starting value.
-- **Harness validated:** train return at 6e5 reaches a substantial fraction of Figure 22's 0-500
-  axis. A `drqv2` run that also ends where it started points at the harness or the scene set, not at
-  the algorithm, and that is the finding worth having before eleven more baselines are run.
+- **The scale is now anchored at both ends**, which it was not when this criterion was first
+  written:
+
+  | reference | train-regime return | what it is |
+  |---|---|---|
+  | random policy | **≈ 2** | measured, `ppg` frame-0, 60 episodes |
+  | `idaac` at 6e5 | **25-50** | an added baseline at faithful config, plateaued |
+  | Figure 22 axis top | **500** | RL-ViGen's own plot for Door |
+
+- **Non-degenerate (weakest bar):** clears random by a wide margin. `idaac` already does this at
+  12-25x, so this alone proves nothing about `drqv2`.
+- **Beats the plateau:** exceeds `idaac`'s 25-50 band and keeps rising past frame 51,200 — the point
+  where `idaac` stopped improving. This is the informative comparison, because `drqv2` is
+  RL-ViGen-native and Figure 22 marks it as one of the two strongest on Robosuite.
+- **Harness validated:** reaches a substantial fraction of the 0-500 axis. **If `drqv2` also
+  plateaus in the 25-50 band, the ceiling is the harness or the scene set, not the algorithm** —
+  and that is the finding worth having before ten more baselines run. Two baselines from different
+  families stopping at the same number is a much stronger signal than either alone.
 - **Comparability caveat:** RL-ViGen evaluates 10 episodes in each of its environments, 100 per
   level. Our grid is 20 episodes across 11 scene sets. Richer, but not the same denominator, so our
   numbers sit beside theirs rather than in their table.
