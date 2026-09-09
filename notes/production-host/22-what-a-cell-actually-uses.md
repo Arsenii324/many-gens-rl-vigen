@@ -179,3 +179,41 @@ individual limit reads as respected.
   knowable from the cell list — it was 6 for two cells and no configuration file says so.
 - The 10k packing measurement stands only for 10k. Any packing claim must be re-measured at the
   scale it is claimed for; this note asserted otherwise for several hours and was wrong.
+
+
+## Correction, 2026-09-09 — the packing verdict was wrong, and it was my error of interpretation
+
+The section above concluded that packing "does not survive production scale" because a packed pair
+reached 29910 MiB of 32494. That reading was wrong in a way worth spelling out, because the wrong
+number came from a fact recorded earlier in this same project and then not applied.
+
+**`nvidia-smi memory.used` is the allocator's RESERVED pool, not live usage.** PyTorch's caching
+allocator reserves and does not return; `NATIVE_VRAM_CAP_MIB` bounds exactly that reservation, per
+process. The packed pair ran **six** processes under a **10240 MiB** cap, so it was entitled to
+reserve up to ~61 GiB and reserved 29910 of it. Almost none of that was memory anyone needed.
+
+The solo run proves the gap directly: `idaac` under a 4096 cap sat at **2644 MiB reserved** for five
+hours, against a measured live requirement of **1204 MiB**. Reserved is roughly twice live, and it
+tracks the cap, not the workload.
+
+**There is no leak anywhere.** 37 consecutive samples of the solo 600k run read *exactly* 2644 MiB
+across five hours of training. `idaac` saves checkpoints, writes logs, and holds a constant
+footprint, which is what a normal on-policy trainer should do.
+
+**`ppg`'s large footprint is its algorithm, not a defect.** `ppg.py:241` sets `n_pi=32` and
+`store_segs = n_pi != 0 and n_aux_epochs != 0`, so PPG retains 32 rollout segments to fit its
+auxiliary value head — the phasic phase that gives the method its name. At `nstep=2048`,
+`frame_stack=3`, 64x64x3 float32 that is **288 MiB per segment and ~9.0 GiB of observations**,
+bounded and expected.
+
+### So what is the real packing constraint?
+
+**Sizing, not feasibility.** The rule is `cap x expected_processes <= the share of the card we are
+willing to hold`, and a cell runs about three processes. For two packed cells on a 32 GiB card,
+leaving a third free for a neighbour: `cap = 20000 / 6 ~= 3400 MiB`. That binds `idaac` (live 1204)
+comfortably and would bind `ppg` (live ~9 GiB) far too hard — so **`ppg` cannot be packed against a
+small cap, and `idaac`-class families can**.
+
+The withdrawal in the section above stands only for `ppg`-like families and for the specific
+10240 cap that was used. It does not stand as a general claim, and note 21's queue should not be
+read as if packing were ruled out.
