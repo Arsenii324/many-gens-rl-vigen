@@ -170,6 +170,23 @@ add only the new data point.**
 higher returns. Not a duplicate of the arm, but evidence in the same direction that would have been
 rediscovered instead of cited.)*
 
+## Shape 4, found the same evening, in my own monitoring
+
+I reported `idaac`'s endpoint "stuck at 44 rows for 46 minutes" and started diagnosing a hung pass.
+Nothing was hung. **The second policy-mode pass writes a different file** —
+`offline_eval_endpoint_mode.jsonl` — and my monitor globbed `offline_eval_endpoint.jsonl` only. Pass
+2 was exactly on schedule at 212 s/row against pass 1's 216 s/row.
+
+This is the same family as the swallowed exception in `prior_art.py` earlier the same hour: **an
+instrument that looked in the wrong place, reporting a confident reading about a system that was
+fine.** It is worth its own line because it arrived *after* I had written the class up, in a script
+I had written that day, while I was actively watching for it.
+
+The project's own machinery was never fooled — `collect_record_delivery` and
+`assemble_reaped_delivery.py` both glob `offline_eval_*.jsonl` and pick up every pass. Only my
+ad-hoc monitor was blind, which is the general lesson: **throwaway observation code gets none of the
+scrutiny the pipeline gets, and it is what I actually form beliefs from.**
+
 ## What I would actually watch now
 
 1. **`ppg`'s curve as it completes.** It gets 293 policy updates for 600k frames instead of 8,192.
