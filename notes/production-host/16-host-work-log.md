@@ -329,3 +329,57 @@ two complete installs while the host cache stayed at 4.0K. pip in this image rep
 commands can not function since cache is disabled"*, so merely omitting `--no-cache-dir` does
 nothing; `--cache-dir` must be passed explicitly. A feature that reports success while doing
 nothing — the exact defect class this workspace exists to refuse, shipped by me the same day.
+
+
+## 2026-09-09 — the production launch recipe that actually works
+
+Getting one production cell onto card 0 took six attempts, and every failure was a guard doing its
+job. Recorded in order, because the next person will hit them in the same order.
+
+```bash
+cd ~/rlvigen-work/repo && git pull --ff-only origin main
+
+# 1. Payload from the CURRENT tree. A repo fix is not a payload fix: run_probe.sh executes from
+#    inside the payload, so an edit committed five minutes ago is absent until you rebuild.
+docker run --rm -v "$PWD:/repo" -v ~/rlvigen-work:/out -w /repo python:3.11-slim \
+  python3 datasphere/native/contract.py build-payload --source . --output /out/payload.tgz --families idaac
+docker run --rm -v "$PWD:/repo:ro" -v ~/rlvigen-work:/out:ro -w /repo python:3.11-slim \
+  python3 datasphere/native/contract.py verify-payload --archive /out/payload.tgz \
+    --require-runner-contract 19 --require-families idaac --require-evaluator-identity
+
+# 2. Launch. `env` explicitly rather than relying on an exported shell variable -- a sourced
+#    NATIVE_ACCEPT_SAME_DEVICE did not reach the wrapper once and cost a run.
+nohup env NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_ACCEPT_UNVERIFIED_DEVICE=1 \
+  CARD=0 CELLS=idaac:101 FRAMES=600000 NATIVE_PRODUCTION=1 \
+  CELL_TIMEOUT_SECONDS=43200 NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=4096 \
+  NATIVE_RESULT_MIRROR=$HOME/rlvigen-mirror SAVE_EVERY_FRAMES=50000 EVAL_EVERY_FRAMES=50000 \
+  ENDPOINT_EVAL=1 \
+  bash datasphere/native/launch-card-cell.sh ~/rlvigen-work/payload.tgz ~/rlvigen-runs/result.tgz \
+  > /tmp/run.log 2>&1 &
+```
+
+### The four guards that will stop you, in the order they fire
+
+| guard | what it says | what it means |
+|---|---|---|
+| result mirror | `NATIVE_RESULT_MIRROR is on the SAME filesystem` | this host has one filesystem; pass `NATIVE_ACCEPT_SAME_DEVICE=1` **via `env`**, and know the mirror buys a second copy, not a second failure domain |
+| production freeze | `NATIVE_PRODUCTION_CONFLICT ENDPOINT_EVAL_REGIMES=train,eval-easy expected=train,eval-easy,eval-medium,eval-hard` | do NOT carry a smoke config's eval overrides into production. Delete `ENDPOINT_EVAL_REGIMES`, `ENDPOINT_EVAL_SCENES`, `ENDPOINT_EVAL_EPISODES` and let the production defaults apply |
+| VRAM cap | `NATIVE_VRAM_CAP_NOT_IN_FORCE` | the cap could not be loaded. Refuses in ~8 minutes rather than after 12 hours |
+| memory floor | `free memory NNNN MiB is below the 4000 MiB floor` | something — possibly us — is filling the card. Two packed cells at 600k did exactly this |
+
+### Sizing the cap, which is the part that is easy to get wrong
+
+`NATIVE_VRAM_CAP_MIB` is enforced **per process**, and a cell runs about **three** processes
+(measured: 2019 + 308 + 308 MiB for a solo `idaac`; two packed cells produced six). So the run
+budget is `cap x 3`, not `cap`. A 10240 cap on a packed pair permitted 61 GiB on a 32 GiB card and
+took 92% of it before the floor stopped us. **4096 for a solo cell** leaves the card mostly free.
+
+### What a healthy production cell looks like
+
+```
+NATIVE_VRAM_CAP_IN_FORCE 4096 MiB, sitecustomize resolves
+NATIVE_PRODUCTION_SET CURVE_EVAL_SCENES=0,1,2,3,4,5,6,7,8,9
+NATIVE_PRODUCTION_SET ENDPOINT_EVAL_EPISODES=20
+card 0: 2639 MiB, 7%, 3 compute processes
+/work: 286.5 GiB free (floor 255.0); 8.2 GiB consumed since arm
+```
