@@ -8,6 +8,30 @@ Status: OPEN / ANSWERED / **REVERSED** (the question showed my position was wron
 
 ---
 
+
+## How to research one of these without reading the repo
+
+[Claude 2026-09-09] This file is the entry point, not the answer. The route that works:
+
+1. **Find the axis here.** If it is listed, the status line already says whether it is settled, and
+   `REVERSED` rows exist because several confident positions turned out to be wrong.
+2. **`python scripts/where_is_this_decided.py <term>`** — every occurrence of the topic across
+   `notes/ docs/ datasphere/ scripts/ tests/`, ordered newest-file-first, with supersession markers
+   flagged and the `git log -S` command for the change that actually moved the value. It reports
+   provenance, deliberately not truth.
+3. **Read the set, not the top row.** Recency is last-touched, which a typo fix also moves. And
+   several notes here were written by an assistant from whatever was in its context, so an
+   exhaustive-sounding review may have seen a subset — breadth is a claim, not a property of tone.
+4. **Check the primary source when one exists.** `ext/` holds the vendored papers. Every IDAAC-C2
+   constant was fixed by reading `raileanu21a-supp.pdf` rather than a review's summary of it, and
+   that is the only method in this project with a record of finding real defects.
+
+The failure this guards against is not ignorance, it is premature closure: settling on the first
+document found, when a contradicting one sits three files away with no marker saying which is
+current.
+
+---
+
 ## Answered, with what followed
 
 **"Why the procs=1? I'm very sure there was a way that was advocated for."** — REVERSED, twice.
@@ -132,3 +156,41 @@ now entitled to make, and the new reconstruction gate had never been observed re
   production competence pilot is where it is actually tested.
 - **Everything host-side**: renderer parity, ctrl 64-env memory, ibac_sni `procs=16` competence,
   Places365 full asset, the ~45 h `soda` canary (`notes/PRODUCTION-RUNBOOK.md:90`).
+
+
+## Added 2026-09-09, from the first production runs
+
+**"Why would IDAAC specifically run 1-proc on a physical env?"** — ANSWERED, and it opened a
+different question. `num_processes=1` is fidelity: A35/Q55 (commit `15b4e73`) took the whole recipe
+from `ext/idaac/raileanu21a-supp.pdf` §E, and **1 process was never tuned** — the authors' grid
+searched learning rate, minibatches, entropy and epochs, while "2048 steps, 1 process" sits beside
+γ and λ as inherited PPO-for-MuJoCo convention. **What it opened:** the same paragraph says they
+used **action repeat 4-8**, and Door runs **action repeat 1**, so a 2048-step rollout covers 4-8x
+less simulated time here. **OPEN** — see
+[`idaac-2048-steps-was-chosen-under-action-repeat-8.md`](idaac-2048-steps-was-chosen-under-action-repeat-8.md).
+Nothing is claimed to be wrong; the condition simply was not written down.
+
+**"Is the memory growth a leak?"** — ANSWERED, no. `idaac` held *exactly* 2644 MiB across 37
+samples in five hours. `ppg` is 8207 MiB in its policy phase and **26653 MiB in its auxiliary
+phase**, which is `n_pi=32` stored segments — upstream PPG's own default, not ours.
+
+**"Is packing really as bad as you concluded?"** — **REVERSED.** I withdrew packing after a pair
+reached 29910 MiB of 32494. Wrong reading: `nvidia-smi` reports the allocator's *reserved* pool, a
+fact recorded earlier in this project and not applied. The real constraint is per-family:
+`idaac`-class cells pack fine, `ppg` is a whole-card job.
+
+**"Is our allocation/reservation/pinning underutilising the GPU?"** — ANSWERED, no. 37 identical
+reserved-memory samples (no churn), rollouts already on device. The limit is **33.2 env steps/sec**
+with batch size 1 — a parallelism property, and `num_processes` is fidelity-fixed.
+
+**"What cap is right — strict enough to protect a booked user, loose enough not to fail a long run?"**
+— ANSWERED: **none, because a cap is the wrong instrument.** It is coercive (it OOMs *us*, and
+fragmentation makes late refusal likelier, where the loss is largest), it cannot see EGL buffers or
+the CUDA context, and it has in fact **never reached a trainer** — all nine `runnable/_launch/*.sh`
+clobber `PYTHONPATH`. The free-memory floor with a cooperative yield is the mechanism that works.
+See [`production-host/26-the-vram-cap-never-reached-a-trainer.md`](production-host/26-the-vram-cap-never-reached-a-trainer.md).
+
+**"Do we have checkpoint duplication or brittleness for PPG?"** — ANSWERED, brittleness, now fixed.
+ppg names by save index, so frames come from its `IC=` log lines; the fallback reconstructed
+`(stamp+1) * save_every`, which measured **off by one save and on the wrong cadence** (actual
+0/51200/100352… against 50000/100000/150000…). It now refuses and skips rather than mislabelling.
