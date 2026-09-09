@@ -227,3 +227,67 @@ def test_the_flag_does_not_override_a_failed_cell(tmp_path):
     code, out = _collect(run, tmp_path, NATIVE_ACCEPT_WATCH_STOP="1")
     assert code == 1, out
     assert "NATIVE_CELL_FAILED" in out
+
+
+# --- Added 2026-09-10: the oversized-delivery class, and the supplementary-pass marker ----------
+#
+# `records_delivery.jsonl` on card0-20260909-115331 was 1,365,573,627 bytes for 964 rows, because
+# `collect_record_delivery` stamps the run manifest onto EVERY row and that manifest inlined the
+# resource sampler's whole per-second series. The guard is on BYTES PER ROW, not total bytes: a
+# genuinely large run has many rows, so a total-size threshold would refuse it while passing a
+# small run with a bloated manifest, which is exactly backwards.
+
+def _fat_row(payload_bytes: int) -> str:
+    return json.dumps({"schema": 2, "phase": "offline-eval", "regime": "train",
+                       "baseline": "idaac", "_run_provenance": {"blob": "x" * payload_bytes}})
+
+
+def test_a_delivery_over_a_megabyte_per_row_refuses(tmp_path):
+    run = _run_dir(tmp_path, log=COMPLETED + EVALUATED,
+                   bundle=[_fat_row(1_200_000) for _ in range(3)])
+    code, out = _collect(run, tmp_path)
+    assert code == 1, out
+    assert "OVERSIZED ROWS" in out
+    assert "REFUSING at over 1 MB/row" in out
+    # The refusal must name a tool that exists, or it is worse than no refusal.
+    assert (ROOT / "scripts" / "explain_delivery_size.py").is_file()
+    assert "explain_delivery_size.py" in out
+
+
+def test_the_fat_delivery_refusal_is_overridable(tmp_path):
+    run = _run_dir(tmp_path, log=COMPLETED + EVALUATED,
+                   bundle=[_fat_row(1_200_000) for _ in range(3)])
+    code, out = _collect(run, tmp_path, NATIVE_ACCEPT_FAT_DELIVERY="1")
+    assert "OVERSIZED ROWS" in out
+    assert "REFUSING at over 1 MB/row" not in out, out
+
+
+def test_a_moderately_fat_delivery_warns_but_installs(tmp_path):
+    """34.6 KB/row is what the idaac bundle actually is; 100 KB warns without blocking."""
+    run = _run_dir(tmp_path, log=COMPLETED + EVALUATED,
+                   bundle=[_fat_row(100_000) for _ in range(3)])
+    code, out = _collect(run, tmp_path)
+    assert "OVERSIZED ROWS" in out
+    assert "REFUSING" not in out, out
+
+
+def test_a_normal_delivery_says_nothing_about_size(tmp_path):
+    run = _run_dir(tmp_path, log=COMPLETED + EVALUATED, bundle=[_row("offline-eval")])
+    code, out = _collect(run, tmp_path)
+    assert "OVERSIZED ROWS" not in out, out
+
+
+def test_a_missing_supplementary_pass_is_reported_and_does_not_refuse(tmp_path):
+    """A cell can now be collectable AND missing its mode comparison; that must be visible.
+
+    Since 2026-09-10 a failing non-native endpoint pass no longer fails the cell -- ppg-s1 lost a
+    complete 44-row native grid that way. Nothing else in this collector would mention the gap.
+    """
+    log = (COMPLETED + EVALUATED
+           + "=== NATIVE_ENDPOINT_SUPPLEMENTARY_FAILED ppg policy_mode=mode rc=1 ===\n"
+           + "=== NATIVE_ENDPOINT_SUPPLEMENTARY_INCOMPLETE ppg passes=1 ===\n")
+    run = _run_dir(tmp_path, log=log, bundle=[_row("offline-eval")])
+    code, out = _collect(run, tmp_path)
+    assert "SUPPLEMENTARY PASS MISSING" in out, out
+    assert "policy_mode=mode" in out
+    assert "REFUSING" not in out, out
