@@ -152,6 +152,29 @@ def summarize_resources(samples: dict | None) -> dict:
                 1,
             )
         ),
+        # [Claude 2026-09-10] Added when the run manifest started calling this instead of
+        # embedding the raw series. `notes/production-host/27-disk-not-vram-is-what-caps-
+        # parallelism.md` is derived from the disk floor, so a summary that dropped it would
+        # have made that note unreproducible from a delivered record.
+        "min_free_disk_gib": (
+            min(
+                (row["free_disk_gib"] for row in rows
+                 if isinstance(row.get("free_disk_gib"), (int, float))),
+                default=None,
+            )
+        ),
+        "sampled_seconds": (
+            round(rows[-1]["monotonic_seconds"] - rows[0]["monotonic_seconds"], 1)
+            if len(rows) > 1
+            and isinstance(rows[0].get("monotonic_seconds"), (int, float))
+            and isinstance(rows[-1].get("monotonic_seconds"), (int, float))
+            else None
+        ),
+        # A COUNT, never the identities. On a shared host `gpu_compute_processes` is every
+        # user's PID; the scheduling question ("was the card busy?") needs only how many.
+        "peak_gpu_compute_process_count": peak(
+            len(row.get("gpu_compute_processes") or []) for row in rows
+        ),
         "logical_cpu_count": (samples.get("host") or {}).get("logical_cpu_count"),
     }
 

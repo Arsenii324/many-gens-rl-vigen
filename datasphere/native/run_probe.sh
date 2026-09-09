@@ -2282,6 +2282,50 @@ def cell_failure_marker(path):
     return hits[-1] if hits else None
 
 
+def resource_summary(path):
+    """A SUMMARY of the sampler's series -- never the series itself.
+
+    `collect_record_delivery` stamps this manifest onto EVERY delivered row, so whatever sits
+    here is duplicated once per record. Three separate reasons it must not be the raw samples,
+    and the third is the one that matters most:
+
+    1. SIZE. On `card0-20260909-115331` the series reached 2,173,638 bytes and 616 rows carried
+       it, producing a 1,365,573,627-byte `records_delivery.jsonl` for 964 rows -- about 1.4 MB
+       per row, of which roughly 8 KB was the record. `collect-host-run.sh` sized this field at
+       "roughly 231 KB per row" against a short cell and nobody re-measured it at production
+       duration; it had grown tenfold by the time a real cell ran.
+    2. IT GROWS WITH THE RUN. The sampler appends about once a second, so a longer cell makes
+       every row bigger without bound. The 45-hour cell this fleet is scheduled around would
+       carry roughly 160,000 samples on each of its rows.
+    3. IT NAMES OTHER PEOPLE'S PROCESSES. `gpu_compute_processes` comes from `nvidia-smi
+       --query-compute-apps=pid,...`, which on a SHARED host lists every user's PIDs and their
+       GPU memory -- nine distinct foreign PIDs in that one run. Host telemetry is the right
+       place for that; every published record of a results repository is not.
+
+    Nothing is lost. The full series stays in the cell's own `resources.json`, which is where
+    the yield-watch and the packing notes already read it from. `summarize_resources` is this
+    project's existing summariser for exactly this schema, and it emits no PID at all -- so the
+    fix is to call what was already written rather than to invent a second summariser here.
+
+    Fail-closed: if the summariser cannot be imported, record THAT. Falling back to the raw
+    series would restore all three problems precisely when something is already wrong.
+    """
+    if not path.exists():
+        return None
+    try:
+        import sys as _sys
+        _here = str(Path("datasphere/native").resolve())
+        if _here not in _sys.path:
+            _sys.path.insert(0, _here)
+        from summarize_result import summarize_resources
+    except Exception as exc:                      # noqa: BLE001 -- reported, never raised
+        return {"summary_unavailable": f"{type(exc).__name__}: {exc}",
+                "series_file": "resources.json"}
+    summary = summarize_resources(read_json(path)) or {}
+    summary["series_file"] = "resources.json"     # the full series, kept in the cell directory
+    return summary
+
+
 frames_requested = int(os.environ.get("FRAMES", "10000"))
 cells = {}
 for spec in requested:
@@ -2306,7 +2350,7 @@ for spec in requested:
         "snapshot_bytes": snapshot.stat().st_size if snapshot.exists() else 0,
         "train_curve_rows": rows(directory / "train.csv"),
         "eval_curve_rows": rows(directory / "eval.csv"),
-        "resource_samples": read_json(directory / "resources.json"),
+        "resource_summary": resource_summary(directory / "resources.json"),
     }
     # A cell can emit a real completion marker and still be in `failed` -- training saved, then
     # endpoint evaluation died. `failed` is the authoritative signal; the log's own success text
