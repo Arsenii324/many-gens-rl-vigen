@@ -1587,7 +1587,7 @@ fi
 # Checked under the same PYTHONPATH the cell will run with, so this verifies the real condition
 # rather than a stricter one that happens to hold for the pip path only.
 for _mod in robosuite robosuitevgb; do
-  if ! PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/envs/robosuiteVGB:${PYTHONPATH:-}" \
+  if ! PYTHONPATH="$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/RL-ViGen-upstream/third_party/robosuite:${PYTHONPATH:-}" \
        python3 -c "import $_mod" 2>/dev/null; then
     echo "=== NATIVE_EDITABLE_IMPORT_FAILED $_mod ===" >&2
     echo "    NATIVE_VENV=${NATIVE_VENV:-<unset>}; the tree is expected at" >&2
@@ -1700,7 +1700,14 @@ fi
 # verification below refusing a production cell after eight minutes rather than after twelve hours.
 # vram_cap.py chains to whichever sitecustomize it displaces, so putting the cap first costs the
 # shim nothing.
-export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/runnable/_shim"
+# [Claude 2026-09-09] `third_party/robosuite` added. `envs/robosuiteVGB` was already here, which is
+# why `import robosuitevgb` worked from the path alone, but `robosuite` itself lived only in the
+# editable install -- so a cell running against a READ-ONLY prebuilt environment (NATIVE_VENV) had
+# no way to import it: the venv cannot be written to, and build-env.sh cannot bake the pointer
+# because the payload carries no RL-ViGen tree (it is cloned at run time). With both package roots
+# on PYTHONPATH the editable installs become an optimisation rather than a requirement, and the
+# prebuilt-environment path -- which removes pip from the cell entirely -- becomes usable.
+export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$work/RL-ViGen-upstream:$work/RL-ViGen-upstream/algos:$work/RL-ViGen-upstream/envs/robosuiteVGB:$work/RL-ViGen-upstream/third_party/robosuite:$work/runnable/_shim"
 
 # [Claude 2026-09-09] VERIFY the cap rather than announcing it. `NATIVE_VRAM_CAP_REQUESTED` was
 # printed on every run for a day while the cap was silently discarded by the PYTHONPATH assignment

@@ -94,3 +94,17 @@ def test_the_editable_import_check_uses_the_module_names_not_the_directory_names
     # And the codebase must agree that this is the importable name.
     repo_imports = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
     assert "envs/robosuiteVGB" in repo_imports, "the directory spelling should still be used for paths"
+
+
+def test_both_editable_package_roots_are_on_pythonpath():
+    """A read-only prebuilt environment cannot receive `pip install -e`, so the path must suffice.
+
+    [Claude 2026-09-09] `envs/robosuiteVGB` was on PYTHONPATH and `third_party/robosuite` was not,
+    so `robosuitevgb` imported from the path while `robosuite` existed only in the editable
+    install. That made NATIVE_VENV unusable: the venv is mounted read-only, and build-env.sh cannot
+    bake the pointer because the payload carries no RL-ViGen tree (it is cloned at run time).
+    """
+    text = PROBE
+    final = [l for l in text.splitlines() if l.startswith("export PYTHONPATH=")][-1]
+    for root in ("envs/robosuiteVGB", "third_party/robosuite"):
+        assert root in final, f"{root} missing from the runtime PYTHONPATH: {final}"
