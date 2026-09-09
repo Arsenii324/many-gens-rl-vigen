@@ -196,3 +196,34 @@ def test_an_alias_disagreeing_with_the_record_is_still_a_mismatch(tmp_path):
     code, out = _run(tmp_path, "--strict")
     assert code == 1, out
     assert _count(out, "MISMATCHED") == 1
+
+
+def test_the_delivery_bundle_is_not_counted_beside_its_own_sources(tmp_path):
+    """records_delivery.jsonl IS the concatenation; globbing both doubled every total.
+
+    Measured on card0-20260909-035152: a 553-row bundle audited as 1,106 records.
+    """
+    blob = b"w"
+    (tmp_path / "agent-robosuite:Door-idaac-s101_100352.pt").write_bytes(blob)
+    row = {"baseline": "idaac", "regime": "train",
+           "checkpoint_sha256": _sha(blob), "frame": 100352}
+    cells = tmp_path / "cells" / "idaac-s101"
+    cells.mkdir(parents=True)
+    (cells / "offline_eval_curve.jsonl").write_text(json.dumps(row) + "\n")
+    (tmp_path / "records_delivery.jsonl").write_text(json.dumps(row) + "\n")
+    code, out = _run(tmp_path)
+    assert code == 0, out
+    assert "1 record(s)" in out, f"the bundle must not be counted beside its sources:\n{out}"
+    assert _count(out, "corroborated") == 1
+
+
+def test_a_bundle_alone_is_still_audited(tmp_path):
+    """Skipping the bundle must not mean skipping it when it is all there is."""
+    blob = b"w"
+    (tmp_path / "agent-robosuite:Door-idaac-s101_100352.pt").write_bytes(blob)
+    (tmp_path / "records_delivery.jsonl").write_text(json.dumps(
+        {"baseline": "idaac", "regime": "train",
+         "checkpoint_sha256": _sha(blob), "frame": 100352}) + "\n")
+    code, out = _run(tmp_path)
+    assert code == 0, out
+    assert _count(out, "corroborated") == 1, out

@@ -114,7 +114,24 @@ def _save_lines(root: pathlib.Path) -> tuple[dict[str, int], list[tuple[str, int
 
 
 def _records(target: pathlib.Path) -> list[dict]:
-    files = [target] if target.is_file() else sorted(target.rglob("*.jsonl"))
+    """Every record under `target`, counting each row ONCE.
+
+    [Claude 2026-09-09] `records_delivery.jsonl` is by construction the concatenation of
+    `records.jsonl` and every `cells/*/offline_eval_*.jsonl`. Globbing all of them counted each row
+    twice: a 553-row bundle audited as **1,106 records**, with corroborated and unverifiable both
+    doubled. The per-row verdicts were right and every total was wrong, which is the worse failure —
+    a reader checks the totals.
+
+    So when the bundle and its own sources are both present, the bundle is skipped: the sources are
+    the primary artifact and the bundle adds no row they do not have.
+    """
+    if target.is_file():
+        files = [target]
+    else:
+        files = sorted(target.rglob("*.jsonl"))
+        sources = [f for f in files if f.name != "records_delivery.jsonl"]
+        if sources and len(sources) < len(files):
+            files = sources
     rows = []
     for f in files:
         for line in f.read_text(errors="replace").splitlines():

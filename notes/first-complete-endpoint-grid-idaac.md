@@ -114,3 +114,53 @@ This is exactly the **standalone evaluation from a previous cell's checkpoint** 
 names as the one unproven piece of the train-then-evaluate-separately shape. Running it on two rows
 we need anyway proves the wiring at negligible cost, and the check is direct: the recovered rows must
 carry the same `evaluator_revision` as the 42 that preceded them.
+
+---
+
+# Rehearsal finding: the endpoint's frame label cannot be corroborated, and that is structural
+
+Rehearsed the whole collection sequence on a pre-fetched copy at 18:10, before the cell was stopped.
+It works end to end — assemble, collect under `NATIVE_ACCEPT_WATCH_STOP=1`, both audits — and it
+found two things.
+
+## 1. The auditor was double-counting, and only the totals were wrong
+
+It reported **1,106 records for a 553-row bundle**. `records_delivery.jsonl` is by construction the
+concatenation of `records.jsonl` and every `cells/*/offline_eval_*.jsonl`, and the auditor globbed
+all of them, so each row was counted twice. **Every per-row verdict was right and every total was
+doubled** — the worse way round, because a reader checks the totals. Fixed: when the bundle and its
+own sources are both present the bundle is skipped, and a bundle alone is still audited. Two tests.
+
+## 2. Every endpoint row is UNVERIFIABLE, and no amount of auditing fixes it
+
+Corrected counts on the real cell:
+
+| | rows | verdict |
+|---|---:|---|
+| curve | **484** | **corroborated** — each measured a frame-named checkpoint |
+| endpoint, `native`/sample | 44 | **unverifiable** |
+| endpoint, `mode` | 25 | **unverifiable** |
+
+The endpoint evaluates **`snapshot.pt` at frame 598,016**. The retained frame-named checkpoints stop
+at **550,912** — `agent-robosuite:Door-idaac-s101_51200.pt` … `_550912.pt`, eleven files. **There is
+no `_598016.pt`**, so the alias mechanism that corroborates an unnamed file through a byte-identical
+twin has no twin to find, and the frame on the project's *headline* measurement rests on a single
+producer.
+
+**This is not a defect in the audit; it is a gap in what the run retains.** And it applies to every
+host run, not this one: the terminal checkpoint is always written as `snapshot.pt` and the frame-named
+series always stops at the last periodic save.
+
+### The fix, for the next run, and it is small
+
+Retain the terminal checkpoint **under its frame name as well** — `..._598016.pt` beside
+`snapshot.pt`, same bytes. Then the existing alias path corroborates all 88 endpoint rows for free,
+and nothing else changes: the evaluator still loads `snapshot.pt`, the record still carries its
+`checkpoint_sha256`, and `audit_record_frame_provenance.py` finds the twin and matches the name.
+
+Cost: one extra 4.8 MB file per cell, against 53 MB of retained checkpoints already there.
+
+**Until that lands, read the endpoint tables as measured-but-unlabelled**: the numbers are real and
+the checkpoint hash is recorded, but *which frame produced them* is asserted by the runner rather
+than corroborated by a second producer. The curve, which is 484 of the 553 rows, is fully
+corroborated.
