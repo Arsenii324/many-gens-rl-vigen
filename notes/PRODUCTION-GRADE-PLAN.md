@@ -46,17 +46,41 @@ the owner's; this is the plan I would run.
 some of its 36 cells have to be repeated. As of tonight a `ppg` re-run is already owed for exactly
 this reason.
 
-### Step 1 — collect `ppg` (in progress, ~01:20)
-Nothing that moves an evaluator revision may be touched until its records are installed.
+### Step 1 — `ppg` finished; both cells carry a complete primary result — **done 2026-09-10**
 
-### Step 2 — one revision bump carrying three changes
-Landing these separately costs three re-attestations of seven families; together, one.
+`ppg-s1` ended `NATIVE_CELL_FAILED` and **its native endpoint grid is complete**: 44/44 rows, as is
+`idaac-s101`'s. Only the supplementary `mode` pass was lost (ppg 0/44, idaac 41/44). Numbers,
+validity and the floor comparison are in
+[`two-endpoint-grids-and-the-unit-of-variation.md`](two-endpoint-grids-and-the-unit-of-variation.md)
+and [`both-endpoint-grids-against-the-random-floor.md`](both-endpoint-grids-against-the-random-floor.md).
+`sha256(snapshot.pt)` equals the `checkpoint_sha256` on every one of those rows for both cells, so
+any later evaluation of those bytes is commensurable with them by construction.
 
-| change | defect it closes | member |
-|---|---|---|
-| episode id gains `eval_scope` + `eval_policy_mode` | 760 of 2,120 ids collide, all reporting different returns | `scripts/eval_grid.py` (CODE) |
-| `ppg` `nminibatch` — assert like `idaac` does | executed config was not the declared one, silently | `runnable/ppg/…` (FAMILY_RUNTIME) |
-| write a frame-0 checkpoint | no family has a measured random floor, so "did it learn" is a judgement | family runtimes |
+**Not yet installed into `results/records/`.** ppg's `records_delivery.jsonl` is 1.27 GB for 964
+rows (see below); installing it as-is would import the defect. Options are to regenerate the bundle
+on the host under the fixed runner, or to install from sources with an explicit provenance marker.
+**Left as a decision rather than guessed at**, because a mislabelled bundle is worse than a
+missing one.
+
+### Step 2 — one revision bump, now carrying five changes
+Landing these separately costs five re-attestations of seven families; together, one. Three were
+implemented on 2026-09-10 and are **in the working tree awaiting the bump**; two remain.
+
+| change | defect it closes | member | state |
+|---|---|---|---|
+| `ppg` mode eval under `no_grad` | killed a 3.6 h cell; bypassed `PpoModel.act`'s `@tu.no_grad` | `scripts/eval_grid.py` (CODE) | **done** |
+| row states the action rule it *used* | 41 rows labelled `sample` were `mode`; the closure audit read the wrong field | `datasphere/native/normalize_curves.py` (CODE) | **done** |
+| episode id gains `eval_scope` + `eval_policy_mode` | 760 of 2,120 ids collide, all reporting different returns | `scripts/eval_grid.py` (CODE) | **done** — subsumed by the label fix; verify against a fresh cell |
+| `runtime_import_manifest` → digest per row, manifest to a sidecar | 74 % of a 19.7 MB bundle; 2 distinct values over 569 rows; nothing reads it | `scripts/eval_grid.py` (CODE) | open |
+| `ppg` `nminibatch` — assert like `idaac` does | executed config was not the declared one, silently | `runnable/ppg/…` (FAMILY_RUNTIME) | open |
+| write a frame-0 checkpoint | no family has a measured **initialised-network** floor | family runtimes | open — but see below |
+
+**The frame-0 item is no longer blocking interpretation.** C55's random-**action** floor (1.842,
+`rlvigen_reference.py:87`) applies to these grids and survives the closure change, because
+`probe_floor.py` never reads the observation and so is invariant to every axis that moved the
+revision. Both cells are 6.2×–18.3× it. What frame-0 would add is the *initialised network's* floor,
+a different question. It needs a per-family trainer change, since `eval_grid.py` unpickles agents
+and cannot construct one.
 
 ### Step 3 — re-attest, then verify on one short cell
 `production_gates.py` back to 7/7, then a single short cell checked with
