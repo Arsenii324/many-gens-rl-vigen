@@ -167,6 +167,19 @@ simultaneously; not derivable from any single document.
   — the five external reviews, item by item, against the tree. **Historical: carries a status stamp
   of what has since been fixed. Do not read the bodies as live defect lists.**
 
+- [`two-endpoint-grids-and-the-unit-of-variation.md`](two-endpoint-grids-and-the-unit-of-variation.md)
+  — **the first two production endpoint grids on the V100**, `idaac-s101` and `ppg-s1`. Both cells
+  read `NATIVE_CELL_FAILED` and both carry a complete, valid result on the native estimand (44/44
+  rows each, 800 episode ids each, placements paired, resets 200/200 reproducible). Also: why an SE
+  across pooled episodes is the wrong denominator, and the `conventions.eval_policy_mode` mislabel
+  that made an earlier table pool two estimands.
+- [`both-endpoint-grids-against-the-random-floor.md`](both-endpoint-grids-against-the-random-floor.md)
+  — those grids against C55's random-action floor: **6.2×–18.3×**, zero task successes anywhere, and
+  the argument for why that floor survives a closure change when policy results do not.
+- [`first-complete-endpoint-grid-idaac.md`](first-complete-endpoint-grid-idaac.md) — the earlier
+  idaac-only write-up. **Carries an inline correction**: its SE column and its "400 episodes" are
+  both wrong, for the two reasons above.
+
 ### 5b. Current exhaustive source-review inputs — **evidence to reconcile, not a replacement for the authority surfaces**
 
 - [`PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`](PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md) —
