@@ -85,3 +85,27 @@ def test_finiteness_is_checked_before_paid_offline_evaluation():
     curve = RUNNER.index('run_curve_eval_with_policy "$cell_out"')
     endpoint = RUNNER.index('run_endpoint_eval "$cell_out"')
     assert retain < finite < curve < endpoint
+
+
+def test_the_endpoint_stamps_the_terminal_checkpoint_with_its_frame():
+    """Without this every endpoint row is UNVERIFIABLE for frame provenance.
+
+    Measured on card0-20260909-035152: 484 curve rows corroborated and all 85 endpoint rows
+    unverifiable, because the endpoint evaluates `snapshot.pt` whose name carries no frame while the
+    frame-named series stops at the last periodic save. A byte-identical `snapshot_<frame>.pt`
+    written BY THE RUNNER, from the frame it computed, gives the auditor's alias path a twin to read.
+
+    It must be written at EVALUATION time, not at collection time: a collector creating it from the
+    record's own frame would manufacture the second producer the audit exists to find.
+    """
+    text = (pathlib.Path(__file__).resolve().parents[1]
+            / "datasphere" / "native" / "run_probe.sh").read_text()
+    body = text[text.index("run_endpoint_eval() {"):]
+    body = body[:body.index("\nrun_curve_eval")] if "\nrun_curve_eval" in body else body[:8000]
+    assert 'stamped="$cell_out/snapshot_${frame}.pt"' in body, "the stamp must use the endpoint frame"
+    assert "NATIVE_ENDPOINT_STAMPED_SNAPSHOT" in body
+    assert "NATIVE_ENDPOINT_STAMP_FAILED" in body, "a failed stamp must be announced"
+    # Non-fatal: an uncorroborated endpoint beats no endpoint.
+    stamp_block = body[body.index('stamped="$cell_out'):]
+    stamp_block = stamp_block[:stamp_block.index("fi\n  fi") + 8]
+    assert "return 1" not in stamp_block, "a failed stamp must not abort the evaluation"

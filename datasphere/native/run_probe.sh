@@ -1014,6 +1014,34 @@ run_endpoint_eval() {
     echo "=== NATIVE_ENDPOINT_EVAL_NO_CHECKPOINT $baseline ===" >&2
     return 1
   fi
+  # [Claude 2026-09-09] STAMP THE TERMINAL CHECKPOINT WITH ITS FRAME, so the endpoint's row labels
+  # can be corroborated at all.
+  #
+  # Measured on card0-20260909-035152: every CURVE row corroborates, because the curve evaluates
+  # `..._<frame>.pt` files and `scripts/audit_record_frame_provenance.py` reads the frame out of the
+  # trainer's own filename -- two independent producers agreeing. Every ENDPOINT row came back
+  # UNVERIFIABLE, because the endpoint evaluates `snapshot.pt`, whose name carries no frame, and the
+  # frame-named series stops at the last periodic save (550,912 there, against an endpoint at
+  # 598,016). **The project's headline measurement was the one whose frame nothing could check.**
+  #
+  # A byte-identical copy under `snapshot_<frame>.pt` fixes it with no change to what is evaluated:
+  # the evaluator still loads `snapshot.pt`, the record still carries the same `checkpoint_sha256`,
+  # and the auditor's alias path finds the twin and reads the frame from its name. The
+  # `snapshot_<frame>.pt` spelling is not invented here -- `scripts/eval_grid.py:1352` already
+  # recognises it as the P18 stamped form.
+  #
+  # Cost: one 4.8 MB file per cell against ~53 MB of retained checkpoints already there. A failure
+  # to copy is a WARNING, never fatal: an uncorroborated endpoint is worse than a corroborated one
+  # and far better than no endpoint at all.
+  local stamped="$cell_out/snapshot_${frame}.pt"
+  if [[ ! -e "$stamped" ]]; then
+    if cp "$snapshot" "$stamped" 2>/dev/null; then
+      echo "=== NATIVE_ENDPOINT_STAMPED_SNAPSHOT $(basename "$stamped") ==="
+    else
+      echo "=== NATIVE_ENDPOINT_STAMP_FAILED $(basename "$stamped"): endpoint rows will be" >&2
+      echo "    UNVERIFIABLE for frame provenance; the evaluation itself is unaffected ===" >&2
+    fi
+  fi
   # [Claude 2026-09-07, DECISION-SHEET A25 addendum] The endpoint grid runs once per requested
   # POLICY MODE, the same shape `run_offline_eval` already uses for OFFLINE_EVAL_DEVICES.
   #
