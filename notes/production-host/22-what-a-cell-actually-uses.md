@@ -114,3 +114,33 @@ Consequence for packing arithmetic: the GPU-memory column in the table above was
 *uncapped* `idaac` at 831 MiB and an uncapped `ppg` at 8207 MiB. `ppg` is roughly **10x** `idaac`
 on VRAM, so a packed set must be sized from per-family measurements, not from one family's figure
 multiplied by N.
+
+
+## How many processes a cell puts on the card, measured 2026-09-09
+
+**Two packed cells produce SIX compute processes.** Confirmed while we were the only user on the
+box: `nvidia-smi --query-compute-apps` reported 6 with card 0 at 3689 MiB and 18% utilisation, and
+the same run logged `NATIVE_VRAM_CAP_APPLIED` **24 times** — 24 interpreter starts.
+
+`families.json` declares `num_processes: 1` for `idaac` and `num_envs: 1` for `ppg`. Both are true
+and neither predicts this: the extra processes come from what robosuite, EGL and each trainer fork
+underneath, not from anything the configuration names.
+
+**This killed two production launches before it was understood.** The yield daemon counted
+processes against `--expect-ours`, derived from the cell list as 2, saw 6, and stopped both healthy
+cells at ~90 seconds — twice — while 28794 MiB of 32494 was free and utilisation was 21%. The
+assumption was corrected three times before the signal itself was questioned:
+
+| version | assumption | how it failed |
+|---|---|---|
+| first | ours is one process per RUN | packed run yielded to its own second cell |
+| second | ours is one process per CELL | packed run yielded to its own forked workers |
+| third | not countable in advance | process trigger made opt-in; memory floor is the trigger |
+
+The lesson is not the number. It is that **a signal which needs a correct constant to be safe, and
+whose correct constant is a property of somebody else's fork behaviour, is the wrong signal.**
+Memory is the right one: it measures the harm directly (the process that asks the driver second is
+the one that OOMs), needs no constant, and cannot be wrong about who owns what.
+
+`watch_card_exclusivity.py` still counts processes and still reports co-tenancy loudly. Seeing a
+neighbour arrive is useful; stopping a twelve-hour run over an uncountable proxy is not.
