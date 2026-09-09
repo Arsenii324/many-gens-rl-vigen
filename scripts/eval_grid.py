@@ -592,6 +592,58 @@ def _ppg_setup() -> None:
         sys.path.insert(0, str(path))
 
 
+def ppg_mode_act_fn(agent):
+    """The deterministic action rule for ppg, as a module-level function so it can be TESTED.
+
+    `PpoModel.act` draws `pd.sample()` and this repo ships no deterministic path to call instead,
+    so `mode` is implemented HERE, in our harness, rather than by editing `runnable/ppg` -- the
+    same principle as every other evaluator delta. The continuous head is
+    `torch.distributions.Normal` (`distr_builder.py:28`), whose mode is its mean; `pd.mean` rather
+    than `pd.mode()` because the latter is not in every torch version this project pins.
+
+    ## The `no_grad` is load-bearing, and its absence killed a production cell
+
+    `runnable/ppg/phasic_policy_gradient/ppg.py:26` decorates the method this replaces:
+
+        @tu.no_grad
+        def act(self, ob, first, state_in):
+
+    Calling `_model(...)` invokes `forward` and therefore bypasses that decorator. `Roller` hands
+    the action to `venv.act`, which reaches `torch_util.th2np` -> `tharr.cpu().numpy()`, and on a
+    tensor that still carries grad torch raises:
+
+        RuntimeError: Can't call numpy() on Tensor that requires grad.
+                      Use tensor.detach().numpy() instead.
+
+    That is what ended `ppg-s1` on `card0-20260909-115331` after 3.6 hours of training and 572
+    curve rows: the SAMPLED endpoint pass completed 44 rows because `agent.act` carried the
+    decorator, then the MODE pass died 9 seconds in because this override did not.
+
+    So the rule is narrower than "add no_grad somewhere": **an override that stands in for a
+    decorated method must carry that method's decorator.** Two hundred lines above,
+    `run_scene_idaac` already does the equivalent -- idaac's `act` is undecorated
+    (`ppo_daac_idaac/model.py:332`) and the harness supplies `with torch.no_grad():` itself. ppg
+    was the one family where the harness substituted for the vendored method and dropped what
+    came with it. `ibac_sni` is unaffected: its `Agent.get_actions` holds its own `no_grad`
+    (`torch_rl/utils/agent.py:25`).
+
+    `torch.no_grad()` rather than the vendored `tu.no_grad` decorator only because
+    `tu.no_grad = contextmanager_to_decorator(th.no_grad)` (`torch_util.py:125`) -- they are the
+    same object, and this spelling needs no import ordering to be correct.
+    """
+    def act_fn(ob, first, state_in, _model=agent):
+        import torch                      # module-scope in this file it is NOT; see line 153 etc.
+        from phasic_policy_gradient import tree_util as _tu
+        with torch.no_grad():
+            pd, _vpred, _aux, state_out = _model(
+                ob=_tu.tree_map(lambda x: x[:, None], ob), first=first[:, None],
+                state_in=state_in)
+            deterministic = pd.mean
+            return (_tu.tree_map(lambda x: x[:, 0], deterministic), state_out,
+                    dict(vpred=_vpred[:, 0], logp=_vpred[:, 0] * 0.0))
+    return act_fn
+
+
 def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None, policy_mode="native"):
     """One (regime, scene) cell for ppg, through PPG's own Roller and VecMonitor2.
 
@@ -637,22 +689,9 @@ def run_scene_ppg(agent, task, scene_id, mode, episodes, seed, frame_stack=None,
     # callback signature and avoids moving a CUDA tensor to CPU solely for diagnostics.
     venv.act = _observed_venv_act
     try:
-        # [Claude 2026-09-07, A25 addendum] PpoModel.act draws `pd.sample()` and this repo ships no
-        # deterministic path to call instead, so `mode` is implemented HERE, in our harness, rather
-        # than by editing runnable/ppg -- the same principle as every other evaluator delta. The
-        # continuous head is torch.distributions.Normal (distr_builder.py:28), whose mode is its
-        # mean; `pd.mean` rather than `pd.mode()` because the latter is not in every torch version
-        # this project pins.
-        act_fn = agent.act
-        if policy_mode == "mode":
-            def act_fn(ob, first, state_in, _model=agent):
-                from phasic_policy_gradient import tree_util as _tu
-                pd, _vpred, _aux, state_out = _model(
-                    ob=_tu.tree_map(lambda x: x[:, None], ob), first=first[:, None],
-                    state_in=state_in)
-                deterministic = pd.mean
-                return (_tu.tree_map(lambda x: x[:, 0], deterministic), state_out,
-                        dict(vpred=_vpred[:, 0], logp=_vpred[:, 0] * 0.0))
+        # A25 addendum: `mode` is implemented in our harness rather than in runnable/ppg. The
+        # rationale, and the no_grad that a production cell died without, are in ppg_mode_act_fn.
+        act_fn = ppg_mode_act_fn(agent) if policy_mode == "mode" else agent.act
 
         roller = Roller(venv=venv, act_fn=act_fn, initial_state=agent.initial_state(1),
                         keep_buf=max(100, episodes))
