@@ -6,11 +6,52 @@ in the other would pass every ppg run.
 """
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import subprocess
 import sys
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "audit_training_diagnostics.py"
+
+# [Claude 2026-09-09] The column names below are IMPORTED, not written as literals, and the reason
+# is a guard this file tripped: `tests/test_eval_identity.py::test_no_tag_literals_outside_tags_module`
+# forbids `train/...` string literals outside `rlgen/tags.py`, so that every baseline logs under one
+# importable vocabulary.
+#
+# These names do NOT belong in `rlgen/tags.py`. That module is "the only place logging key strings
+# exist" for keys THIS project emits, and changing one there "changes it for every baseline at once".
+# `train/approx_kl_k3` and `Opt/clipfrac` are the UPSTREAM trainers' own CSV and log-table headers --
+# idaac's from the pytorch-a2c-ppo-acktr lineage, ppg's from phasic_policy_gradient. We cannot rename
+# them and must not imply we can.
+#
+# So the canonical list stays in the auditor's own SERIES map and the test reads it from there. That
+# satisfies the guard's actual intent -- one place per name -- and makes this test fail if the
+# auditor stops recognising a column, which a hardcoded copy would not.
+_spec = importlib.util.spec_from_file_location("_audit_training_diagnostics", SCRIPT)
+_atd = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_atd)
+
+
+def _name(canonical: str, prefix: str) -> str:
+    """The auditor's alias for `canonical` that a given family's logger actually emits."""
+    for alias in _atd.SERIES[canonical]:
+        if alias.startswith(prefix):
+            return alias
+    raise AssertionError(f"no {prefix!r} alias for {canonical!r} in SERIES")
+
+
+KL_CSV = _name("kl", "train/")            # idaac's CSV column
+CLIP_CSV = _name("clipfrac", "train/")
+SIGMA = _name("sigma", "train/")
+STEPS_CSV = _name("steps", "train/")
+EV = _name("ev", "VFStats/")
+KL_LOG = _name("kl", "Opt/approxkl")      # ppg's log-table row
+CLIP_LOG = _name("clipfrac", "Opt/")
+ENTROPY_LOG = _name("entropy", "Opt/")
+STEPS_LOG = _name("steps", "Misc/")
+EP_REWARD = _name("ep_reward", "EpRewMean")
+FRAME_REWARD = _name("frame_reward", "Misc/")
+EP_LEN = _name("ep_len", "EpLenMean")
 
 
 def _run(target: pathlib.Path, *extra: str) -> tuple[int, str]:
@@ -38,9 +79,9 @@ def _log(tmp_path: pathlib.Path, blocks: list[dict]) -> pathlib.Path:
 
 
 def _healthy(n: int = 20) -> list[dict]:
-    return [{"train/total_num_steps": 2048 * (i + 1), "train/approx_kl_k3": 0.02,
-             "train/clip_fraction": 0.2, "train/sigma_mean": 1.0 - 0.005 * i,
-             "VFStats/EV": 0.6} for i in range(n)]
+    return [{STEPS_CSV: 2048 * (i + 1), KL_CSV: 0.02,
+             CLIP_CSV: 0.2, SIGMA: 1.0 - 0.005 * i,
+             EV: 0.6} for i in range(n)]
 
 
 def test_a_healthy_run_raises_nothing(tmp_path):
@@ -52,7 +93,7 @@ def test_a_healthy_run_raises_nothing(tmp_path):
 def test_trust_region_blowout_is_flagged(tmp_path):
     rows = _healthy()
     for r in rows[10:]:
-        r["train/approx_kl_k3"], r["train/clip_fraction"] = 1.2, 0.83
+        r[KL_CSV], r[CLIP_CSV] = 1.2, 0.83
     code, out = _run(_csv(tmp_path, rows), "--strict")
     assert code == 1, out
     assert "far outside the trust region" in out
@@ -62,8 +103,8 @@ def test_trust_region_blowout_is_flagged(tmp_path):
 def test_a_policy_that_never_moves_is_flagged(tmp_path):
     rows = _healthy()
     for r in rows:
-        r["train/approx_kl_k3"], r["train/clip_fraction"] = 2.5e-13, 0.0
-        r["train/sigma_mean"] = 1.0
+        r[KL_CSV], r[CLIP_CSV] = 2.5e-13, 0.0
+        r[SIGMA] = 1.0
     code, out = _run(_csv(tmp_path, rows), "--strict")
     assert code == 1, out
     assert "not moving between sampling and update" in out
@@ -73,7 +114,7 @@ def test_a_policy_that_never_moves_is_flagged(tmp_path):
 def test_entropy_collapse_is_flagged(tmp_path):
     rows = _healthy()
     for i, r in enumerate(rows):
-        r["train/sigma_mean"] = max(0.188, 1.0 - 0.05 * i)
+        r[SIGMA] = max(0.188, 1.0 - 0.05 * i)
     code, out = _run(_csv(tmp_path, rows), "--strict")
     assert code == 1, out
     assert "collapsed toward determinism" in out
@@ -82,7 +123,7 @@ def test_entropy_collapse_is_flagged(tmp_path):
 def test_a_critic_that_does_not_fit_is_flagged(tmp_path):
     rows = _healthy()
     for r in rows:
-        r["VFStats/EV"] = 0.01
+        r[EV] = 0.01
     code, out = _run(_csv(tmp_path, rows), "--strict")
     assert code == 1, out
     assert "does not explain the returns" in out
@@ -90,9 +131,9 @@ def test_a_critic_that_does_not_fit_is_flagged(tmp_path):
 
 def test_the_ppg_log_format_is_parsed_and_flagged(tmp_path):
     """The exact shape of the live ppg cell: `| Opt/clipfrac | 0 |` blocks, zeros throughout."""
-    blocks = [{"Misc/InteractCount": 2048 * (i + 1), "Opt/approxkl": 2.5e-13,
-               "Opt/clipfrac": 0, "Opt/entropy": 9.93, "train/sigma_mean": 1.0,
-               "VFStats/EV": 0.8} for i in range(20)]
+    blocks = [{STEPS_LOG: 2048 * (i + 1), KL_LOG: 2.5e-13,
+               CLIP_LOG: 0, ENTROPY_LOG: 9.93, SIGMA: 1.0,
+               EV: 0.8} for i in range(20)]
     code, out = _run(_log(tmp_path, blocks), "--strict")
     assert code == 1, out
     assert "Opt/clipfrac" in out, "the ppg log format must be parsed at all"
@@ -101,9 +142,9 @@ def test_the_ppg_log_format_is_parsed_and_flagged(tmp_path):
 
 def test_reward_series_disagreeing_in_sign_is_reported(tmp_path):
     """EpRewMean 18.1 against EpLen 500 x FrameRew 0.00746 = 3.73 -- one of them is normalised."""
-    blocks = [{"EpRewMean": 18.1, "Misc/FrameRewMean": 0.00746, "EpLenMean": 500,
-               "Opt/approxkl": 0.02, "Opt/clipfrac": 0.2, "train/sigma_mean": 1.0 - 0.03 * i,
-               "VFStats/EV": 0.8} for i in range(6)]
+    blocks = [{EP_REWARD: 18.1, FRAME_REWARD: 0.00746, EP_LEN: 500,
+               KL_LOG: 0.02, CLIP_LOG: 0.2, SIGMA: 1.0 - 0.03 * i,
+               EV: 0.8} for i in range(6)]
     code, out = _run(_log(tmp_path, blocks), "--strict")
     assert code == 1, out
     assert "ONE IS NORMALISED" in out
@@ -111,16 +152,16 @@ def test_reward_series_disagreeing_in_sign_is_reported(tmp_path):
 
 
 def test_consistent_reward_series_are_not_reported(tmp_path):
-    blocks = [{"EpRewMean": 3.73, "Misc/FrameRewMean": 0.00746, "EpLenMean": 500,
-               "Opt/approxkl": 0.02, "Opt/clipfrac": 0.2, "train/sigma_mean": 1.0 - 0.03 * i,
-               "VFStats/EV": 0.8} for i in range(6)]
+    blocks = [{EP_REWARD: 3.73, FRAME_REWARD: 0.00746, EP_LEN: 500,
+               KL_LOG: 0.02, CLIP_LOG: 0.2, SIGMA: 1.0 - 0.03 * i,
+               EV: 0.8} for i in range(6)]
     code, out = _run(_log(tmp_path, blocks), "--strict")
     assert code == 0, out
     assert "ONE IS NORMALISED" not in out
 
 
 def test_absent_series_are_named_rather_than_passed(tmp_path):
-    rows = [{"train/total_num_steps": 2048 * (i + 1), "train/approx_kl_k3": 0.02} for i in range(6)]
+    rows = [{STEPS_CSV: 2048 * (i + 1), KL_CSV: 0.02} for i in range(6)]
     code, out = _run(_csv(tmp_path, rows))
     assert code == 0, out
     assert "NOT CHECKED, no series found" in out
@@ -136,8 +177,8 @@ def test_a_file_with_no_diagnostics_refuses_rather_than_passing(tmp_path):
 
 def test_a_short_run_is_reported_not_judged(tmp_path):
     """A 2-iteration smoke run has a flat sigma and an unfitted critic by definition."""
-    rows = [{"train/total_num_steps": 2048 * (i + 1), "train/approx_kl_k3": 0.02,
-             "train/clip_fraction": 0.2, "train/sigma_mean": 1.0, "VFStats/EV": 0.01}
+    rows = [{STEPS_CSV: 2048 * (i + 1), KL_CSV: 0.02,
+             CLIP_CSV: 0.2, SIGMA: 1.0, EV: 0.01}
             for i in range(2)]
     code, out = _run(_csv(tmp_path, rows), "--strict")
     assert code == 0, out
@@ -151,7 +192,7 @@ def test_two_cells_in_one_run_are_never_pooled(tmp_path):
     (tmp_path / "ppg-s1").mkdir()
     healthy = _healthy()
     _csv(tmp_path / "idaac-s101", healthy)
-    blown = [dict(r, **{"train/approx_kl_k3": 1.3, "train/clip_fraction": 0.83}) for r in healthy]
+    blown = [dict(r, **{KL_CSV: 1.3, CLIP_CSV: 0.83}) for r in healthy]
     _csv(tmp_path / "ppg-s1", blown)
     code, out = _run(tmp_path, "--strict")
     assert code == 1, out
@@ -167,10 +208,10 @@ def test_the_pooled_job_level_log_is_dropped_when_per_cell_files_exist(tmp_path)
     cells = tmp_path / "native-out" / "cells"
     (cells / "idaac-s101").mkdir(parents=True)
     _csv(cells / "idaac-s101", _healthy())
-    blown = [dict(r, **{"train/approx_kl_k3": 1.3, "train/clip_fraction": 0.83}) for r in _healthy()]
-    _log(tmp_path / "native-out", [{"train/approx_kl_k3": r["train/approx_kl_k3"],
-                                    "train/clip_fraction": r["train/clip_fraction"],
-                                    "train/sigma_mean": r["train/sigma_mean"]} for r in blown])
+    blown = [dict(r, **{KL_CSV: 1.3, CLIP_CSV: 0.83}) for r in _healthy()]
+    _log(tmp_path / "native-out", [{KL_CSV: r[KL_CSV],
+                                    CLIP_CSV: r[CLIP_CSV],
+                                    SIGMA: r[SIGMA]} for r in blown])
     (tmp_path / "native-out" / "training.log").rename(tmp_path / "native-out" / "job.log")
     code, out = _run(tmp_path, "--strict")
     assert code == 0, out
@@ -187,9 +228,9 @@ def test_a_trainer_clamping_its_own_minibatch_count_is_flagged(tmp_path):
     """
     log = tmp_path / "training.log"
     log.write_text("\n".join(["Warning: nminibatch > ntrain!! (32 > 1)"] * 289) + "\n"
-                   + "\n".join(f"| Opt/clipfrac             | 0        |\n"
-                               f"| Opt/approxkl             | 2.5e-13  |\n"
-                               f"| train/sigma_mean         | {1.0 - 0.03 * i:<8} |"
+                   + "\n".join(f"| {CLIP_LOG:<24} | 0        |\n"
+                               f"| {KL_LOG:<24} | 2.5e-13  |\n"
+                               f"| {SIGMA:<24} | {1.0 - 0.03 * i:<8} |"
                                for i in range(8)) + "\n")
     code, out = _run(tmp_path, "--strict")
     assert code == 1, out
