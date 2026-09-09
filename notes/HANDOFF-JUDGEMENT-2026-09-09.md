@@ -118,3 +118,71 @@ The opposite is also true and less comfortable: **three of this session's mechan
 while doing nothing** — the pip cache twice, the VRAM cap for its entire existence. All three were
 mine, all three were caught only by measuring the effect rather than reading the log. Assume the
 next one exists and has not been caught yet.
+
+---
+
+# Addendum, same day, after the first two production cells completed
+
+§1 above catalogues **one** failure shape — a bound asserted from samples taken inside a single
+regime. The hours after it was written produced **two more, both distinct from it and from each
+other**, and naming them is worth more than the individual corrections.
+
+## Shape 2: reading a scale as a result
+
+Twice, an hour apart:
+
+- **"`idaac` did not learn Door"** — because its curve ended where it began. A random policy scores
+  **2.0** on that axis; `idaac` reached **12-25x** it. The real finding was a *plateau after fast
+  early learning*, which is nearly the opposite and far more useful, and it needed one number I had
+  not measured.
+- **"the gap to RL-ViGen's own algorithms is real"** — reasoning from Figure 22's 0-500 y-axis.
+  That is the **plot's range**. Neither vendored PDF reports a numeric Door return anywhere; the
+  results live inside figures. The claim had to be withdrawn outright.
+
+**Both errors made our work look worse than the evidence supported.** That is the direction that
+survives review, because it reads as appropriate modesty. Watch for it specifically.
+
+The guard is cheap: before writing "X is N% of Y" or "X failed", say what Y *is* and where it came
+from. If Y is an axis bound, a configured maximum, or a number never seen reported, the comparison
+is not available. And **measure the floor** — a curve without a random baseline cannot distinguish
+"did not learn" from "plateaued high".
+
+## Shape 3: claiming novelty I am structurally unable to check
+
+**Three times in one session**, I nearly published as new something the codebase already documented,
+in two cases better than I was about to:
+
+- **`eval-hard` above `eval-medium`**, 8 SE apart at every stamp. `rlgen/protocol.py:30-35` already
+  said the modes differ in *which* nuisance factors are active rather than in magnitude, that the
+  ordering does not imply rank-ordered returns, and that a sibling project saw 3 of 12 ordered.
+- **"no durable second location exists on this host"** — `run_on_production_host.sh:405-437` already
+  counted filesystems that could hold a result, already drew the second-copy versus
+  second-failure-domain distinction, and already called it an owner-level property.
+- **A plan item I called unimplemented** that `families.json` already covered.
+
+An agent writing from its own context **cannot** check breadth. "Nobody has noticed this" is not a
+claim I can make. `python scripts/where_is_this_decided.py <term>` costs seconds, and when the
+codebase already covers it the right output is smaller and better: **cite the existing treatment and
+add only the new data point.**
+
+*(It worked once it became a reflex: checking before proposing the `ppo_epoch` 10 → 3 arm found
+`bt1djeamji7gilgnndft`, a prior pilot that already tested `ppo_epoch=3` and showed substantially
+higher returns. Not a duplicate of the arm, but evidence in the same direction that would have been
+rediscovered instead of cited.)*
+
+## What I would actually watch now
+
+1. **`ppg`'s curve as it completes.** It gets 293 policy updates for 600k frames instead of 8,192.
+   If its return is **still climbing at the end** rather than flattening, the run is update-limited,
+   and the post-fix re-run should be expected to go substantially higher — not merely look tidier.
+   If it flattens, something else is also wrong.
+2. **The two rows `idaac` loses at the reaper.** Recovering them from `snapshot.pt` is also the
+   standalone-evaluation experiment note 28 wants proven. Check the recovered rows carry the same
+   `evaluator_revision` as the 42 before them.
+3. **Whether `drqv2` plateaus in the same 25-50 band.** Two baselines from different families
+   stopping at the same number would mean the ceiling is the harness or the scene set, not the
+   algorithm. That is the single most valuable thing the next run can tell us, and it is why
+   `drqv2` should be next rather than a fourth added baseline.
+4. **`success_rate` staying 0.000 everywhere.** It is not the axis RL-ViGen judges Robosuite on, so
+   it is not evidence of failure — but if it is still 0.000 across every baseline at the end of the
+   battery, the task configuration deserves its own look before the results are written up.
