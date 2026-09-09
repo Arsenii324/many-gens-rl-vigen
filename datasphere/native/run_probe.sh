@@ -1424,6 +1424,26 @@ if [[ "${NATIVE_PIP_CACHE:-0}" == "1" ]]; then
 fi
 echo "NATIVE_PIP_CACHE_DISCIPLINE $NATIVE_PIP_CACHE_DISCIPLINE"
 python3 -m pip install ${PIP_CACHE_FLAGS[@]+"${PIP_CACHE_FLAGS[@]}"} -r /tmp/requirements-for-this-job.txt
+# [Claude 2026-09-09] VERIFY the cache rather than claiming it, for the same reason the VRAM cap is
+# verified: this feature has now announced success twice while doing nothing. First `--no-cache-dir`
+# was merely omitted, which this image ignores; then `--cache-dir` was passed explicitly, which it
+# ACCEPTS and does not honour. Measured on the production image: a real install with an explicit
+# --cache-dir leaves the directory with **0 entries**. Debian patches pip's caching out, so
+# `pip cache dir` reports "cache is disabled" with no PIP_NO_CACHE_DIR and no pip.conf in sight.
+#
+# A cache is therefore NOT ACHIEVABLE on this image, whatever flags are passed. The prebuilt
+# environment (NATIVE_VENV) is the real remedy and removes pip from the cell entirely.
+if [[ "${NATIVE_PIP_CACHE:-0}" == "1" ]]; then
+  _cached="$(find /root/.cache/pip -type f 2>/dev/null | wc -l | tr -d ' ')"
+  if [[ "${_cached:-0}" -gt 0 ]]; then
+    echo "=== NATIVE_PIP_CACHE_EFFECTIVE ${_cached} file(s) cached; later cells will reuse them ===" >&2
+  else
+    echo "=== NATIVE_PIP_CACHE_INEFFECTIVE requested, mounted, and wrote nothing ===" >&2
+    echo "    This image ships a pip whose cache is disabled and which ignores --cache-dir, so the" >&2
+    echo "    wheels were re-downloaded and will be again next cell. Not fatal, and not fixable" >&2
+    echo "    with flags. Use NATIVE_VENV (datasphere/native/build-env.sh) to remove pip instead." >&2
+  fi
+fi
 fi   # end: skip the whole pip bootstrap when NATIVE_VENV supplied one
 # [Claude 2026-09-02 20:05 MSK: EXCLUDING A PACKAGE BY NAME DOES NOT EXCLUDE ITS DEPENDANTS.
 # ctrl declared excluded_base_requirements ["torch","torchvision"], and pip installed torch anyway

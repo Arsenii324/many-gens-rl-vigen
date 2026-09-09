@@ -99,3 +99,33 @@ def test_a_cache_outside_home_is_refused():
     block = text[guard:text.index("\nfi\n", guard)]
     assert re.search(r'"\$HOME"/\*\)', block), "no $HOME containment check"
     assert "exit 2" in block
+
+
+def test_the_cache_is_verified_after_the_install_not_merely_claimed():
+    """This feature announced success twice while doing nothing.
+
+    [Claude 2026-09-09] First `--no-cache-dir` was merely omitted, which the pinned image ignores.
+    Then `--cache-dir` was passed explicitly, which it ACCEPTS and does not honour: a real install
+    with an explicit cache directory left it with **0 entries**, because Debian patches pip's
+    caching out (`pip cache dir` reports "cache is disabled" with no PIP_NO_CACHE_DIR and no
+    pip.conf present).
+
+    A cache is not achievable on this image whatever flags are passed. What is achievable is saying
+    so, which is what this checks.
+    """
+    text = PROBE.read_text()
+    assert "NATIVE_PIP_CACHE_EFFECTIVE" in text, "success is claimed but never verified"
+    assert "NATIVE_PIP_CACHE_INEFFECTIVE" in text, "failure has no report"
+    verify_at = text.index("NATIVE_PIP_CACHE_EFFECTIVE")
+    install_at = text.index("-r /tmp/requirements-for-this-job.txt")
+    assert verify_at > install_at, (
+        "the cache is inspected before the install that would populate it")
+
+
+def test_the_ineffective_message_points_at_the_real_remedy():
+    text = PROBE.read_text()
+    block = text[text.index("NATIVE_PIP_CACHE_INEFFECTIVE"):][:700]
+    assert "NATIVE_VENV" in block, (
+        "the operator is told the cache failed but not what to do instead; the prebuilt "
+        "environment removes pip from the cell entirely")
+    assert "Not fatal" in block, "an ineffective cache must not read as a failure of the run"

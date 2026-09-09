@@ -180,7 +180,7 @@ Measured on the production host: `apt` **71 s**, `pip` **over two hours** — 17
 
 | variable | effect |
 |---|---|
-| `NATIVE_PIP_CACHE_HOST=~/.cache/pip-rlvigen` | persists the wheels; the first cell still downloads, later ones resolve from disk |
+| `NATIVE_PIP_CACHE_HOST=~/.cache/pip-rlvigen` | **ineffective on the pinned image** — its Debian-patched pip has caching disabled and ignores `--cache-dir` (measured: 0 entries after a real install). The runner now reports `NATIVE_PIP_CACHE_INEFFECTIVE` rather than claiming success. Use the prebuilt environment instead |
 | `NATIVE_VENV_HOST=~/rlvigen-env/<stack>-<reqhash>-<digest>` | mounts a prebuilt environment **read-only** and skips `pip` entirely |
 
 Build the second with `datasphere/native/build-env.sh` (`CELLS=... PAYLOAD=... NATIVE_IMAGE=...`).
