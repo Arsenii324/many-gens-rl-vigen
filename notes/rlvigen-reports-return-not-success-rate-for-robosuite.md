@@ -155,6 +155,11 @@ adjusted after seeing the number:
   the scene set, not the algorithm** —
   and that is the finding worth having before ten more baselines run. Two baselines from different
   families stopping at the same number is a much stronger signal than either alone.
+- **A HARD threshold, added after this criterion was first written:** Door's reward is `1.0` on
+  success and **otherwise** at most `0.25 + 0.25` per step, so over 500 steps **a policy that never
+  opens the door cannot exceed return 250**, and **return > 250 proves at least one success step**.
+  That converts "a substantial fraction of the axis" from a judgement into a test. See
+  [`what-a-door-return-number-means.md`](what-a-door-return-number-means.md).
 - **Comparability caveat:** RL-ViGen evaluates 10 episodes in each of its environments, 100 per
   level. Our grid is 20 episodes across 11 scene sets. Richer, but not the same denominator, so our
   numbers sit beside theirs rather than in their table.
