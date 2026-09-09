@@ -102,6 +102,14 @@ fi
 if [[ ! -s "$SRC" ]]; then
   echo "   REFUSING: $SRC is absent or empty. A completed cell that produced no records is a" >&2
   echo "   finding, not an empty result to file away." >&2
+  if compgen -G "$RUN_DIR/native-out/cells/*/offline_eval_*.jsonl" >/dev/null 2>&1; then
+    echo "   BUT the per-cell evaluation rows EXIST. collect_record_delivery runs after evaluation," >&2
+    echo "   so a cell reaped mid-evaluation has written every row and assembled none -- the" >&2
+    echo "   measurements are unassembled, not lost. Recover them explicitly:" >&2
+    echo "     python scripts/assemble_reaped_delivery.py $RUN_DIR --out <bundle>.jsonl" >&2
+    echo "   Every row it writes is marked _assembled_after_reaping and must never be filed as" >&2
+    echo "   though the runner produced it." >&2
+  fi
   if [[ -s "$RUN_DIR/native-out/records.jsonl" ]]; then
     echo "   records.jsonl IS present. That file is normalize_curves.py's per-cell rows, not the" >&2
     echo "   delivered bundle -- measured on card0-20260909-005543 it held 2 rows and ZERO" >&2
