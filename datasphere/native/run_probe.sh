@@ -1071,6 +1071,18 @@ run_endpoint_eval() {
   IFS=','
   local mode_list=($endpoint_modes)
   IFS="$previous_ifs_modes"
+  # [Claude 2026-09-10] A SUPPLEMENTARY pass failing must not discard the PRIMARY result.
+  #
+  # ppg-s1 on card0-20260909-115331 trained 3.6 hours, wrote a COMPLETE native endpoint grid --
+  # 44 of 44 rows, 4 regimes x 11 scene sets, later audited clean on all three validity checks --
+  # and was then marked NATIVE_CELL_FAILED because the `mode` pass died nine seconds in. `native`
+  # is the estimand `family_eval_policy_mode` says the family reports; `mode` is an extra for the
+  # A25 cross-group pairs. Losing the second is a gap in a supplementary comparison. Losing the
+  # first is losing the cell. Treating them alike lost neither correctly.
+  #
+  # Keyed on the pass's IDENTITY, not its position, so a reordered ENDPOINT_EVAL_POLICY_MODES
+  # cannot silently make the supplementary pass the fatal one.
+  local supplementary_failures=0
   for policy_mode in "${mode_list[@]}"; do
     # The native pass keeps the historical filename so nothing downstream has to learn a new one;
     # only an extra mode gets a suffix.
@@ -1100,11 +1112,23 @@ run_endpoint_eval() {
     set -e
     echo "=== NATIVE_ENDPOINT_EVAL_SECONDS $(( $(date +%s) - started )) policy_mode=$policy_mode ==="
     if [[ "$rc" -ne 0 ]]; then
-      echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline policy_mode=$policy_mode rc=$rc ===" >&2
-      return 1
+      if [[ "$policy_mode" == "native" ]]; then
+        # The reported estimand. Without it the cell has no endpoint result at all.
+        echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline policy_mode=$policy_mode rc=$rc ===" >&2
+        return 1
+      fi
+      echo "=== NATIVE_ENDPOINT_SUPPLEMENTARY_FAILED $baseline policy_mode=$policy_mode rc=$rc ===" >&2
+      echo "    The native endpoint grid stands. This cell keeps its reported result and loses" >&2
+      echo "    the $policy_mode comparison only." >&2
+      supplementary_failures=$(( supplementary_failures + 1 ))
+      continue
     fi
     echo "=== NATIVE_ENDPOINT_EVAL_COMPLETED $baseline frame=$frame policy_mode=$policy_mode ==="
   done
+  if [[ "$supplementary_failures" -gt 0 ]]; then
+    # Announced on its own line so a collector or monitor can see it without parsing the loop.
+    echo "=== NATIVE_ENDPOINT_SUPPLEMENTARY_INCOMPLETE $baseline passes=$supplementary_failures ===" >&2
+  fi
   return 0
 }
 
@@ -1161,6 +1185,59 @@ run_curve_eval() {
       failed=$(( failed + 1 ))
     else
       count=$((count + 1))
+      # [Claude 2026-09-10] EXERCISE THE SUPPLEMENTARY POLICY MODE ONCE, EARLY.
+      #
+      # The `mode` action rule is only ever executed at the ENDPOINT, after all training. On
+      # card0-20260909-115331 that meant a defect reachable in nine seconds -- ppg's mode override
+      # bypassed `PpoModel.act`'s @tu.no_grad, so `th2np` raised "Can't call numpy() on Tensor that
+      # requires grad" -- was not discovered until 3.6 hours of training had already been spent.
+      # The curve pass never sees it: it does not pass --policy-mode at all, so it exercised the
+      # sampled path 572 times and the mode path zero times.
+      #
+      # One episode, one scene, one regime, against the first stamp that exists. It is the cheapest
+      # possible execution of that code path and it would have caught this exact failure.
+      #
+      # DELIBERATELY NON-FATAL, and that is the lesson from the same run rather than caution: ppg's
+      # native grid completed and is a valid, audited result. A probe that aborted the cell would
+      # have destroyed a good primary measurement to protect a supplementary one. It reports, and
+      # the endpoint decides.
+      #
+      # Written to `mode_path_probe.jsonl`, which `collect_record_delivery`'s `offline_eval_*`
+      # glob does not match: a single episode is a smoke test, never a record.
+      if [[ "$count" -eq 1 && "${ENDPOINT_EVAL_POLICY_MODES:-native}" != "native" ]]; then
+        local probe_mode
+        probe_mode="$(printf '%s' "${ENDPOINT_EVAL_POLICY_MODES}" | tr ',' '\n' \
+                      | grep -v '^native$' | head -1)"
+        if [[ -n "$probe_mode" ]]; then
+          echo "=== NATIVE_MODE_PATH_PROBE_BEGIN $baseline policy_mode=$probe_mode frame=$frame ==="
+          set +e
+          env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
+            --snapshot "$item" \
+            --family "$family" \
+            --baseline "$baseline" \
+            --seed "$seed" \
+            --frame "$frame" \
+            --regimes train \
+            --scenes 0 \
+            --episodes 1 \
+            --episode-seed "${OFFLINE_EVAL_EPISODE_SEED:-20260903}" \
+            --device "${CURVE_EVAL_DEVICE:-cuda}" \
+            --policy-mode "$probe_mode" \
+            --eval-scope curve \
+            --append \
+            --out "$cell_out/mode_path_probe.jsonl" >>"$cell_out/training.log" 2>&1
+          local probe_rc=$?
+          set -e
+          if [[ "$probe_rc" -ne 0 ]]; then
+            echo "=== NATIVE_MODE_PATH_BROKEN $baseline policy_mode=$probe_mode rc=$probe_rc ===" >&2
+            echo "    The supplementary $probe_mode endpoint pass will fail too. Training and the" >&2
+            echo "    native grid continue; this cell will produce its reported result and lose" >&2
+            echo "    the $probe_mode comparison. Fix before the next wave." >&2
+          else
+            echo "=== NATIVE_MODE_PATH_OK $baseline policy_mode=$probe_mode ==="
+          fi
+        fi
+      fi
       if [[ "${CURVE_EVAL_DISCARD_WEIGHTS:-0}" == "1" ]]; then
         rm -f "$item"
       fi
