@@ -358,3 +358,15 @@ an assertion the data did not support.
 
 Caveat: this is `ppg`'s initialisation, not a per-family baseline. Every family's curve evaluates its
 own frame-0 checkpoint, so a proper per-family random reference costs nothing as the battery runs.
+
+**"What do RL-ViGen's own algorithms score on Door?"** — **UNKNOWN, and not obtainable from the
+vendored documents.** Searching both PDFs' extracted text for a numeric Door return finds none:
+every "Door" line is a hyperparameter. The Robosuite results live in **Figures 22 and 19, which are
+images**, and Figure 22's caption says training steps are *"normalized into (0, 1)"*, so neither
+axis gives an absolute value.
+
+**I used Figure 22's 0-500 y-axis as though it were a target, twice, before checking.** It is the
+plot's range. Statements of the form "the gap to RL-ViGen's own results is real" are **withdrawn** —
+there may be a gap, and these documents cannot establish it. `drqv2` at 6e5 under our own evaluator
+is the only route to a comparable Door number available to this project, which is a further reason
+to run it early rather than late.

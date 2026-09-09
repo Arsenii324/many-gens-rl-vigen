@@ -15,6 +15,15 @@ Success rate is **Adroit's** metric and Habitat's (Figure 24). Robosuite's is re
 plots it — *"Sample efficiency of Robosuite. The episode return of each algorithm"* — on a y-axis
 running 0 to **500**.
 
+> **The 0-500 is the PLOT'S RANGE, not a reported achievement, and I used it as a target twice
+> before checking.** Searching both vendored PDFs' extracted text for a numeric Door return finds
+> **none**: every "Door" line is a hyperparameter (Table 6). RL-ViGen's Door results exist only in
+> **Figures 22 and 19, which are images**, and Figure 22's caption additionally says the training
+> steps are *"normalized into (0, 1)"*, so even the x-axis is not absolute. **We do not know what
+> RL-ViGen's algorithms actually score on Door**, and no statement about "the gap to RL-ViGen's own
+> results" is supported from these documents. `drqv2` at 6e5 under our evaluator is the only route
+> to a comparable number we have.
+
 ## Why this matters right now
 
 Our records carry a `success_rate` column for every row, and today's `idaac` endpoint grid reports
@@ -68,8 +77,11 @@ oscillation between 12 and 50 with no monotone trend, ending at 24.74.
 
 **The finding is the plateau, not a failure to learn** — and a plateau is what the trust-region
 diagnostics predict. Large updates make rapid progress while the policy is far from anything good
-and any direction helps; they prevent the refinement that comes after. Against Figure 22's 0-500
-axis it is still under 10% of the plotted range, so the gap to RL-ViGen's own algorithms is real.
+and any direction helps; they prevent the refinement that comes after.
+
+*(An earlier version of this paragraph added "so the gap to RL-ViGen's own algorithms is real",
+reasoning from Figure 22's 0-500 axis. **Withdrawn**: that axis is the plot's range and the paper
+reports no numeric Door return anywhere. There may be a gap; these documents cannot establish it.)*
 
 *(One caveat on the baseline: it is `ppg`'s initialisation, not `idaac`'s. A randomly initialised
 policy's return on a dense-reward manipulation task is set by the environment far more than by the
@@ -124,8 +136,10 @@ adjusted after seeing the number:
 - **Beats the plateau:** exceeds `idaac`'s 25-50 band and keeps rising past frame 51,200 — the point
   where `idaac` stopped improving. This is the informative comparison, because `drqv2` is
   RL-ViGen-native and Figure 22 marks it as one of the two strongest on Robosuite.
-- **Harness validated:** reaches a substantial fraction of the 0-500 axis. **If `drqv2` also
-  plateaus in the 25-50 band, the ceiling is the harness or the scene set, not the algorithm** —
+- **Harness validated:** reaches a substantial fraction of the 0-500 axis. *(Held loosely — that
+  axis is the plot's range, not a published score. It bounds what Door returns can be, not what
+  RL-ViGen achieved.)* **If `drqv2` also plateaus in the 25-50 band, the ceiling is the harness or
+  the scene set, not the algorithm** —
   and that is the finding worth having before ten more baselines run. Two baselines from different
   families stopping at the same number is a much stronger signal than either alone.
 - **Comparability caveat:** RL-ViGen evaluates 10 episodes in each of its environments, 100 per
