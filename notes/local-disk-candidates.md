@@ -27,9 +27,24 @@
 - **Production refuses the `val` split.** `run_probe.sh:1962-1973`: at `FRAMES >= 600000` the runner
   refuses unless `NATIVE_PLACES365_SPLIT=train`, or `NATIVE_PLACES365_ACCEPT_VAL=1` records an
   explicit deviation.
-- **Three baselines need it**, and they are the disk-heaviest cells in the battery:
-  `svea`, `sgqn`, `soda` each charge **45.0 GiB** for it, for a 72.9-73.7 GiB per-cell requirement.
-  The other nine charge **0.0**.
+- **Three baselines need it**: `svea`, `sgqn`, `soda`. The other nine charge **0.0**.
+
+**Where 45 and 73 came from, since 26 GB is what is on disk.** `family.py`'s `PLACES365_TRAIN_GIB`
+was a flat **45.0** documented as *"~21 GiB compressed … plus the expanded tree … a stated estimate,
+not a measurement: replace it with the real number at the first host provisioning."* It covers the
+**archive** path, where `run_probe.sh` untars `places365standard_easyformat.tar` and the tarball and
+its expansion are resident together. 73 was that 45 plus the 27.88 GiB base (replay 17.74, three
+checkpoint copies, 8.0 margin).
+
+Now measured and split: **`PLACES365_TRAIN_EXTRACTED_GIB = 26.5`** (measured here: 26.46 GiB across
+1,803,461 files, and **no archive exists**) plus **`PLACES365_TRAIN_ARCHIVE_GIB = 21.0`** (DMC-GB's
+README) = 47.5 for the archive path, giving 76 GiB per overlay cell.
+
+**But the path we would actually take charges nothing.** `family.py:588-597` already handles it, and
+correctly: with `NATIVE_PLACES365_DIR` set the corpus is mounted read-only, `run_probe.sh` prints
+`NATIVE_PLACES365_PREEXTRACTED … (no copy, no extraction this job)`, and the model charges **0.0** —
+because the corpus is on the disk whether we run or not, so it is not part of the job's incremental
+footprint. **`svea` is then 28 GiB, the same as `drqv2`.**
 
 **So deleting it blocks 3 of 12 baselines and costs a ~27 GB re-download.** Once it is on the host
 and verified (`setup/verify_datasets.py --split train` -> 365 classes), the local copy becomes the

@@ -458,10 +458,41 @@ def _replay_gib(family: str, settings: dict, frames: int | None = None) -> float
 
 
 #: The Places365 train corpus, charged to the three overlay baselines that actually open it.
-#: ~21 GiB compressed (DMC-GB's own README figure for places365standard_easyformat.tar) plus the
-#: expanded tree, which is roughly the same again for JPEGs. A stated estimate, not a measurement:
-#: replace it with the real number at the first host provisioning.
-PLACES365_TRAIN_GIB = 45.0
+#:
+#: [Claude 2026-09-09] The 45.0 that stood here asked to be replaced "with the real number at the
+#: first host provisioning", and it conflated the project's TWO consumption paths.
+#:
+#:   * **Archive path.** `run_probe.sh` untars `places365standard_easyformat.tar` into the work
+#:     directory, so the tarball and the expanded tree are resident together: ~21 GiB (DMC-GB's own
+#:     README figure) + the expansion. That is where 45.0 came from and it remains right for it.
+#:   * **Pre-extracted path.** With `NATIVE_PLACES365_DIR` set, `run_probe.sh` prints
+#:     `NATIVE_PLACES365_PREEXTRACTED ... (no copy, no extraction this job)` and mounts the corpus
+#:     read-only. **No archive, no second copy.**
+#:
+#: MEASURED on the only corpus this project has (`data/places365_standard`, 2026-09-09):
+#: **train 26.46 GiB across 1,803,461 files**, whole tree 27.05 GiB, and no archive exists at all --
+#: so the pre-extracted path is the one we can actually take, and charging 45.0 for it over-books
+#: ~19 GiB per overlay cell. On a host with 283 GiB free that is the difference between fitting a
+#: second cell and refusing it.
+PLACES365_TRAIN_EXTRACTED_GIB = 26.5     # measured
+PLACES365_TRAIN_ARCHIVE_GIB = 21.0       # DMC-GB README, places365standard_easyformat.tar
+
+
+def places365_train_gib() -> float:
+    """Cost of the ARCHIVE path: the tarball and its expansion, resident together.
+
+    Deliberately NOT branching on `NATIVE_PLACES365_DIR`. The caller below already decides that, and
+    decides it better than a size would: a mounted read-only corpus costs the job **nothing**, not
+    26.5 GiB, because it is on the disk whether we run or not. Two places keying on one variable is
+    how a model drifts from the runtime it is meant to predict -- and the first version of this
+    function did exactly that before the existing check was read.
+    """
+    return PLACES365_TRAIN_EXTRACTED_GIB + PLACES365_TRAIN_ARCHIVE_GIB
+
+
+#: The archive path's total, kept under its old name so existing callers and tests resolve.
+#: Was a flat 45.0 estimate; now 47.5 = a measured 26.5 plus DMC-GB's cited ~21.
+PLACES365_TRAIN_GIB = PLACES365_TRAIN_EXTRACTED_GIB + PLACES365_TRAIN_ARCHIVE_GIB
 PLACES365_BASELINES = ("svea", "sgqn", "soda")
 
 
@@ -565,7 +596,7 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         # mounts one, so the model cannot disagree with the runtime about whether the copy happens.
         places_mounted = bool(os.environ.get("NATIVE_PLACES365_DIR"))
         places = 0.0 if places_mounted else (
-            PLACES365_TRAIN_GIB if baseline in PLACES365_BASELINES else 0.0)
+            places365_train_gib() if baseline in PLACES365_BASELINES else 0.0)
         cell_total = replay + 3 * checkpoints + places
         rows[cell] = {"family": family, "replay_gib": round(replay, 2),
                       "checkpoints_written_gib": round(checkpoints, 2),
@@ -575,7 +606,7 @@ def disk_requirement_gib(cells: str, frames: int, path: Path | None = None,
         total += cell_total
     # One shared extraction, charged once. See the note above the `places` term.
     overlay_cells = sum(1 for row in rows.values() if row["places365_gib"] > 0)
-    duplicated = PLACES365_TRAIN_GIB * max(0, overlay_cells - 1)
+    duplicated = places365_train_gib() * max(0, overlay_cells - 1)
     total -= duplicated
     # [Claude 2026-09-08] MEASURED, replacing a 5.0 GiB judgement that was under by about 2x.
     # `margin` is the only term covering everything that is not replay, checkpoints or Places365,
