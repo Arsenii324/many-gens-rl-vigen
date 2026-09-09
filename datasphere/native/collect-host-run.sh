@@ -126,6 +126,49 @@ else
   echo "   NOTE: no egl.json; the renderer is unverified for this run." >&2
 fi
 
+# 2c. A SUPPLEMENTARY policy-mode pass may be missing without the cell having failed.
+#
+# Since 2026-09-10 a non-native endpoint pass that fails no longer fails the cell: `native` is the
+# estimand the family reports and `mode` is an extra for the A25 cross-group pairs, so losing the
+# second must not discard the first (ppg-s1 on card0-20260909-115331 lost a complete 44-row native
+# grid that way). The consequence for collection is that a run can now be legitimately collectable
+# AND missing a comparison, and nothing else in this script would say so.
+if grep -q "NATIVE_ENDPOINT_SUPPLEMENTARY_INCOMPLETE" "$LOG"; then
+  echo "   SUPPLEMENTARY PASS MISSING -- collectable, but not the whole grid:"
+  grep -h "NATIVE_ENDPOINT_SUPPLEMENTARY_FAILED" "$LOG" | sed 's/^/     /'
+  echo "     The native endpoint grid is present and is the reported estimand. Any table that"
+  echo "     needs the mode/sample comparison for this cell must treat it as absent, not as zero."
+fi
+
+# 2d. A delivery whose rows are mostly provenance is a defect, not a large run.
+#
+# `collect_record_delivery` stamps the run manifest onto EVERY row, so anything large in that
+# manifest is multiplied by the row count. On card0-20260909-115331 the manifest inlined the
+# resource sampler's whole per-second series and the bundle reached 1,365,573,627 bytes for 964
+# rows -- about 1.4 MB per row, of which roughly 8 KB was the record. run_probe.sh now stores a
+# summary instead, but a bundle produced by an older runner still carries it, and the next thing
+# to bloat a manifest would do this again silently.
+#
+# Bytes-per-row rather than total bytes: a genuinely large run has many rows, and a threshold on
+# total size would refuse it while passing a small run with a bloated manifest -- exactly backwards.
+_rows="$(wc -l < "$SRC" | tr -d ' ')"
+if [[ "${_rows:-0}" -gt 0 ]]; then
+  _bytes="$(wc -c < "$SRC" | tr -d ' ')"
+  _per_row=$(( _bytes / _rows ))
+  if [[ "$_per_row" -gt 65536 ]]; then
+    echo "   OVERSIZED ROWS: $_per_row bytes/row over $_rows rows ($_bytes bytes total)." >&2
+    echo "   A record row is normally a few KB. This is the run manifest being stamped onto every" >&2
+    echo "   row with something large inside it -- historically resource_samples, which grows with" >&2
+    echo "   run duration and, on a shared host, names other users' GPU PIDs." >&2
+    if [[ "$_per_row" -gt 1048576 && "${NATIVE_ACCEPT_FAT_DELIVERY:-0}" != "1" ]]; then
+      echo "   REFUSING at over 1 MB/row. Find what the manifest carries before installing it:" >&2
+      echo "     python3 scripts/explain_delivery_size.py $SRC" >&2
+      echo "   Set NATIVE_ACCEPT_FAT_DELIVERY=1 to install it anyway, deliberately." >&2
+      exit 1
+    fi
+  fi
+fi
+
 # 3. The bundle must exist and be non-empty. SUCCESS with no records is itself a finding.
 if [[ ! -s "$SRC" ]]; then
   echo "   REFUSING: $SRC is absent or empty. A completed cell that produced no records is a" >&2
