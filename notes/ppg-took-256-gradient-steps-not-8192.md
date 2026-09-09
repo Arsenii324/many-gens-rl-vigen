@@ -185,3 +185,42 @@ A short cell after the change must show **all three**, and any one of them alone
 Then re-run `ppg` at 600k. **The current cell is a diagnostic, not a data point for PPG** — it
 measures a policy that received 1/32 of its configured updates, and no comparison against the other
 eleven baselines may include it. The battery is twelve baselines **plus one re-run**.
+
+---
+
+# Independent confirmation on the return axis, 2026-09-09 16:12
+
+The evidence above is all from the optimiser's own diagnostics. The curve evaluation now supplies a
+second, unrelated line of evidence, and it agrees.
+
+`scripts/learning_over_random.py` on the live `ppg` curve, first two stamps:
+
+| regime | floor (frame 0) | frame 51,200 | ratio |
+|---|---|---|---|
+| train | 2.24 | **4.68** | **2.1x** |
+| eval-easy | 1.98 | **4.47** | **2.3x** |
+
+**`ppg` is learning — it moved off its floor.** But `idaac` at the *same* frame count reached
+**24.66** on the train regime, roughly 11x its floor.
+
+The update counts at frame 51,200 explain the difference directly:
+
+| | iterations | updates per iteration | **policy updates at 51,200** |
+|---|---|---|---|
+| `idaac` | 25 | 10 epochs x 32 minibatches | **8,000** |
+| `ppg` | 25 | 1 epoch x **1** minibatch (clamped from 32) | **25** |
+
+**320x fewer updates, and about 5x less return.** The two lines of evidence are independent — one is
+`clipfrac`/`approxkl`/σ from inside the optimiser, the other is offline evaluation of checkpoints on
+the benchmark's own axis — and they point the same way.
+
+**The caveat, and it is not small.** `idaac` and `ppg` are different algorithms with different
+networks; their returns at a shared frame count are **not** an algorithm comparison, and
+`scripts/comparison_blocks.py` would refuse to rank them. What the number supports is narrower and
+sufficient: **`ppg`'s optimisation is throttled**, which the log said, the diagnostics said, and the
+return now says too.
+
+**What to watch as the curve completes.** `ppg` will have had **293 policy updates** by 600k. If its
+return keeps climbing to the end rather than flattening, the run is update-limited rather than
+converged — which would mean the re-run after the minibatch fix should be expected to go
+substantially higher, not merely to look tidier.
