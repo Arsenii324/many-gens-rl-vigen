@@ -128,3 +128,44 @@ binds a trainer which wants twice that will OOM rather than throttle. Either mea
 a cap it fits under, or raise the cap for that cell alone and accept the larger share. This is the
 direct consequence of the cap having never worked until today: every previous `ppg` run was
 uncapped, so no evidence exists about how it behaves under one.
+
+
+## Ready-to-run commands for runs 2-4, with the traps already removed
+
+Each baseline is its own evaluator family except `drqv2`, which belongs to `rlvigen`:
+
+| run | baseline | `--families` | cap | disk allowance |
+|---|---|---|---|---|
+| 2 | `ppg:1` | `ppg` | **10240** | default 40 |
+| 3 | `drqv2:1` | `rlvigen` | 4096 | **80** |
+| 4 | `alda:1` | `alda` | 4096 | default 40 |
+
+**Why `ppg` gets 10240 and not 4096.** It measured **8207 MiB uncapped**, and every previous `ppg`
+run was uncapped because the cap never worked. A 4096 cap would now genuinely bind a trainer that
+wants twice that, and a binding cap OOMs rather than throttles. 10240 is a ceiling, not a
+reservation: the expected actual is ~8.8 GiB for the three processes, leaving ~23 GiB free, and the
+memory floor still stops us if the card fills.
+
+**Why `drqv2` needs `NATIVE_DISK_ALLOWANCE_GIB=80`.** `family.py disk-requirement --frames 600000`
+gives **48 GiB** for `drqv2` against 9 for `idaac`/`ppg`. The disk watch derives its floor as
+`free_at_arm - allowance`, and the allowance defaults to **40** — so a cell legitimately writing
+48 GiB would breach a floor set for a 40 GiB job and yield partway through. The allowance is a
+statement about how much *this* cell may consume, and it has to be at least what the cell needs.
+
+```bash
+# run 2 -- ppg
+docker run --rm -v "$PWD:/repo" -v ~/rlvigen-work:/out -w /repo python:3.11-slim \
+  python3 datasphere/native/contract.py build-payload --source . --output /out/payload-ppg.tgz --families ppg
+nohup env NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_ACCEPT_UNVERIFIED_DEVICE=1 \
+  CARD=0 CELLS=ppg:1 FRAMES=600000 NATIVE_PRODUCTION=1 CELL_TIMEOUT_SECONDS=43200 \
+  NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=10240 NATIVE_RESULT_MIRROR=$HOME/rlvigen-mirror \
+  SAVE_EVERY_FRAMES=50000 EVAL_EVERY_FRAMES=50000 ENDPOINT_EVAL=1 \
+  bash datasphere/native/launch-card-cell.sh ~/rlvigen-work/payload-ppg.tgz ~/rlvigen-runs/ppg.tgz \
+  > /tmp/runppg.log 2>&1 &
+
+# run 3 -- drqv2, the RL-ViGen-native validity check. NOTE the disk allowance.
+#   ... --families rlvigen ... NATIVE_VRAM_CAP_MIB=4096 NATIVE_DISK_ALLOWANCE_GIB=80 CELLS=drqv2:1
+```
+
+**Do not carry `ENDPOINT_EVAL_REGIMES`, `ENDPOINT_EVAL_SCENES` or `ENDPOINT_EVAL_EPISODES` into any
+of these.** The production freeze rejects a smoke config's two-regime eval, and correctly.
