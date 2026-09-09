@@ -295,9 +295,10 @@ toward the card.~~ **WRONG, corrected 2026-09-09 by per-process capture.** 8207 
 earlier called unexplained in the packed run. The owner predicted exactly this -- "we assume it'll
 peak towards whole card at the phasic stage" -- while I asserted a plateau from thirty minutes of
 samples taken entirely within one phase. **`ppg` is a whole-card job: 26653 of 32494 MiB.** Two cells training should therefore be roughly `2644 + 8823 = 11467 MiB`, and the
-packed run showed **29910**. About 18 GiB is unaccounted for.
+packed run showed **29910**. ~~About 18 GiB is unaccounted for.~~ **RESOLVED above: it is ppg's auxiliary phase, 8207 -> 26653 MiB.** Caught only because per-process sampling was added after the fact; the packed run itself had none, which is why it stayed open for hours.
 
-No per-process capture exists from that run, so this is open. Candidates: eager reservation during
-startup under the 10240 cap, or the periodic curve-eval subprocesses that fire during training each
-reserving a pool of their own. **Stated as unexplained rather than attributed**, because the last
-time a memory figure was explained without per-process evidence the explanation was wrong.
+~~No per-process capture exists from that run, so this is open.~~ **Closed 2026-09-09.** Neither
+candidate guessed here was right -- not startup reservation, not the curve-eval subprocesses. It was
+`ppg`'s auxiliary phase, visible the moment per-process sampling existed. Both guesses were plausible
+and both were wrong, which is the argument for instrumenting rather than reasoning: the answer took
+one minute of measurement and had resisted an hour of inference.
