@@ -68,8 +68,18 @@ the retained checkpoints**. Twelve trainings cost 59 h instead of 148 h, the car
 waiting on a single-threaded evaluator, and the evaluation wave can be packed against a *training*
 cell of the next baseline rather than against nothing.
 
-**What this requires that is not yet proven:** an evaluation wave reads checkpoints that a previous
-cell wrote, and this project has never run one that way on this host. The in-cell path has now run
-end to end; the standalone path has not. That is one cheap experiment — evaluate `idaac-s101`'s
-retained checkpoints from a fresh cell and check the rows match the ones it already produced — and
-it should happen before the shape is adopted, not after.
+**The gap is smaller than I first wrote, and being precise about it matters.** I said the standalone
+path "has not run". That overstates it. `scripts/eval_grid.py` is *already* a standalone harness —
+`--snapshot <any path> --family --baseline --seed --frame --regimes --scenes --episodes
+--policy-mode --eval-scope --out` — and `run_probe.sh` already drives it once per checkpoint for the
+curve. Nothing about it requires the trainer.
+
+**What is genuinely unproven is the cell wiring**: pointing a cell at a *previous run directory's*
+checkpoints — the mount, the environment, the EGL context, the provenance stamping. That is a
+smaller and cheaper experiment than "build a standalone evaluator", and it should be run before the
+shape is adopted rather than after.
+
+**Tonight supplies the reason to run it.** The `idaac` cell will be reaped roughly thirty rows into
+its second (`mode`) endpoint pass. Those rows are recoverable from the retained checkpoint with a
+single invocation of the harness above at `--policy-mode mode --eval-scope endpoint --frame 598016`,
+which is exactly the experiment, on data we need anyway.
