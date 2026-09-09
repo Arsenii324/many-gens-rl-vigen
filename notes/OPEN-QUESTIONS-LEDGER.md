@@ -214,3 +214,14 @@ evaluator working: regimes separate as `train ≈ eval-easy` >> `eval-medium ≈
 every stamp, with 60 episodes per cell. **This does NOT answer whether IDAAC's own hyperparameters,
 tuned at action repeat 4-8, transfer to repeat 1** — same words, different question, and a null is
 exactly the evidence that tempts an untested answer.
+
+**"Does the VRAM cap reach the trainer?"** — ANSWERED from production, **no**, and the scope is
+narrower than previously written. Two live cells declare caps of 4096 and 10240 MiB, summing to
+14336; card 0 holds **28108 MiB**. The argument survives the reserved-versus-used trap: a per-process
+fraction bounds what the allocator may reserve, so reserved above the cap proves the cap is not in
+force either way. The cap DOES apply to the runner and to `eval_grid.py` (8 events before the cell,
+15 during evaluation, 5 short-lived helpers during training), so `NATIVE_VRAM_CAP_IN_FORCE` is true
+of the process that prints it and false of the trainer. **What is NOT broken:** all nine launchers
+re-add `runnable/_shim`, so `sitecustomize.py`, `safe_checkpoint.py`, the `wandb` stub and `no_tf`
+reach the trainer normally — the single casualty is the cap directory. See
+[`production-host/26-the-vram-cap-never-reached-a-trainer.md`](production-host/26-the-vram-cap-never-reached-a-trainer.md).
