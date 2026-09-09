@@ -254,3 +254,45 @@ MiB and ~0-8% utilisation. Overlapping one cell's evaluation with the next cell'
 almost nothing and removes the eval half of note 25's 10-hour figure from the critical path. That
 overlap was started on 2026-09-09 at 11:54 -- `ppg` training launched while `idaac` was on
 curve-eval pass 7 of 11.
+
+
+## The cost of `num_processes=1`, in hours
+
+| `num_processes` | env steps/s (CPU-bound, 16 cores) | 600k frames |
+|---|---|---|
+| **1** (current, IDAAC-C2) | 33.2 measured | **5.02 h** |
+| 8 | ~266 projected | 0.63 h |
+| 16 | ~465 projected | 0.36 h |
+
+Per update at `num_processes=1`: a 2048-sample rollout taking **62 seconds of wall clock**, then
+`ppo_epoch=10 x num_mini_batch=32` = **320 GPU updates on 64 samples each**. Sixty-two seconds of
+one CPU core stepping one environment, for a few hundred milliseconds of GPU work.
+
+**This is not a free knob.** `num_steps` is per PROCESS, so 16 processes is a 32768-sample rollout
+rather than 2048 — a sixteen-fold larger batch with different gradient statistics and a different
+update cadence. Raising it changes the algorithm's configuration, not merely its speed, which is
+presumably why the project fixed it at 1 and removed the v100 override. The reasoning behind that
+decision is being traced separately; **do not treat these hours as available savings until it is.**
+
+What IS available without touching any algorithm parameter is concurrency: more cells at once, and
+overlapping one cell's evaluation with the next cell's training.
+
+## Residual: the packed 600k run's 29910 MiB is still not fully explained
+
+Per-process capture from the concurrent `ppg` + `idaac`-eval pair on 2026-09-09:
+
+```
+890631  8207 MiB   ppg main (the phasic aux buffer, plateaued -- same figure as at 10k)
+890455   308 MiB   ppg worker context
+890470   308 MiB   ppg worker context
+895931   837 MiB   idaac eval
+```
+
+`ppg` reaches 8207 MiB and **stops there**; the buffer is bounded at `n_pi=32` and does not trend
+toward the card. Two cells training should therefore be roughly `2644 + 8823 = 11467 MiB`, and the
+packed run showed **29910**. About 18 GiB is unaccounted for.
+
+No per-process capture exists from that run, so this is open. Candidates: eager reservation during
+startup under the 10240 cap, or the periodic curve-eval subprocesses that fire during training each
+reserving a pool of their own. **Stated as unexplained rather than attributed**, because the last
+time a memory figure was explained without per-process evidence the explanation was wrong.
