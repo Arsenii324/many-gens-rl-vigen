@@ -55,7 +55,56 @@ def _rows(path: pathlib.Path) -> list[dict]:
     return out
 
 
+
+#: `eval_grid.py` emits one row per scene AND one pooled row per regime. The pooled row is the
+#: AUTHORITATIVE regime statistic and this code must prefer it.
+#:
+#: [Claude 2026-09-09] Three successive readings of this, each wrong, and the sequence is the lesson.
+#: First I episode-weighted all eleven rows: the pooled row repeats the same episodes, so n came out
+#: 400 for 200 distinct episodes and every SE was understated by sqrt(2). Then I excluded the pooled
+#: row and weighted the ten: n was right, but the SD became the MEAN OF PER-SCENE SDs, which discards
+#: between-scene variance -- and on this task the scene means span 11.84 to 49.44, so that understated
+#: the SE by a further 1.11x to 1.40x.
+#:
+#: The pooled row already carries the right thing: `eval_grid.py:1261` builds it from
+#: `np.concatenate(per_scene)` with `pooled.std(ddof=1)`, so its SD includes between-scene spread and
+#: it costs no extra evaluation. It also self-identifies via `native.aggregate_over_scenes`, which is
+#: an explicit marker rather than the comma-in-scene_set heuristic I started with.
+#:
+#: Every iteration moved the same way -- eval-easy 1.2 sigma, then 0.9, then 0.8 -- so the original
+#: numbers overstated confidence. Hence: use the pooled row; fall back to per-scene only when it is
+#: absent, and say so, because that fallback's SE is a floor rather than the value.
+def is_summary_row(row: dict) -> bool:
+    native = row.get("native") or {}
+    if native.get("aggregate_over_scenes"):
+        return True
+    return "," in str(row.get("scene_set", ""))
+
+
+def regime_stat(rows: list[dict]) -> tuple[float, float | None, int, bool]:
+    """(mean, standard error, episodes, exact) for one regime.
+
+    `exact` is False when no pooled row was found and the SE is a per-scene approximation that
+    OMITS between-scene variance -- a floor, not the value.
+    """
+    pooled = [r for r in rows if is_summary_row(r)]
+    if pooled:
+        r = max(pooled, key=lambda x: x.get("episodes") or 0)
+        n = r.get("episodes") or 0
+        sd = r.get("episode_return_sd")
+        return (r.get("episode_return_mean"),
+                (sd / (n ** 0.5)) if (sd and n) else None, n, True)
+    per = [r for r in rows if not is_summary_row(r)]
+    n = sum(r.get("episodes") or 0 for r in per)
+    if not n:
+        return (float("nan"), None, 0, False)
+    mean = sum((r.get("episode_return_mean") or 0.0) * (r.get("episodes") or 0) for r in per) / n
+    sd = sum((r.get("episode_return_sd") or 0.0) * (r.get("episodes") or 0) for r in per) / n
+    return (mean, (sd / (n ** 0.5)) if sd else None, n, False)
+
+
 def _weighted(rows: list[dict], key: str) -> float | None:
+    rows = [r for r in rows if not is_summary_row(r)] or rows
     n = sum(r.get("episodes") or 0 for r in rows)
     if not n:
         return None
@@ -71,6 +120,7 @@ def _stderr(rows: list[dict]) -> float | None:
     "drop" 1.8 SE and therefore nothing. Printing the SE beside the mean makes that visible without
     anyone having to remember to compute it.
     """
+    rows = [r for r in rows if not is_summary_row(r)] or rows
     n = sum(r.get("episodes") or 0 for r in rows)
     if not n:
         return None
@@ -169,8 +219,7 @@ def build() -> str:
             byf = collections.defaultdict(list)
             for r in curve:
                 byf[int(float(r["frame"]))].append(r)
-            pts = [(f, _weighted(byf[f], "episode_return_mean"), _stderr(byf[f]))
-                   for f in sorted(byf)]
+            pts = [(f, regime_stat(byf[f])[0], regime_stat(byf[f])[1]) for f in sorted(byf)]
             pts = [(f, v, se) for f, v, se in pts if v is not None]
             if pts:
                 peak = max(pts, key=lambda kv: kv[1])
@@ -194,20 +243,22 @@ def build() -> str:
         end = [r for r in rows if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
         if end:
             add("")
-            add("  | policy mode | regime | return | **SE** | success rate | episodes |")
-            add("  |---|---|---:|---:|---:|---:|")
+            add("  | policy mode | regime | return | **SE** | success rate | episodes | scenes |")
+            add("  |---|---|---:|---:|---:|---:|---:|")
             grouped = collections.defaultdict(list)
             for r in end:
                 grouped[((r.get("evaluator_scope") or {}).get("eval_policy_mode"),
                          r.get("regime"))].append(r)
             for key in sorted(grouped, key=lambda k: (str(k[0]), str(k[1]))):
                 g = grouped[key]
-                ret = _weighted(g, "episode_return_mean")
+                ret, se, eps, exact = regime_stat(g)
                 sr = _weighted(g, "success_rate")
-                se = _stderr(g)
-                eps = sum(x.get("episodes") or 0 for x in g)
-                add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | "
-                    f"{('± %.2f' % se) if se else '—'} | {sr:.3f} | {eps} |")
+                scenes = len([x for x in g if not is_summary_row(x)])
+                se_txt = ("± %.2f" % se) if se else "—"
+                if se and not exact:
+                    se_txt += " ⚠"          # per-scene floor: omits between-scene variance
+                add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | {se_txt} | {sr:.3f} | "
+                    f"{eps} | {scenes} |")
         add("")
 
     host = ROOT / "results" / "host-runs.jsonl"

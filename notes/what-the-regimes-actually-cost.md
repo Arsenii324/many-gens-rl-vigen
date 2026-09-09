@@ -6,17 +6,32 @@ a difference without one and got the sign or the significance wrong.
 
 ## The endpoint, `idaac` at 598,016 frames, 400 episodes per regime
 
-| regime | return | gap vs train | **σ** | verdict |
-|---|---:|---:|---:|---|
-| train | 33.69 ± 1.25 | — | — | — |
-| eval-easy | 31.58 ± 1.30 | 2.11 | **1.2** | **not detectable** |
-| eval-medium | 11.55 ± 0.42 | 22.14 | **16.9** | large, unambiguous |
-| eval-hard | 18.47 ± 0.76 | 15.22 | **10.4** | large, unambiguous |
+| regime | return | **SE** | gap vs train | **σ** | verdict |
+|---|---:|---:|---:|---:|---|
+| train | 33.69 | ± 1.86 | — | — | — |
+| eval-easy | 31.58 | ± 1.98 | 2.11 | **0.8** | **not detectable** |
+| eval-medium | 11.55 | ± 0.63 | 22.14 | **11.3** | large, unambiguous |
+| eval-hard | 18.47 | ± 1.25 | 15.22 | **6.8** | large, unambiguous |
 
-**This corrects how I first reported it.** I wrote "eval-easy 93.7 % retention", which reads as a
-measured 6 % drop. At 400 episodes per regime that difference is **1.2 σ** — there is no detectable
-loss at all. Retention percentages invite exactly this: a ratio always produces a number, whether or
-not the numerator and denominator differ.
+*(n = **200** per regime, and the SE is the **pooled** standard deviation over those 200 episodes.)*
+
+**This table is the third version of itself, and the sequence is the lesson.**
+
+1. **"eval-easy 93.7 % retention"** — a ratio, which always produces a number whether or not the two
+   quantities differ. It reads as a measured 6 % drop.
+2. **1.2 σ, n=400** — wrong twice over. `eval_grid.py` emits ten per-scene rows *and* a pooled row,
+   and I episode-weighted all eleven, so 200 distinct episodes were counted as 400 and every SE was
+   understated by √2.
+3. **0.9 σ, n=200, per-scene SD** — n fixed, SD still wrong: averaging per-scene SDs discards
+   **between-scene** variance, and on this task the scene means span **11.84 to 49.44**. That
+   understated the SE by a further 1.11x-1.40x.
+4. **0.8 σ, n=200, pooled SD** — correct. The pooled row already carried it:
+   `eval_grid.py:1261` builds it from `np.concatenate(per_scene)` with `pooled.std(ddof=1)`, at no
+   extra evaluation cost, and marks itself with `native.aggregate_over_scenes`.
+
+**Every iteration moved the same way — toward less significance.** 1.2 → 0.9 → 0.8; 16.9 → 12.6 →
+11.3; 10.4 → 8.0 → 6.8. The verdicts survived all three, but confidence was overstated at every step
+before the last, and the authoritative statistic was sitting in the records the whole time.
 
 ## The same question across the whole curve, not just the endpoint
 
