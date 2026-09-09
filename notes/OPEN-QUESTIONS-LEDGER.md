@@ -253,3 +253,25 @@ eval-easy 21.12, eval-medium 7.16, eval-hard 11.65.
 thin and should not be read as a level — only the regime aggregate and the trend across stamps carry
 weight. RL-ViGen's own Robosuite protocol is 10 per environment (supplement §B); the endpoint's 20 is
 richer, the curve's 3 is not.
+
+**"Why did `idaac` produce a null on Door?"** — ANSWERED at the level of mechanism: **it
+over-updates**. From the first complete production cell, `approx_kl_k3` reaches **1.0-1.5 nats**
+against PPO's usual 0.01-0.05 target, `clip_fraction` saturates at **0.80-0.84** from 100k onward,
+and `dist_entropy` falls 9.92 → −1.75 driven entirely by σ collapsing 0.996 → 0.188 (the arithmetic
+for a 7-DoF diagonal Gaussian matches both endpoints to two decimals), with IDAAC's tuned entropy
+coefficient at 0.0. `value_loss` is healthy, so it is not the critic; `order_acc` never leaves
+0.34-0.44, so the auxiliary task is not learning either. **Consistent with — not proof of** — the
+condition recorded in
+[`idaac-2048-steps-was-chosen-under-action-repeat-8.md`](idaac-2048-steps-was-chosen-under-action-repeat-8.md),
+since 10 PPO epochs over 2048 samples is far more aggressive per unit of simulated time at action
+repeat 1 than at the authors' 4-8. Three predefined discriminating arms and what each predicts are in
+[`idaac-on-door-is-a-trust-region-blowout.md`](idaac-on-door-is-a-trust-region-blowout.md). **Read
+`ppg`'s log for the same three columns** — it is on-policy with Procgen-tuned constants too, and if
+it shows the same signature the finding is about the transfer, not about IDAAC.
+
+**"Is the in-cell final evaluation an authority?"** — ANSWERED, **no, and it inverts**. At frame
+598016 the in-cell evaluation reports train-mode 18.8 and eval-easy 40.6 over **10 episodes**, while
+the standalone endpoint grid at the same frame reports train 33.69 and eval-easy 31.58 over **400
+per regime**. The in-cell path ranks eval-easy ABOVE train; the standalone ranks it below. Ten
+episodes cannot separate regimes whose returns differ by less than a standard error, so the in-cell
+number is a smoke signal and never a result. The standalone grid is the authority.
