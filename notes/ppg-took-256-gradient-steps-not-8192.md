@@ -383,3 +383,37 @@ says "the rows for `ppg`, `ibac_sni` and the others are untouched by A35 and sta
 configuration. A36 changed `ppg` to `1 x 2048` with 32 minibatches on 2026-09-07, two days after that
 note was written. Its `ppg` numbers (0.00391 grad steps/frame, "8x / 32x") describe a configuration
 that no longer exists, exactly as its `idaac` numbers did.
+
+## The curve at nine stamps: rising, with wiggles that are mostly noise
+
+| frame | 0 | 51,200 | 100,352 | 151,552 | 200,704 | 251,904 | 301,056 | **350,208** | 401,408 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| train | 2.24 | 4.68 | 10.05 | 5.34 | 5.86 | 8.87 | 9.31 | **27.55** | 20.68 |
+| eval-easy | 1.98 | 4.54 | 9.92 | 6.47 | 4.96 | 8.40 | 9.19 | **25.35** | 22.95 |
+
+**I called this twice and got it wrong both times** — first "still climbing and accelerating" from
+three points, then "not climbing; it peaked and fell" from four. Nine points show what is actually
+there: **a clear upward trend with large stamp-to-stamp wiggle**, and the resolution is arithmetic I
+had already written down elsewhere.
+
+**The curve runs 3 episodes per scene.** A regime aggregate is 11 scenes x 3 = **33 episodes**, and
+per-row SD on this task is 15-20, so the standard error of a curve point is about **15/√33 ≈ 2.6**.
+Therefore:
+
+- 10.05 → 5.34 (stamps 3→4) is **1.8 SE**. That is noise, and I read it as a reversal.
+- 9.31 → 27.55 (stamps 7→8) is **7 SE**. That is signal.
+
+`production-host/28` already said a 3-episode curve point "is not a level and must not be read as
+one", and I then read four of them as a trajectory. The trend across stamps is what carries weight,
+exactly as that note said.
+
+**So: `ppg` is rising and has not converged** — 2.24 → 27.55 by frame 350,208, on **171** policy
+updates. That is the answer to the question this note left open, and it now rests on nine points
+rather than three or four.
+
+**One comparison, carefully bounded.** At the same frame `idaac` peaked at 50.32 with roughly 54,700
+policy updates against `ppg`'s 171. Different algorithms, different networks, and
+`comparison_blocks.py` would refuse to rank them; the only thing it supports is that `ppg`'s
+optimisation being throttled has not prevented it from reaching the same order of magnitude, which
+is consistent with the reconciliation above — the executed configuration is PPG's own released update
+density, not a broken one.
