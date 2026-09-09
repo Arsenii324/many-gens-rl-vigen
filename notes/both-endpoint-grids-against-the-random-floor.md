@@ -71,6 +71,18 @@ it does better than eval-medium nearly everywhere rather than sometimes. That is
 So the two families reach a similar-looking ordering by different mechanisms, and only ppg's is a
 location shift. **The ordering is real; only ppg's version of it is established.**
 
+## A correction to the companion note's validity line
+
+That note's "resets 200/200 reproducible in every regime" was **vacuous**, and is fixed there. The
+audit had a single pass to look at, so no slot had a second observation to disagree with;
+`audit_eval_validity.py` now prints `NOT COMPARED` for such input. On the **full bundle** the real
+figures are train 200/200, eval-easy 200/200, `eval-hard` **145/166 (13 % vary)**, `eval-medium`
+**75/200 (62 % vary)**.
+
+Nothing on this page changes — the floor comparison is per-episode and does not rest on pairing.
+But any *paired* claim about those two regimes remains unavailable, which is what
+[`PRODUCTION-GRADE-PLAN.md`](PRODUCTION-GRADE-PLAN.md) has said all along.
+
 ## What is still genuinely missing
 
 The frame-0 row — each family's own initialised network — remains unmeasured, and it is a different
