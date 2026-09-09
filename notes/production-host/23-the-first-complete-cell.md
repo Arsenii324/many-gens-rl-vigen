@@ -88,3 +88,36 @@ because IDAAC's in-training evaluator does not emit a per-episode spread. Both c
 absent-versus-zero is the distinction measurement exists to preserve. A diagnostic that erases it
 manufactures findings, and I acted on two of them before checking the raw values. Print `repr`, or
 print nothing.
+
+
+## Are the metrics actually rich? Measured on the 600k production run, 2026-09-09
+
+The question was whether a real training curve and a real eval curve come out, or whether the
+records are thin. From `progress-robosuite:Door-idaac-s101.csv` at ~300k frames: **18 columns**.
+
+| group | columns |
+|---|---|
+| eval (per sweep) | `test/mean_episode_reward`, `test/median_episode_reward`, `test/success_rate` |
+| return | `train/mean_episode_reward`, `train/median_episode_reward` |
+| optimisation | `train/action_loss`, `train/value_loss`, `train/approx_kl_k3`, `train/clip_fraction`, `train/dist_entropy` |
+| IDAAC-specific | `train/adv_loss`, `train/clf_loss`, `train/order_acc`, `train/order_loss`, `train/boundary_fraction` |
+| policy scale | `train/mean_log_std`, `train/sigma_mean` |
+| accounting | `train/total_num_steps` |
+
+Both **mean and median** return are present for train and test, which matters because a mean alone
+hides the bimodality a sparse manipulation task produces. `approx_kl_k3` and `clip_fraction` are
+the two numbers that say whether PPO updates are behaving; `order_acc`/`order_loss` are IDAAC's own
+auxiliary heads and are what distinguishes this baseline from plain PPO.
+
+**Frame accounting is per-row**, via `train/total_num_steps`, and the endpoint is predicted before
+the run rather than read afterwards: `family.py expected-endpoint --baseline idaac --frames 600000`
+gives **598016**, and the 10k rehearsal already confirmed the rule exactly (10000 requested → 8192
+executed).
+
+**The eval curve is the `test/*` columns**, one point per sweep, and `CURVE_EVAL_SCENES` was set to
+all ten certified scenes by the production freeze — so each point averages 10 scenes x 3 episodes
+rather than a single scene. 15 sweeps had run by 300k. There is no separate `eval*.csv`; the offline
+endpoint grid writes the records instead, at 20 episodes across four regimes.
+
+So: rich, and richer at production settings than at smoke scale, because the freeze widens both the
+scene set and the episode count.
