@@ -18,7 +18,30 @@
 > reference update density are `10 x 32 / 2048 = 0.15625` grad steps per env frame in both cases.
 > **The ratio is 1x.** There is no idaac parallelism divergence left to report.
 >
-> The rows for `ppg`, `ibac_sni` and the others are untouched by A35 and stand as written.
+> The rows for `ibac_sni` and `ctrl` are untouched by A35 and stand as written.
+>
+> ## ALSO SUPERSEDED FOR `ppg`, found 2026-09-09 — same shape, two days later
+>
+> The line above originally read "the rows for `ppg`, `ibac_sni` and the others … stand as written".
+> **The `ppg` row does not.** It is computed from `8 x 256 = 2048` with `1 x 8` minibatches, which is
+> the **pre-A36** configuration. **A36 (2026-09-07) changed `ppg` to `num_envs 1 x nstep 2048` with
+> `nminibatch 32`**, adopting `raileanu21a-supp.pdf` §E for the same reason A35 changed `idaac` —
+> two days after this note was written, and the note was not revisited.
+>
+> Recomputed under the declared A36 configuration: `1 x 32 = 32` grad steps over a 2048 rollout is
+> **0.015625** steps per env frame, against PPG's released 1-rank **0.000488** — a **32x** ratio,
+> not the 8x/32x recorded below, and arrived at by a different mechanism (minibatch count, not
+> rollout size).
+>
+> **And the EXECUTED density is a third number again.** `minibatch_optimize` splits on the batch
+> axis, so `num_envs=1` clamps `nminibatch` 32 → 1 (logged 291 times as
+> `Warning: nminibatch > ntrain!! (32 > 1)`), giving **0.000488** steps per env frame — *exactly*
+> PPG's released density, by accident. See
+> [`ppg-took-256-gradient-steps-not-8192.md`](ppg-took-256-gradient-steps-not-8192.md).
+>
+> So this note's own method — grad steps per env frame, read from the executed entry point — is
+> still right, and applying it to `ppg` today gives **declared 0.015625, executed 0.000488,
+> upstream 0.000488**. Do not quote the `ppg` number below either.
 >
 > Left in place rather than deleted: the arithmetic is still the right method, and a note that
 > quietly vanished would take its reasoning with it. But do not quote an `idaac` number from below.
