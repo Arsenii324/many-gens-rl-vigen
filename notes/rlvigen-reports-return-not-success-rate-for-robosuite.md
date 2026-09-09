@@ -48,9 +48,34 @@ the expected order (`train ≈ eval-easy` well above `eval-medium ≈ eval-hard`
 60 episodes give a standard error around 2-3, so the train gap between 24.66 and 50.32 is many
 standard errors wide. A pipeline that produced noise would not produce that ordering eleven times.
 
-**The algorithm did not learn Door.** The train curve wanders between 12 and 50 with no monotone
-trend and **ends at 24.74, where it began at 24.66**. Against Figure 22's 0-500 axis, that is under
-10% of the plotted range. The mid-run rise to 50.32 is real but does not hold.
+**The algorithm learned quickly, then stopped.** *(Corrected 2026-09-09, later the same day — the
+first version of this line said "the algorithm did not learn Door", and that was wrong for want of a
+baseline.)*
+
+`ppg`'s curve evaluated its **frame-0 checkpoint** — a randomly initialised policy — under the same
+evaluator, 60 episodes per regime:
+
+| regime | random-policy return |
+|---|---|
+| train | **2.24** |
+| eval-easy | **1.98** |
+| eval-medium | **1.54** |
+| eval-hard | **2.04** |
+
+So **random is ≈ 2 on this axis**, and `idaac`'s 24.7-50.3 is **12-25x random**. It learned, and it
+learned almost all of it *early*: 2 → 24.66 by frame 51,200, then 550,000 further frames of
+oscillation between 12 and 50 with no monotone trend, ending at 24.74.
+
+**The finding is the plateau, not a failure to learn** — and a plateau is what the trust-region
+diagnostics predict. Large updates make rapid progress while the policy is far from anything good
+and any direction helps; they prevent the refinement that comes after. Against Figure 22's 0-500
+axis it is still under 10% of the plotted range, so the gap to RL-ViGen's own algorithms is real.
+
+*(One caveat on the baseline: it is `ppg`'s initialisation, not `idaac`'s. A randomly initialised
+policy's return on a dense-reward manipulation task is set by the environment far more than by the
+network, so ~2 is a fair reference — but it is one architecture's random init measured once, and a
+per-family frame-0 row would settle it properly. Every family's curve now evaluates its own frame-0
+checkpoint, so this costs nothing to check as the battery runs.)*
 
 ## The budget is not the excuse
 

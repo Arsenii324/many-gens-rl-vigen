@@ -41,6 +41,13 @@ began — see
 So the run is not inert. It improves, then degrades, with a policy collapsing toward determinism
 while its updates are far outside the trust region — the shape of a run that is over-updating.
 
+**Measured against random, later the same day:** `ppg`'s frame-0 checkpoint — a randomly initialised
+policy under the same evaluator — returns **2.24 train / 1.98 eval-easy** over 60 episodes per
+regime. `idaac`'s 24.7-50.3 is therefore **12-25x random**, and essentially all of that gain arrives
+by frame 51,200. **This is a plateau after fast early learning, not an inert run**, which is exactly
+what an over-large update step produces: rapid progress while any direction helps, then no
+refinement.
+
 ## The mechanism this is consistent with, stated as inference and not as a finding
 
 [`idaac-2048-steps-was-chosen-under-action-repeat-8.md`](idaac-2048-steps-was-chosen-under-action-repeat-8.md)

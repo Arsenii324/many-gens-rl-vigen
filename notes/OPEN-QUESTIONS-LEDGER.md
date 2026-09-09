@@ -343,3 +343,18 @@ row. `card0-20260909-115331` began its curve evaluation 2026-09-09 15:42 with
 0, 51200, 100352, 151552 … against the reconstruction's 50000, 100000, 150000. A measurement of the
 untrained initial policy would have been filed as a measurement at 50k. The 13 `IC=` lines match the
 13 `model00N.jd` files on disk one-for-one, so the positional mapping is sound for this whole run.
+
+**"What does a random policy score on Door?"** — ANSWERED, **≈ 2.0**, measured 2026-09-09 from
+`ppg`'s frame-0 curve stamp (its randomly initialised checkpoint) under the production evaluator, 60
+episodes per regime: train **2.24**, eval-easy **1.98**, eval-medium **1.54**, eval-hard **2.04**,
+success rate 0.000 throughout.
+
+**This corrects a claim I made earlier the same day.** I wrote that `idaac` "did not learn Door"
+because its curve ends where it began. Against a baseline of 2, `idaac`'s 24.7-50.3 is **12-25x
+random** — it learned, and it learned almost all of it by frame 51,200, then oscillated for 550,000
+frames without further progress. **The finding is the plateau, not an absence of learning**, and a
+plateau is what the trust-region diagnostics predict. Writing "did not learn" without a baseline was
+an assertion the data did not support.
+
+Caveat: this is `ppg`'s initialisation, not a per-family baseline. Every family's curve evaluates its
+own frame-0 checkpoint, so a proper per-family random reference costs nothing as the battery runs.
