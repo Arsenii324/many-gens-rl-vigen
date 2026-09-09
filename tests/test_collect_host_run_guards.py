@@ -105,7 +105,7 @@ def test_a_present_records_jsonl_is_named_as_the_wrong_file(tmp_path):
     code, out = _collect(run, tmp_path)
     assert code == 1, out
     assert "do not point this script at records.jsonl" in out
-    assert "no offline evaluation rows" in out
+    assert "ZERO" in out and "offline-eval rows" in out
 
 
 def test_evaluated_run_whose_bundle_has_no_offline_rows_refuses(tmp_path):

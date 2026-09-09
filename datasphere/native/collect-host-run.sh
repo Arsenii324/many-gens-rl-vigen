@@ -27,11 +27,19 @@
 # ## The source file, which the first version of this script got wrong
 #
 # [Claude 2026-09-09] It read `native-out/records.jsonl`. **No completed host run has that file.**
-# `normalize_curves.py` writes training rows to `records.jsonl` only when the job HAS training
-# cells to normalise, and the delivered bundle -- training rows plus every offline evaluation row
-# from `cells/<cell>/offline_eval_*.jsonl` -- is assembled by `collect_record_delivery` into
-# `records_delivery.jsonl`. Verified against three completed runs on 2026-09-09: `records.jsonl` is
-# absent, `records_delivery.jsonl` is the bundle.
+# `normalize_curves.py` writes per-cell rows to `records.jsonl`; the delivered bundle -- those rows
+# PLUS every offline evaluation row from `cells/<cell>/offline_eval_*.jsonl` -- is assembled by
+# `collect_record_delivery` into `records_delivery.jsonl`.
+#
+# Measured on completed runs, 2026-09-09. On `card0-20260909-005543`, `records_delivery.jsonl` holds
+# **6 rows (2 eval + 4 offline-eval)** and matches that run's `NATIVE_RECORDS_EMITTED 6 rows` exactly,
+# while `records.jsonl` holds **2 rows and no offline-eval rows at all**. On three other completed
+# runs `records.jsonl` does not exist. Either way it is never the bundle.
+#
+# Byte sizes mislead here and are worth not trusting: the bundle was 1.39 MB against records.jsonl's
+# 12.9 KB, which looks like a 100x row difference and is not one. Delivery rows carry
+# `_run_provenance` -- manifest, payload and asset digests, resolved packages -- at roughly 231 KB
+# per row. Count rows, never bytes.
 #
 # The failure was fail-closed by luck rather than by design: an absent file trips the `-s` test and
 # refuses, so nothing would have been silently lost. Had `records.jsonl` merely been *incomplete*
@@ -95,8 +103,9 @@ if [[ ! -s "$SRC" ]]; then
   echo "   REFUSING: $SRC is absent or empty. A completed cell that produced no records is a" >&2
   echo "   finding, not an empty result to file away." >&2
   if [[ -s "$RUN_DIR/native-out/records.jsonl" ]]; then
-    echo "   records.jsonl IS present. That file is normalize_curves.py's TRAINING rows, not the" >&2
-    echo "   delivered bundle -- it carries no offline evaluation rows. Collecting it would install" >&2
+    echo "   records.jsonl IS present. That file is normalize_curves.py's per-cell rows, not the" >&2
+    echo "   delivered bundle -- measured on card0-20260909-005543 it held 2 rows and ZERO" >&2
+    echo "   offline-eval rows, against the bundle's 6. Collecting it would install" >&2
     echo "   a fraction of the run and report success. Find out why collect_record_delivery did not" >&2
     echo "   run; do not point this script at records.jsonl." >&2
   fi
