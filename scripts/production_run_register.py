@@ -104,28 +104,23 @@ def regime_stat(rows: list[dict]) -> tuple[float, float | None, int, bool]:
 
 
 def _weighted(rows: list[dict], key: str) -> float | None:
-    rows = [r for r in rows if not is_summary_row(r)] or rows
-    n = sum(r.get("episodes") or 0 for r in rows)
-    if not n:
-        return None
-    return sum((r.get(key) or 0.0) * (r.get("episodes") or 0) for r in rows) / n
+    """Episode-weighted mean over the per-scene rows. Used for RATES, where it is exact.
 
+    [Claude 2026-09-09] Deliberately NOT switched to `regime_stat`, and the reason is worth keeping
+    so this is not "fixed" later. For a rate, the episode-weighted mean of per-scene rates is
+    algebraically the pooled rate -- sum(rate_i * n_i)/sum(n_i) = sum(successes_i)/sum(n_i) -- and
+    that is exactly what `eval_grid.py:1263` computes as `successes / pooled.size`. Verified against
+    the real records: identical to 0.00e+00.
 
-def _stderr(rows: list[dict]) -> float | None:
-    """Standard error of the episode-return mean, from the per-row SD the records carry.
-
-    [Claude 2026-09-09] Added because a mean without its noise floor invites exactly the error I
-    made three times in one day: reading stamp-to-stamp wiggle as a trend. The curve runs 3 episodes
-    per scene, so a regime aggregate is 33 episodes and its SE is about 2.6 -- which makes a 4.7-point
-    "drop" 1.8 SE and therefore nothing. Printing the SE beside the mean makes that visible without
-    anyone having to remember to compute it.
+    The same is true of the MEAN: per-scene weighted 31.5805 against pooled 31.5805. **Only the SD
+    differs**, because averaging per-scene SDs discards between-scene variance -- which is why
+    `regime_stat` exists for the mean-with-SE and this function does not need to change.
     """
     rows = [r for r in rows if not is_summary_row(r)] or rows
     n = sum(r.get("episodes") or 0 for r in rows)
     if not n:
         return None
-    sd = sum((r.get("episode_return_sd") or 0.0) * (r.get("episodes") or 0) for r in rows) / n
-    return sd / (n ** 0.5) if sd else None
+    return sum((r.get(key) or 0.0) * (r.get("episodes") or 0) for r in rows) / n
 
 
 def build() -> str:
