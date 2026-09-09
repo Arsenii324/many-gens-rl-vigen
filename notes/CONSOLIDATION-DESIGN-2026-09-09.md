@@ -252,3 +252,112 @@ says otherwise.
 If Phase 0 shows an agent taking wrong turns on real questions — reading a stale document and acting
 on it, or missing a contested axis entirely — then the per-area maps earn their risk. That is a
 measurable outcome and it should be measured before, not asserted after.
+
+---
+
+# The domain — what anyone acting here is actually operating on
+
+**Read this before §1.** The design and the blockers assume a map of the territory; this is that map.
+It is an enumeration, not a set of solutions. Nothing here is optional to account for: each item
+changes what a correct action looks like, and an executor who has not reckoned with it will produce
+something that reads fine and is wrong.
+
+## D1. The artifact kinds, which do not share decay properties or authority
+
+Treating these as one corpus is the first error available.
+
+| kind | authority | how it decays | cost to edit |
+|---|---|---|---|
+| **vendored primary sources** (`ext/*.pdf`) | highest; settles fidelity questions outright | does not decay | n/a — read-only |
+| **hashed trees** (`runnable/*`, evaluator members) | defines what actually executes | cannot decay silently; the hash moves | **high** — moves payload/evaluator revisions, may force re-attestation |
+| **executable contracts** (`contract.py`, `families.json`) | authoritative for "what runs" | guarded by `RUNNER_CONTRACT` and tests | medium |
+| **checks and tests** | the only artifacts that *cannot* go quietly stale | can be **vacuous** rather than stale | low |
+| **generated blocks** (`FAITHFULNESS.md` §0) | machine-derived, `--check`ed | cannot drift | must not hand-edit |
+| **hand prose in `docs/`** | none intrinsically | **silently**, and it is where the six stale claims lived | low |
+| **`notes/` series** | none intrinsically | silently — but carries reasoning found nowhere else | low |
+| **external AI reviews** (`ai-review-*`) | varies wildly by vintage; the 20s series is strong, early ones are not | frozen at their date | do not edit |
+| **decision records** (`DECISION-SHEET`, `OPEN-QUESTIONS-LEDGER`, `REGISTER`) | high, *and they carry their own supersession* | by accretion, not rot | append only |
+| **operational logs** (`production-host/*`, work logs) | true as snapshots | instantly — they are dated observations | append only |
+| **run artifacts** (records, curves, checkpoints) | data, not claims | do not decay; but **labels can be wrong** | never edit |
+| **one-off scripts and probes** | encode assumptions from their moment | silently | low |
+
+Consequence: "consolidate the documentation" is not a well-formed instruction until it says which of
+these it touches. Merging prose is cheap and lossy; touching a hashed tree costs re-attestation;
+editing a generated block is simply wrong.
+
+## D2. The claim kinds, which have different verification routes
+
+- **Measured** — has a number, a date, and a method. Verify by re-measuring. *Inherits the regime it
+  was measured in*, which is the failure that recurred four times on 2026-09-09.
+- **Derived** — computed from a measurement. Inherits every limitation of its input, invisibly.
+- **Cited** — traceable to `ext/`. Verify against the source, never against the citation; A35 was
+  right precisely because it read the PDF rather than a review's summary of it.
+- **Normative** ("we should X", "declare rather than compensate") — not falsifiable the same way.
+  Merging these with factual claims is how a preference acquires the authority of a measurement.
+- **Status** ("the gate passes", "35/0/10") — machine-checkable and **time-varying**. Any status in
+  prose is stale the moment it is written; it belongs in a check.
+- **Conditional** ("under action_repeat 4-8, 2048 steps means…") — **the kind summarization
+  destroys**, because the condition is the part that looks like context.
+
+## D3. Live axes of disagreement that must not be collapsed
+
+Each has at least two defensible positions *currently held somewhere in the repo*:
+
+fidelity vs throughput · upstream-faithful vs adapted-for-Door · which upstream reference applies
+(Procgen vs DMC) · declare-and-keep vs change-the-value · whether evaluation is part of "a run" ·
+single-cell vs packed · in-cell vs standalone evaluation · `action_repeat` 1 vs 4-8 · time-limit
+handling (3 bootstrap / 9 terminal) · which of the two trees is the subject.
+
+An executor who resolves any of these *by presentation* has made an owner-level decision without
+saying so.
+
+## D4. Temporal structure — much of the corpus is true only at a time
+
+Host state changes hourly. Gate counts change per commit. Recipes have generations (IDAAC-P → C2),
+and documents written under an earlier generation are not wrong, they are **scoped**. Run outcomes
+are dated observations. `HANDOFF.md` is marked EXPIRED and kept deliberately as evidence.
+
+Consequence: a value without its timestamp and regime is not a fact, and a consolidation that
+normalises everything into the present tense manufactures false currency at scale.
+
+## D5. Ownership boundaries — not everything is the executor's to settle
+
+- **Owner decisions** — ten gates currently read OWNER. Writing a confident summary of one does not
+  close it, and reads as if it did.
+- **Fidelity questions** — need a primary source first, then the owner. Never an operator judgement.
+- **Operator choices** (cap values, packing, schedules) — safe to change with evidence.
+- **Mechanical repairs** — safe, and should be accompanied by a check.
+
+## D6. What is not known, and blocks honest scoping
+
+- **What is unique to each tree.** `ccm-intro` vs the recovery workspace; neither is a subset. Not
+  measured. Cheap to measure. Changes what the subject *is*.
+- **The real navigation cost.** Asserted, never measured (B5).
+- **How many claims are currently stale.** Six were found on *one* axis. The rate across all axes is
+  unknown, and six-per-axis would imply a very different remedy than one-per-axis.
+- **Whether record labels are correct.** `scripts/audit_record_frame_provenance.py` was written today
+  to answer exactly this and **has not been run on a completed cell**.
+- **Whether `where_is_this_decided.py` has adequate recall.** It searches seven directories and skips
+  vendored trees; nobody has checked what it misses.
+
+## D7. Constraints that bound any plan
+
+- Hashed trees cost re-attestation, so a "tidy the launchers" change is not free.
+- Production runs are in flight; the host is shared; findings are still arriving.
+- **No test can validate a merge** (B2) — the project's main quality mechanism does not cover the
+  central operation.
+- Every executor has a context limit, and the operation needs both breadth and depth (B1).
+- Documents are cheap to add and effectively impossible to un-drop.
+
+## D8. What "done" cannot mean
+
+- Not "one document describes the current state" — several axes have no single current state.
+- Not "no document contradicts another" — contradictions between a superseded and a current document
+  are *information*, and the marker is the fix, not the merge.
+- Not "an agent needs to read only one file" — depth is the point; the goal is knowing *which* file,
+  and what it costs to go deeper.
+- Not "the uncertain material was removed" — that is the failure mode wearing the costume of success.
+
+A reasonable "done" looks like: an agent asking a real question reaches a correct, appropriately
+hedged answer in bounded time, **and can tell when the question is open**. That last clause is the
+whole difficulty.
