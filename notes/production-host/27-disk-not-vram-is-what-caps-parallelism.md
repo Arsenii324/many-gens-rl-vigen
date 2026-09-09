@@ -87,13 +87,49 @@ is a `pip` install, so it is not free of disk either, and the allowance must cov
 which is not the flag; every family hashed to `e3b0c442`, which is sha256 of the empty string. A
 check that agrees with nothing agrees with everything.)*
 
-## A plan item this closes in the negative
+## A plan item that is already closed in code, and I nearly re-discovered it
 
 `notes/RUNNING-ON-PRODUCTION-HOST.md` and the standing plan both ask for a **durable second location
-for results**, so that a 45-hour cell does not lose everything if the host disk fails. **There is
-nowhere on this host to put one.** `/dev/sda2` is the only filesystem with space; `/dev/sda3` is a
-975 MB `/boot`. The second location has to be off-host, which makes it a transfer policy rather than
-a mount, and that is a different piece of work from the one the plan describes.
+for results**. There is nowhere on this host to put one: `/dev/sda2` is the only filesystem with
+space and `/dev/sda3` is a 975 MB `/boot`.
+
+**`run_on_production_host.sh:405-437` already knows this, and says it better than I first wrote it.**
+It counts filesystems with at least 20 GB free — *"what matters is not how many filesystems exist but
+whether any of them could actually HOLD a result"* — and when there is only one it refuses with:
+
+> THIS HOST HAS NO SECOND FILESYSTEM THAT COULD HOLD A RESULT … The mirror still buys a second COPY
+> — it survives our own tar failing, a bad path, an overwrite — but it does NOT buy a second failure
+> domain: one full or failed disk loses both. … set `NATIVE_ACCEPT_SAME_DEVICE=1` to run knowing
+> that. **This is an owner-level property of the campaign, not a slip.**
+
+That distinction — second copy versus second failure domain — is the whole content of the plan item,
+and it was already drawn. My first version of this section presented it as a finding.
+
+**The pattern is worth more than the fact.** This is the second time today a note of mine claimed
+novelty the codebase already had. An agent writing from its own context cannot check breadth, so
+"this is not handled anywhere" is a claim it is structurally unable to make. Run
+`scripts/where_is_this_decided.py` before asserting an absence.
+
+## The drqv2 launch, with every value it actually needs
+
+`launch-card-cell.sh` derives only `DOCKER_GPUS` (from `CARD`) and `NATIVE_RESULT_MIRROR` (from the
+run directory). Everything else is the caller's, and `run_on_production_host.sh` refuses production
+scale without it:
+
+```bash
+CARD=0 CELLS=drqv2:101 FRAMES=600000 CELL_TIMEOUT_SECONDS=43200 NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=10240 NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_PIP_CACHE=1 NATIVE_PIP_CACHE_HOST="$HOME/rlvigen-work/pip-cache" NATIVE_DISK_ALLOWANCE_GIB=56   nohup bash datasphere/native/launch-card-cell.sh <payload.tgz> <result.tgz> > run.log 2>&1 &
+```
+
+- **No `NATIVE_VENV_HOST`.** Retracted above: the only prebuilt env has `"editable": []` and cannot
+  run an `rlvigen` cell. The pip-cache path is what both current cells use.
+- **`NATIVE_ACCEPT_SAME_DEVICE=1` is an owner-level acceptance**, not a workaround — the refusal
+  above says so in those words, and the campaign has been running under it.
+- **`NATIVE_VRAM_CAP_MIB` is required whenever a GPU is requested** (`run_on_production_host.sh:165`)
+  and, per note 26, bounds evaluation rather than the trainer. Set it, and do not read it as
+  protection for a co-tenant; the free-memory floor is what does that.
+- **The payload must be rebuilt.** Every `payload-v205-*.tgz` in the repo reports *"built for runner
+  contract 14 but this runner needs 19"*. `payload-v208-rlvigen.tgz` is built and verifies against
+  contract 19 with `--require-evaluator-identity`.
 
 ## The sequencing this implies
 
