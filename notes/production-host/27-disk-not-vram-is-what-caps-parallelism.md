@@ -117,8 +117,14 @@ run directory). Everything else is the caller's, and `run_on_production_host.sh`
 scale without it:
 
 ```bash
-CARD=0 CELLS=drqv2:101 FRAMES=600000 CELL_TIMEOUT_SECONDS=43200 NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=10240 NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_PIP_CACHE=1 NATIVE_PIP_CACHE_HOST="$HOME/rlvigen-work/pip-cache" NATIVE_DISK_ALLOWANCE_GIB=56   nohup bash datasphere/native/launch-card-cell.sh <payload.tgz> <result.tgz> > run.log 2>&1 &
+CARD=0 CELLS=drqv2:101 FRAMES=600000 CELL_TIMEOUT_SECONDS=43200 NATIVE_PRODUCTION=1 NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=10240 NATIVE_ACCEPT_SAME_DEVICE=1 NATIVE_PIP_CACHE=1 NATIVE_PIP_CACHE_HOST="$HOME/rlvigen-work/pip-cache" NATIVE_DISK_ALLOWANCE_GIB=56   nohup bash datasphere/native/launch-card-cell.sh \
+    ~/rlvigen-work/payload-v208-rlvigen.tgz ~/rlvigen-runs/drqv2-result.tgz > run.log 2>&1 &
 ```
+
+**The payload is already on the host**, staged 2026-09-09: `~/rlvigen-work/payload-v208-rlvigen.tgz`,
+277,571 bytes, sha256 `b0fed801ef6cd694…`, matching the local copy byte for byte. It verifies against
+`--require-runner-contract 19 --require-families rlvigen --require-evaluator-identity`, which every
+`payload-v205-*.tgz` in the repo fails (they report contract 14).
 
 - **No `NATIVE_VENV_HOST`.** Retracted above: the only prebuilt env has `"editable": []` and cannot
   run an `rlvigen` cell. The pip-cache path is what both current cells use.
