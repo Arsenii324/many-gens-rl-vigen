@@ -70,6 +70,18 @@ def test_the_renderer_check_still_exists_to_catch_the_next_one():
 # supplied read-only the renderer became 'Tesla V100-SXM2-32GB/PCIe/SSE2'.
 
 
+def _gpucomp_block(text: str) -> str:
+    """The whole gpucomp guard, not a fixed number of characters.
+
+    [Claude 2026-09-09] These slices were 1200 chars and the explanatory comment above the mount
+    grew past that, so the assertions stopped seeing the code they were about and failed on
+    correct source. A window measured in characters is a window that expires.
+    """
+    start = text.index("NATIVE_INJECT_GPUCOMP")
+    end = text.index("DOCKER_MOUNT_ARGS=(-v", start)
+    return text[start:end]
+
+
 def test_the_wrapper_injects_the_missing_driver_library():
     text = WRAPPER.read_text()
     assert "libnvidia-gpucomp" in text, (
@@ -88,7 +100,7 @@ def test_the_wrapper_injects_the_missing_driver_library():
 def test_the_injected_library_is_pinned_to_the_running_driver():
     """A userspace driver library must match the kernel driver, or it is worse than the bug."""
     text = WRAPPER.read_text()
-    block = text[text.index("NATIVE_INJECT_GPUCOMP"):][:1200]
+    block = _gpucomp_block(text)
     assert "nvidia-smi --query-gpu=driver_version" in block, (
         "the driver version is not read from the running driver")
     assert "libnvidia-gpucomp.so.$_drv" in block, "the library is not pinned to that version"
@@ -98,15 +110,14 @@ def test_the_injected_library_is_pinned_to_the_running_driver():
 def test_it_is_a_single_file_never_a_directory():
     """The rule-3 carve-out is bounded to one file; a directory mount is the original hazard."""
     text = WRAPPER.read_text()
-    block = text[text.index("NATIVE_INJECT_GPUCOMP"):][:1200]
+    block = _gpucomp_block(text)
     assert "dst=/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.$_drv" in block
     assert "src=/usr/lib\"" not in block and "src=/usr/lib," not in block
 
 
 def test_a_host_without_the_library_is_not_fatal():
     """A newer toolkit injects it already; refusing there would break correct hosts."""
-    block = WRAPPER.read_text()
-    block = block[block.index("NATIVE_INJECT_GPUCOMP"):][:1400]
+    block = _gpucomp_block(WRAPPER.read_text())
     assert "relying on the toolkit" in block, (
         "absence must be reported and tolerated -- the renderer check is what actually decides")
 

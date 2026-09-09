@@ -152,7 +152,10 @@ def test_how_many_processes_are_ours_is_not_a_bare_literal():
     """
     code = _code()
     assert '--expect-ours "$EXPECT_OURS"' in code, "process count hardcoded at the call site"
-    assert 'EXPECT_OURS="${NATIVE_EXPECT_OURS:-1}"' in code
+    # [Claude 2026-09-09] Was `:-1`. The default is now DERIVED from the cell list, because a
+    # packed run puts one process on the card per CELL and a literal 1 made the daemon yield to
+    # its own second cell.
+    assert 'EXPECT_OURS="${NATIVE_EXPECT_OURS:-$_cell_count}"' in code
 
 
 def test_a_prebuilt_environment_collapses_the_bootstrap_allowance():

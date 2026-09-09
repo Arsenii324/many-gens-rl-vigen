@@ -23,6 +23,19 @@ def test_script_is_valid_bash():
     assert result.returncode == 0, result.stderr
 
 
+def _cell_invocation(log_path: pathlib.Path) -> list[str]:
+    """The docker call that RUNS THE CELL, not the helper or chown calls around it.
+
+    The wrapper makes several docker calls per run: `docker info`, helper containers for disk and
+    requirement arithmetic, the cell itself, and a post-run chown. Only one of them mounts the
+    staging directory at /work, and that is the one every assertion here is about.
+    """
+    blocks = [b.strip().splitlines() for b in log_path.read_text().split("@@@") if b.strip()]
+    cell = [b for b in blocks if any(a.endswith(":/work") for a in b)]
+    assert cell, f"no docker invocation mounted :/work; calls were: {[b[:3] for b in blocks]}"
+    return cell[-1]
+
+
 def _stub_docker(tmp_path: pathlib.Path, log_path: pathlib.Path) -> pathlib.Path:
     fake_bin = tmp_path / "fakebin"
     fake_bin.mkdir()
@@ -44,7 +57,13 @@ def _stub_docker(tmp_path: pathlib.Path, log_path: pathlib.Path) -> pathlib.Path
         '    *disk-requirement*)  echo 5; exit 0;;\n'
         '  esac\n'
         'done\n'
-        f'printf \'%s\\n\' "$@" > "{log_path}"\n'
+        # [Claude 2026-09-09] APPEND, with a separator, and let the caller pick the invocation it
+        # means. This used to overwrite, so the log held whichever docker call happened LAST -- and
+        # once the wrapper gained a post-run `chown` container (to hand root-owned outputs back
+        # before copying them), that became the recorded call and three tests started asserting
+        # about a chown. The stub was silently answering a different question than it was asked.
+        f'printf \'%s\\n\' "$@" >> "{log_path}"\n'
+        f'printf \'@@@\\n\' >> "{log_path}"\n'
         'mkdir -p "$(dirname "${@: -1}")" 2>/dev/null || true\n'
         # Find the -v host:/work mount and drop the expected output files there, so the
         # script's own post-run `cp` steps succeed rather than masking what we want to check.
