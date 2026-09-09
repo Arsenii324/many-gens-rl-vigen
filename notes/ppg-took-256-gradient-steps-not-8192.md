@@ -122,3 +122,55 @@ makes the executed optimisation match the one the authors described. Raising `nu
 silently change the on-policy update density, which
 [`FINDING-on-policy-update-density.md`](FINDING-on-policy-update-density.md) already flags as its own
 comparability axis.
+
+---
+
+# The fix is specified here and deliberately NOT applied yet
+
+I would normally implement this rather than describe it. **A hard constraint says otherwise, and it
+is the project's own:**
+
+```
+FAMILY_RUNTIME_MEMBERS['ppg'] = ('runnable/ppg/phasic_policy_gradient',
+                                 'runnable/ppg/phasic_policy_gradient/train.py', ...)
+ppg evaluator revision = 184329928b51da31de8e314b87db805154f823dbd0edfec1c533ed9d7ea49a2c
+```
+
+`minibatch_optimize.py` lives inside a **family runtime member**, so editing it **moves ppg's
+evaluator revision**. The ppg cell is 92% through training with ten hours of evaluation ahead of it,
+and `populate_evaluator_ledger.py` refuses a record whose revision is not the live one — by
+assertion, deliberately. **Editing this file now would make a twelve-hour cell uncollectable.** The
+standing rule is explicit: while a wave runs, nothing under `runnable/` is touched, comment bytes
+included.
+
+So: **apply it after the ppg cell is collected and its revision retired**, not before.
+
+## The change
+
+`minibatch_gen` splits `th.randperm(ntrain)` where `ntrain` is the batch axis. For a non-recurrent
+model the batch and time axes are interchangeable for optimisation purposes, and `idaac`'s lineage
+already flattens them. The fix is to make the policy phase split over `batch × time` rather than
+`batch` alone.
+
+**It is not a one-line clamp removal.** Removing the clamp without flattening gives
+`th.chunk(th.randperm(1), 32)`, which yields one chunk — the same behaviour with the warning gone,
+which is strictly worse because the only instrument that reported the problem would fall silent.
+
+The safe form flattens the leading two axes before splitting, and must keep `state_in` and `first`
+consistent. PPG as configured here is non-recurrent (`state_in` is empty), so the flatten is sound —
+**and that condition must be asserted in the code rather than assumed**, because a future recurrent
+configuration would be silently corrupted by it.
+
+## Acceptance, predefined
+
+A short cell after the change must show **all three**, and any one of them alone is insufficient:
+
+1. **`Warning: nminibatch > ntrain!!` no longer appears.** Necessary, not sufficient — removing the
+   clamp alone achieves this while changing nothing.
+2. **`Opt/clipfrac` is non-zero and in 0.1-0.3**, and **`Opt/approxkl` is around 0.01-0.05.** This is
+   the real test: it means the ratio is being measured against a policy that has actually moved.
+3. **`nminibatch` reported as 32**, matching `effective_config.json`.
+
+Then re-run `ppg` at 600k. **The current cell is a diagnostic, not a data point for PPG** — it
+measures a policy that received 1/32 of its configured updates, and no comparison against the other
+eleven baselines may include it. The battery is twelve baselines **plus one re-run**.
