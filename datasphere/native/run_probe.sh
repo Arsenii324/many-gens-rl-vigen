@@ -1187,15 +1187,25 @@ run_curve_eval() {
       count=$((count + 1))
       # [Claude 2026-09-10] EXERCISE THE SUPPLEMENTARY POLICY MODE ONCE, EARLY.
       #
-      # The `mode` action rule is only ever executed at the ENDPOINT, after all training. On
-      # card0-20260909-115331 that meant a defect reachable in nine seconds -- ppg's mode override
+      # The `mode` action rule is otherwise executed for the first time at the ENDPOINT, after
+      # BOTH training and the whole curve pass. On card0-20260909-115331 ppg's mode override
       # bypassed `PpoModel.act`'s @tu.no_grad, so `th2np` raised "Can't call numpy() on Tensor that
-      # requires grad" -- was not discovered until 3.6 hours of training had already been spent.
-      # The curve pass never sees it: it does not pass --policy-mode at all, so it exercised the
-      # sampled path 572 times and the mode path zero times.
+      # requires grad" -- a defect reachable in nine seconds, found last. The curve pass cannot see
+      # it: it does not pass --policy-mode at all, so it exercised the sampled path 572 times and
+      # the mode path zero times.
       #
-      # One episode, one scene, one regime, against the first stamp that exists. It is the cheapest
-      # possible execution of that code path and it would have caught this exact failure.
+      # WHAT THIS DOES AND DOES NOT SAVE. `run_curve_eval` is called from `run_one_cell` AFTER
+      # `wait "$training_pid"`, so this cannot save training time -- the first version of this
+      # comment claimed it would have saved 3.6 hours and that was wrong. What it saves is the
+      # curve pass and the native endpoint pass that follow, which on that cell was 572 curve rows
+      # and 44 endpoint rows, and `notes/production-host/28-eval-is-sixty-percent-of-a-cell.md`
+      # says what that is worth. Earlier is not available: no checkpoint exists before training,
+      # which is the same gap the frame-0 row leaves open.
+      #
+      # One episode, one scene, one regime, against the first stamp the loop reaches. "First" is
+      # LEXICOGRAPHIC -- `for item in "$dir"/*` sorts `model_102400.pt` before `model_51200.pt` --
+      # which is fine here because any checkpoint exercises the code path equally, and is noted so
+      # nobody later reads it as "earliest frame".
       #
       # DELIBERATELY NON-FATAL, and that is the lesson from the same run rather than caution: ppg's
       # native grid completed and is a valid, audited result. A probe that aborted the cell would
