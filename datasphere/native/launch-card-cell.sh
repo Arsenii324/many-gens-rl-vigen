@@ -71,11 +71,43 @@ SLACK="${NATIVE_WATCH_SLACK_SECONDS:-900}"
 # ~5h training, then ~4.5h of curve eval (11 checkpoints x 1478s) and ~3.3h of endpoint grid
 # (80 regime-scene passes at 2 per 5 min) -- eval is about 1.6x the training it follows.
 #
-# The default allowance is therefore the cell timeout again: generous, and generous in the safe
-# direction, because the failure it prevents is a reaper killing a cell DURING EVALUATION after all
-# the training is done -- the most expensive moment there is, and one that note 25 warned about
-# before this file went and encoded it.
-EVAL_ALLOWANCE="${NATIVE_EVAL_ALLOWANCE_SECONDS:-$CELL_TIMEOUT_SECONDS}"
+# [Claude 2026-09-09] THE COMMENT ABOVE SAID EVAL IS 1.6x TRAINING AND THE NEXT LINE ALLOWED 1.0x.
+# Measured to completion on the idaac 600k cell rather than estimated mid-run:
+#
+#   training           4.95 h   (inside its 6 h CELL_TIMEOUT)
+#   curve evaluation   4.60 h   11 stamps x 44 rows x 3 episodes = 1,452 episodes
+#   endpoint grid      5.52 h   44 rows x 20 episodes x **TWO policy-mode passes**
+#   evaluation total  10.12 h   against a 6 h allowance -- 69% short
+#
+# The missed term was `ENDPOINT_EVAL_POLICY_MODES`, which defaults to `native,mode`: the endpoint
+# runs the WHOLE grid twice. That cell's endpoint is projected to finish at 18:36 against a reaper
+# at 18:37 -- one minute -- and the failure it would have caused is not a lost pass but a lost
+# DELIVERY, because `collect_record_delivery` runs after evaluation and a reaped cell never reaches
+# it. Every record of a 12-hour cell, unassembled.
+#
+# So the allowance is derived from the work rather than borrowed from the training budget: episodes
+# actually scheduled, times a measured seconds-per-episode, times a safety factor. Both evaluation
+# phases cost the same per episode (11.4 s curve, 11.2 s endpoint), so one constant covers both.
+# Floored at the old default, so this can only ever be MORE generous than what ran today.
+_csv_count() { local s="${1:-}"; [[ -z "$s" ]] && { printf 0; return; }; awk -F, '{print NF}' <<<"$s"; }
+_c_regimes="$(_csv_count "${CURVE_EVAL_REGIMES:-train,eval-easy}")"
+_c_scenes="$(_csv_count "${CURVE_EVAL_SCENES:-0}")"
+_e_regimes="$(_csv_count "${ENDPOINT_EVAL_REGIMES:-train,eval-easy,eval-medium,eval-hard}")"
+_e_scenes="$(_csv_count "${ENDPOINT_EVAL_SCENES:-0}")"
+_e_modes="$(_csv_count "${ENDPOINT_EVAL_POLICY_MODES:-native}")"
+# One scene set beyond the listed ones is swept: the idaac cell declared scenes 0-9 and produced 11
+# distinct `scene_set` values per regime. Counted from the artifact, not from the variable.
+_c_rows=$(( _c_regimes * (_c_scenes + 1) ))
+_e_rows=$(( _e_regimes * (_e_scenes + 1) ))
+_stamps="${NATIVE_EXPECTED_STAMPS:-$(( ${FRAMES:-0} / ${EVAL_EVERY_FRAMES:-50000} + 1 ))}"
+_episodes=$(( _stamps * _c_rows * ${CURVE_EVAL_EPISODES:-3}
+              + _e_rows * ${ENDPOINT_EVAL_EPISODES:-20} * _e_modes ))
+_sec_per_episode="${NATIVE_SECONDS_PER_EVAL_EPISODE:-12}"
+_derived=$(( _episodes * _sec_per_episode * 3 / 2 ))
+EVAL_ALLOWANCE="${NATIVE_EVAL_ALLOWANCE_SECONDS:-$(( _derived > CELL_TIMEOUT_SECONDS ? _derived : CELL_TIMEOUT_SECONDS ))}"
+echo "eval workload:  ${_episodes} episode(s) = ${_stamps} stamp(s) x ${_c_rows} curve row(s) x ${CURVE_EVAL_EPISODES:-3} ep"
+echo "                + ${_e_rows} endpoint row(s) x ${ENDPOINT_EVAL_EPISODES:-20} ep x ${_e_modes} policy mode(s)"
+echo "                -> ${_derived}s derived at ${_sec_per_episode}s/episode x1.5; allowance ${EVAL_ALLOWANCE}s"
 MUST_COVER=$(( CELL_TIMEOUT_SECONDS + EVAL_ALLOWANCE + BOOTSTRAP_ALLOWANCE ))
 WATCH_SECONDS=$(( MUST_COVER + SLACK ))
 
