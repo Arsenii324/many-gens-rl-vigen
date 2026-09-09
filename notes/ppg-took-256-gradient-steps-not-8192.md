@@ -264,3 +264,77 @@ for.
 
 *(These are different algorithms with different networks; the `idaac` column is context for update
 counts, not an algorithm comparison. `scripts/comparison_blocks.py` would refuse to rank them.)*
+
+---
+
+# Reconciliation with the project's own update-density framework — and a substantial revision
+
+`notes/FINDING-on-policy-update-density.md` already frames exactly this question: **grad steps per
+env frame**, executed against upstream. Reconciling the clamp with it changes what this note should
+claim.
+
+## The three configurations, computed the same way that note computes them
+
+| configuration | frames / iter | grad steps / iter | **samples per step** | **steps per 2048 env frames** |
+|---|---:|---:|---:|---:|
+| **PPG's own release** (Procgen, 1 rank) | 64 x 256 = 16384 | 1 x 8 = **8** | **2048** | **1** |
+| **Our DECLARED config** (A36, IDAAC supp §E) | 1 x 2048 = 2048 | 1 x 32 = **32** | **64** | **32** |
+| **Our EXECUTED config** (nminibatch clamped to 1) | 2048 | 1 x 1 = **1** | **2048** | **1** |
+
+**The executed configuration matches PPG's own release exactly on both axes** — 2048 samples per
+gradient step, one step per 2048 environment frames. Over 600k frames both take **293** policy
+gradient steps.
+
+**So "256 updates instead of 8,192" measures against the DECLARED value, not against upstream PPG.**
+Against PPG's release, the executed run is not under-optimised at all; it is exactly on density.
+
+## What the declared config actually is
+
+`nminibatch = 32` does not come from PPG. It comes from **IDAAC's supplement §E** — "32 minibatches,
+entropy 0, 2048 steps, 1 process, linear rate decay over 1e6 env steps" — which the authors say they
+used "for all the methods", and which A36 adopted for `ppg` on 2026-09-07 when `num_envs x nstep`
+went `8 x 256` → `1 x 2048`. `families.json`'s own note says these values **DEVIATE from PPG's
+release**, deliberately and with the reason recorded.
+
+Applied to a 2048-sample rollout, 32 minibatches means **64 samples per gradient step** — a 32x
+smaller batch than PPG's release uses, at 32x the density.
+
+## What this revises, and what survives
+
+**Revised — the severity.** This run is not a broken PPG. It is a run of PPG **at PPG's own released
+optimisation statistics**, while the configuration declared IDAAC's DMC statistics. That is why the
+diagnostics look calm, why the value head fits, and why the return climbs steadily rather than
+collapsing. My "320x fewer updates" framing measured a deviation from the declared value and
+implied a deviation from a sane one; those are different claims and only the first is true.
+
+**Survives — it is still a defect.** The executed configuration is not the declared configuration,
+nothing reported it, and `clipfrac`/`approxkl` are structurally uninformative at one minibatch. A
+run whose optimiser does not do what its config says is not usable as that config's result, however
+defensible the accident turns out to be.
+
+**Survives — the run still cannot represent PPG in the battery**, but the reason changes: not
+"under-trained", but **"trained under a different, undeclared recipe"**.
+
+## The question this exposes, which is an owner decision and not a bug
+
+Fixing the clamp restores 32 minibatches of 64 samples — the declared IDAAC-DMC recipe. Leaving it
+gives 1 minibatch of 2048 — PPG's own release. **Both are sourced.** The choice is:
+
+- **follow IDAAC's supplement**, on its "we used the best values found for all the methods" claim,
+  which is what A36 decided and what the fidelity record says; or
+- **follow PPG's own release** for PPG, on the grounds that a 64-sample minibatch on a 7-DoF
+  continuous-control task is a long way from what either author ran.
+
+I would **fix the clamp and keep the declared IDAAC-DMC recipe**, because A36 resolved that question
+deliberately with the primary source in hand and one accident is not grounds to reopen it. But the
+accident has produced, for free, a run at the alternative — so **the comparison is already half
+done**, and the re-run turns it into a genuine two-arm result rather than a correction.
+
+## A stale row this reconciliation surfaced
+
+`FINDING-on-policy-update-density.md` carries a prominent supersession block for its `idaac` rows and
+says "the rows for `ppg`, `ibac_sni` and the others are untouched by A35 and stand as written".
+**The `ppg` row is also stale.** It reads `8 x 256 = 2048` with `1 x 8` minibatches — the pre-A36
+configuration. A36 changed `ppg` to `1 x 2048` with 32 minibatches on 2026-09-07, two days after that
+note was written. Its `ppg` numbers (0.00391 grad steps/frame, "8x / 32x") describe a configuration
+that no longer exists, exactly as its `idaac` numbers did.
