@@ -56,7 +56,7 @@ def test_the_caveats_name_what_cannot_be_seen():
 def test_headline_numbers_are_split_by_policy_mode():
     """Pooling a sampled return with a mode return is the defect comparison_blocks.py refuses."""
     text = REGISTER.read_text()
-    assert "| policy mode | regime | return | success rate | episodes |" in text
+    assert "| policy mode | regime | return | **SE** | success rate | episodes |" in text
 
 
 def test_it_records_the_door_reward_ceiling():
@@ -98,3 +98,34 @@ def test_the_register_states_which_half_check_covers():
     text = REGISTER.read_text()
     assert "Derived versus asserted" in text
     assert "says nothing about the second" in text
+
+
+def test_the_endpoint_table_carries_a_standard_error():
+    """A mean without its noise floor invites reading wiggle as a trend."""
+    text = REGISTER.read_text()
+    assert "| policy mode | regime | return | **SE** | success rate | episodes |" in text
+    assert "± " in text
+
+
+def test_the_curve_line_states_the_noise_floor_and_the_gap_in_SE(tmp_path, monkeypatch):
+    import importlib.util, json
+    spec = importlib.util.spec_from_file_location("_reg", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    recs = tmp_path / "records"
+    recs.mkdir()
+
+    def row(frame, mean, sd=15.0):
+        return json.dumps({"baseline": "idaac", "cell": "c", "seed": 1, "regime": "train",
+                           "frame": frame, "episodes": 33, "episode_return_mean": mean,
+                           "episode_return_sd": sd, "phase": "offline-eval",
+                           "evaluator_scope": {"eval_scope": "curve"}})
+    (recs / "j__records.jsonl").write_text(
+        "\n".join(row(f, m) for f, m in [(1000, 10.0), (2000, 50.0), (3000, 10.0)]) + "\n")
+    monkeypatch.setattr(mod, "RECORDS", recs)
+    monkeypatch.setattr(mod, "LOGS", tmp_path / "logs")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    text = mod.build()
+    assert "SE ≈ 2.6 per point" in text, text[:600]
+    assert "is not a trend" in text
+    assert "ends below its peak by 15.3 SE" in text

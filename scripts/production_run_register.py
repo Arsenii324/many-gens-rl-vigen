@@ -62,6 +62,22 @@ def _weighted(rows: list[dict], key: str) -> float | None:
     return sum((r.get(key) or 0.0) * (r.get("episodes") or 0) for r in rows) / n
 
 
+def _stderr(rows: list[dict]) -> float | None:
+    """Standard error of the episode-return mean, from the per-row SD the records carry.
+
+    [Claude 2026-09-09] Added because a mean without its noise floor invites exactly the error I
+    made three times in one day: reading stamp-to-stamp wiggle as a trend. The curve runs 3 episodes
+    per scene, so a regime aggregate is 33 episodes and its SE is about 2.6 -- which makes a 4.7-point
+    "drop" 1.8 SE and therefore nothing. Printing the SE beside the mean makes that visible without
+    anyone having to remember to compute it.
+    """
+    n = sum(r.get("episodes") or 0 for r in rows)
+    if not n:
+        return None
+    sd = sum((r.get("episode_return_sd") or 0.0) * (r.get("episodes") or 0) for r in rows) / n
+    return sd / (n ** 0.5) if sd else None
+
+
 def build() -> str:
     files = sorted(RECORDS.glob("*.jsonl"))
     lines: list[str] = []
@@ -153,21 +169,33 @@ def build() -> str:
             byf = collections.defaultdict(list)
             for r in curve:
                 byf[int(float(r["frame"]))].append(r)
-            pts = [(f, _weighted(byf[f], "episode_return_mean")) for f in sorted(byf)]
-            pts = [(f, v) for f, v in pts if v is not None]
+            pts = [(f, _weighted(byf[f], "episode_return_mean"), _stderr(byf[f]))
+                   for f in sorted(byf)]
+            pts = [(f, v, se) for f, v, se in pts if v is not None]
             if pts:
                 peak = max(pts, key=lambda kv: kv[1])
-                add(f"- **curve** (train regime, {len(pts)} stamp(s)): "
-                    f"first {pts[0][1]:.2f} @{pts[0][0]:,} · "
-                    f"**peak {peak[1]:.2f} @{peak[0]:,}** · last {pts[-1][1]:.2f} @{pts[-1][0]:,}"
-                    + ("  — ends below its peak" if pts[-1][1] < 0.8 * peak[1] else ""))
+                ses = [se for _, _, se in pts if se]
+                typical_se = sorted(ses)[len(ses) // 2] if ses else None
+                line = (f"- **curve** (train regime, {len(pts)} stamp(s)): "
+                        f"first {pts[0][1]:.2f} @{pts[0][0]:,} · "
+                        f"**peak {peak[1]:.2f} @{peak[0]:,}** · last {pts[-1][1]:.2f} @{pts[-1][0]:,}")
+                if typical_se:
+                    line += f" · **SE ≈ {typical_se:.1f} per point**"
+                if pts[-1][1] < 0.8 * peak[1]:
+                    drop = peak[1] - pts[-1][1]
+                    line += ("  — ends below its peak"
+                             + (f" by {drop / typical_se:.1f} SE" if typical_se else ""))
+                add(line)
+                if typical_se:
+                    add(f"  <br/>*A move smaller than about {2 * typical_se:.1f} between stamps is "
+                        f"inside 2 SE and is not a trend.*")
 
         # headline numbers, endpoint scope only, split by policy mode so nothing is pooled
         end = [r for r in rows if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
         if end:
             add("")
-            add("  | policy mode | regime | return | success rate | episodes |")
-            add("  |---|---|---:|---:|---:|")
+            add("  | policy mode | regime | return | **SE** | success rate | episodes |")
+            add("  |---|---|---:|---:|---:|---:|")
             grouped = collections.defaultdict(list)
             for r in end:
                 grouped[((r.get("evaluator_scope") or {}).get("eval_policy_mode"),
@@ -176,8 +204,10 @@ def build() -> str:
                 g = grouped[key]
                 ret = _weighted(g, "episode_return_mean")
                 sr = _weighted(g, "success_rate")
+                se = _stderr(g)
                 eps = sum(x.get("episodes") or 0 for x in g)
-                add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | {sr:.3f} | {eps} |")
+                add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | "
+                    f"{('± %.2f' % se) if se else '—'} | {sr:.3f} | {eps} |")
         add("")
 
     host = ROOT / "results" / "host-runs.jsonl"
