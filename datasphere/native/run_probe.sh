@@ -1619,6 +1619,44 @@ for _mod in robosuite robosuitevgb; do
     exit 3
   fi
 done
+# [Claude 2026-09-09] THE CHECK ABOVE IS NOT THE CONDITION THE TRAINER MEETS, and the comment saying
+# it is was wrong. It imports with `third_party/robosuite` prepended -- and NO launcher keeps that
+# entry. `runnable/_launch/rlvigen.sh` sets PYTHONPATH to
+# `$RLV:$RLV/algos:$RLV/envs/robosuiteVGB:$REPO/runnable/_shim`; `idaac.sh` names no RL-ViGen path at
+# all. So the loop above can pass on a tree that no trainer can import from, which is the same shape
+# as the VRAM cap: a verification true of the process that runs it and false of the process that
+# matters.
+#
+# On the pip path this never bit, because the editable installs put robosuite in site-packages and
+# every launcher inherits it. It bites on the PREBUILT ENV path. Measured 2026-09-09 on the host's
+# only prebuilt environment, `~/rlvigen-env/torch-02805cc0-94c1577b2cd9/ENVIRONMENT.json`:
+#
+#     "cells": "idaac:1",  "editable": [],  robosuite ABSENT, robosuitevgb ABSENT
+#
+# It was built from an idaac payload. Payloads carry no `RL-ViGen-upstream/` -- the runner git-clones
+# it at line 1546 -- so `build-env.sh`'s `[[ -d RL-ViGen-upstream ]]` was false and it printed its
+# NOTE and baked nothing. Reusing that env for an `rlvigen` cell skips the editable installs (they
+# are guarded by `-z "${NATIVE_VENV:-}"`), leaves robosuite importable ONLY from the clone, and the
+# launcher drops the one path that reaches it. Nothing refused the reuse: the environment is
+# family-specific and its filename says only the requirements hash, which is identical for all
+# twelve.
+#
+# So: import with the RL-ViGen paths REMOVED. Succeeding bare means genuinely installed, which every
+# launcher inherits. Succeeding only with the paths means the run is one PYTHONPATH assignment away
+# from an ImportError inside a GPU call.
+for _mod in robosuite robosuitevgb; do
+  if ! PYTHONPATH="" python3 -c "import $_mod" 2>/dev/null; then
+    echo "=== NATIVE_EDITABLE_NOT_INSTALLED $_mod ===" >&2
+    echo "    It imports from the cloned tree but is NOT installed, so it reaches this check and" >&2
+    echo "    NOT the trainer: every runnable/_launch/*.sh replaces PYTHONPATH and none keeps" >&2
+    echo "    RL-ViGen-upstream/third_party/robosuite." >&2
+    echo "    NATIVE_VENV=${NATIVE_VENV:-<unset>}. A prebuilt env bakes the editable installs only" >&2
+    echo "    if the payload it was built from carried RL-ViGen-upstream, and payloads never do." >&2
+    echo "    Check its ENVIRONMENT.json: \"editable\": [] means this env cannot run an rlvigen" >&2
+    echo "    cell. Build one from a cell that needs it, or run without NATIVE_VENV." >&2
+    exit 3
+  fi
+done
 python3 -m pip check
 # [Codex 2026-09-01 10:51 MSK: preserve resolved versions so remote results remain reproducible despite transitive package resolution]
 python3 - <<'PY' > "$out/resolved_packages.json"

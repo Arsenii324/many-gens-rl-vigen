@@ -225,3 +225,14 @@ of the process that prints it and false of the trainer. **What is NOT broken:** 
 re-add `runnable/_shim`, so `sitecustomize.py`, `safe_checkpoint.py`, the `wandb` stub and `no_tf`
 reach the trainer normally — the single casualty is the cap directory. See
 [`production-host/26-the-vram-cap-never-reached-a-trainer.md`](production-host/26-the-vram-cap-never-reached-a-trainer.md).
+
+**"Can the prebuilt venv be reused across families?"** — ANSWERED, **not blindly**, and I got this
+wrong for an hour. `filtered-requirements` is byte-identical for all twelve, and the env directory is
+named by that hash — but the host's only prebuilt env reads `"cells": "idaac:1"`, `"editable": []`,
+with `robosuite`/`robosuitevgb` **ABSENT**. `build-env.sh` bakes the editable installs only when the
+build payload carries `RL-ViGen-upstream/`, and **payloads never do** — the runner git-clones it. So
+that env cannot run an `rlvigen` cell, and nothing refused the reuse. Worse, it would not have failed
+loudly: `run_probe.sh` skips the editable installs under `NATIVE_VENV` and its import check ran with
+`third_party/robosuite` prepended, a path **no** `runnable/_launch/*.sh` keeps. Now guarded —
+`PYTHONPATH="" python3 -c "import robosuite"`, refusing with `NATIVE_EDITABLE_NOT_INSTALLED`. Neither
+running cell uses the prebuilt env at all; both take `NATIVE_PIP_CACHE=1`, and `drqv2` will too.

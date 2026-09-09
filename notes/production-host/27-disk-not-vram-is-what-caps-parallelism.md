@@ -55,9 +55,33 @@ precisely because neither writes a replay buffer. Their cells are ~2 GiB each af
 ## The prebuilt environment serves every family, so this costs nothing extra
 
 `family.py filtered-requirements --cells <baseline>` is **byte-identical across `drqv2`, `idaac` and
-`ppg`** (sha256 `72053d1e78d0`). One venv serves all of them, and `~/rlvigen-env/torch-02805cc0-94c1577b2cd9`
-is already built and already in use by both running cells. `drqv2` points `NATIVE_VENV_HOST` at the
-same directory: no `pip`, no two-hour bootstrap, and **no additional disk**.
+`ppg`** (sha256 `72053d1e78d0`).
+
+**RETRACTED, same day.** I wrote that one venv therefore serves all of them, that
+`~/rlvigen-env/torch-02805cc0-94c1577b2cd9` was "already in use by both running cells", and that
+`drqv2` should point `NATIVE_VENV_HOST` at it. **All three are wrong, and acting on them would have
+broken the run.**
+
+- **Neither running cell uses it.** Both set `NATIVE_PIP_CACHE=1` and no `NATIVE_VENV`; the idaac log
+  carries `Successfully installed robosuite-1.4.0` and `robosuitevgb-1.0.0`, which only the pip path
+  produces. I inferred the env was in use from its existence and did not check.
+- **Identical requirements do not make an identical environment.** That env's `ENVIRONMENT.json`
+  reads `"cells": "idaac:1"`, `"editable": []`, with `robosuite` and `robosuitevgb` **ABSENT**.
+  `build-env.sh` bakes the two editable installs only `[[ -d RL-ViGen-upstream ]]`, payloads never
+  carry that tree — the runner git-clones it — so the build printed its NOTE and baked nothing. The
+  requirements hash in the directory name is identical for all twelve families and says nothing
+  about this.
+- **The failure would not have been loud.** `run_probe.sh` skips the editable installs when
+  `NATIVE_VENV` is set, and its import check ran with `third_party/robosuite` prepended, which no
+  launcher keeps. It would have passed, and the trainer would have hit `ImportError` inside a GPU
+  call.
+
+`run_probe.sh` now imports both modules with `PYTHONPATH=""` and refuses with
+`NATIVE_EDITABLE_NOT_INSTALLED` when they resolve only from the clone.
+
+**So `drqv2` takes the same path as the two running cells: `NATIVE_PIP_CACHE=1`, no
+`NATIVE_VENV_HOST`.** With a warm cache that is minutes, not the two-hour cold bootstrap — but it
+is a `pip` install, so it is not free of disk either, and the allowance must cover it.
 
 *(Measured properly on the second attempt. The first comparison ran `filtered-requirements --family`,
 which is not the flag; every family hashed to `e3b0c442`, which is sha256 of the empty string. A
