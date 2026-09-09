@@ -135,3 +135,45 @@ def test_even_save_cadence_says_so(tmp_path):
     code, out = _run(tmp_path)
     assert code == 0, out
     assert "Save cadence even across 3 logged saves" in out
+
+
+def test_an_unnamed_snapshot_is_corroborated_through_its_frame_named_alias(tmp_path):
+    """The endpoint measures snapshot.pt, which carries no frame. Its twin does.
+
+    Measured on card0-20260909-013936: every row with a checkpoint_sha256 matched `snapshot.pt`,
+    so the auditor's first version read the entire endpoint grid as UNVERIFIABLE -- the headline
+    measurement being the one with no checkable label, for every family.
+    """
+    blob = b"terminal-weights"
+    (tmp_path / "snapshot.pt").write_bytes(blob)
+    (tmp_path / "agent-robosuite:Door-idaac-s101_598016.pt").write_bytes(blob)
+    _write(tmp_path, [{"baseline": "idaac", "regime": "train",
+                       "checkpoint_sha256": _sha(blob), "frame": 598016}])
+    code, out = _run(tmp_path, "--strict")
+    assert code == 0, out
+    assert _count(out, "corroborated") == 1, out
+    assert "byte-identical frame-named alias" in out
+    assert _count(out, "unverifiable") == 0
+
+
+def test_an_unnamed_snapshot_with_no_alias_stays_unverifiable(tmp_path):
+    """The alias must be a real file, not an assumption that one exists."""
+    blob = b"terminal-weights"
+    (tmp_path / "snapshot.pt").write_bytes(blob)
+    _write(tmp_path, [{"baseline": "idaac", "regime": "train",
+                       "checkpoint_sha256": _sha(blob), "frame": 598016}])
+    code, out = _run(tmp_path, "--strict")
+    assert code == 0, out
+    assert _count(out, "unverifiable") == 1, out
+    assert _count(out, "corroborated") == 0
+
+
+def test_an_alias_disagreeing_with_the_record_is_still_a_mismatch(tmp_path):
+    blob = b"terminal-weights"
+    (tmp_path / "snapshot.pt").write_bytes(blob)
+    (tmp_path / "agent-robosuite:Door-idaac-s101_550912.pt").write_bytes(blob)
+    _write(tmp_path, [{"baseline": "idaac", "regime": "train",
+                       "checkpoint_sha256": _sha(blob), "frame": 598016}])
+    code, out = _run(tmp_path, "--strict")
+    assert code == 1, out
+    assert _count(out, "MISMATCHED") == 1

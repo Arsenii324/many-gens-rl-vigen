@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import pathlib
 import re
 import sys
@@ -131,22 +132,37 @@ def _from_log(path: pathlib.Path) -> dict[str, list[float]]:
     return out
 
 
-def collect(target: pathlib.Path) -> tuple[dict[str, list[float]], list[str]]:
-    files: list[pathlib.Path]
+#: Below this many points a trajectory check compares a run against itself over almost no history.
+#: [Claude 2026-09-09] A 2-iteration smoke run tripped "the policy scale never moved" and "the value
+#: function does not explain the returns", both of which are simply true of any run that has barely
+#: started. A check that fires on every smoke run is a check people learn to ignore.
+MIN_POINTS = 6
+
+
+def collect(target: pathlib.Path) -> list[tuple[str, dict[str, list[float]]]]:
+    """One entry PER CELL, never pooled.
+
+    [Claude 2026-09-09] The first version merged every log under the target into one series set. On
+    `card0-20260909-013936`, which ran `idaac-s101` and `ppg-s1` in one job, that concatenated two
+    families' diagnostics into a single column and reported flags against the mixture -- the exact
+    cross-family pooling this file's own header refuses. Each log or CSV is its own unit, named.
+    """
     if target.is_file():
         files = [target]
     else:
         files = sorted(target.rglob("progress*.csv")) + sorted(target.rglob("*.log"))
-    raw: dict[str, list[float]] = {}
-    used: list[str] = []
+    out: list[tuple[str, dict[str, list[float]]]] = []
     for f in files:
         got = _from_csv(f) if f.suffix == ".csv" else _from_log(f)
-        if not got:
-            continue
-        used.append(str(f))
-        for k, v in got.items():
-            raw.setdefault(k, []).extend(v)
-    return raw, used
+        if got:
+            out.append((str(f), got))
+    # [Claude 2026-09-09] The job-level log is a POOLED superset: the runner tees every cell's
+    # output into it, so on a two-cell job its table blocks are idaac's and ppg's interleaved, and
+    # checking it means checking the mixture. Per-cell files exist beside it and are the real unit.
+    # Verified on card0-20260909-013936, where the job.log unit flagged two conditions produced by
+    # the concatenation while every per-cell unit was correctly reported as too short to judge.
+    per_cell = [(name, raw) for name, raw in out if f"{os.sep}cells{os.sep}" in name]
+    return per_cell if per_cell else out
 
 
 def resolve(raw: dict[str, list[float]]) -> dict[str, tuple[str, list[float]]]:
@@ -188,18 +204,26 @@ def main() -> int:
         print(f"no such path: {target}")
         return 2
 
-    raw, used = collect(target)
-    found = resolve(raw)
-    if not found:
+    units = collect(target)
+    units = [(name, resolve(raw)) for name, raw in units]
+    units = [(name, found) for name, found in units if found]
+    if not units:
         print(f"No recognised diagnostic series under {target}.")
         print("Nothing was checked, which is NOT the same as nothing being wrong. If this run does")
         print("emit diagnostics under other names, add them to SERIES rather than reading it clean.")
         return 2
 
     print(f"TRAINING DIAGNOSTICS -- {target}")
-    for f in used[:4]:
-        print(f"  read {f}")
-    print()
+    print(f"  {len(units)} unit(s), reported separately: diagnostics from different families come "
+          f"from\n  different loggers and are never pooled or compared.\n")
+    worst = 0
+    for name, found in units:
+        worst = max(worst, report(name, found))
+    return 1 if (args.strict and worst) else 0
+
+
+def report(name: str, found: dict[str, tuple[str, list[float]]]) -> int:
+    print(f"=== {name}")
 
     steps = found.get("steps")
     if steps:
@@ -212,6 +236,11 @@ def main() -> int:
     print()
 
     flags: list[tuple[str, str, str]] = []
+    longest = max((len(v) for _, v in found.values()), default=0)
+    if longest < MIN_POINTS:
+        print(f"  ONLY {longest} POINT(S). Too short to judge: a run that has barely started has a")
+        print("  flat sigma and an unfitted critic by definition. Reported, not checked.\n")
+        return 0
     for canonical, question, predicate, scope, why in CHECKS:
         if canonical not in found:
             continue
@@ -248,8 +277,8 @@ def main() -> int:
         print()
 
     print("  These ranges describe PPO-family optimisation, not a comparison to another run.")
-    print("  A flag is a question to answer, and for a deliberate deviation it may be expected.")
-    return 1 if (args.strict and (flags or scale)) else 0
+    print("  A flag is a question to answer, and for a deliberate deviation it may be expected.\n")
+    return 1 if (flags or scale) else 0
 
 
 if __name__ == "__main__":

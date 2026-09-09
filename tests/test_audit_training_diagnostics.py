@@ -132,3 +132,47 @@ def test_a_file_with_no_diagnostics_refuses_rather_than_passing(tmp_path):
     code, out = _run(tmp_path / "empty.log")
     assert code == 2, out
     assert "NOT the same as nothing being wrong" in out
+
+
+def test_a_short_run_is_reported_not_judged(tmp_path):
+    """A 2-iteration smoke run has a flat sigma and an unfitted critic by definition."""
+    rows = [{"train/total_num_steps": 2048 * (i + 1), "train/approx_kl_k3": 0.02,
+             "train/clip_fraction": 0.2, "train/sigma_mean": 1.0, "VFStats/EV": 0.01}
+            for i in range(2)]
+    code, out = _run(_csv(tmp_path, rows), "--strict")
+    assert code == 0, out
+    assert "Too short to judge" in out
+    assert "FLAG" not in out
+
+
+def test_two_cells_in_one_run_are_never_pooled(tmp_path):
+    """card0-20260909-013936 ran idaac-s101 and ppg-s1 in one job; merging them mixes loggers."""
+    (tmp_path / "idaac-s101").mkdir()
+    (tmp_path / "ppg-s1").mkdir()
+    healthy = _healthy()
+    _csv(tmp_path / "idaac-s101", healthy)
+    blown = [dict(r, **{"train/approx_kl_k3": 1.3, "train/clip_fraction": 0.83}) for r in healthy]
+    _csv(tmp_path / "ppg-s1", blown)
+    code, out = _run(tmp_path, "--strict")
+    assert code == 1, out
+    assert "2 unit(s), reported separately" in out
+    assert "never pooled or compared" in out
+    # The healthy unit must still read healthy; a pooled median would have flagged both.
+    assert "No diagnostic left its expected range" in out
+    assert "far outside the trust region" in out
+
+
+def test_the_pooled_job_level_log_is_dropped_when_per_cell_files_exist(tmp_path):
+    """The runner tees every cell into job.log, so on a two-cell job it IS the pooled mixture."""
+    cells = tmp_path / "native-out" / "cells"
+    (cells / "idaac-s101").mkdir(parents=True)
+    _csv(cells / "idaac-s101", _healthy())
+    blown = [dict(r, **{"train/approx_kl_k3": 1.3, "train/clip_fraction": 0.83}) for r in _healthy()]
+    _log(tmp_path / "native-out", [{"train/approx_kl_k3": r["train/approx_kl_k3"],
+                                    "train/clip_fraction": r["train/clip_fraction"],
+                                    "train/sigma_mean": r["train/sigma_mean"]} for r in blown])
+    (tmp_path / "native-out" / "training.log").rename(tmp_path / "native-out" / "job.log")
+    code, out = _run(tmp_path, "--strict")
+    assert code == 0, out
+    assert "1 unit(s)" in out, out
+    assert "job.log" not in out, "the pooled superset must not be checked beside its own parts"

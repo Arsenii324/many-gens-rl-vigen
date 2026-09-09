@@ -68,14 +68,30 @@ def _sha256(path: pathlib.Path) -> str:
     return h.hexdigest()
 
 
-def _checkpoints(root: pathlib.Path) -> dict[str, pathlib.Path]:
-    out: dict[str, pathlib.Path] = {}
-    for path in root.rglob("*"):
+def _checkpoints(root: pathlib.Path) -> dict[str, list[pathlib.Path]]:
+    """hash -> EVERY file with that content, frame-named ones first.
+
+    [Claude 2026-09-09] This returned one path per hash and overwrote the rest, which lost the whole
+    endpoint grid. Measured on card0-20260909-013936: every row carrying a `checkpoint_sha256`
+    matched `snapshot.pt` -- the terminal snapshot, whose name carries no frame -- so all 24 read
+    UNVERIFIABLE. The curve names its checkpoints (`..._501760.pt`) and the endpoint does not; the
+    headline measurement was the one with no verifiable label, for EVERY family, not just ppg.
+
+    A trainer that writes `snapshot.pt` normally writes the same bytes to a frame-named file. When
+    it does, the two are ALIASES and the frame-named one corroborates the record exactly as it would
+    have if the endpoint had measured it directly -- same bytes, same weights, an independent
+    producer having stamped the frame into a name. So all aliases are kept and the frame-named ones
+    are preferred.
+    """
+    out: dict[str, list[pathlib.Path]] = {}
+    for path in sorted(root.rglob("*")):
         if path.is_file() and path.suffix in (".pt", ".pth", ".jd", ".tar"):
             try:
-                out[_sha256(path)] = path
+                out.setdefault(_sha256(path), []).append(path)
             except OSError:
                 continue
+    for paths in out.values():
+        paths.sort(key=lambda p: (FRAME_IN_NAME.search(p.name) is None, p.name))
     return out
 
 
@@ -146,7 +162,7 @@ def main() -> int:
 
     by_hash = _checkpoints(root)
     saves, ordered = _save_lines(root)
-    corroborated = tied = mismatched = unverifiable = 0
+    corroborated = tied = mismatched = unverifiable = aliased = 0
     problems: list[str] = []
 
     for r in rows:
@@ -156,15 +172,20 @@ def main() -> int:
         if not sha or frame is None:
             unverifiable += 1
             continue
-        path = by_hash.get(sha)
-        if path is None:
+        paths = by_hash.get(sha)
+        if not paths:
             unverifiable += 1
             continue
+        path = paths[0]
+        alias = (f" (as {path.name}, identical bytes to {paths[1].name})"
+                 if len(paths) > 1 and FRAME_IN_NAME.search(path.name) else "")
         m = FRAME_IN_NAME.search(path.name)
         if m:
             named = int(m.group(1))
             if named == int(float(frame)):
                 corroborated += 1
+                if alias:
+                    aliased += 1
             else:
                 mismatched += 1
                 problems.append(f"    {baseline} {r.get('regime','?'):<11} record frame={frame} "
@@ -184,6 +205,9 @@ def main() -> int:
     total = len(rows)
     print(f"RECORD FRAME PROVENANCE -- {total} record(s) under {target}\n")
     print(f"  corroborated  {corroborated:>5}   trainer filename and record agree, no shared code path")
+    if aliased:
+        print(f"    of which     {aliased:>5}   matched through a byte-identical frame-named alias "
+              f"of an\n                      unnamed file such as snapshot.pt")
     print(f"  tied          {tied:>5}   frame belongs to the measured file, via the training log")
     print(f"  MISMATCHED    {mismatched:>5}   the frame does not belong to the file it labels")
     print(f"  unverifiable  {unverifiable:>5}   nothing was checked for these rows")
