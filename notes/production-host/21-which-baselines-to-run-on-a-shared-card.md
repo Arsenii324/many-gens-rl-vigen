@@ -99,3 +99,32 @@ Revised order:
 
 A non-degenerate result from (3) is what licenses trusting (1) and (2). If `drqv2` learns nothing
 here, the added baselines learning nothing would be uninterpretable.
+
+
+## Second revision, 2026-09-09 — production runs go one at a time
+
+The packing recommendation is withdrawn for production scale (see note 22): two cells at 600k took
+29910 MiB of 32494 and the memory floor stopped them. Production runs are therefore **sequential,
+one cell per launch**, with `NATIVE_VRAM_CAP_MIB=4096` — measured as roughly `budget / 3`, since a
+solo cell runs about three processes (2019 + 308 + 308 MiB).
+
+### The queue
+
+| # | cell | frames | origin | why |
+|---|---|---|---|---|
+| 1 | `idaac:101` | 600000 | added | **running** since 2026-09-09 02:5x |
+| 2 | `ppg:1` | 600000 | added | second added on-policy family; VRAM ~8 GiB uncapped, so watch the cap |
+| 3 | `drqv2:1` | 600000 | **RL-ViGen-native** | the validity check: an algorithm with an external expectation of success |
+| 4 | `alda:1` | 600000 | added | third added baseline, if the card is free |
+
+`ppg` is second rather than third because it is the other *added* on-policy family and the owner
+asked for run-priority there. `drqv2` follows immediately because a non-degenerate result from a
+baseline RL-ViGen itself ships is what licenses believing the added ones — if `drqv2` learns
+nothing here, the added baselines learning nothing would be uninterpretable.
+
+**`ppg` needs its cap checked before launch.** It measured **8207 MiB uncapped** while `idaac`
+measured 2019. At `NATIVE_VRAM_CAP_MIB=4096` the cap would now genuinely bind it, and a cap that
+binds a trainer which wants twice that will OOM rather than throttle. Either measure `ppg` solo at
+a cap it fits under, or raise the cap for that cell alone and accept the larger share. This is the
+direct consequence of the cap having never worked until today: every previous `ppg` run was
+uncapped, so no evidence exists about how it behaves under one.
