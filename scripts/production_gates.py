@@ -1014,6 +1014,12 @@ DESCRIPTIVE_AUDITS = {
     # stronger position than a repo gate, not a weaker one -- it runs once per result rather than
     # once per release, and it cannot be reached without the evidence it needs.
     "audit_record_frame_provenance.py", "audit_training_diagnostics.py",
+    # [Claude 2026-09-09] DESCRIPTIVE for the same reason as the two above -- it reads per-episode
+    # detail (`native.returns`, `placement_witnesses`, `eval_episode_ids`) that lives in a collected
+    # run's records, not in a fresh checkout. Wired into collect-host-run.sh, where the data exists.
+    # It found two defects on its first use: 760 colliding episode ids, and eval-medium/eval-hard
+    # resampling their visual perturbation between passes (62%/10%, against 0% for train/eval-easy).
+    "audit_eval_validity.py",
     # [Claude 2026-09-08] DESCRIPTIVE and not GATING, and the reason is a constraint rather than a
     # preference: it compares `resolved_packages.json` ACROSS returned job archives, which live
     # outside the repository. A fresh checkout has none, so a gate consulting it would report

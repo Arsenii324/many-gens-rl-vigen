@@ -250,6 +250,17 @@ if [[ -f scripts/audit_training_diagnostics.py ]]; then
   "$BP" scripts/audit_training_diagnostics.py "$RUN_DIR" 2>&1 | sed 's/^/      /'
 fi
 
+# [Claude 2026-09-09] Eval validity: are these numbers reportable at all? Checks each row's summary
+# against its own raw episodes, episode-id uniqueness, and that placement is paired across regimes --
+# then REPORTS reset reproducibility per regime rather than failing on it, because eval-medium and
+# eval-hard resample their perturbation by design and that is a limit on what may be claimed, not a
+# fault. Not --strict here: a defect it finds is about the evaluator, not about whether these rows
+# should be filed, and refusing the collection would lose the very evidence that shows the defect.
+if [[ -f scripts/audit_eval_validity.py ]]; then
+  echo "   -- eval validity"
+  "$BP" scripts/audit_eval_validity.py "$DEST" 2>&1 | sed 's/^/      /'
+fi
+
 # 7. The ledger REFUSES a stale evaluator revision, and that refusal is the most valuable thing it
 #    does. Capture the status explicitly: piping it through `tail` would discard the exit code and
 #    print "Do NOT write this entry" while exiting 0.
