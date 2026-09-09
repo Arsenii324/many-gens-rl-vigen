@@ -151,7 +151,7 @@ stated once. This is `PREMISES.md` Q5 and it is unresolved.
 | `rad` | ours, on a recovered SAC | n-step 3 vs 1-step; `random_shift` not paper's crop/translate | medium |
 | `soda` | recovered from history | official DMC-GB launcher and active production launcher use `[P]` 3e-4; generic argparse default `[C]` is 1e-3 but is not effective in production | low |
 | `alda` | sibling port | **faithful**; benchmark extrapolated (DMControl-GB → robosuite) | low |
-| `idaac` | sibling port | per-environment rollout **256 matches `[P]`**; `num_processes=4` vs upstream 64, so **16x fewer parallel environments**; 8-sample minibatches | **high** |
+| `idaac` | sibling port | **SUPERSEDED 2026-09-06 by DECISION-SHEET A35 / Q55 (commit `15b4e73`).** This row describes the discarded Procgen-derived IDAAC-P recipe. The production recipe is IDAAC-C2: `num_steps=2048`, **`num_processes=1`**, `num_mini_batch=32`, and the `v100` host-profile override that raised processes to 16 was REMOVED. 1 process is the value IDAAC's own authors used for continuous control -- `ext/idaac/raileanu21a-supp.pdf` reads "2048 steps, 1 process" -- so it is fidelity-fixed, not a hardware accommodation. | low |
 | `ppg` | ours, shared PPO core | per-environment rollout **256 matches `[P]`**; four-MPI-worker upstream run has global 65,536-sample updates, while our one-worker `num_envs=8` run has 2,048 (**32x lower effective batch**); lr 1e-4 vs 5e-4; **continuous head has no reference** | **high** |
 | `ibac_sni` | ours, shared PPO core | β and λ match `[P]`; **continuous head has no reference** | medium |
 | `ctrl` | ours, shared PPO core | **the released code had `L_clust` lines commented out; this project restored them so the algorithm executes.** The current path uses nearest-neighbour positives; the remaining implementation quirk is inherited from the released code | **medium** |
@@ -159,8 +159,11 @@ stated once. This is `PREMISES.md` Q5 and it is unresolved.
 **Reconciliation note, 2026-09-05.** The two on-policy rollout entries above describe parallelism,
 not trajectory length: both retain the upstream per-environment 256-step rollout, while using fewer
 environments per update for the available pre-production hardware. `FIXED` elsewhere in this file
-means “no longer catastrophic,” not “matches the canonical reference”; the table above is the
-current wording. The `ctrl` restoration is an executable repair, while its nearest-neighbour
+means “no longer catastrophic,” not “matches the canonical reference”. **The claim that “the table
+above is the current wording” expired on 2026-09-06**: A35/Q55 replaced idaac's recipe wholesale and
+the `idaac` row is marked superseded in place. Left standing rather than deleted, because a
+reconciliation note that quietly acquired a wrong tense is itself the failure mode this file warns
+about. The `ctrl` restoration is an executable repair, while its nearest-neighbour
 construction is inherited and remains a fidelity item to verify, not a claim that `L_clust` is
 absent.
 
@@ -817,7 +820,12 @@ PPO epochs, E_V=9, N_π=32, α_a=0.1, α_i=0.1.
 lr **5e-4** come from the live launch path. The 256-step trajectory length matches the released
 per-environment default; the production accommodation is `num_processes=4` rather than the
 released 64, so each update has 1,024 rather than 16,384 samples. This is a parallelism/batch-
-diversity divergence, not a shortened trajectory. The older paragraph below is retained as a
+diversity divergence, not a shortened trajectory.
+**SUPERSEDED 2026-09-06 (A35/Q55, commit `15b4e73`).** Everything in this paragraph describes the
+IDAAC-P recipe, which was discarded. Executed now: `num_steps=2048`, `num_processes=1`,
+`num_mini_batch=32`, γ 0.99, and no `v100` override. `num_processes=1` is the authors' own
+continuous-control setting, verified in `ext/idaac/raileanu21a-supp.pdf` ("2048 steps, 1 process"),
+so it is not an accommodation at all. The older paragraph below is retained as a
 port-era audit trail and must not be read as the current clone configuration.
 
 Also independently corroborated by the sibling gen-rebuttal project, which shares this exact port

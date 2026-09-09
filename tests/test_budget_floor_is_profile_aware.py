@@ -1,8 +1,15 @@
-"""check-budget's rollout-quantum floor must track the RESOLVED profile, not the base descriptor.
+"""
+[Claude 2026-09-09] PAST TENSE above, deliberately. Both figures describe the IDAAC-P recipe, which
+DECISION-SHEET A35 / Q55 discarded on 2026-09-06 (commit `15b4e73`): idaac now runs
+`num_processes=1 x num_steps=2048` and has NO `host_profiles.v100` block at all. The hazard this
+file guards -- a static floor going stale when a profile moves the geometry -- is unchanged and
+still worth testing; only the example is historical. The file's own comment at the check below was
+already updated; this docstring was not, and said "raises" in the present tense for three days.
+check-budget's rollout-quantum floor must track the RESOLVED profile, not the base descriptor.
 
 External review 14 section 13: idaac's `min_frames` was stored as a static 1024 (base
-`num_processes=4 x num_steps=256`). The V100 profile raises `num_processes` to 16, so one full
-rollout there is 4096 frames -- but the stale static floor let a canary at, say, 2000 frames pass
+`num_processes=4 x num_steps=256`). The V100 profile raised `num_processes` to 16, so one full
+rollout there was 4096 frames -- but the stale static floor let a canary at, say, 2000 frames pass
 `check-budget` while completing ZERO rollouts (`frames // num_steps // num_processes == 0`),
 training nothing and proving nothing about the profile it claims to validate. The same shape
 affects `ibac_sni` (`procs x frames_per_proc`). This is a canary-validity defect, not a production

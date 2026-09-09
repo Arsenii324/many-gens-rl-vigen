@@ -1,5 +1,29 @@
 # The four on-policy families' regular-phase update density versus their Procgen source
 
+> ## SUPERSEDED FOR `idaac`, 2026-09-06 — and the finding is VOID, not merely restated
+>
+> Every `idaac` row below is computed from `16 x 256 = 4096` with `1 x 8` epochs x minibatches.
+> **That configuration no longer exists.** DECISION-SHEET **A35 / Q55** (commit `15b4e73`,
+> 2026-09-06) replaced the Procgen-derived IDAAC-P recipe wholesale with the authors' own DMC
+> continuous-control recipe, every constant confirmed directly against
+> `ext/idaac/raileanu21a-supp.pdf` §E: `num_processes` **1**, `num_steps` **2048**,
+> `num_mini_batch` **32**, `ppo_epoch` **10**, γ **0.99**, `entropy_coef` **0**, `lr` **3e-4**,
+> `value_freq` **32**, `adv_loss_coef`/`order_loss_coef` **0.1**, frame stack **3**. The `v100`
+> host-profile override that raised processes to 16 was **removed**.
+>
+> **Why the finding is void rather than re-derivable.** It measured a *divergence from upstream
+> parallelism* — 4x the update density because we ran fewer environments than the Procgen
+> reference's 64. Under C2 the reference is no longer Procgen: it is the authors' DMC recipe, whose
+> own rollout is **1 process x 2048 steps**, which is exactly what we now run. Executed and
+> reference update density are `10 x 32 / 2048 = 0.15625` grad steps per env frame in both cases.
+> **The ratio is 1x.** There is no idaac parallelism divergence left to report.
+>
+> The rows for `ppg`, `ibac_sni` and the others are untouched by A35 and stand as written.
+>
+> Left in place rather than deleted: the arithmetic is still the right method, and a note that
+> quietly vanished would take its reasoning with it. But do not quote an `idaac` number from below.
+
+
 Found 2026-09-05 in the full-project audit, extending the same question already asked of the
 off-policy families (`FINDING-update-to-data-ratio.md`, A27, corrected after review 14): not "what
 does one unit of the x-axis mean" but "how much learning happens per unit". PPG's AUXILIARY-phase
@@ -32,7 +56,7 @@ this distinction: `ppo.py`'s function signature defaults to 4, but `train.py:33`
 entry point our launcher calls — defaults to 8, and that is the value that executes):
 
 - idaac: `ppo_daac_idaac/arguments.py:62-64,72-79,134-136`; `algo/idaac.py:60,76,94,132`;
-  `families.json` idaac constants/host_profiles.v100 (`num_processes` 4 base / 16 v100, vs upstream
+  `families.json` idaac constants/host_profiles.v100 (`num_processes` 4 base / 16 v100, vs upstream **[SUPERSEDED 2026-09-06: `host_profiles.v100` no longer exists on idaac; `num_processes` is 1.]**
   default 64).
 - ppg: `phasic_policy_gradient/train.py:27-38`; `ppo.py:168-170`; `families.json` ppg
   constants (`num_envs: 8`, A26-reverted) vs upstream default 64 (single rank) / 4-rank MPI.
@@ -53,7 +77,7 @@ were already built to restore the full upstream `num_envs`** — ctrl explicitly
 at 16 envs, 113 GiB host, restore 64), ibac_sni structurally (16 was always the upstream default;
 `procs=1` is the DataSphere-memory accommodation, not a chosen production value, and is gated behind
 a real smoke before it may launch). `idaac` and `ppg` have no such V100 restoration: idaac's V100
-profile only raises `num_processes` to 16, still a quarter of Procgen's 64, and `ppg`'s A26 fix
+profile only raises `num_processes` to 16, still a quarter of Procgen's 64, and `ppg`'s A26 fix **[SUPERSEDED 2026-09-06: that profile was removed; idaac runs 1 process, which IS the DMC reference.]**
 deliberately kept `num_envs` at 8 to preserve its AUXILIARY-phase cadence — which is the right call
 for that axis, and this finding is what it costs on this one.
 

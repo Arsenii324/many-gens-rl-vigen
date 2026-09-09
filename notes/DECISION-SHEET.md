@@ -1778,7 +1778,7 @@ published continuous-control recipe (review 15 §4, citing the paper's Appendix 
 specifies, holding everything else at IDAAC-P's value so the comparison isolates the recipe rather
 than introducing untested combinations:
 
-| parameter | IDAAC-P (current) | IDAAC-C (proposed) | reasoning |
+| parameter | IDAAC-P (SUPERSEDED 2026-09-06 by A35/Q55 below; was current when written) | IDAAC-C (proposed) | reasoning |
 |---|---|---|---|
 | `num_processes` | 4 | **1** | Confirmed directly against `ext/idaac/raileanu21a-supp.pdf` §E ("2048 steps, 1 process"), not just review 15's summary — this table's other rows originally cited review 15 alone and were corrected the same way once the frame-stack question forced a primary-source read. Unlike the Procgen case (64 envs genuinely don't fit), 1 robosuite/MuJoCo instance has no forcing constraint against it |
 | `num_steps` | 256 | **2048** | Same source, same sentence ("2048 steps"), confirmed directly |
