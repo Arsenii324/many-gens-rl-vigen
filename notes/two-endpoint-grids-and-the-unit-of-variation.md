@@ -131,3 +131,41 @@ The `eval_grid.py` fix moves every family's evaluator revision, so mode rows pro
 on a different closure from the 44 sampled rows already collected. **They must not be pooled.** If
 the mode pass is re-run, re-run *both* passes for that cell so the mode-versus-sample comparison
 lives inside one closure. The sampled grids stand on the closure they were produced under.
+
+---
+
+## 7. Why the earlier note's table said 400 episodes — a mislabel, not a miscount
+
+Chasing that discrepancy found the defect underneath it, and it is the most consequential thing on
+this page.
+
+`normalize_curves.py:186` builds the row's `conventions` block from `CONVENTIONS.get(baseline)`, a
+**static per-baseline dict**. So `conventions.eval_policy_mode` always reports the family's *native*
+action rule and can never reflect `--policy-mode mode`. The comment at `normalize_curves.py:57-61`
+states the requirement exactly right — *"It records the action rule used by the evaluator that
+produced the row, not merely whether the original repository shipped a suitable evaluator … the row
+must say which happened"* — and the code does the opposite.
+
+Measured on the installed idaac delivery, endpoint rows only:
+
+| `evaluator_scope.eval_policy_mode` | `conventions.eval_policy_mode` | rows |
+|---|---|---:|
+| `mode` | **`sample`** | 41 |
+| `sample` | `sample` | 44 |
+
+**All 85 rows claim `sample`.** Two pooled rows exist per regime, identically labelled, with
+different means — eval-medium 11.55 and 14.32, train 33.69 and 34.00. A reader keying on
+`conventions` sees 400 episodes per regime where there are 200 of each of two estimands. That is
+where the earlier note's 400 came from.
+
+`scripts/audit_row_closure.py:44` reads `conventions.eval_policy_mode` — so the audit whose purpose
+is to stop exactly this pooling reads the one field that cannot distinguish the passes.
+
+**Nothing needs re-running.** `evaluator_scope.eval_policy_mode` is correct on every row (41 `mode`,
+44 `sample`, matching the counts exactly), so the delivered records are relabellable in place and
+the two estimands separate cleanly. The fix is to derive the row's convention from the resolved
+scope — `eval_grid.py:1451` already computes the right value — rather than from the static table,
+and to make `audit_row_closure.py` refuse a row whose two fields disagree.
+
+Both files are `CODE_MEMBER`s, so this belongs in the same single evaluator-revision bump as the
+`no_grad` fix in §3 rather than in a bump of its own.
