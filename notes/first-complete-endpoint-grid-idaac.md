@@ -12,6 +12,23 @@ produced on any host.
 | eval-medium | **11.55** | 8.35 | 0.42 | 0.000 | 400 |
 | eval-hard | **18.47** | 15.14 | 0.76 | 0.000 | 400 |
 
+> **Corrected 2026-09-10 — the SE column and the episode count are both wrong, and for one reason.**
+> The "400 episodes" is 200 sampled plus 200 `mode`, pooled, because
+> `conventions.eval_policy_mode` labelled **both passes `sample`**: `normalize_curves.py` built it
+> from a static per-baseline table, so a `--policy-mode mode` pass carried the family's native rule.
+> `evaluator_scope` had it right all along (41 `mode`, 44 `sample`). Both are now fixed and
+> `audit_row_closure.py` refuses a row whose two fields disagree. **The table above therefore pools
+> two estimands `SAME-AXES-VERDICT.md` forbids pooling.** The sampled-only pooled rows are
+> train 33.69 (sd 26.25), eval-easy 31.58 (27.93), eval-medium 11.55 (8.86), eval-hard 18.47 (17.64),
+> each on **200** episodes.
+>
+> Separately, **an SE computed across pooled episodes is the wrong denominator for a comparison
+> between regimes.** Episodes within a scene share that scene; the ten scenes are what vary. Paired
+> by scene, `eval-hard − eval-medium` is **+6.92 with SE 3.77, t = 1.83, 7/10 scenes** — suggestive,
+> not established. `ppg` independently gives **+6.04, SE 0.90, t = 6.74, 10/10 scenes**, which is.
+> So the finding below strengthens to 2 of 2 checkpoints while its statistics weaken.
+> See [`two-endpoint-grids-and-the-unit-of-variation.md`](two-endpoint-grids-and-the-unit-of-variation.md).
+
 Standard errors of 0.4-1.3 on 400 episodes: every gap below is many SE wide and none of this is
 noise.
 
