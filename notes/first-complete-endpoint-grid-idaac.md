@@ -74,3 +74,43 @@ rather than borrowing `ppg`'s number, which is the correct behaviour.
 - **Nothing about IDAAC as an algorithm at its best.** This is IDAAC at faithful configuration, whose
   optimiser diagnostics show it updating far outside the trust region
   ([`idaac-on-door-is-a-trust-region-blowout.md`](idaac-on-door-is-a-trust-region-blowout.md)).
+
+---
+
+## Pass 2, and the two rows it will lose
+
+Measured rather than projected: **pass 1 took 9,520 s (2.64 h)** for 880 episodes — **10.8 s per
+episode**, which confirms the 12 s/episode constant used in `launch-card-cell.sh`'s new allowance
+derivation is conservative in the right direction.
+
+Pass 2 (`policy_mode=mode`) began **16:04 MSK** (`epoch=1788959041`). At the same rate it lands
+**~18:43** against a reaper at **18:37**, so it completes roughly **42 of 44 rows** and then the cell
+is stopped.
+
+**What is lost is not the rows — it is the delivery.** `collect_record_delivery` runs after
+evaluation, so a reaped cell writes every row and assembles none. Handled:
+
+1. The rows are already being pulled locally every ten minutes, so a reaping costs at most one row.
+2. `scripts/assemble_reaped_delivery.py <fetched-run-dir> --out bundle.jsonl` rebuilds the bundle
+   from the same sources the runner would have used, marking every row `_assembled_after_reaping`
+   and printing coverage by `(frame, phase, policy mode)` so the missing cells are visible rather
+   than inferred from a row count.
+3. `collect-host-run.sh`'s refusal detects the per-cell rows and names that path.
+
+**The two missing rows are recoverable, and recovering them is the experiment worth running anyway.**
+`snapshot.pt` is retained, and `scripts/eval_grid.py` takes an arbitrary checkpoint:
+
+```bash
+python scripts/eval_grid.py \
+  --snapshot <run>/native-out/cells/idaac-s101/snapshot.pt \
+  --family idaac --baseline idaac --seed 101 --frame 598016 \
+  --regimes <the regime that was cut> --scenes <the scene sets that were cut> \
+  --episodes 20 --episode-seed 20260903 --policy-mode mode --eval-scope endpoint \
+  --append --out <run>/native-out/cells/idaac-s101/offline_eval_endpoint.jsonl
+```
+
+This is exactly the **standalone evaluation from a previous cell's checkpoint** that
+[`production-host/28-eval-is-sixty-percent-of-a-cell.md`](production-host/28-eval-is-sixty-percent-of-a-cell.md)
+names as the one unproven piece of the train-then-evaluate-separately shape. Running it on two rows
+we need anyway proves the wiring at negligible cost, and the check is direct: the recovered rows must
+carry the same `evaluator_revision` as the 42 that preceded them.
