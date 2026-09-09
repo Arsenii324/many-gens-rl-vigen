@@ -157,6 +157,40 @@ def build() -> str:
                 add(f"  | `{key[0]}` | {key[1]} | {ret:.2f} | {sr:.3f} | {eps} |")
         add("")
 
+    host = ROOT / "results" / "host-runs.jsonl"
+    if host.is_file():
+        entries = _rows(host)
+        collected = {f.name.split("__", 1)[0] for f in files}
+        pending = [e for e in entries if e.get("run_id") not in collected]
+        add("## Runs on the production host not yet collected")
+        add("")
+        add("Recorded when launched, from each cell's own `effective_config.json`, so a run's "
+            "existence does not depend on anyone's memory. Source: "
+            "[`host-runs.jsonl`](host-runs.jsonl). **These have no records in this repository "
+            "yet** — that is the point of listing them.")
+        add("")
+        for e in entries:
+            state = "**COLLECTED**" if e.get("run_id") in collected else "**not yet collected**"
+            add(f"### `{e.get('run_id')}` — {e.get('baseline')} — {state}")
+            add("")
+            add(f"- **cell** `{e.get('cell')}` · **seed** {e.get('seed')} · "
+                f"**frames** {e.get('frames_requested'):,} · **card** {e.get('card')} · "
+                f"**profile** `{e.get('host_profile')}`")
+            add(f"- **launched** {e.get('launched_msk')} MSK · "
+                f"**run dir** `{e.get('run_dir')}` on `{e.get('host')}`")
+            add(f"- **eval** curve {e.get('curve_eval_episodes')} ep/scene, endpoint "
+                f"{e.get('endpoint_eval_episodes')} ep/scene, policy modes "
+                f"`{e.get('endpoint_policy_modes')}`")
+            add(f"- **status** {e.get('status')}")
+            if e.get("note"):
+                add(f"- ⚠ {e['note']}")
+            add("")
+        if pending:
+            add(f"**{len(pending)} run(s) above have produced no record file here.** Until they "
+                "are collected their numbers exist only on the host, and nothing in this "
+                "repository can be used to check them.")
+            add("")
+
     add("## Caveats — what this register cannot see")
     add("")
     add("Listed rather than omitted, because a catalogue that silently drops what it cannot see "

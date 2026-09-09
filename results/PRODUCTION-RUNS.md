@@ -1000,6 +1000,28 @@ Every run whose records this repository holds, with the circumstances each recor
   | `mode` | eval-easy | 1.00 | 0.000 | 10 |
   | `mode` | train | 1.01 | 0.000 | 10 |
 
+## Runs on the production host not yet collected
+
+Recorded when launched, from each cell's own `effective_config.json`, so a run's existence does not depend on anyone's memory. Source: [`host-runs.jsonl`](host-runs.jsonl). **These have no records in this repository yet** — that is the point of listing them.
+
+### `card0-20260909-035152` — idaac — **not yet collected**
+
+- **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
+- **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** training complete; curve complete (11 stamps, 484 rows); endpoint pass 1 (native) complete, 44 rows; pass 2 (mode) in progress
+- ⚠ First complete production cell on any host. Watch budget 53100s from 03:52 expires ~18:37 MSK; pass 2 projects to ~18:53 at 3.84 min/row, so ~4 of 44 mode rows are expected to be lost and collect_record_delivery not to run.
+
+### `card0-20260909-115331` — ppg — **not yet collected**
+
+- **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
+- **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** training complete at IC=600064 (293 iterations); curve in progress
+- ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. This cell cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
+
+**2 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
+
 ## Caveats — what this register cannot see
 
 Listed rather than omitted, because a catalogue that silently drops what it cannot see teaches its reader that absence means fine.
