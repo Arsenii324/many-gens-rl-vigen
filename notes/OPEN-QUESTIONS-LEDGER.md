@@ -383,3 +383,20 @@ change under the same hashed-tree constraint that defers the `ppg` minibatch fix
 together. `scripts/learning_over_random.py` computes the ratio where a floor exists, prints
 `NO frame-0 row -- floor unknown, ratio NOT computed` where it does not, and **refuses to borrow one
 from another family**, since initialisation scale is architecture-specific.
+
+**"Has the IDAAC-C2 recipe been validated by a full-length run?"** — **NOW YES, and the answer is
+split.** `families.json` declared `ppo_epoch: 10` and the rest of C2 as "this project's best
+technical default (Q55)" while stating plainly that it was **NOT YET VALIDATED by a full-length
+training run**. `card0-20260909-035152` spent that validation: 600,064 frames, full C2.
+
+**Validated as learning:** endpoint train return **33.69** over 400 episodes, ~17x a random policy.
+**Not validated as competent:** success rate **0.000** across all 880 endpoint episodes, with the
+curve plateauing after frame 51,200 — almost all progress inside the first 8% of the budget.
+**And the diagnostics say why:** `approx_kl_k3` 1.0-1.5 nats, `clip_fraction` 0.82, σ 0.996 → 0.188.
+
+The proposed `ppo_epoch` 10 → 3 arm is **not** a repeat of the `bt1djeamji7gilgnndft` pilot, which
+ran `frame_stack=1` on a short budget under **C1** and was judged on returns; the arm holds full C2
+at 600k and is judged on diagnostics. That pilot nonetheless already showed `ppo_epoch=3` giving
+substantially higher raw returns, so two independent hints now point at epoch count. The arm needs
+**no hashed-tree change** — `NATIVE_EXTRA_OVERRIDES="--ppo_epoch 3"` is a declared escape hatch
+recorded in `effective_config.json`. **The faithful default stays 10**; the arm is a diagnostic.

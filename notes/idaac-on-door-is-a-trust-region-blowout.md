@@ -95,3 +95,54 @@ know *how* it fails, which is the thing a second run needs in order to be worth 
 shows the same signature, the finding is about transferring Procgen/DMC PPO settings to a physical
 manipulator, not about IDAAC — and that is a materially more useful thing to know before the
 remaining ten baselines run.
+
+---
+
+# This run IS the validation `families.json` was waiting on
+
+`datasphere/native/families.json`, `idaac.constants_note`, declares the IDAAC-C2 recipe — including
+**`ppo_epoch: 10`** — and says of it, verbatim:
+
+> **NOT YET VALIDATED by a full-length training run**: the partial C1 pilot (`frame_stack=1`,
+> `ppo_epoch=3`, `bt1djeamji7gilgnndft`) tested part of this recipe and showed **substantially higher
+> raw returns than the old defaults** without yet reaching competence at a short budget … consistent
+> with this direction, not proof of it. This is this project's best technical default (Q55) …
+> **a full-length competence run is the separate, not-yet-spent validation this default is waiting on**.
+
+**`card0-20260909-035152` is that run.** 600,064 frames, full C2 recipe, and it is now spent. What it
+returns:
+
+- **The recipe learns.** Train return reaches **33.69** at the endpoint over 400 episodes, roughly
+  **17x** a random policy. That is not a failed default.
+- **It does not reach competence.** Success rate is **0.000** across all 880 endpoint episodes, and
+  the curve plateaus after frame 51,200 — almost all the learning happens in the first 8% of the
+  budget.
+- **The optimiser is far outside its trust region for the whole run**: `approx_kl_k3` 1.0-1.5 nats
+  against PPO's 0.01-0.05, `clip_fraction` saturated at 0.82, σ collapsing 0.996 → 0.188 with
+  `entropy_coef` 0.0.
+
+So the declared default is **validated as learning and not validated as competent**, and the
+diagnostics say *why* rather than leaving it a mystery. That is a materially better outcome than
+either "it worked" or "it failed".
+
+## What this does to the proposed 3-epoch arm
+
+The arm I proposed — `ppo_epoch` 10 → 3, everything else held — is **not** a repeat of
+`bt1djeamji7gilgnndft`. That pilot ran `frame_stack=1` on a short budget under the **C1** recipe and
+was judged on returns. Mine holds the full **C2** recipe at `frame_stack=3` and 600k, and is judged
+on **diagnostics**: does `clip_fraction` fall below 0.5 and `approx_kl_k3` below 0.2.
+
+But the pilot is real evidence in the same direction and should be cited rather than rediscovered: it
+already showed `ppo_epoch=3` giving **substantially higher raw returns** than the then-defaults.
+Two independent hints now point at epoch count.
+
+**It needs no hashed-tree change.** `NATIVE_EXTRA_OVERRIDES` is a declared escape hatch
+(`run_probe.sh:398`) that appends to argv and is recorded in `effective_config.json`, so the arm runs
+as a separate cell without moving `families.json` or any evaluator revision:
+
+```bash
+NATIVE_EXTRA_OVERRIDES="--ppo_epoch 3"   # everything else the faithful C2 recipe
+```
+
+**The faithful default stays `ppo_epoch: 10`.** The arm is a diagnostic, not a proposal to retune, and
+whether 10 should change is an owner decision that a single arm does not settle.
