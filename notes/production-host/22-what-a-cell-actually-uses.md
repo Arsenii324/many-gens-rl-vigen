@@ -217,3 +217,40 @@ small cap, and `idaac`-class families can**.
 The withdrawal in the section above stands only for `ppg`-like families and for the specific
 10240 cap that was used. It does not stand as a general claim, and note 21's queue should not be
 read as if packing were ruled out.
+
+## Why the GPU sits at 5-8%, and why it is not a memory problem
+
+Asked directly: is our allocation/reservation/pinning subpar and underutilising the card? Measured
+answer: **no**.
+
+| evidence | reading |
+|---|---|
+| 37 consecutive samples at **exactly 2644 MiB** reserved | the caching allocator never grew, shrank or churned; the 4096 cap never bound |
+| `rollouts.to(device)` (`idaac/train.py:217`) | rollout storage already lives on the GPU — there is no per-step host→device transfer for pinned memory to accelerate |
+| **33.2 env steps/sec** sustained over five hours | the actual constraint |
+| CPU 1.24 of 16 cores | one core stepping the environment, the rest idle |
+
+With `num_processes=1`, a step is one MuJoCo physics tick, one 64x64 EGL render, and a policy
+forward on **batch size 1**. Thirty-three of those per second is a rounding error on a V100, so 5-8%
+utilisation is arithmetic rather than a defect. Nothing about allocation, reservation or pinning
+changes it: the kernels are tiny and there are few of them.
+
+**The lever is parallelism, and it comes in two kinds.**
+
+1. **More environments per cell** — batches the renders and the forward pass, and is exactly what
+   `num_processes`/`num_envs` controls. This project deliberately set `idaac` to 1 under IDAAC-C2
+   and **removed** the v100 override that raised it to 16, as a fidelity decision. Not an operator
+   knob.
+2. **More cells at once** — free, and bounded by CPU rather than GPU. At 1.24 cores and ~2.6 GiB
+   reserved per cell: 16/1.24 ~= 12 cells on CPU, 32/2.6 ~= 12 on reserved VRAM. Practical ceiling
+   around **8**, leaving a third of the machine for other people.
+
+The second is where the campaign time is. Sequential execution of the note-21 queue is four cells
+back to back; concurrent execution is bounded by the slowest, and the measurements say the card can
+hold them.
+
+**And the eval phase parallelises even better than training**: it is a single process at ~490-865
+MiB and ~0-8% utilisation. Overlapping one cell's evaluation with the next cell's training costs
+almost nothing and removes the eval half of note 25's 10-hour figure from the critical path. That
+overlap was started on 2026-09-09 at 11:54 -- `ppg` training launched while `idaac` was on
+curve-eval pass 7 of 11.
