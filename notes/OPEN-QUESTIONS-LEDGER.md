@@ -400,3 +400,21 @@ at 600k and is judged on diagnostics. That pilot nonetheless already showed `ppo
 substantially higher raw returns, so two independent hints now point at epoch count. The arm needs
 **no hashed-tree change** — `NATIVE_EXTRA_OVERRIDES="--ppo_epoch 3"` is a declared escape hatch
 recorded in `effective_config.json`. **The faithful default stays 10**; the arm is a diagnostic.
+
+**"What does a Door return number mean, and is SR=0.000 evidence of a broken flag?"** — ANSWERED
+from the vendored source. Door's reward is `1.0` when `hinge_qpos > 0.3`, and **otherwise** at most
+`0.25` reaching + `0.25` latch. Success and shaping are mutually exclusive per step (`elif`), with
+`reward_scale=1.0` and `horizon=500`.
+
+**So a policy that never opens the door cannot exceed return 250, and return > 250 proves at least
+one success step.** `idaac`'s 33.69 is 0.067/step — 13.5 % of the shaped ceiling — with the latch
+component contributing almost nothing, i.e. **it learned to approach the handle and never to turn
+it**. SR 0.000 across 880 episodes is consistent, not a broken flag: the convention is pinned and
+tested (`tests/test_success_convention.py`, seven sites, any-step; REGISTER 2026-08-18).
+
+Consequences: **the remaining gap is discrete, not gradual** — improving 34 → 60 is better hovering,
+not progress toward opening. **`drqv2` gets a hard criterion**: clearing 250 proves the harness
+supports competence; landing near 34 with SR 0.000 alongside `idaac` would point at the task
+configuration, action space or observation rather than at either algorithm. And `success_rate = 0`
+and `return <= 250` are the **same statement**, so they must not be reported as two independent
+observations. See [`what-a-door-return-number-means.md`](what-a-door-return-number-means.md).
