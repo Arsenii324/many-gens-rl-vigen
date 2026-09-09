@@ -334,3 +334,12 @@ reported a 22x improvement on a run whose raw return may be falling.
 
 `scripts/audit_training_diagnostics.py` flags the inconsistency directly, using the identity
 `EpRewMean = EpLenMean x FrameRewMean` that must hold when both are raw.
+
+**"Did the `ppg_checkpoint_frame` fix actually matter?"** — CONFIRMED in production, on its first
+row. `card0-20260909-115331` began its curve evaluation 2026-09-09 15:42 with
+`NATIVE_CURVE_EVAL_BEGIN ppg frame=0 file=model000.jd`, taking the frame from the trainer's own
+`IC=0` line. **The removed reconstruction would have written `(0 + 1) x 50000 = 50000`** — wrong by
+50,000 frames on the very first stamp, and wrong on every subsequent one, since the real cadence is
+0, 51200, 100352, 151552 … against the reconstruction's 50000, 100000, 150000. A measurement of the
+untrained initial policy would have been filed as a measurement at 50k. The 13 `IC=` lines match the
+13 `model00N.jd` files on disk one-for-one, so the positional mapping is sound for this whole run.
