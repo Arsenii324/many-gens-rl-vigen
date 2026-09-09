@@ -242,6 +242,13 @@ Not a project. A loop, which is what found everything today:
    mark contradicting documents in place rather than deleting them.
 6. **If the claim can become a check, make it one.** A check is the only artifact here that cannot
    go quietly stale.
+7. **Before committing a note, run `python scripts/prior_art.py <the note>`.** Added 2026-09-09
+   after three near-misses in one session where the codebase already documented what I was about to
+   present as new — twice better than my version. It reads the draft's own identifiers and reports
+   which already have a history, **code hits first**, because in all three cases the authority was a
+   comment or a refusal message in code and the notes were restatements of it. It is a report and
+   not a gate: a regex over absence-phrases was measured first (25 such lines across 15 notes, most
+   of them legitimate prose) and rejected as a tax on honest writing.
 
 Steps 2 and 5 exist as of today. **The plausible conclusion is that this loop plus Phase 0 is the
 whole deliverable**, and that the rest of the design should stay unbuilt until something measured
