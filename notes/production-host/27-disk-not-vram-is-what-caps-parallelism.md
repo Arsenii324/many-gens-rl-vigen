@@ -121,6 +121,25 @@ CARD=0 CELLS=drqv2:101 FRAMES=600000 CELL_TIMEOUT_SECONDS=43200 NATIVE_PRODUCTIO
     ~/rlvigen-work/payload-v208-rlvigen.tgz ~/rlvigen-runs/drqv2-result.tgz > run.log 2>&1 &
 ```
 
+**Pre-flighted 2026-09-09, so the numbers are seen before launch rather than after a stop:**
+
+| | value |
+|---|---|
+| disk required (`family.py disk-requirement --cells drqv2 --frames 600000`) | **28 GiB** |
+| eval workload derived | 3,476 episodes → **62,568 s (17.4 h)** allowance |
+| `MUST_COVER` = train 43,200 + eval 62,568 + bootstrap 9,000 | 114,768 s |
+| **`WATCH_SECONDS`** (+900 s slack) | **≈ 115,700 s (32 h)** |
+
+**A 32-hour watch is long for a shared, booked card, and that is deliberate rather than careless.**
+The reaper is a *last* resort against a hung cell; what protects a co-tenant is the **yield watch**,
+which stands down cooperatively within seconds of another process appearing — it did exactly that
+four times between 01:32 and 03:25 today. Over-covering the reaper costs an idle poll; under-covering
+it costs the delivery step, which is what happened to `idaac` at 18:37.
+
+Against the measured `idaac` cell (5 h training + 10 h evaluation ≈ 15 h) the derived budget is a
+~1.3x margin on a slower off-policy family. If `drqv2` trains at 20 frames/s rather than `idaac`'s
+33.7, 600k frames is ~8.3 h and the 12 h `CELL_TIMEOUT_SECONDS` still holds.
+
 **The payload is already on the host**, staged 2026-09-09: `~/rlvigen-work/payload-v208-rlvigen.tgz`,
 277,571 bytes, sha256 `b0fed801ef6cd694…`, matching the local copy byte for byte. It verifies against
 `--require-runner-contract 19 --require-families rlvigen --require-evaluator-identity`, which every
