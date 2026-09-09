@@ -36,6 +36,24 @@ At the endpoint's two policy-mode passes on the **same checkpoint**: **122 of 20
 slots and 15 of 160 `eval-hard` slots saw different pixels**, against **0 of 200** for `train` and
 `eval-easy`.
 
+**REPLICATED on a second family, 2026-09-09.** The same audit on `ppg`'s completed 13-stamp curve
+(520 detailed rows, an independent cell and a different algorithm):
+
+| regime | `idaac` | `ppg` |
+|---|---:|---:|
+| `train` | **0 %** | **0 %** |
+| `eval-easy` | **0 %** | **0 %** |
+| `eval-hard` | 10 % | 23 % |
+| `eval-medium` | 62 % | 67 % |
+
+Two families, two cells, the same conclusion: **`train` and `eval-easy` are deterministic and
+`eval-medium`/`eval-hard` are not.** That makes this a property of the benchmark's regimes rather
+than of one run or one algorithm — which is what it needed to be before anything is reported on it.
+
+`ppg`'s episode ids came back **unique** (1,560 ids, 0 duplicated), because its curve runs a single
+policy mode. That is the diagnosis confirming itself: the collision is specific to a multi-pass
+endpoint, and it is the missing `eval_policy_mode` that causes it.
+
 **This is probably not a bug.** RL-ViGen's regimes are *distributions* over visual conditions and
 sampling them is the intent. But it settles what may be claimed:
 
