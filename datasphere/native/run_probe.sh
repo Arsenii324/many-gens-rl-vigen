@@ -196,7 +196,12 @@ run_measured() {
     (
       while kill -0 "$training_pid" 2>/dev/null; do
         if [[ -e "$NATIVE_YIELD_SENTINEL" ]]; then
-          echo "=== NATIVE_CELL_YIELDED a co-tenant needs the card; stopping this cell ===" >&2
+          # [Claude 2026-09-09] Do not name the cause here. The sentinel carries the real reason,
+          # and it is not always a co-tenant: a 600k packed run stopped itself because OUR OWN six
+          # processes had taken 29910 MiB of 32494 and free memory fell under the floor. The log
+          # then said "a co-tenant needs the card" while no co-tenant existed, which sent the first
+          # reader looking for a neighbour who was never there.
+          echo "=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===" >&2
           cat "$NATIVE_YIELD_SENTINEL" >&2 2>/dev/null || true
           echo "    Artifacts written so far are durable on the bind mounts." >&2
           kill -TERM -- "-$training_pid" 2>/dev/null || kill -TERM "$training_pid" 2>/dev/null

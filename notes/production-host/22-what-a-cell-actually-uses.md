@@ -144,3 +144,38 @@ the one that OOMs), needs no constant, and cannot be wrong about who owns what.
 
 `watch_card_exclusivity.py` still counts processes and still reports co-tenancy loudly. Seeing a
 neighbour arrive is useful; stopping a twelve-hour run over an uncountable proxy is not.
+
+
+## Packing does NOT survive production scale — measured 2026-09-09, and it reverses this note
+
+The recommendation at the top of this file was "pack 3-4 cells", derived from a **10k-frame** cell
+using 831 MiB and 6% of the card. At **600k with production settings** the same packed pair
+(`idaac:101,ppg:1`) reached:
+
+```
+card 0: 29910 MiB of 32494, 100% utilisation, 6 compute processes
+yielded: free memory 2585 MiB is below the 4000 MiB floor
+```
+
+Two cells took **92% of a shared card**. The disk watch and the memory floor both behaved
+correctly — the floor stopped us, cleanly, with no leak and the card back to 0 MiB — but what they
+stopped was *us starving the card ourselves*, not a co-tenant.
+
+**Why the 10k measurement did not predict this.** Utilisation and CPU scaled roughly as expected;
+memory did not. At 10k the pair held 9296 MiB; at 600k, 29910. The growth is in what production
+settings allocate (`SAVE_EVERY_FRAMES`, `EVAL_EVERY_FRAMES`, endpoint evaluation and each
+trainer's own buffers), none of which is exercised at smoke scale.
+
+**And the cap could not prevent it.** `NATIVE_VRAM_CAP_MIB` is enforced **per process**, and the
+pair runs six. A 10240 MiB cap therefore permits 61 GiB on a 32 GiB card: it bounded every
+individual process correctly and bounded the aggregate not at all. A per-process cap is not a
+per-run budget, and treating it as one is how 92% of a shared card gets taken while every
+individual limit reads as respected.
+
+### Revised recommendation
+
+- **Do not pack at production scale on a shared card.** One cell at a time.
+- **Size the cap as `budget / expected_processes`**, and remember that the process count is not
+  knowable from the cell list — it was 6 for two cells and no configuration file says so.
+- The 10k packing measurement stands only for 10k. Any packing claim must be re-measured at the
+  scale it is claimed for; this note asserted otherwise for several hours and was wrong.
