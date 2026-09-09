@@ -41,8 +41,41 @@ CLOSURE_FIELDS = (
      lambda r: (r.get("native", {}).get("run_provenance") or {}).get("container_image")),
     ("evaluator_revision", lambda r: r.get("evaluator_revision")),
     ("evaluator_scope_revision", lambda r: r.get("evaluator_scope_revision")),
-    ("eval_policy_mode", lambda r: (r.get("conventions") or {}).get("eval_policy_mode")),
+    # [Claude 2026-09-10] The RESOLVED SCOPE first, `conventions` only as a fallback.
+    # `conventions` came from a static per-baseline table until today, so on every record written
+    # before this change a `--policy-mode mode` pass is stamped with the family's native rule --
+    # meaning this audit, whose whole purpose is to stop two estimands being pooled, was reading
+    # the one field that could not tell them apart. `evaluator_scope` was correct all along.
+    ("eval_policy_mode",
+     lambda r: ((r.get("evaluator_scope") or {}).get("eval_policy_mode")
+                or (r.get("conventions") or {}).get("eval_policy_mode"))),
 )
+
+
+def policy_mode_disagreements(paths):
+    """Rows whose two policy-mode fields contradict each other.
+
+    Grouping by the authoritative field above makes such a row group CORRECTLY, so the audit would
+    otherwise pass in silence over a record that misreports its own estimand to every other reader.
+    Reported separately for that reason: the pooling is safe, the record is not.
+    """
+    import json as _json
+    found = []
+    for path in paths:
+        for line in path.read_text(errors="replace").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                record = _json.loads(line)
+            except _json.JSONDecodeError:
+                continue
+            scope = (record.get("evaluator_scope") or {}).get("eval_policy_mode")
+            stated = (record.get("conventions") or {}).get("eval_policy_mode")
+            if scope and stated and scope != stated:
+                found.append((path.name, record.get("baseline"), record.get("regime"),
+                              record.get("frame"), scope, stated))
+    return found
 
 
 def rows(paths):
@@ -94,6 +127,18 @@ def main() -> int:
             values.discard(None)
             if len(values) > 1:
                 mixed.append((key, field, values, sorted({name for name, _ in entries})))
+
+    disagreements = policy_mode_disagreements(paths)
+    if disagreements:
+        print(f"  {len(disagreements)} row(s) MISREPORT their own action rule: "
+              f"`conventions.eval_policy_mode` contradicts `evaluator_scope.eval_policy_mode`.")
+        for name, baseline, regime, frame, scope, stated in disagreements[:6]:
+            print(f"      {name[:34]:34} {baseline}/{regime}@{frame}: "
+                  f"scope={scope} but conventions={stated}")
+        print("      Written by a runner predating normalize_curves.py's scope deference. The")
+        print("      scope value is authoritative and is what this audit groups by, so these rows")
+        print("      pool CORRECTLY here -- but they misreport the estimand to every other reader.")
+        print()
 
     print("ROW CLOSURE AUDIT -- do the seeds pooled into one row share one scientific closure?")
     print(f"  {len(paths)} record file(s), {len(grouped)} row group(s), "

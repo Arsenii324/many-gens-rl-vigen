@@ -183,7 +183,31 @@ def record(**fields) -> dict:
     run_provenance = base.pop("_run_provenance", None)
     # A record that cannot state its own conventions says so, rather than carrying a default that
     # would read as a measured fact.
-    base["conventions"] = CONVENTIONS.get(base.get("baseline"))
+    #
+    # `dict(...)` and not the table's own object: `CONVENTIONS.get` returns the SAME mapping to
+    # every row of a baseline, so assigning it directly makes one row's edit a module-wide edit.
+    # The override below is exactly such an edit.
+    _conventions = CONVENTIONS.get(base.get("baseline"))
+    base["conventions"] = dict(_conventions) if _conventions is not None else None
+    # [Claude 2026-09-10] `eval_policy_mode` must be what the evaluator DID, not what the family
+    # does by default -- this file's own header says so at :57-61: "It records the action rule used
+    # by the evaluator that produced the row, not merely whether the original repository shipped a
+    # suitable evaluator ... the row must say which happened."
+    #
+    # It did not. `CONVENTIONS` is a static per-baseline table, so a `--policy-mode mode` pass was
+    # stamped with the family's NATIVE rule. On card0-20260909-035152 all 85 endpoint rows claimed
+    # `sample` while `evaluator_scope` correctly held 41 `mode` and 44 `sample`; two pooled rows
+    # per regime carried the same label and different means (eval-medium 11.55 and 14.32). A reader
+    # keying on `conventions` -- which is what `scripts/audit_row_closure.py:44` does -- saw 400
+    # episodes per regime where there were 200 each of two estimands SAME-AXES-VERDICT forbids
+    # pooling.
+    #
+    # The resolved scope is authoritative: `eval_grid.py` computes it from the run's actual
+    # `--policy-mode` and stamps it per row. Deferring to it here costs nothing and makes the two
+    # fields agree by construction rather than by coincidence.
+    _scope_mode = (base.get("evaluator_scope") or {}).get("eval_policy_mode")
+    if _scope_mode and isinstance(base.get("conventions"), dict):
+        base["conventions"]["eval_policy_mode"] = _scope_mode
     if base.get("baseline") is not None:
         try:
             # Bare sibling import, matching this file's own existing convention (see
