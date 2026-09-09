@@ -370,3 +370,16 @@ plot's range. Statements of the form "the gap to RL-ViGen's own results is real"
 there may be a gap, and these documents cannot establish it. `drqv2` at 6e5 under our own evaluator
 is the only route to a comparable Door number available to this project, which is a further reason
 to run it early rather than late.
+
+**"Is a random-policy floor available for every family?"** — ANSWERED, **no, and I claimed otherwise
+within the hour.** `ppg` has a frame-0 row only because its save-index scheme writes `model000.jd` at
+`IC=0`. **`idaac`'s earliest retained checkpoint is 51,200**; no untrained checkpoint exists for it.
+`eval_grid.py` refuses without a snapshot (`"no snapshot found; nothing was measured"`) rather than
+constructing a fresh policy, which is correct and means the floor cannot be recovered afterwards from
+the evaluator alone.
+
+A per-family floor needs the trainer to write a checkpoint before the first update — a `runnable/`
+change under the same hashed-tree constraint that defers the `ppg` minibatch fix, so schedule the two
+together. `scripts/learning_over_random.py` computes the ratio where a floor exists, prints
+`NO frame-0 row -- floor unknown, ratio NOT computed` where it does not, and **refuses to borrow one
+from another family**, since initialisation scale is architecture-specific.

@@ -83,11 +83,24 @@ and any direction helps; they prevent the refinement that comes after.
 reasoning from Figure 22's 0-500 axis. **Withdrawn**: that axis is the plot's range and the paper
 reports no numeric Door return anywhere. There may be a gap; these documents cannot establish it.)*
 
-*(One caveat on the baseline: it is `ppg`'s initialisation, not `idaac`'s. A randomly initialised
-policy's return on a dense-reward manipulation task is set by the environment far more than by the
-network, so ~2 is a fair reference — but it is one architecture's random init measured once, and a
-per-family frame-0 row would settle it properly. Every family's curve now evaluates its own frame-0
-checkpoint, so this costs nothing to check as the battery runs.)*
+*(Caveat, and the second half of it corrects something I wrote an hour earlier. The baseline is
+`ppg`'s initialisation, not `idaac`'s; a random policy's return on a dense-reward manipulation task
+is set by the environment far more than by the network, so ~2 is a fair reference, but it is one
+architecture measured once.*
+
+***The floor is NOT free, and I said it was.*** *I wrote that "every family's curve now evaluates its
+own frame-0 checkpoint". It does not. `ppg` has a frame-0 row only because its save-index scheme
+writes `model000.jd` at `IC=0`. **`idaac`'s earliest retained checkpoint is 51,200** — its trainer
+saves on a cadence that starts at the first interval, so no untrained checkpoint exists for it at
+all. `scripts/eval_grid.py` refuses without a snapshot rather than constructing a fresh policy
+(`"no snapshot found; nothing was measured"`), which is right, and means the floor cannot be
+recovered from the evaluator alone.*
+
+*Getting a per-family floor needs the trainer to write a checkpoint before the first update. That is
+a `runnable/` change — the same hashed-tree constraint that defers the `ppg` minibatch fix — so it
+should be scheduled with it, not before. `scripts/learning_over_random.py` reports* `NO frame-0 row
+-- floor unknown, ratio NOT computed` *for every family that lacks one, and refuses to borrow
+another family's.)*
 
 ## The budget is not the excuse
 
