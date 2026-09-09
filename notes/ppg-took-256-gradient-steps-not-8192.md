@@ -271,9 +271,18 @@ The curve at three stamps, train regime, against `idaac` at the same frames:
 | 51,200 | 4.68 | 24.66 | 25 |
 | 100,352 | **10.05** | 12.21 | **49** |
 
-**`ppg` is still climbing and accelerating** — roughly doubling per stamp — which answers the
-question this note left open: the run is **update-limited, not converged**, so the re-run after the
-fix should be expected to go materially higher rather than merely look tidier.
+**CORRECTED at the fourth stamp.** I wrote "still climbing and accelerating — roughly doubling per
+stamp" from three points. The fourth reverses it:
+
+| frame | 0 | 51,200 | 100,352 | **151,552** |
+|---|---:|---:|---:|---:|
+| train | 2.24 | 4.68 | 10.05 | **5.34** |
+| eval-easy | 1.98 | 4.54 | 9.92 | **6.47** |
+
+It peaked at 100,352 and fell by nearly half — **the same oscillating shape `idaac` shows**, not a
+monotone rise. Three ascending points are not a trend, and I called one after exactly three. The
+open question this paragraph claimed to answer is **still open**: whether the run is update-limited
+or oscillating around a low plateau cannot be told until the curve finishes.
 
 **But it reaches 10.05 on 49 updates where `idaac` reaches 12.21 on roughly 15,700**, and that
 forces a correction to how I framed the defect above. "320x fewer updates" is arithmetically true

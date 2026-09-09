@@ -135,3 +135,37 @@ def test_a_good_run_installs_the_bundle(tmp_path):
     dest = tmp_path / "records" / "card0-20260909-035152__records.jsonl"
     assert dest.is_file(), out
     assert len(dest.read_text().splitlines()) == 4
+
+
+def test_it_refuses_to_overwrite_a_different_past_run(tmp_path):
+    """A job id is unique per launch, so a collision means a re-collection or a re-used name.
+
+    Either way the file already there is a completed production cell's only installed copy.
+    """
+    rows = [_row("train")] + [_row("offline-eval")] * 3
+    run = _run_dir(tmp_path,
+                   log=COMPLETED + EVALUATED + "=== NATIVE_RECORDS_EMITTED 4 rows -> records_delivery.jsonl ===\n",
+                   bundle=rows, egl={"renderer": "Tesla V100-SXM2-32GB/PCIe/SSE2"})
+    records = tmp_path / "records"
+    records.mkdir()
+    dest = records / "card0-20260909-035152__records.jsonl"
+    dest.write_text(json.dumps({"phase": "eval", "precious": True}) + "\n")
+    before = dest.read_text()
+    code, out = _collect(run, tmp_path, RECORDS_DIR=str(records))
+    assert code == 1, out
+    assert "already exists and DIFFERS" in out
+    assert dest.read_text() == before, "the existing records were modified"
+
+
+def test_recollecting_the_identical_run_is_idempotent(tmp_path):
+    rows = [_row("train")] + [_row("offline-eval")] * 3
+    run = _run_dir(tmp_path,
+                   log=COMPLETED + EVALUATED + "=== NATIVE_RECORDS_EMITTED 4 rows -> records_delivery.jsonl ===\n",
+                   bundle=rows, egl={"renderer": "Tesla V100-SXM2-32GB/PCIe/SSE2"})
+    records = tmp_path / "records"
+    records.mkdir()
+    dest = records / "card0-20260909-035152__records.jsonl"
+    dest.write_text((run / "native-out" / "records_delivery.jsonl").read_text())
+    code, out = _collect(run, tmp_path, RECORDS_DIR=str(records))
+    assert code == 0, out
+    assert "byte-identical" in out

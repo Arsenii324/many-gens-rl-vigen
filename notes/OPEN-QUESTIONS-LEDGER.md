@@ -294,8 +294,11 @@ workload so a wrong number is visible before the cell starts. For today's config
 62,568s against the 21,600s used. Six tests, `tests/test_eval_allowance_is_derived.py`.
 
 Mitigation for the cell already running, since the reaper cannot be moved without removing the
-instrument: its `*.jsonl`, `*.csv` and `job.log` are pulled locally every ten minutes, so a reaping
-costs at most one row rather than the bundle. Rows are appended as produced.
+instrument: its `*.jsonl`, `*.csv` and `job.log` are pulled locally every ten minutes. **That is a
+second copy, not a rescue, and the earlier wording overstated it** — the rows stay on the host's
+disk whatever happens; what the stop costs is `collect_record_delivery`, an ASSEMBLY step
+(concatenate + stamp `_run_provenance`) that computes no metric and that
+`scripts/assemble_reaped_delivery.py` reproduces from a fetched copy.
 
 **"Is `ppg`'s policy being trained?"** — ANSWERED, **barely, and the trainer said so 291 times.**
 `Warning: nminibatch > ntrain!! (32 > 1)` appears once per iteration in `cells/ppg-s1/training.log`.

@@ -90,7 +90,7 @@ is stopped.
 **What is lost is not the rows — it is the delivery.** `collect_record_delivery` runs after
 evaluation, so a reaped cell writes every row and assembles none. Handled:
 
-1. The rows are already being pulled locally every ten minutes, so a reaping costs at most one row.
+1. The rows are pulled locally every ten minutes. **This is a second copy, not a rescue** — the rows stay on the host's disk either way; what the stop costs is the ASSEMBLY step, not the measurements.
 2. `scripts/assemble_reaped_delivery.py <fetched-run-dir> --out bundle.jsonl` rebuilds the bundle
    from the same sources the runner would have used, marking every row `_assembled_after_reaping`
    and printing coverage by `(frame, phase, policy mode)` so the missing cells are visible rather

@@ -90,8 +90,15 @@ tests/          the structural guarantees, as tests
 mutants/        real mutation testing: mutate rlgen/, run `pytest tests`, report survivors
 setup/          upstream clone, patches, install, verification
 docs/           the brief, the working standard, the review of the previous code
+results/        every run's records, and PRODUCTION-RUNS.md — the generated run register
 instruction.md  what was taken from where, and every decision, with reasons
 ```
+
+**What has actually been run** is [`results/PRODUCTION-RUNS.md`](results/PRODUCTION-RUNS.md) —
+per job: cells, seeds, frame span, evaluator revision, policy mode, headline numbers, and a link to
+every file this repo holds for it, plus a caveats section naming what the register **cannot** see.
+It is generated from `results/records/` by `scripts/production_run_register.py`;
+`--check` fails when it drifts, so it cannot quietly go stale.
 
 ## Baselines
 

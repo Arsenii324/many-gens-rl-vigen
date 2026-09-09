@@ -147,8 +147,36 @@ if [[ -n "$emitted" && "$emitted" != "$have" ]]; then
 fi
 
 mkdir -p "$RECORDS_DIR"
-cp "$SRC" "$DEST"
-echo "   installed $have record rows -> $DEST${emitted:+ (runner emitted $emitted)}"
+
+# 5b. NEVER OVERWRITE A PAST RUN'S RECORDS.
+#
+# [Claude 2026-09-09] `cp` was unconditional. The job id is the run directory's basename
+# (`card0-<YYYYmmdd-HHMMSS>`), which is unique per launch at second resolution, so a collision needs
+# either a re-collection of the same run or a re-used directory name -- and BOTH are plausible: a
+# re-collection is exactly what an operator does after fixing a fetch, and this script is designed
+# to be re-runnable. Overwriting is silent, and the thing overwritten is a completed production
+# cell's only installed copy.
+#
+# Identical content is not a collision -- re-collecting the same run must stay idempotent. Different
+# content is refused, with both paths named, because deciding which is right is not this script's
+# call.
+if [[ -e "$DEST" ]]; then
+  if cmp -s "$SRC" "$DEST"; then
+    echo "   already installed and byte-identical; nothing to do"
+  else
+    echo "   REFUSING: $DEST already exists and DIFFERS from what this run produced." >&2
+    echo "     existing: $(wc -l < "$DEST" | tr -d ' ') rows, $(stat -c %s "$DEST" 2>/dev/null || stat -f %z "$DEST") bytes" >&2
+    echo "     incoming: $have rows, $(stat -c %s "$SRC" 2>/dev/null || stat -f %z "$SRC") bytes" >&2
+    echo "   A job id is the run directory basename and is unique per launch, so this means either" >&2
+    echo "   a re-collection whose source changed, or two runs sharing a directory name. Installing" >&2
+    echo "   over it would destroy a completed production cell's only installed copy. Move the" >&2
+    echo "   existing file aside deliberately, or collect under a different RECORDS_DIR." >&2
+    exit 1
+  fi
+else
+  cp "$SRC" "$DEST"
+fi
+echo "   records at $DEST: $have row(s)${emitted:+, runner emitted $emitted}"
 
 # 6. THE TWO AUDITS THAT CAN ONLY RUN HERE. Both read artifacts that never enter the repository --
 #    checkpoints to hash, and the training CSV or log -- so `production_gates.py` classifies them
