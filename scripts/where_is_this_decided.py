@@ -111,7 +111,12 @@ def main() -> int:
     print(f"{len(hits)} occurrence(s) of {args.term!r} in {len(files)} file(s), "
           f"NEWEST FILE FIRST.\n")
     print("  This is an ORDERING, not a ruling. A note written yesterday can be wrong and a config")
-    print("  comment from last week can be the authority. Read the set, not the top row.\n")
+    print("  comment from last week can be the authority. Read the set, not the top row.")
+    print("  Recency is LAST-TOUCHED, which a typo fix also moves; for the change that actually")
+    print("  altered the value, use the git log -S line printed at the end.")
+    print("  And treat a confident tone as no evidence at all: several notes here were written by")
+    print("  an assistant from whatever was in its context, and a document can read as an")
+    print("  exhaustive review while having seen a subset. Breadth is a claim like any other.\n")
 
     shown = 0
     for path, first in files.items():
