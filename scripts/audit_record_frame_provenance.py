@@ -13,26 +13,37 @@ measurements to frames off by one save and on the wrong cadence -- and **nothing
 have detected it**, because `frame=200000` for a checkpoint at 200704 is not implausible, not
 malformed, and not checkable after the fact.
 
-## Why a check is possible at all
+## Three grades, because two of them would be a lie
 
-Two independent producers write the frame:
+The strength of the evidence differs by family, and collapsing that difference is the failure this
+file exists to prevent.
 
-  * the **trainer** names the checkpoint file, and six families stamp the frame into that name
-    (`agent-robosuite:Door-idaac-s101_100352.pt`);
-  * **`eval_grid.py`** writes `frame` into the record, from a value the runner passed it.
+**CORROBORATED** -- two producers that share no code path agree. The **trainer** names the checkpoint
+file and stamps the frame into that name (`agent-robosuite:Door-idaac-s101_100352.pt`); **`eval_grid.py`**
+writes `frame` into the record from a value the runner passed it. Agreement here is real
+corroboration: for the record to be wrong, two unrelated pieces of code must be wrong the same way.
 
-They share no code path. If they agree, the label is corroborated by construction. If they disagree,
-one of them is wrong and the record is not usable.
+**TIED** -- `ppg` names by save index (`model008.jd`), so no frame is in the filename. Its training
+log carries `Saving to /tmp/native-work/runs/ppg-s1/model008.jd IC=401408`, which names the file and
+the frame together, and that is what `ppg_checkpoint_frame` reads. So the record's frame is
+**derived from** that line rather than independent of it, and calling the agreement "corroboration"
+would manufacture confidence out of a single producer.
 
-`checkpoint_sha256` is what ties a record to a file, so the comparison needs no filename bookkeeping:
-hash the checkpoints, match, then read the frame out of the matched name.
+What it does establish is narrower and is exactly the defect that was live: **the frame in the record
+belongs to the specific file the record measured**, tied through `checkpoint_sha256`. The
+reconstruction fallback would have failed this -- it computed a frame from an assumed cadence while
+the file came from a save index, with nothing connecting the two. A trainer that writes a wrong `IC=`
+is still not caught, and TIED says so.
 
-## What it deliberately will not do
+**UNVERIFIABLE** -- no checkpoint matched the row's hash, or the row carries no hash, or the file is
+named by index and no log line mentions it. Nothing was checked. It must never print like a pass.
 
-`ppg` names by **save index** (`model004.jd`), so its frames come from `IC=` lines in its training
-log and there is no second producer. Those rows are reported **UNVERIFIABLE**, never OK. A record
-whose corroboration is impossible and a record that was corroborated must not print the same, which
-is the whole reason the earlier fallback survived three days.
+## The cadence check, which is independent
+
+`IC=` values are emitted by the trainer on a fixed save cadence. Uneven deltas mean a save was missed
+or the cadence changed mid-run, and either one breaks any reasoning that maps save index to frame.
+This is checked from the log alone and does not depend on the records, so it catches a class the
+per-row grades cannot.
 """
 from __future__ import annotations
 
@@ -44,6 +55,9 @@ import re
 import sys
 
 FRAME_IN_NAME = re.compile(r"_(\d+)\.(?:pt|pth|jd|tar)$")
+#: The trainer's own save line. `ppg` is the family that needs it; the pattern is not ppg-specific,
+#: so any family that names by index and logs the pair is covered without a new branch.
+SAVE_LINE = re.compile(r"Saving to\s+(\S+)\s+IC=(\d+)")
 
 
 def _sha256(path: pathlib.Path) -> str:
@@ -65,6 +79,24 @@ def _checkpoints(root: pathlib.Path) -> dict[str, pathlib.Path]:
     return out
 
 
+def _save_lines(root: pathlib.Path) -> tuple[dict[str, int], list[tuple[str, int]]]:
+    """basename -> frame, plus the ordered sequence for the cadence check."""
+    by_name: dict[str, int] = {}
+    ordered: list[tuple[str, int]] = []
+    for log in sorted(root.rglob("*.log")):
+        try:
+            text = log.read_text(errors="replace")
+        except OSError:
+            continue
+        for match in SAVE_LINE.finditer(text):
+            name = pathlib.PurePosixPath(match.group(1)).name
+            frame = int(match.group(2))
+            # A later line for the same basename wins: a resumed run rewrites the same index.
+            by_name[name] = frame
+            ordered.append((name, frame))
+    return by_name, ordered
+
+
 def _records(target: pathlib.Path) -> list[dict]:
     files = [target] if target.is_file() else sorted(target.rglob("*.jsonl"))
     rows = []
@@ -78,11 +110,27 @@ def _records(target: pathlib.Path) -> list[dict]:
     return rows
 
 
+def cadence_report(ordered: list[tuple[str, int]]) -> list[str]:
+    """Uneven `IC=` deltas, reported from the log alone."""
+    frames = sorted({f for _, f in ordered})
+    if len(frames) < 3:
+        return []
+    deltas = [b - a for a, b in zip(frames, frames[1:])]
+    common = max(set(deltas), key=deltas.count)
+    odd = [(frames[i], frames[i + 1], d) for i, d in enumerate(deltas) if d != common]
+    if not odd:
+        return []
+    out = [f"    the usual save interval is {common} frames, and {len(odd)} gap(s) differ:"]
+    for a, b, d in odd[:8]:
+        out.append(f"      {a} -> {b} is {d}")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("target", help="a run directory, or a records .jsonl")
     ap.add_argument("--strict", action="store_true",
-                    help="exit 1 on any MISMATCH (UNVERIFIABLE alone never fails)")
+                    help="exit 1 on any MISMATCH. TIED and UNVERIFIABLE never fail on their own")
     args = ap.parse_args()
 
     target = pathlib.Path(args.target)
@@ -97,7 +145,8 @@ def main() -> int:
         return 2
 
     by_hash = _checkpoints(root)
-    corroborated = mismatched = unverifiable = 0
+    saves, ordered = _save_lines(root)
+    corroborated = tied = mismatched = unverifiable = 0
     problems: list[str] = []
 
     for r in rows:
@@ -112,34 +161,62 @@ def main() -> int:
             unverifiable += 1
             continue
         m = FRAME_IN_NAME.search(path.name)
-        if not m:
-            # ppg and anything else naming by save index: no second producer exists.
+        if m:
+            named = int(m.group(1))
+            if named == int(float(frame)):
+                corroborated += 1
+            else:
+                mismatched += 1
+                problems.append(f"    {baseline} {r.get('regime','?'):<11} record frame={frame} "
+                                f"but the checkpoint it measured is named {named} ({path.name})")
+            continue
+        logged = saves.get(path.name)
+        if logged is None:
             unverifiable += 1
             continue
-        named = int(m.group(1))
-        if named == int(float(frame)):
-            corroborated += 1
+        if logged == int(float(frame)):
+            tied += 1
         else:
             mismatched += 1
-            problems.append(f"    {baseline} {r.get('regime','?'):<11} record frame={frame} "
-                            f"but the checkpoint it measured is named {named} ({path.name})")
+            problems.append(f"    {baseline} {r.get('regime','?'):<11} record frame={frame} but the "
+                            f"training log saves {path.name} at IC={logged}")
 
     total = len(rows)
     print(f"RECORD FRAME PROVENANCE -- {total} record(s) under {target}\n")
-    print(f"  corroborated  {corroborated:>5}   the trainer's filename and the record agree")
-    print(f"  MISMATCHED    {mismatched:>5}   two independent producers disagree")
-    print(f"  unverifiable  {unverifiable:>5}   no second producer exists for these rows")
+    print(f"  corroborated  {corroborated:>5}   trainer filename and record agree, no shared code path")
+    print(f"  tied          {tied:>5}   frame belongs to the measured file, via the training log")
+    print(f"  MISMATCHED    {mismatched:>5}   the frame does not belong to the file it labels")
+    print(f"  unverifiable  {unverifiable:>5}   nothing was checked for these rows")
+
     if problems:
         print("\n  Disagreements:")
         for p in problems[:20]:
             print(p)
+
+    if tied:
+        print("\n  TIED IS WEAKER THAN CORROBORATED and the difference is not cosmetic. The record's")
+        print("  frame is DERIVED from the same log line the check reads, so a trainer writing a")
+        print("  wrong IC= passes. What it does establish is that the frame belongs to the specific")
+        print("  file measured -- which is precisely what ppg_checkpoint_frame's reconstruction")
+        print("  fallback broke, and what nothing downstream could have detected.")
+
     if unverifiable:
-        print("\n  UNVERIFIABLE IS NOT OK. It means the label rests on one producer -- typically ppg,")
-        print("  which names checkpoints by save index, so its frames come from IC= log lines with")
-        print("  nothing to check them against. Read those rows as uncorroborated, not as clean.")
+        print("\n  UNVERIFIABLE IS NOT OK. No checkpoint matched the hash, or the row carries none, or")
+        print("  the file is named by index and no log line mentions it. Read these as unchecked.")
+
     if mismatched:
         print("\n  A mismatch means a real measurement is attached to the wrong frame. The record is")
         print("  well-formed and plausible, which is exactly why nothing else would catch it.")
+
+    cadence = cadence_report(ordered)
+    if cadence:
+        print("\n  SAVE CADENCE IS UNEVEN -- checked from the log alone, so this holds even where every")
+        print("  row above is unverifiable. Any reasoning that maps save index to frame is unsound:")
+        for line in cadence:
+            print(line)
+    elif ordered:
+        print(f"\n  Save cadence even across {len({f for _, f in ordered})} logged saves.")
+
     return 1 if (mismatched and args.strict) else 0
 
 
