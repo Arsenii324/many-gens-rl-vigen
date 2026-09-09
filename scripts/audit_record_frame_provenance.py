@@ -127,19 +127,44 @@ def _records(target: pathlib.Path) -> list[dict]:
 
 
 def cadence_report(ordered: list[tuple[str, int]]) -> list[str]:
-    """Uneven `IC=` deltas, reported from the log alone."""
+    """A MISSED save, reported from the log alone. Jitter is not a finding.
+
+    [Claude 2026-09-09] The first version flagged any delta differing from the modal one, and the
+    live ppg cell's real cadence is **alternating 51200 / 49152**:
+
+        0, 51200, 100352, 151552, 200704, 251904, 301056, 350208, 401408, 450560, 501760,
+        550912, 600064
+
+    That is `ic_per_save=50000` quantised onto a 2048-frame rollout -- the save fires on the first
+    iteration past each 50,000 multiple, so the gap is 25 or 24 rollouts. Every correct ppg run
+    produces it, and a check that fires on every correct run is one people learn to ignore.
+
+    What the check is FOR is a save that did not happen, which breaks any index-to-frame mapping.
+    So it compares against the median delta by RATIO: at least 1.5x is a gap where a save is
+    missing, at most 0.5x is a duplicate or a restart. Quantisation jitter is neither.
+    """
     frames = sorted({f for _, f in ordered})
-    if len(frames) < 3:
+    if len(frames) < 4:
         return []
     deltas = [b - a for a, b in zip(frames, frames[1:])]
-    common = max(set(deltas), key=deltas.count)
-    odd = [(frames[i], frames[i + 1], d) for i, d in enumerate(deltas) if d != common]
+    typical = median_int(deltas)
+    if typical <= 0:
+        return []
+    odd = [(frames[i], frames[i + 1], d) for i, d in enumerate(deltas)
+           if d >= 1.5 * typical or d <= 0.5 * typical]
     if not odd:
         return []
-    out = [f"    the usual save interval is {common} frames, and {len(odd)} gap(s) differ:"]
+    out = [f"    the typical save interval is {typical} frames, and {len(odd)} gap(s) are at least",
+           "    50% away from it -- large enough to be a missing or duplicated save, not jitter:"]
     for a, b, d in odd[:8]:
-        out.append(f"      {a} -> {b} is {d}")
+        out.append(f"      {a} -> {b} is {d}  ({d / typical:.2f}x typical)")
     return out
+
+
+def median_int(values: list[int]) -> int:
+    s = sorted(values)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) // 2
 
 
 def main() -> int:

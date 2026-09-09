@@ -110,31 +110,50 @@ def test_a_row_whose_hash_matches_nothing_is_unverifiable(tmp_path):
     assert _count(out, "unverifiable") == 1
 
 
+def test_the_real_ppg_alternating_cadence_is_NOT_flagged(tmp_path):
+    """51200/49152 alternating is ic_per_save=50000 quantised onto a 2048-frame rollout.
+
+    Every correct ppg run produces it. The first version of the check flagged all twelve gaps.
+    """
+    frames = [0, 51200, 100352, 151552, 200704, 251904, 301056, 350208, 401408, 450560,
+              501760, 550912, 600064]
+    (tmp_path / "job.log").write_text(
+        "".join(f"Saving to  /run/model{i:03d}.jd IC={f}\n" for i, f in enumerate(frames)))
+    _write(tmp_path, [{"baseline": "ppg", "regime": "train",
+                       "checkpoint_sha256": _sha(b"absent"), "frame": 1}])
+    code, out = _run(tmp_path)
+    assert code == 0, out
+    assert "SAVE CADENCE IS UNEVEN" not in out, out
+    assert "Save cadence even across 13 logged saves" in out
+
+
 def test_uneven_save_cadence_is_reported_from_the_log_alone(tmp_path):
     # No records reference these, and no checkpoints exist: the cadence check must still fire.
     (tmp_path / "job.log").write_text(
         "Saving to  /run/model001.jd IC=50000\n"
         "Saving to  /run/model002.jd IC=100000\n"
         "Saving to  /run/model003.jd IC=150000\n"
-        "Saving to  /run/model004.jd IC=250000\n")
+        "Saving to  /run/model004.jd IC=200000\n"
+        "Saving to  /run/model005.jd IC=400000\n")
     _write(tmp_path, [{"baseline": "ppg", "regime": "train",
                        "checkpoint_sha256": _sha(b"absent"), "frame": 1}])
     code, out = _run(tmp_path)
     assert code == 0, out
     assert "SAVE CADENCE IS UNEVEN" in out
-    assert "150000 -> 250000 is 100000" in out
+    assert "200000 -> 400000 is 200000" in out
 
 
 def test_even_save_cadence_says_so(tmp_path):
     (tmp_path / "job.log").write_text(
         "Saving to  /run/model001.jd IC=50000\n"
         "Saving to  /run/model002.jd IC=100000\n"
-        "Saving to  /run/model003.jd IC=150000\n")
+        "Saving to  /run/model003.jd IC=150000\n"
+        "Saving to  /run/model004.jd IC=200000\n")
     _write(tmp_path, [{"baseline": "ppg", "regime": "train",
                        "checkpoint_sha256": _sha(b"absent"), "frame": 1}])
     code, out = _run(tmp_path)
     assert code == 0, out
-    assert "Save cadence even across 3 logged saves" in out
+    assert "Save cadence even across 4 logged saves" in out
 
 
 def test_an_unnamed_snapshot_is_corroborated_through_its_frame_named_alias(tmp_path):
