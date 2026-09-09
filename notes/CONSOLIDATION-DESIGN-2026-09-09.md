@@ -1,0 +1,151 @@
+# Consolidating the repo's understanding — a design, deliberately not an execution
+
+**2026-09-09.** Written at the end of a long session, at ~99% context, *because* of that: whatever
+I understand right now is about to be summarized, and a summary is exactly the operation whose
+failure mode this note exists to reason about. So this is the design and the evidence, on disk,
+where the next agent can disagree with it.
+
+**Nothing here has been executed.** No document was merged, rewritten or deleted for this.
+
+---
+
+## 1. The goal, stated so it can be failed
+
+An agent arriving at this repo should reach an **accurate** understanding, **at the depth the task
+needs**, without reading everything, and without being misled by what it happens to read first.
+
+Three failure modes, and only the first is the obvious one:
+
+- **Too slow** — the answer exists but costs a full read. (Cheap to fix. Least important.)
+- **Misled** — the agent reads a confident document that stopped being true. (Happened repeatedly.)
+- **Falsely settled** — the agent reads a *correct* document and does not learn that the question
+  is contested, conditional, or open. (The expensive one, and the one a consolidation *creates*.)
+
+A consolidation that fixes the first and worsens the third is a net loss, and it will feel like
+progress while it happens.
+
+## 2. What this session actually observed, because the design should rest on evidence
+
+Not hypotheticals. All from 2026-09-08/09, all checkable:
+
+| observation | what it says about consolidation |
+|---|---|
+| Six documents asserted `idaac num_processes` 4/16 in the present tense, three days after A35 fixed it at 1. One was a **test docstring** contradicted by its own file's code comment. | Prose decays silently and nothing notices. Recency does not track truth: the stale test file had been touched more recently than the decision that superseded it. |
+| `FINDING-on-policy-update-density.md`'s idaac result was not stale but **void** — it measured divergence from Procgen's 64 envs, and C2's reference *is* 1 process. | A merge that "reconciled" it would have preserved a number whose *premise* had gone. Summaries carry numbers forward and drop premises. |
+| I asserted `ppg` "plateaus at 8207 MiB". It goes to **26653** at its auxiliary phase. I had 30 minutes of samples, all inside one phase. | A confident claim from partial observation reads identically to one from complete observation. **I** wrote it, in this repo, this session. |
+| I withdrew packing on a misread of `nvidia-smi` (reserved, not used) and had to reverse it. | Positions written under time pressure enter the record with the same authority as considered ones. |
+| The VRAM cap had **never reached a trainer** — all nine `runnable/_launch/*.sh` clobber `PYTHONPATH` — while every run logged `NATIVE_VRAM_CAP_APPLIED`. | A mechanism reporting its own success is not evidence. Consolidating *logs* would have propagated a three-day-old fiction. |
+| The `raileanu21a-supp.pdf` paragraph settled `num_processes` **and opened** the action-repeat question, from one read. | Primary sources both close and open questions. Derived prose only closes them. |
+
+**The pattern.** Every real defect this session was found by (a) reading a primary source, or
+(b) a mechanical check that could fail. None was found by reading a summary — and three were
+*created* by writing one.
+
+## 3. Why the obvious instrument is the wrong one
+
+"Merge the overlapping documents into a clean current statement" fails here for a specific,
+structural reason, not a stylistic one.
+
+**This repo's value is disproportionately in its conditionals and its dissent.** `A35` matters
+because it records *what it replaced and why*. `OPEN-QUESTIONS-LEDGER` carries `REVERSED` rows whose
+whole content is that a confident position was wrong. `PARAMETER-REVIEW-CONSENSUS-MATRIX` was
+deliberately framed as *dispositions* rather than values, because several reviews' actual position
+is "keep the value and declare it unfaithful" — which no consolidated number can express.
+
+Summarization is lossy **in a direction that is invisible afterwards**: it keeps the conclusion and
+drops the condition, the minority reading, the date, the "this held when X". You cannot audit for
+what a summary removed, because the removal leaves no trace. That asymmetry — cheap to do, uncheckable
+afterwards, and irreversible in practice — is why this is not a tidying task.
+
+And the timing argument is decisive: **a consolidation performed 24 hours ago would have baked in
+three positions I have since reversed.** There is no reason to believe today is different.
+
+## 4. What the evidence suggests instead
+
+Not a rewrite. Three moves, in increasing cost, each independently useful:
+
+**(a) Make claims checkable rather than merged.** The mechanisms that have actually held are the
+ones that fail loudly: `RUNNER_CONTRACT` in two homes, `test_docs_not_stale`, the register's
+self-counting entry total, mutation-tested guards. Where a claim can be converted into a check, that
+is worth more than any amount of prose reconciliation — a check cannot go quietly stale.
+
+**(b) Navigation over merging.** `scripts/where_is_this_decided.py` (built today) answers "where is
+this decided and what contradicts it" without reading the tree, and states each time that an
+ordering is not a ruling, that recency is last-touched, and that an exhaustive-sounding note may
+have seen a subset. `OPEN-QUESTIONS-LEDGER` is the curated entry point above it. **This is the part
+that is already done**, and it is the cheap 80%.
+
+**(c) Progressive disclosure by *area*, written as pointers, not as replacements.** A short
+per-area map — host operations, fidelity, evaluator closure, comparability, run history — that says
+what exists, what is current, what is contested, and *what it costs to go deeper*. Pointers can be
+wrong and repaired; a merge that dropped a conditional cannot be.
+
+**What is deliberately NOT proposed:** merging the notes series into the docs series, deleting
+superseded material, or producing "the current state" as a single document. The two trees
+(`ccm-intro` and the recovery workspace) are also **not** proposed for joining — they differ in ways
+neither subsumes, and the git-tracked one is the one exercised on production, which makes the other
+evidence rather than duplication.
+
+## 5. Phasing, with stop conditions
+
+**Phase 0 — measure the actual navigation cost.** Before writing anything: take 5-8 real questions
+(the action-repeat condition, "which eval runs where", "is the cap enforced", "what does a cell
+cost") and record how long each takes with today's tools and where the agent goes wrong. **Stop
+condition: if the existing entry points answer them, the remaining work is (a) only.** This phase is
+measurement and cannot damage anything.
+
+**Phase 1 — convert the top decayed claims into checks.** Ranked by how badly a wrong answer would
+hurt. No prose merged.
+
+**Phase 2 — per-area maps, pointers only.** One area at a time, each reviewed against Phase 0's
+questions. **Stop condition: if a map cannot be written without deciding a contested question, that
+question goes to the ledger as OPEN and the map records both positions.**
+
+**Phase 3 — does not exist yet.** Any merging or rewriting is a separate decision, taken with
+Phase 0-2 evidence in hand, and is the owner's.
+
+## 6. Risks, including the one that ends the project
+
+- **The consolidation destroys what it organises.** Primary risk. Mitigated only by refusing to
+  merge in Phases 0-2 — not by care, because care is exactly what I exercised while writing three
+  claims I later reversed.
+- **A map becomes the new stale layer.** Real: it is prose about prose. Mitigated by pointers over
+  restatement, and by a check that its references resolve.
+- **False settlement.** A tidy map implies the questions are closed. Every area map must carry its
+  open questions inline, not in an appendix.
+- **Drift into fixing.** Several live inconsistencies are named in §7. Fixing them *during* a
+  consolidation entangles two kinds of change and makes both unreviewable. They are recorded, not
+  repaired here.
+- **The right answer may be "don't."** If Phase 0 shows the entry points already work, the correct
+  outcome is to stop after (a). That is a success, not an abandonment.
+
+## 7. Known inconsistent or unreviewed, stated plainly rather than smoothed
+
+- **Train/eval wiring.** `CELL_TIMEOUT_SECONDS` bounds training only; curve and endpoint eval run
+  outside it. Found today, launcher budget fixed, but *the general question of what bounds a
+  container's life is not settled*.
+- **In-cell vs between-cell eval.** Curve eval runs in-cell per checkpoint; the endpoint grid runs
+  in-cell at the end; `eval_grid.py` also runs standalone. Three paths, one evaluator, no document
+  states which is authoritative for a given record.
+- **Cross-cell eval overlap** was started empirically today (`ppg` training beside `idaac`
+  evaluating). It works; it is not designed, and nothing records it as a supported mode.
+- **The VRAM cap** is now known never to have applied. Nine launchers would need editing, and they
+  are payload members — an owner decision, still open.
+- **`action_repeat` 1 vs the source's 4-8** — open, filed, not answered.
+- **Two workspace trees** differ and neither is a subset. Not investigated beyond noting it.
+
+## 8. Operational state at the time of writing
+
+`idaac:101` 600k on card 0: trained to **598016** frames (the predicted endpoint exactly), curve eval
+11/11 (431 records), endpoint grid running, projected ~17:10 against an 18:36 reaper. `ppg:1` 600k
+training concurrently since 11:53, at `model007.jd`. Card 0: ~28 GiB used, ~4.3 GiB free against a
+4000 MiB floor, no co-tenant. Suite 2217 tests / 0 failures; gates 35 pass / 0 fail / 10 owner.
+Collector `datasphere/native/collect-host-run.sh` is written and tested but **has not yet run on a
+real completed cell**.
+
+## 9. One thing I did not do
+
+The owner referenced `docs/anthropic-prompting.md`. I did not read it before writing this, because
+at ~99% context reading it risked triggering compaction mid-task and losing the pending launcher fix.
+That is a judgement call and it may be the wrong one; the next agent should read it and revise this
+design accordingly.
