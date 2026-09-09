@@ -157,23 +157,61 @@ def main() -> int:
     fail += len(unpaired)
 
     # 4. reset reproducibility -- REPORTED, not failed
+    # A SET alone cannot tell "seen once" from "seen ten times identically" -- and those are the
+    # difference between "not measured" and "perfectly reproducible". Count observations too.
     wit = collections.defaultdict(set)
+    seen = collections.Counter()
     for r in detailed:
         for i, w in enumerate(r["native"].get("placement_witnesses") or []):
-            wit[(r["regime"], str(r["scene_set"]), i)].add(w)
-    per = collections.defaultdict(lambda: [0, 0])
-    for (reg, _, _), v in wit.items():
+            slot = (r["regime"], str(r["scene_set"]), i)
+            wit[slot].add(w)
+            seen[slot] += 1
+    # [Claude 2026-09-10] COUNT THE COMPARISONS, and refuse to report a rate without them.
+    #
+    # A slot is only evidence of reproducibility if the same (regime, scene, index) was OBSERVED
+    # MORE THAN ONCE -- at another frame, or in another pass. `wit` is a set per slot, so a file
+    # holding a single pass at a single frame gives every slot exactly one witness, `len(v) > 1` is
+    # never true, and this printed "200/200 reproducible (0% vary)" having compared nothing.
+    #
+    # That is not hypothetical: run on one endpoint file it reported 0% vary for all four regimes
+    # across 800 slots, none of which had a second observation, and the number was repeated into
+    # two notes as though it were a measurement. The full bundle for the same cell has 146
+    # comparable slots and says eval-medium 62% and eval-hard 10%.
+    #
+    # An instrument that could not run must never read as one that ran, so the compared count is
+    # now printed beside every rate and a regime with none says so instead of showing 0%.
+    # varying, total slots, COMPARABLE slots (observed more than once -- the only ones that
+    # carry evidence either way).
+    per = collections.defaultdict(lambda: [0, 0, 0])
+    for slot, v in wit.items():
+        reg = slot[0]
         per[reg][1] += 1
-        if len(v) > 1:
-            per[reg][0] += 1
+        if seen[slot] > 1:
+            per[reg][2] += 1
+            if len(v) > 1:
+                per[reg][0] += 1
     print("\n  4. reset observation reproducible across frames and passes, per regime:")
+    uncomparable = []
     for reg in sorted(per):
-        b, t = per[reg]
+        b, t, comparable = per[reg]
+        if comparable == 0:
+            uncomparable.append(reg)
+            print(f"       {reg:<12} NOT COMPARED -- all {t} slot(s) observed exactly once")
+            continue
         note = ""
         if b:
             note = ("  <- NOT paired: comparisons involving this regime carry perturbation "
                     "variance beyond their episode count")
-        print(f"       {reg:<12} {t - b:>4}/{t} reproducible ({b / t:>5.0%} vary){note}")
+        print(f"       {reg:<12} {comparable - b:>4}/{comparable} reproducible "
+              f"({b / comparable:>5.0%} vary), of {t} slot(s){note}")
+    if uncomparable:
+        print(f"\n     {len(uncomparable)} regime(s) had NO repeated observation of any slot, so"
+              f" nothing")
+        print("     about their reproducibility was measured here. This happens when the input is a"
+              " single")
+        print("     pass at a single frame -- run the audit on the full bundle (curve + every"
+              " endpoint")
+        print("     pass) to get a rate. A single-pass file cannot disagree with itself.")
     print("\n     Reported, never failed: RL-ViGen's regimes are distributions over visual")
     print("     conditions and sampling them is the point. What it forbids is a PAIRED claim")
     print("     about a regime that varies -- see the module docstring.")

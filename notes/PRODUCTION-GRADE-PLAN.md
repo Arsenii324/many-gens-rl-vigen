@@ -81,7 +81,13 @@ them**, verified on the real records by adding the alias and re-auditing.
 
 ## What no amount of running fixes, and must be reported as a limitation
 
-`eval-medium` and `eval-hard` **resample their visual perturbation between passes** — 62 % and 10 %
-of slots respectively, against 0 % for `train` and `eval-easy`. That is RL-ViGen's design, not a bug,
+`eval-medium` and `eval-hard` **resample their visual perturbation between passes** — 62 % and
+**13 %** of slots respectively, against 0 % for `train` and `eval-easy`.
+
+> **Denominator corrected 2026-09-10.** `eval-hard` was stated as 10 %, which divided 21 varying
+> slots by all 200 rather than by the **166 that were actually observed more than once**. A slot
+> seen once is evidence of nothing. `audit_eval_validity.py` now counts observations per slot and
+> prints `NOT COMPARED` where there are none — it previously reported "0 % vary" for a single-pass
+> file across 800 slots it had never compared. That is RL-ViGen's design, not a bug,
 but it means **no paired claim is available for those regimes**, and their numbers carry perturbation
 variance on top of episode variance. Seeds do not fix it; only more episodes narrow it.

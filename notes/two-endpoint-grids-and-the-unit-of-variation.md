@@ -31,7 +31,12 @@ and nothing in the runner said so.
 - row summaries match their own raw episodes — PASS
 - **800 episode ids each, 0 duplicated, 0 mismatched** — PASS
 - placement seed identical across regimes and frames — PASS, so the regimes are **paired**
-- reset observation reproducible **200/200 in every regime** for both cells
+- reset observation reproducible — **corrected 2026-09-10, this line was vacuous.** The audit ran
+  on a single endpoint pass, where each `(regime, scene, index)` slot is observed exactly once, so
+  "200/200 reproducible" compared nothing. `audit_eval_validity.py` now prints `NOT COMPARED` for
+  such input. On the **full bundle** the real figures are train 200/200, eval-easy 200/200,
+  **eval-hard 145/166 (13 % vary)**, **eval-medium 75/200 (62 % vary)** — so the two hard regimes
+  are *not* paired, exactly as `PRODUCTION-GRADE-PLAN.md` already said
 
 ## 2. The numbers
 
