@@ -33,11 +33,17 @@ def _extract(name: str) -> str:
 
 
 def _run(tmp_path: Path, family: str, filenames: list[str], save_every: int = 2000,
-         discard: str = "0") -> tuple[str, list[str], list[str]]:
+         discard: str = "0", saves: list[tuple[str, int]] | None = None,
+         expect_success: bool = True) -> tuple[str, list[str], list[str]]:
     cell = tmp_path / "cell"
     (cell / "checkpoints").mkdir(parents=True)
     for name in filenames:
         (cell / "checkpoints" / name).write_bytes(b"weights")
+    # `saves` writes the trainer's own `Saving to <path> IC=<frame>` lines, which is the ONLY
+    # authority for a ppg frame. Absent, the runner must refuse rather than reconstruct.
+    if saves is not None:
+        (cell / "training.log").write_text(
+            "".join(f"Saving to  /tmp/native-work/runs/ppg-s1/{n} IC={f}\n" for n, f in saves))
     # The stub is an executable on PATH, not a shell function: run_curve_eval invokes
     # `env RLVIGEN_IMAGE_SIZE=... python3` for the dmc_gb family, and `env` execs a BINARY --
     # it cannot see a shell function. A function stub silently stopped intercepting the call
@@ -83,9 +89,16 @@ def _run(tmp_path: Path, family: str, filenames: list[str], save_every: int = 20
            "CURVE_EVAL_DISCARD_WEIGHTS": discard, "CURVE_EVAL_EPISODES": "3"}
     proc = subprocess.run(["bash", str(script), str(cell), family, str(save_every)],
                           capture_output=True, text=True, env=env)
-    assert proc.returncode == 0, proc.stderr
+    # A run whose every checkpoint was refused legitimately returns non-zero: run_curve_eval ends
+    # with NATIVE_CURVE_EVAL_NO_STAMPS. Callers testing the refusal say so rather than having the
+    # helper hide it.
+    if expect_success:
+        assert proc.returncode == 0, proc.stderr
+    else:
+        assert proc.returncode != 0, "a fully-refused curve must not report success"
     calls = log.read_text().splitlines() if log.exists() else []
-    records = (cell / "offline_eval_curve.jsonl").read_text().splitlines()
+    records = ((cell / "offline_eval_curve.jsonl").read_text().splitlines()
+               if (cell / "offline_eval_curve.jsonl").exists() else [])
     return proc.stdout + proc.stderr, calls, records
 
 
@@ -102,11 +115,37 @@ def test_idaac_names_survive_embedded_digits(tmp_path):
     assert "frame=4096" in calls[0], calls
 
 
-def test_ppg_save_index_is_converted_to_frames(tmp_path):
-    """ppg names by save index; recorded raw they would plot at 0, 1, 2 beside real frame counts."""
-    _, calls, _ = _run(tmp_path, "ppg", ["model000.jd", "model001.jd", "model005.jd"], save_every=2000)
+def test_ppg_frames_come_from_the_trainers_own_IC_lines(tmp_path):
+    """ppg names by save index; the frame is whatever the trainer logged beside that save.
+
+    [Claude 2026-09-09] This test used to assert `(stamp + 1) * save_every`, and that assertion was
+    WRONG -- it encoded a reconstruction that was measured against a live ppg cell and found to be
+    incorrect in two independent ways:
+
+        actual IC=   0, 51200, 100352, 151552   (ppg saves on its rollout quantum, 25 x 2048)
+        reconstruct  50000, 100000, 150000, 200000
+
+    The cadence is wrong AND it is off by one save, because model000.jd is written at IC=0. So the
+    old test passed on behaviour that mislabelled every curve row by up to 50k frames. The contract
+    is now the trainer's own log, and the test asserts THAT.
+    """
+    _, calls, _ = _run(tmp_path, "ppg", ["model000.jd", "model001.jd", "model005.jd"],
+                       save_every=2000,
+                       saves=[("model000.jd", 0), ("model001.jd", 51200), ("model002.jd", 100352),
+                              ("model003.jd", 151552), ("model004.jd", 200704),
+                              ("model005.jd", 251904)])
     frames = sorted(int(re.search(r"frame=(\d+)", c).group(1)) for c in calls)
-    assert frames == [2000, 4000, 12000], calls
+    assert frames == [0, 51200, 251904], calls
+
+
+def test_ppg_refuses_when_no_IC_line_maps_the_checkpoint(tmp_path):
+    """No log means no authority. A skipped checkpoint is visible; a mislabelled one is not."""
+    out, calls, _ = _run(tmp_path, "ppg", ["model000.jd", "model001.jd"], save_every=2000,
+                         expect_success=False)
+    assert "NATIVE_PPG_FRAME_UNMAPPABLE" in out, out
+    assert "NATIVE_CURVE_EVAL_SKIPPED" in out, out
+    assert "NATIVE_CURVE_EVAL_NO_STAMPS" in out, out
+    assert calls == [], f"refused checkpoints must not be evaluated, got {calls}"
 
 
 def test_ctrl_msgpack_stamps(tmp_path):

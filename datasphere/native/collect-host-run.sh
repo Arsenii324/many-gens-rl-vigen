@@ -142,7 +142,36 @@ mkdir -p "$RECORDS_DIR"
 cp "$SRC" "$DEST"
 echo "   installed $have record rows -> $DEST${emitted:+ (runner emitted $emitted)}"
 
-# 6. The ledger REFUSES a stale evaluator revision, and that refusal is the most valuable thing it
+# 6. THE TWO AUDITS THAT CAN ONLY RUN HERE. Both read artifacts that never enter the repository --
+#    checkpoints to hash, and the training CSV or log -- so `production_gates.py` classifies them
+#    DESCRIPTIVE and this is where they actually execute, once per collected result.
+#
+#    [Claude 2026-09-09] Wired in after the first two production cells each produced a null whose
+#    CAUSE was invisible in every artifact the pipeline checked. Reading their logs by hand found
+#    idaac updating far outside the trust region (clip_fraction 0.82, KL 1.0-1.5 nats) and ppg's
+#    policy diagnostics pinned at zero. Ten baselines remain; finding that by hand once is luck.
+#
+#    The frame audit REFUSES on a mismatch -- a real measurement attached to the wrong frame is a
+#    corrupt record and must not be filed. The diagnostics audit REPORTS: a flag is a question about
+#    the run, not a defect in the record, and a deliberate deviation may be expected.
+if [[ -f scripts/audit_record_frame_provenance.py ]]; then
+  echo "   -- frame provenance"
+  frames_out="$("$BP" scripts/audit_record_frame_provenance.py "$RUN_DIR" --strict 2>&1)"
+  frames_status=$?
+  printf '%s\n' "$frames_out" | sed 's/^/      /'
+  if [[ $frames_status -ne 0 ]]; then
+    echo "   REFUSING: a record's frame does not belong to the checkpoint it measured. The rows are" >&2
+    echo "   well-formed and plausible, which is why nothing downstream would catch it." >&2
+    rm -f "$DEST"
+    exit 1
+  fi
+fi
+if [[ -f scripts/audit_training_diagnostics.py ]]; then
+  echo "   -- training diagnostics"
+  "$BP" scripts/audit_training_diagnostics.py "$RUN_DIR" 2>&1 | sed 's/^/      /'
+fi
+
+# 7. The ledger REFUSES a stale evaluator revision, and that refusal is the most valuable thing it
 #    does. Capture the status explicitly: piping it through `tail` would discard the exit code and
 #    print "Do NOT write this entry" while exiting 0.
 out="$("$BP" scripts/populate_evaluator_ledger.py "$FAMILY" "$JOB_ID" 2>&1)"
@@ -153,7 +182,7 @@ if [[ $status -ne 0 ]] || printf '%s' "$out" | grep -q "Do NOT write this entry"
   exit 1
 fi
 
-# 7. The gate line is a SUMMARY, and a summary must not decide this script's exit status. As the
+# 8. The gate line is a SUMMARY, and a summary must not decide this script's exit status. As the
 #    last command, a `grep` that matches nothing made the collector exit 1 after installing the
 #    bundle and passing the ledger -- indistinguishable, to a caller, from a refusal. The collection
 #    either happened or it did not, and by this line it has.

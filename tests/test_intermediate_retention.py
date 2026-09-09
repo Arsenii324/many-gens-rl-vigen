@@ -137,7 +137,15 @@ def test_ppg_stamps_are_converted_from_save_index_to_frames():
     text = _runner()
     assert 'if [[ "$family" == "ppg" ]]; then' in text
     assert 'frame="$(ppg_checkpoint_frame' in text
-    assert "printf '%s\\n' \"$(( (10#$stamp + 1) * save_every ))\"" in text
+    # [Claude 2026-09-09] This used to assert the reconstruction `(10#$stamp + 1) * save_every`.
+    # That expression was REMOVED because it is wrong: measured against a live ppg cell, real saves
+    # land at IC=0, 51200, 100352 while the reconstruction produces 50000, 100000, 150000 -- wrong
+    # cadence and off by one save. Asserting its presence pinned a defect in place. The contract is
+    # now the trainer's own `Saving to ... IC=` line, and a refusal when none maps.
+    assert "grep 'Saving to .*IC='" in text, "the frame must come from the trainer's own log"
+    assert "NATIVE_PPG_FRAME_UNMAPPABLE" in text, "an unmappable checkpoint must be refused"
+    assert "(10#$stamp + 1) * save_every" not in text, (
+        "the reconstruction fallback is back; it mislabels every ppg curve row by up to 50k frames")
 
 
 def test_the_checkpoint_storage_projection_is_computed_not_guessed():

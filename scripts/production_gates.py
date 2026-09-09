@@ -1002,6 +1002,18 @@ DESCRIPTIVE_AUDITS = {
     "audit_implementations.py", "audit_job_budgets.py", "audit_pairing_evidence.py",
     "audit_row_closure.py", "audit_submission_configs.py", "audit_observation_geometry.py",
     "audit_eval_cadence.py",
+    # [Claude 2026-09-09] DESCRIPTIVE for the same reason as audit_environment_drift below, not as a
+    # judgement of importance: BOTH read artifacts that live outside the repository. The frame
+    # auditor needs the CHECKPOINTS to hash, and the diagnostics auditor needs the training CSV or
+    # log -- neither is committed, and a fresh checkout has no run directory at all. A gate
+    # consulting them would report "nothing to check" and pass, which is precisely the
+    # instrument-that-could-not-run failure this project refuses.
+    #
+    # So they are run where their inputs EXIST: `datasphere/native/collect-host-run.sh` invokes both
+    # on every collected run, and the frame auditor refuses collection on a MISMATCH. That is a
+    # stronger position than a repo gate, not a weaker one -- it runs once per result rather than
+    # once per release, and it cannot be reached without the evidence it needs.
+    "audit_record_frame_provenance.py", "audit_training_diagnostics.py",
     # [Claude 2026-09-08] DESCRIPTIVE and not GATING, and the reason is a constraint rather than a
     # preference: it compares `resolved_packages.json` ACROSS returned job archives, which live
     # outside the repository. A fresh checkout has none, so a gate consulting it would report
