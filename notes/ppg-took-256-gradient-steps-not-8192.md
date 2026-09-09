@@ -65,11 +65,22 @@ That asymmetry is exactly what the metrics showed and what made the run confusin
 plainly learns beside a policy that plainly does not. It is one defect, not two, and the split falls
 precisely on which `minibatch_gen` branch each phase takes.
 
-**Checked, not assumed:** `grep -rn 'nminibatch|num_mini_batch|mini_batch' runnable/` finds this
-clamp **only** in `runnable/ppg/`. `idaac` and `ibac_sni` share the `pytorch-a2c-ppo-acktr` lineage,
-which flattens `num_processes × num_steps` before splitting; `ctrl` is a separate JAX implementation
-at `num_envs=64`; the remaining families are off-policy and replay-based. **`ppg` is the only
-baseline of the twelve with this exposure.**
+**Checked, not assumed.** `grep -rn 'nminibatch|num_mini_batch|mini_batch' runnable/` finds this
+clamp **only** in `runnable/ppg/`. The declared constants in `families.json` make the difference
+concrete:
+
+| family | parallelism | rollout | requested minibatches | samples available to split | effective |
+|---|---|---|---|---|---|
+| `idaac` | `num_processes=1` | `num_steps=2048` | `num_mini_batch=32` | **2048** (flattened) | **32** |
+| `ppg` | `num_envs=1` | `nstep=2048` | `nminibatch=32` | **1** (batch axis only) | **1** |
+| `ctrl` | `num_envs=64` (v100) | — | — | 64 | fine |
+
+`idaac` and `ibac_sni` share the `pytorch-a2c-ppo-acktr` lineage, which flattens
+`num_processes × num_steps` before splitting — which is why `idaac` reads `clip_fraction` 0.83 on the
+*same* one-process configuration that reduces `ppg` to a single update. `ctrl` is a separate JAX
+implementation at 64 environments, and the remaining families are off-policy and replay-based.
+**`ppg` is the only baseline of the twelve with this exposure**, and the two on-policy families still
+to run are not affected.
 
 ## Why the configuration is not obviously wrong
 
