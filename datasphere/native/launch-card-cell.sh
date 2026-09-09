@@ -64,7 +64,19 @@ else
 fi
 EXPECT_OURS="${NATIVE_EXPECT_OURS:-$_cell_count}"
 SLACK="${NATIVE_WATCH_SLACK_SECONDS:-900}"
-MUST_COVER=$(( CELL_TIMEOUT_SECONDS + BOOTSTRAP_ALLOWANCE ))
+# [Claude 2026-09-09] The EVAL half, which this arithmetic used to omit entirely.
+# `CELL_TIMEOUT_SECONDS` wraps TRAINING only -- run_probe.sh applies it at its line ~500, and
+# `run_curve_eval` / `run_endpoint_eval` execute afterwards, outside it. So a budget derived from
+# the cell timeout alone covers roughly half the container's life. Measured on the idaac 600k cell:
+# ~5h training, then ~4.5h of curve eval (11 checkpoints x 1478s) and ~3.3h of endpoint grid
+# (80 regime-scene passes at 2 per 5 min) -- eval is about 1.6x the training it follows.
+#
+# The default allowance is therefore the cell timeout again: generous, and generous in the safe
+# direction, because the failure it prevents is a reaper killing a cell DURING EVALUATION after all
+# the training is done -- the most expensive moment there is, and one that note 25 warned about
+# before this file went and encoded it.
+EVAL_ALLOWANCE="${NATIVE_EVAL_ALLOWANCE_SECONDS:-$CELL_TIMEOUT_SECONDS}"
+MUST_COVER=$(( CELL_TIMEOUT_SECONDS + EVAL_ALLOWANCE + BOOTSTRAP_ALLOWANCE ))
 WATCH_SECONDS=$(( MUST_COVER + SLACK ))
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -81,7 +93,7 @@ echo "card:           $CARD"
 echo "cells:          $CELLS  (expecting $EXPECT_OURS process(es) of ours)"
 echo "cell timeout:   ${CELL_TIMEOUT_SECONDS}s"
 echo "bootstrap:      ${BOOTSTRAP_ALLOWANCE}s allowed (${NATIVE_VENV_HOST:+prebuilt env: $NATIVE_VENV_HOST})${NATIVE_VENV_HOST:-, no prebuilt env: this cell will run pip}"
-echo "watch budget:   ${WATCH_SECONDS}s (must cover ${MUST_COVER}s, ${SLACK}s slack)"
+echo "watch budget:   ${WATCH_SECONDS}s (train ${CELL_TIMEOUT_SECONDS}s + eval ${EVAL_ALLOWANCE}s + bootstrap ${BOOTSTRAP_ALLOWANCE}s + ${SLACK}s slack)"
 
 reaper_pid=""
 

@@ -58,7 +58,9 @@ def test_the_watch_outlasts_the_cell_and_its_bootstrap():
 def test_a_longer_cell_gets_a_longer_watch():
     """The budget must track the cell, or it is a constant wearing a formula's clothes."""
     short, long = _derive("3600"), _derive("162000")   # 45h, production scale
-    assert long["watch"] - short["watch"] == 162000 - 3600, (short, long)
+    # x2, because the budget now covers training AND the evaluation that follows it, and the eval
+    # allowance defaults to the cell timeout (2026-09-09: eval measured ~1.6x its training).
+    assert long["watch"] - short["watch"] == 2 * (162000 - 3600), (short, long)
 
 
 def test_the_bootstrap_allowance_is_pessimistic_by_default():
@@ -172,3 +174,18 @@ def test_a_prebuilt_environment_collapses_the_bootstrap_allowance():
     assert fast["watch"] < slow["watch"]
     # Still has to cover the cell itself plus a real bootstrap, or we have traded one bug for another.
     assert fast["cover"] > 3600 and fast["boot"] >= 300, fast
+
+
+def test_the_budget_covers_evaluation_not_only_training():
+    """CELL_TIMEOUT_SECONDS wraps TRAINING only; eval runs after it and is comparable in size.
+
+    [Claude 2026-09-09] run_probe.sh applies the cell timeout at its line ~500 and then calls
+    run_curve_eval / run_endpoint_eval afterwards, outside it. Measured on the idaac 600k cell:
+    ~5h training, ~4.5h curve eval (11 checkpoints x 1478s), ~3.3h endpoint grid (80 regime-scene
+    passes at 2 per 5 min). A reaper budget derived from the cell timeout alone covers about half
+    the container's life, and the failure it permits is the worst-timed one available: killing a
+    cell DURING EVALUATION, after every hour of training is already paid for.
+    """
+    got = _derive("43200")
+    assert got["cover"] >= 2 * 43200, (
+        f"the watch budget still assumes the cell timeout bounds the whole container: {got}")
