@@ -176,3 +176,29 @@ def test_the_pooled_job_level_log_is_dropped_when_per_cell_files_exist(tmp_path)
     assert code == 0, out
     assert "1 unit(s)" in out, out
     assert "job.log" not in out, "the pooled superset must not be checked beside its own parts"
+
+
+def test_a_trainer_clamping_its_own_minibatch_count_is_flagged(tmp_path):
+    """`Warning: nminibatch > ntrain!! (32 > 1)` appeared 289 times in a live cell, unread.
+
+    The range checks CANNOT catch this: with one minibatch the ratio is 1 every time it is measured,
+    so clipfrac reads 0.000 and approxkl reads float noise -- which is exactly what a perfectly
+    behaved optimiser would also look like if you only had those two columns.
+    """
+    log = tmp_path / "training.log"
+    log.write_text("\n".join(["Warning: nminibatch > ntrain!! (32 > 1)"] * 289) + "\n"
+                   + "\n".join(f"| Opt/clipfrac             | 0        |\n"
+                               f"| Opt/approxkl             | 2.5e-13  |\n"
+                               f"| train/sigma_mean         | {1.0 - 0.03 * i:<8} |"
+                               for i in range(8)) + "\n")
+    code, out = _run(tmp_path, "--strict")
+    assert code == 1, out
+    assert "TRAINER WARNING x289" in out, out
+    assert "CLAMPED its own minibatch count" in out
+    assert "outranks every range check" in out
+
+
+def test_no_trainer_warning_is_not_reported(tmp_path):
+    code, out = _run(_csv(tmp_path, _healthy()), "--strict")
+    assert code == 0, out
+    assert "TRAINER WARNING" not in out

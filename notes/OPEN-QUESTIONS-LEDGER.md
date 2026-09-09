@@ -296,3 +296,22 @@ workload so a wrong number is visible before the cell starts. For today's config
 Mitigation for the cell already running, since the reaper cannot be moved without removing the
 instrument: its `*.jsonl`, `*.csv` and `job.log` are pulled locally every ten minutes, so a reaping
 costs at most one row rather than the bundle. Rows are appended as produced.
+
+**"Is `ppg`'s policy being trained?"** — ANSWERED, **barely, and the trainer said so 291 times.**
+`Warning: nminibatch > ntrain!! (32 > 1)` appears once per iteration in `cells/ppg-s1/training.log`.
+`minibatch_optimize` splits along the **batch (environment)** axis, and `num_processes=1` makes
+`ntrain = 1`, so the requested `--nminibatch 32` was clamped to **1**. With `n_epoch_pi = 1` that is
+**one gradient step per iteration — 256 policy updates over 524,288 frames instead of 8,192.**
+
+It also dissolves the earlier dilemma: `clipfrac ≡ 0.000` and `approxkl ≈ 1e-13` are **arithmetic,
+not evidence.** With one minibatch the ratio is measured before the only step, so it is exactly 1
+every time. **The two columns a reader would check are the two the defect forces to look perfect.**
+
+Neither constant is wrong — `1 process` and `32 minibatches` are both sourced from the same
+paragraph of IDAAC's supplement — and PPG was written for Procgen where 64 environments make the
+batch axis the natural split. **The interaction is the defect, and no fidelity table has a row for
+interactions.** `idaac` is unaffected: its lineage flattens `num_processes × num_steps`, which is why
+its `clip_fraction` reads 0.83.
+
+Guarded: `audit_training_diagnostics.py` now reports trainer warnings **above** the range checks.
+See [`ppg-took-256-gradient-steps-not-8192.md`](ppg-took-256-gradient-steps-not-8192.md).

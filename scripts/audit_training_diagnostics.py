@@ -118,6 +118,26 @@ def _from_csv(path: pathlib.Path) -> dict[str, list[float]]:
 
 TABLE_ROW = re.compile(r"^\|\s*([A-Za-z_][A-Za-z0-9_/]*)\s*\|\s*(-?[0-9][0-9.eE+-]*)\s*\|\s*$")
 
+#: Warnings a trainer prints about its OWN optimisation being reduced. These are not diagnostics to
+#: be ranged-checked -- they are the trainer saying it could not do what it was configured to do, and
+#: the reason this list exists is that one of them was printed 289 times and nobody read it.
+#:
+#: [Claude 2026-09-09] `Warning: nminibatch > ntrain!! (32 > 1)` in the live ppg cell. PPG minibatches
+#: along the BATCH dimension, `num_envs=1` leaves nothing to split, so `nminibatch` was clamped 32 to
+#: 1 and, with `n_epoch_pi=1`, the policy took exactly ONE gradient step per iteration -- 256 for the
+#: whole 524k-frame run instead of 8,192. It also explains that run's `clipfrac` of exactly 0.000 and
+#: `approxkl` of 1e-13: with a single minibatch the ratio is 1 by construction every time it is
+#: measured, so the diagnostics could never have reported the problem they were being read for.
+TRAINER_WARNINGS = (
+    (re.compile(r"nminibatch > ntrain!!\s*\((\d+) > (\d+)\)"),
+     "the trainer CLAMPED its own minibatch count",
+     "PPG-family code splits minibatches along the batch (environment) dimension. With one "
+     "environment there is nothing to split, so `nminibatch` collapses to 1 and the policy takes a "
+     "single gradient step per iteration. Whatever `--nminibatch` says, that many updates did not "
+     "happen. It also pins clipfrac at 0 and approxkl at float noise, because a single minibatch is "
+     "always measured at ratio 1 -- so the range checks above CANNOT see this and this line must."),
+)
+
 
 def _from_log(path: pathlib.Path) -> dict[str, list[float]]:
     out: dict[str, list[float]] = {}
@@ -137,6 +157,28 @@ def _from_log(path: pathlib.Path) -> dict[str, list[float]]:
 #: function does not explain the returns", both of which are simply true of any run that has barely
 #: started. A check that fires on every smoke run is a check people learn to ignore.
 MIN_POINTS = 6
+
+
+def trainer_warnings(target: pathlib.Path) -> list[tuple[str, str, str, int]]:
+    """Warnings the trainer printed about its own optimisation, counted."""
+    files = [target] if target.is_file() else sorted(target.rglob("*.log"))
+    out = []
+    for pattern, headline, why in TRAINER_WARNINGS:
+        total, sample = 0, ""
+        for f in files:
+            try:
+                text = f.read_text(errors="replace")
+            except OSError:
+                continue
+            found = pattern.findall(text)
+            if found:
+                total += len(found)
+                if not sample:
+                    m = pattern.search(text)
+                    sample = m.group(0) if m else ""
+        if total:
+            out.append((headline, why, sample, total))
+    return out
 
 
 def collect(target: pathlib.Path) -> list[tuple[str, dict[str, list[float]]]]:
@@ -219,7 +261,19 @@ def main() -> int:
     worst = 0
     for name, found in units:
         worst = max(worst, report(name, found))
-    return 1 if (args.strict and worst) else 0
+
+    warned = trainer_warnings(target)
+    for headline, why, sample, total in warned:
+        print(f"  TRAINER WARNING x{total}: {headline}")
+        print(f"      {sample}")
+        for i in range(0, len(why), 86):
+            print(f"      {why[i:i + 86]}")
+        print()
+    if warned:
+        print("  A trainer warning outranks every range check above: the ranges describe how an")
+        print("  optimiser behaved, and this says it did not run the optimisation configured.\n")
+
+    return 1 if (args.strict and (worst or warned)) else 0
 
 
 def report(name: str, found: dict[str, tuple[str, list[float]]]) -> int:
