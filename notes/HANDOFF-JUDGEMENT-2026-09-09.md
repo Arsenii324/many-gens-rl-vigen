@@ -187,6 +187,18 @@ The project's own machinery was never fooled — `collect_record_delivery` and
 ad-hoc monitor was blind, which is the general lesson: **throwaway observation code gets none of the
 scrutiny the pipeline gets, and it is what I actually form beliefs from.**
 
+**And then the fix did it again, worse.** The replacement monitor used `${pair%%%%:*}` where the
+working one had `${pair%%:*}`, so the container name became the whole `name:dir` string, `docker ps`
+matched nothing, and it reported **both live cells as EXITED** — a false terminal-state alarm, which
+is the most damaging thing this particular instrument can say. I had armed it without running its
+remote command once.
+
+**The procedural fix is one line: test the observation command before arming it, the same way any
+other check gets a failing case.** I now do that (`for pair in ...; do ... echo "c=[$c] d=[$d]"`,
+run against the host, output inspected) and the third version was verified before it went live.
+Three instrument bugs in one hour, all in code written to watch for instrument bugs, is the clearest
+evidence I have that observation code needs the project's own discipline rather than less of it.
+
 ## What I would actually watch now
 
 1. **`ppg`'s curve as it completes.** It gets 293 policy updates for 600k frames instead of 8,192.
