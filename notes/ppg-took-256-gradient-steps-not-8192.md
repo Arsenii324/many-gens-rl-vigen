@@ -172,6 +172,42 @@ consistent. PPG as configured here is non-recurrent (`state_in` is empty), so th
 **and that condition must be asserted in the code rather than assumed**, because a future recurrent
 configuration would be silently corrupted by it.
 
+## The sibling implementation already made the opposite choice, and it is the better one
+
+Sweeping all four on-policy families for the same defect (rather than stopping at the one that bit):
+
+| family | when the batch is smaller than the minibatch count | outcome |
+|---|---|---|
+| `idaac` | `assert batch_size >= num_mini_batch` — `ppo_daac_idaac/storage.py:73, 153, 275` | **crashes loudly** |
+| `ppg` | `logger.log("Warning: nminibatch > ntrain!!"); nminibatch = ntrain` | **silently clamps** |
+| `ibac_sni` | recurrence-based split (`torch_rl/algos/ppo.py:203`), no clamp | none found |
+| `ctrl` | separate JAX implementation at `num_envs=64` | none |
+
+**Two implementations of the same PPO minibatching, one fail-loud and one fail-quiet, and only the
+quiet one is in this project's path to a silent result.** `idaac` runs the *identical* shape —
+`num_processes=1`, `num_steps=2048`, `num_mini_batch=32` — and would have refused to start had its
+batch been too small.
+
+### So there is a third fix, smaller than the one specified above
+
+| option | what it does | cost |
+|---|---|---|
+| **(a) flatten** `batch x time` before splitting | 32 minibatches of 64 actually happen | changes sampling semantics away from PPG's release; needs a non-recurrence assertion |
+| **(b) assert, as `idaac` does** | refuses to start on a config it cannot honour | **the declared A36 config becomes unrunnable at `num_envs=1`** until someone chooses |
+| (c) remove the clamp only | one chunk, warning gone | strictly worse — see above |
+
+**(b) is the honest one and I now prefer it over (a).** With a batch-axis splitter, `num_envs=1` and
+`nminibatch=32` is not a configuration that *can* execute as written — flattening does not run the
+declared config, it runs a **different** one that happens to produce 32 updates. Asserting says so at
+startup, at the cost of forcing the choice the reconciliation above already surfaced: **IDAAC's DMC
+grid (32 x 64 samples) or PPG's own release (1 x 2048)**. That choice belongs to the owner, and a
+crash on the second line of a cell is a far cheaper way to reach it than twelve hours and a
+reconciliation.
+
+It also makes the two implementations agree, which is worth something on its own: this project runs
+both, and having one assert while the other shrugs is exactly the "one convention, two
+implementations" defect `rlgen/tags.py` was built to stop in the logging layer.
+
 ## Acceptance, predefined
 
 A short cell after the change must show **all three**, and any one of them alone is insufficient:
