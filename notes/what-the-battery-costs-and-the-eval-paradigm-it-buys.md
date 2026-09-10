@@ -23,13 +23,36 @@ covers both phases (11.4 curve, 11.2 endpoint) — the per-cell arithmetic is:
     endpoint, one pass : 44 rows × 20 ep = 880 ep = 2.76 h
     curve, 3 episodes  : 11 × 44 × 3     = 1452 ep = 4.56 h
 
-## The decision
+## The decision — REVERSED the same day, before it was implemented
 
-**Drop the supplementary `mode` endpoint pass from the battery. Keep curve at 3 episodes and
-endpoint at 20.**
+**Keep the supplementary `mode` endpoint pass. Keep curve at 3 episodes and endpoint at 20.
+Change nothing.**
+
+> **The first version of this note said to drop the `mode` pass, and it was wrong.** I costed it
+> from `idaac`'s training time and concluded 2.76 h per affected cell was worth removing.
+> `family.py:702` had already costed it, more accurately, and accepted it:
+>
+> > *"Cost as actually scoped: THREE baselines x three seeds x ~2.4 h = **~21.6 GPU-h against a
+> > campaign near 893, about 2.4%** -- not the ~3.2% the four-family figure implies."*
+>
+> **2.4 % of the campaign**, decided deliberately, against a scientific need I was discounting: two
+> of A25's three fixed cross-group pairs **straddle the policy-mode split** (`SAME-AXES-VERDICT.md`),
+> so a cross-group number built from native passes alone confounds the mechanism with the action
+> rule. Dropping the pass does not save a meaningful fraction of the campaign and does damage the
+> comparison the campaign exists to make.
+>
+> And all three of my fragility arguments were fixed **today**, hours before I made them: the
+> `no_grad` defect that killed the pass, the supplementary-failure path that let it destroy a
+> complete native grid, and the early mode-path probe that surfaces such a defect at the first curve
+> stamp. Arguing to remove a pass because it is fragile, on the day its fragility was repaired, is
+> reasoning from a stale premise.
+>
+> Left visible rather than deleted, because the arithmetic below is still the thing this note exists
+> to record, and because "existing code was right and I nearly overrode it" is the finding.
 
 `ENDPOINT_EVAL_POLICY_MODES` defaults to `native,mode`, which runs the **whole 44-row grid twice**
-for the three sampling families (`idaac`, `ppg`, `ibac_sni`). Four reasons, in order of weight:
+for the three sampling families (`idaac`, `ppg`, `ibac_sni`). The four reasons I gave for dropping
+it, and why each fails:
 
 1. **It is not the reported estimand.** `family_eval_policy_mode` makes *sampled* native for those
    three; `mode` exists for A25's cross-group pairs. Every headline number comes from the native
@@ -54,9 +77,9 @@ At `idaac`'s training time for every family — a **floor**, since a 6e5 `soda` 
 
 | paradigm | GPU-h | card-days |
 |---|---:|---:|
-| as currently configured (`native,mode`) | 467 | 19.4 |
-| **native only (adopted)** | **442** | **18.4** |
-| native only, curve at 1 episode | 332 | 13.8 |
+| **as currently configured (`native,mode`) — kept** | **467** | **19.4** |
+| native only (rejected: 2.4 % saved, A25 pairs confounded) | 442 | 18.4 |
+| native only, curve at 1 episode (rejected: shape becomes noise) | 332 | 13.8 |
 
 The project's own campaign figure, using per-family training times, is **~893 GPU-h ≈ 37 card-days
 on one card.** That is the number that matters for scheduling, and it is why the supplementary pass
