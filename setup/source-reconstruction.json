@@ -109,8 +109,8 @@
       "destination": "runnable/ppg",
       "patch_kind": "git_patch",
       "patch_file": "runnable/_patches/ppg.patch",
-      "patch_sha256": "99e523e2b01e1b562fa3e9d872e5c755d325f38068a226b2d9bb62797f8bc4fc",
-      "expected_tree_hash": "bde1b5ecf7bc1cc305ee313262e5eb1025f2b6805acf90d27278cefcf42217db",
+      "patch_sha256": "bf1f19de941ad0fbcc7d51ac7abeb75395cfa864bc4b2db1f9e863b66302659d",
+      "expected_tree_hash": "a7c3877137b67dcc5117544bfc52ed0cfc89b6bf6deb7cf0803605268a5f13f5",
       "exclude": [
         "phasic_policy_gradient/results",
         "results",

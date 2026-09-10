@@ -667,3 +667,39 @@ index 7eab369..d60743f 100644
  
      def clear_episode_bufs(self):
          if self.ep_buf:
+diff --git a/phasic_policy_gradient/minibatch_optimize.py b/phasic_policy_gradient/minibatch_optimize.py
+index 74c6191..63f593b 100644
+--- a/phasic_policy_gradient/minibatch_optimize.py
++++ b/phasic_policy_gradient/minibatch_optimize.py
+@@ -51,8 +51,29 @@ def minibatch_optimize(
+ ):
+     ntrain = tu.batch_len(tensordict)
+     if nminibatch > ntrain:
+-        logger.log(f"Warning: nminibatch > ntrain!! ({nminibatch} > {ntrain})")
+-        nminibatch = ntrain
++        # [Claude 2026-09-10] UPSTREAM WARNED AND CONTINUED; THIS PROJECT REFUSES.
++        #
++        # `batch_len` is the LEADING axis, and `Roller.singles_to_multi` documents that axis as
++        # "(batch, time)" -- so `ntrain` is `num_envs`, never `num_envs * nstep`. At `num_envs=1`
++        # any `nminibatch > 1` is INEXPRESSIBLE and upstream silently substituted `ntrain`.
++        #
++        # On card0-20260909-115331 that printed 293 times and nobody read it, so a cell declared
++        # `--nminibatch 32` and executed 1 for 600k frames. The executed run turned out to be a
++        # faithful PPG -- 1 step of 2048 samples per 2048 frames is exactly the released
++        # 8 steps of 2048 per 16384 -- but that was luck, and the DECLARATION was false either way.
++        # A record whose config says 32 and whose trainer did 1 cannot support any claim about
++        # either number.
++        #
++        # Raising is the whole point: `families.json` must declare a value this geometry can
++        # execute, and a future change to `num_envs` that invalidates it fails at the first
++        # optimisation call rather than 293 warnings deep.
++        raise ValueError(
++            f"nminibatch={nminibatch} exceeds ntrain={ntrain}. `minibatch_optimize` splits the "
++            f"LEADING (environment) axis, so nminibatch can never exceed num_envs. Upstream "
++            f"clamped silently; this project refuses, because the run would then execute a "
++            f"configuration different from the one it records. Set nminibatch <= num_envs in "
++            f"datasphere/native/families.json, or raise num_envs."
++        )
+     ldp = LossDictPrinter()
+     epoch_dicts = []
+     for _ in range(nepoch):
