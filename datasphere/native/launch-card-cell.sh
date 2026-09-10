@@ -191,11 +191,38 @@ docker run -d --rm --name "$EXCL" \
     --max-seconds "$WATCH_SECONDS" --must-cover-seconds "$MUST_COVER" --interval 20 >/dev/null \
   || { echo "ABORTING: the exclusivity watch refused to arm."; exit 4; }
 
+# [Claude 2026-09-10] THE CARD-1 RULE, ENFORCED RATHER THAN OBSERVED.
+# The standing instruction for this host is: on card 0 a memory floor is the right trigger; on
+# card 1, either run nothing or process-yield for certain. Until now that held only because
+# battery-chain.sh hardcodes CARD=0 -- nothing in this launcher knew the difference, so
+# `CARD=1 bash launch-card-cell.sh ...` would have armed a memory-only yield and said nothing.
+# A rule that depends on every future caller remembering it is not a rule.
+#
+# Process yield stays OFF by default on card 0 and that default is measured, not timid: our own
+# packed cells put up to 24 interpreters on a card, so a count trigger yields to itself. On a card
+# that is not ours the trade reverses -- yielding to ourselves costs us a cell, failing to yield
+# costs someone else theirs.
+YIELD_PROCS=()
+if [[ "$CARD" != "0" ]]; then
+  if [[ "${NATIVE_YIELD_ON_PROCESSES:-0}" != "1" ]]; then
+    echo "ABORTING: CARD=$CARD is not card 0, and NATIVE_YIELD_ON_PROCESSES is not 1."
+    echo "  Card 0 may run with the memory floor alone. Any other card must process-yield, because"
+    echo "  it is not ours to take. Set NATIVE_YIELD_ON_PROCESSES=1 (and NATIVE_EXPECT_OURS to the"
+    echo "  count this cell legitimately puts on the card) or run on card 0."
+    exit 4
+  fi
+  YIELD_PROCS=(--yield-on-processes)
+  echo "  card $CARD is not ours: process yield ARMED, --expect-ours $EXPECT_OURS"
+elif [[ "${NATIVE_YIELD_ON_PROCESSES:-0}" == "1" ]]; then
+  YIELD_PROCS=(--yield-on-processes)          # opt-in on card 0 too, if a caller wants it
+  echo "  process yield armed on card 0 by request, --expect-ours $EXPECT_OURS"
+fi
+
 echo "=== STEP 2: yield watch"
 docker run -d --rm --name "$YIELD" \
   -v "$REPO:/repo:ro" -v "$W/native-work:/work" -w /repo --gpus all "$IMAGE" \
   python3 scripts/yield_gpu_to_neighbour.py --device "$CARD" --sentinel /work/yield.sentinel \
-    --expect-ours "$EXPECT_OURS" \
+    --expect-ours "$EXPECT_OURS" ${YIELD_PROCS[@]+"${YIELD_PROCS[@]}"} \
     --active-file /work/cell-active --stop-when-inactive \
     --max-seconds "$WATCH_SECONDS" --must-cover-seconds "$MUST_COVER" \
     --interval 20 --floor-mib "${NATIVE_FLOOR_MIB:-4000}" >/dev/null \
