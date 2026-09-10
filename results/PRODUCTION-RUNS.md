@@ -5,7 +5,7 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**77 job(s), 2898 record row(s), 12 baseline(s).**
+**78 job(s), 2905 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
@@ -15,8 +15,8 @@ Every run whose records this repository holds, with the circumstances each recor
 | `rad` | 147 |
 | `ppg` | 99 |
 | `soda` | 85 |
+| `alda` | 58 |
 | `ctrl` | 56 |
-| `alda` | 51 |
 | `svea` | 36 |
 | `curl` | 19 |
 | `drq` | 19 |
@@ -83,6 +83,21 @@ Every run whose records this repository holds, with the circumstances each recor
   |---|---|---:|---:|---:|---:|---:|---|
   | `sample` | eval-easy | 7.28 | ± 1.90 | 0.000 | 5 | 1 | **paired** |
   | `sample` | train | 5.69 | ± 2.02 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v212-alda` — alda
+
+- **cells** `alda-s1` · **seeds** `1` · **rows** 7
+- **frames** 10,000 → 10,000 (1 distinct)
+- **phases** {'eval': 3, 'offline-eval': 4}
+- **policy mode(s)** `mode`
+- **evaluator revision(s)** `0b7b90037b79` **CURRENT**
+- **records** [`results/records/attest-v212-alda__records.jsonl`](results/records/attest-v212-alda__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.32 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.34 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
 
 ### `attest-v212-idaac` — idaac
 
@@ -1132,7 +1147,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 19h ago**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 20h ago**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 **1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
