@@ -70,7 +70,7 @@ implemented on 2026-09-10 and are **in the working tree awaiting the bump**; two
 |---|---|---|---|
 | `ppg` mode eval under `no_grad` | killed a 3.6 h cell; bypassed `PpoModel.act`'s `@tu.no_grad` | `scripts/eval_grid.py` (CODE) | **done** |
 | row states the action rule it *used* | 41 rows labelled `sample` were `mode`; the closure audit read the wrong field | `datasphere/native/normalize_curves.py` (CODE) | **done** |
-| episode id gains `eval_scope` + `eval_policy_mode` | 760 of 2,120 ids collide, all reporting different returns | `scripts/eval_grid.py` (CODE) | **done** — subsumed by the label fix; verify against a fresh cell |
+| episode id gains `eval_scope` + `eval_policy_mode` | 760 of 2,120 ids collide, all reporting different returns | `scripts/eval_grid.py` (CODE) | **OPEN — my earlier "subsumed" was wrong.** Verified 2026-09-10 on `card0-20260909-035152`: **all 760** mode-pass ids collide with sampled ones, e.g. `idaac-s101-f598016-eval-easy-sc0-e0` names two episodes with different returns. The conventions fix made the ROW distinguishable; the ID still names two measurements |
 | `runtime_import_manifest` → digest per row, manifest to a sidecar | 74 % of a 19.7 MB bundle; 2 distinct values over 569 rows; nothing reads it | `scripts/eval_grid.py` (CODE) | open |
 | `ppg` `nminibatch` — assert like `idaac` does | executed config was not the declared one, silently | `runnable/ppg/…` (FAMILY_RUNTIME) | open |
 | write a frame-0 checkpoint | no family has a measured **initialised-network** floor | family runtimes | open — but see below |
