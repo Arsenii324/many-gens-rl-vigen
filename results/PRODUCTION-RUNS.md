@@ -5,7 +5,7 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**79 job(s), 2915 record row(s), 12 baseline(s).**
+**80 job(s), 2932 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
@@ -17,7 +17,7 @@ Every run whose records this repository holds, with the circumstances each recor
 | `soda` | 85 |
 | `alda` | 58 |
 | `ctrl` | 56 |
-| `svea` | 36 |
+| `svea` | 53 |
 | `curl` | 19 |
 | `drq` | 19 |
 | `sgqn` | 19 |
@@ -143,6 +143,21 @@ Every run whose records this repository holds, with the circumstances each recor
   |---|---|---:|---:|---:|---:|---:|---|
   | `sample` | eval-easy | 4.66 | ± 1.42 | 0.000 | 5 | 1 | **paired** |
   | `sample` | train | 3.57 | ± 1.30 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v212-rlvigen` — svea
+
+- **cells** `svea-s1` · **seeds** `1` · **rows** 17
+- **frames** 4,500 → 10,000 (12 distinct)
+- **phases** {'eval': 2, 'train': 11, 'offline-eval': 4}
+- **policy mode(s)** `mode`
+- **evaluator revision(s)** `bf4be2d2f3d1` **CURRENT**
+- **records** [`results/records/attest-v212-rlvigen__records.jsonl`](results/records/attest-v212-rlvigen__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.01 | ± 0.09 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 2.68 | ± 1.09 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1037211b64e17auo88` — idaac
 
@@ -1154,7 +1169,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 18h ago**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 19h ago**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
