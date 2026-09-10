@@ -244,6 +244,59 @@ def curve_eval_hours(frames: int, seeds: int, path: Path | None = None,
     return {"rows": rows, "total_hours": total}
 
 
+def endpoint_eval_hours(frames: int, seeds: int, path: Path | None = None,
+                        profile: str | None = "v100") -> dict:
+    """Job-hours added by the ENDPOINT grid, which nothing modelled at all.
+
+    [Claude 2026-09-10] `curve_eval_hours` above is correct and, until today, had NO CALLERS -- the
+    exact defect its own docstring describes having fixed in its predecessor. So the schedule's
+    headline `job_hours` was `frames / fps` and nothing else: TRAINING ONLY. On the one production
+    cell measured to completion (idaac 600k) evaluation was **2.04x** the training it followed --
+    4.95 h training against 4.60 h curve and 5.52 h endpoint -- so the published campaign understated
+    itself by more than half, and `wall_clock_days_at_two_parallel_jobs` with it.
+
+    The endpoint is `offline_eval_regimes x offline_eval_scenes x offline_eval_episodes` episodes,
+    run once per entry in `ENDPOINT_EVAL_POLICY_MODES`. That last term is the one
+    `launch-card-cell.sh` was also missing on 2026-09-09: it defaults to `native,mode`, so the three
+    SAMPLING families (`idaac`, `ppg`, `ibac_sni`) run the whole grid TWICE. Omitting it halves
+    their endpoint estimate, which is how a cell came within one minute of losing its delivery.
+    """
+    per_episode, unmeasured = _seconds_per_episode()
+    identity = _load_identity()
+    rows = {}
+    for baseline, family in FAMILY_OF.items():
+        settings = (_family.resolved_descriptor(family, path=path, profile=profile)
+                    .get("production") or {})
+        regimes = settings.get("offline_eval_regimes") or ""
+        scenes = settings.get("offline_eval_scenes") or []
+        episodes = settings.get("offline_eval_episodes") or 0
+        if not episodes:
+            continue
+        n_regimes = len(regimes.split(",")) if isinstance(regimes, str) and regimes else 1
+        n_scenes = len(scenes) if isinstance(scenes, list) else 1
+        passes = 2 if identity.FAMILY_EVAL_POLICY_MODE.get(family) == "sample" else 1
+        per_pass = n_regimes * n_scenes * episodes
+        seconds = per_episode.get(baseline, per_episode.get(family, unmeasured))
+        hours = per_pass * passes * seconds / 3600.0
+        rows[baseline] = {
+            "episodes_per_pass": per_pass, "policy_mode_passes": passes,
+            "seconds_per_episode": seconds,
+            "measured": baseline in per_episode or family in per_episode,
+            "hours_per_seed": hours, "hours_all_seeds": hours * seeds,
+        }
+    total = sum(v["hours_all_seeds"] for v in rows.values())
+    return {"rows": rows, "total_hours": total}
+
+
+def _load_identity():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_identity_for_plan", _HERE / "evaluator_identity.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def checkpoint_storage_gb(frames: int, save_every: int, seeds: int) -> dict:
     """What retaining the intermediate grid actually costs, per baseline and in total.
 
@@ -497,6 +550,16 @@ def main() -> int:
     total_rub = sum(row["rub_all_seeds"] for row in measured)
     total_units = sum(row["units_all_seeds"] for row in measured)
     total_job_hours = sum(row["jobs_for_all_seeds"] * row["job_hours"] for row in measured)
+    # [Claude 2026-09-10] TRAINING IS NOT THE CAMPAIGN. `row["job_hours"]` is `frames / fps` and
+    # nothing else, so every total derived from it -- including
+    # `wall_clock_days_at_two_parallel_jobs`, which is what anyone schedules against -- described
+    # only the training half. On the one production cell measured to completion, evaluation was
+    # 2.04x the training it followed. `curve_eval_hours` existed and was correct and had no
+    # callers; the endpoint grid was not modelled at all.
+    _curve = curve_eval_hours(args.frames, len(seeds))
+    _endpoint = endpoint_eval_hours(args.frames, len(seeds))
+    total_eval_hours = _curve["total_hours"] + _endpoint["total_hours"]
+    total_campaign_hours = total_job_hours + total_eval_hours
 
     print(json.dumps({
         "_comment": [
@@ -533,6 +596,16 @@ def main() -> int:
         "totals_measured_only": {
             "baselines_counted": [row["baseline"] for row in measured],
             "job_hours": round(total_job_hours, 1),
+            "job_hours_note": ("TRAINING ONLY -- frames/fps. Kept under its historical name so "
+                               "nothing that quotes it changes meaning silently. The campaign is "
+                               "campaign_hours below."),
+            "curve_eval_hours": round(_curve["total_hours"], 1),
+            "endpoint_eval_hours": round(_endpoint["total_hours"], 1),
+            "eval_hours": round(total_eval_hours, 1),
+            "campaign_hours": round(total_campaign_hours, 1),
+            "eval_share_of_campaign": round(total_eval_hours / total_campaign_hours, 3),
+            "campaign_days_at_two_parallel_jobs": round(total_campaign_hours / 2 / 24, 1),
+            "campaign_days_on_one_card": round(total_campaign_hours / 24, 1),
             "rub": total_rub,
             "units": total_units,
             "grant_units": GRANT_UNITS,

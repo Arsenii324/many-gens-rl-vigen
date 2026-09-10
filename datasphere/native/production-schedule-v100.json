@@ -6,7 +6,7 @@
     "not estimates silently relabelled as production measurements."
   ],
   "host_profile": "v100",
-  "resolved_descriptor_sha256": "0637d9f9b3f5d9a6f464111d574cc58d6767bc9f800964ef914b1f4e4db9afab",
+  "resolved_descriptor_sha256": "4c01ab66dbd2a7f583085c14f2d3e1c8ce43a48e77b2f525570f39238aa5f7c2",
   "host": {
     "cpu_cores": 16,
     "ram_gib_available": 113,
