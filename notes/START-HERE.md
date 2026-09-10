@@ -157,6 +157,17 @@ simultaneously; not derivable from any single document.
 
 ### 5. Evidence and verified findings
 
+- [`../docs/RESOLVED-REGISTER.md`](../docs/RESOLVED-REGISTER.md) — **the settled questions, and
+  what would unsettle each.** One row per question this project has actually closed: disk,
+  Places365, eval validity, eval frequency, eval cost, host safety, reproducibility. Generated from
+  `docs/resolved-register.json`; do not hand-edit the rendered file.
+  Every row carries a **falsifier** (what observation would reopen it) and a **pinning test**, and
+  `scripts/verify_resolved_register.py --run-tests` refuses a row whose citation has drifted or
+  whose test no longer passes. A row claiming `resolved` with no passing test is rendered as
+  `traced` instead — the register cannot flatter itself.
+  **Read this before re-deriving anything**, and before recording a finding: the three most recent
+  rows exist because a question got answered twice, once wrongly.
+
 - [`faithfulness-reconciliation.md`](faithfulness-reconciliation.md) — `FAITHFULNESS.md`'s divergence
   table checked against the clones; includes the verified nine-of-twelve parallelism table.
 - [`rlvigen-published-door-anchor.md`](rlvigen-published-door-anchor.md) — RL-ViGen's **published**

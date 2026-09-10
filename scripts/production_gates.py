@@ -1440,7 +1440,38 @@ def gate_checkpoint_cadence_matches_fleet():
     return PASS, "every family's v100 checkpoint cadence matches the fleet's 12-stamp/50k decision"
 
 
+
+def gate_resolved_register_holds():
+    """Every question recorded as SETTLED still has a citation that resolves and a test that pins it.
+
+    [Claude 2026-09-10] The register is only worth reading if a row cannot quietly rot. Rows cite
+    `path:line`; files move. Rows name a pinning test; tests get deleted. This runs the verifier's
+    structural half on every gate pass -- citations, falsifiers, test existence -- so a decayed row
+    is a gate failure rather than a document nobody re-checked. The `--run-tests` half is the
+    release suite's job, not this gate's; running twelve test files here would make the gate set
+    slow enough to skip, and a gate that gets skipped protects nothing.
+    """
+    register = ROOT / "docs" / "resolved-register.json"
+    if not register.is_file():
+        return FAIL, "docs/resolved-register.json is absent; the settled-questions surface is gone"
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "verify_resolved_register.py")],
+            cwd=ROOT, capture_output=True, text=True, timeout=120)
+    except Exception as error:
+        return FAIL, f"resolved-register verifier could not run: {type(error).__name__}"
+    if proc.returncode != 0:
+        detail = (proc.stdout or proc.stderr).strip().splitlines()
+        return FAIL, ("the resolved register does not hold: "
+                      + "; ".join(l.strip() for l in detail if l.strip())[:240])
+    total = json.loads(register.read_text()).get("entries", [])
+    resolved = sum(1 for e in total if e.get("status") == "resolved")
+    return PASS, (f"{len(total)} settled questions, {resolved} resolved and pinned by a test, "
+                  f"every citation resolves (docs/RESOLVED-REGISTER.md)")
+
+
 GATES = [
+    ("resolved register holds", gate_resolved_register_holds),
     ("submission configs runnable", gate_submission_configs_runnable),
     ("checkpoint cadence matches fleet", gate_checkpoint_cadence_matches_fleet),
     ("ctrl v100 profile restored", gate_ctrl_v100_profile_restored),

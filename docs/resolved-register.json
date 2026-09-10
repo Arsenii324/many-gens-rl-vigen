@@ -1,0 +1,417 @@
+{
+  "_comment": [
+    "THE RESOLVED REGISTER. One row per question this project has settled to depth, so a future",
+    "reader does not re-derive it -- and, more importantly, does not re-open it, spend ten minutes,",
+    "reach the opposite conclusion, and act on it. That has happened here: see ppg-nminibatch,",
+    "which went through three defensible conclusions before the right one, and ctrl-cudnn, where",
+    "two wrong theories were acted on.",
+    "",
+    "STATUS is the load-bearing field. Only `resolved` may be quoted as fact.",
+    "  observed  -- something looks wrong; nothing is established",
+    "  traced    -- the mechanism is understood; the consequence is not settled",
+    "  resolved  -- the whole path is walked, the alternative is ruled out, a falsifier is stated,",
+    "               and a test pins it",
+    "",
+    "Generated view: docs/RESOLVED-REGISTER.md. Verifier: scripts/verify_resolved_register.py,",
+    "which checks every evidence citation resolves and every pinning test exists and passes. A",
+    "`resolved` row whose test is missing or failing is a defect in this file, not in the test."
+  ],
+  "schema": 1,
+  "entries": [
+    {
+      "id": "ppg-nminibatch",
+      "domain": "eval-fidelity",
+      "status": "resolved",
+      "question": "ppg declares nminibatch=1 while raileanu21a-supp.pdf SS E says 32 minibatches. Which is right?",
+      "verdict": "1. At SS E's own `1 process`, 32 is INEXPRESSIBLE, and 1 reproduces PPG's released update density and per-step batch size exactly.",
+      "why": "minibatch_optimize splits the LEADING axis and Roller.singles_to_multi documents it as '(batch, time)', so ntrain is num_envs. PPG released is 64x256=16384 with 1 epoch x 8 minibatches = 8 steps of 2048 samples = 0.00048828 steps/env-frame; ours at 1x2048 with nminibatch=1 is 1 step of 2048 samples per 2048 frames = the same density AND the same per-step batch size. Declaring 32 would be 32x upstream density on 64-sample steps.",
+      "evidence": [
+        "runnable/ppg/phasic_policy_gradient/minibatch_optimize.py:52",
+        "runnable/ppg/phasic_policy_gradient/roller.py:100",
+        "datasphere/native/families.json:603"
+      ],
+      "falsifier": "If minibatch_optimize is ever changed to split a flattened num_envs*nstep axis, ntrain stops being num_envs, 32 becomes expressible, and this must be re-derived.",
+      "pinned_by": [
+        "tests/test_ppg_minibatch_config_must_be_executable.py",
+        "tests/test_ppg_c2_contract.py"
+      ],
+      "supersedes": "The 'severe under-optimisation of PPG' reading in notes/ppg-took-256-gradient-steps-not-8192.md, corrected in place."
+    },
+    {
+      "id": "ppg-clip-inert",
+      "domain": "eval-fidelity",
+      "status": "resolved",
+      "question": "Why is ppg's clipfrac exactly 0.000 and approxkl 1e-13? Is the run broken?",
+      "verdict": "Neither. With 1 epoch x 1 minibatch every update is exactly on-policy, so ratio == 1 by construction and PPO's clip term is inert. The values are arithmetic, not measurements.",
+      "why": "ppo.py recomputes newlogp from the CURRENT model; with one minibatch the model has not moved since collection. Restoring an active clip needs nminibatch>=2 hence num_envs>=2, and holding upstream density then forces the segment to 16384, whose n_pi=32 auxiliary buffer is 8x ours -- and ours already peaks at 26,653 MiB of a 32,768 MiB card. The three properties are jointly unreachable here.",
+      "evidence": [
+        "runnable/ppg/phasic_policy_gradient/ppo.py:130",
+        "notes/ppg-clip-is-inert-and-that-is-forced.md:1"
+      ],
+      "falsifier": "A card with enough VRAM for a 16384-sample segment at n_pi=32 makes all three properties reachable at once; then this is a choice again rather than a constraint.",
+      "pinned_by": [
+        "tests/test_ppg_mode_eval_runs_without_grad.py"
+      ],
+      "supersedes": "Reading clipfrac 0.000 as evidence of a failing policy."
+    },
+    {
+      "id": "episode-id-uniqueness",
+      "domain": "eval-validity",
+      "status": "resolved",
+      "question": "Are episode ids unique across the fleet, as their comment claimed?",
+      "verdict": "They were NOT. The endpoint runs once per ENDPOINT_EVAL_POLICY_MODES entry and the id carried neither scope nor action rule, so all 760 mode-pass ids reproduced sampled ones. Fixed: ids now carry eval_scope and eval_policy_mode.",
+      "why": "audit_eval_validity checks uniqueness per FILE and each pass writes its own, so the collision existed only in the assembled bundle -- which is exactly where a join or dedup meets it, and merging those two ids merges two estimands SAME-AXES-VERDICT forbids pooling.",
+      "evidence": [
+        "scripts/eval_grid.py:1285",
+        "scripts/audit_eval_validity.py:66"
+      ],
+      "falsifier": "Adding a third endpoint pass axis that the id does not carry reopens this immediately.",
+      "pinned_by": [
+        "tests/test_episode_ids_name_one_measurement.py"
+      ],
+      "supersedes": "My own claim on 2026-09-10 that the eval_policy_mode label fix subsumed this. It did not."
+    },
+    {
+      "id": "row-states-executed-action-rule",
+      "domain": "eval-validity",
+      "status": "resolved",
+      "question": "Does conventions.eval_policy_mode record what the evaluator DID?",
+      "verdict": "It did not -- it came from a static per-baseline table, so a --policy-mode mode pass was stamped with the family's native rule. All 85 endpoint rows of one cell claimed `sample` while evaluator_scope correctly held 41 mode and 44 sample. Now derived from the resolved scope.",
+      "why": "normalize_curves.py's own header states the requirement correctly and the code did the opposite. audit_row_closure.py read the static field, so the audit meant to stop two estimands being pooled was reading the one field that could not tell them apart.",
+      "evidence": [
+        "datasphere/native/normalize_curves.py:186",
+        "scripts/audit_row_closure.py:44"
+      ],
+      "falsifier": "If evaluator_scope ever stops carrying eval_policy_mode, the fallback to conventions silently returns the old behaviour.",
+      "pinned_by": [
+        "tests/test_row_states_the_action_rule_it_used.py"
+      ],
+      "supersedes": "The 400-episodes-per-regime figure in notes/first-complete-endpoint-grid-idaac.md, which pooled two estimands."
+    },
+    {
+      "id": "yield-is-memory-not-process",
+      "domain": "host-safety",
+      "status": "resolved",
+      "question": "Is the GPU yield process-count based, and does a varying count of OUR OWN processes break it?",
+      "verdict": "The ARMED trigger is free-memory (--floor-mib, 4000 via the launcher). Process-count (--yield-on-processes) is OFF by default precisely because our own count varies -- 24 interpreters in one packed run -- so a count trigger yields to itself. The memory trigger is indifferent to how many processes are ours.",
+      "why": "Memory measures the harm (a neighbour would fail) rather than a proxy for it (someone is present). Parallel evaluation adds processes of ours and only matters if it actually starves the card, in which case yielding is correct.",
+      "evidence": [
+        "scripts/yield_gpu_to_neighbour.py:103",
+        "datasphere/native/launch-card-cell.sh:176"
+      ],
+      "falsifier": "Enabling --yield-on-processes alongside parallel evaluation would require a cell-written count file; nothing today needs one.",
+      "pinned_by": [
+        "tests/test_yield_watch_spans_evaluation.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "yield-spans-evaluation",
+      "domain": "host-safety",
+      "status": "resolved",
+      "question": "Is the card watched during EVALUATION, not just training?",
+      "verdict": "It was not. The in-container sentinel poller and the cell-active marker were both released when training returned, leaving evaluation -- 2.04x longer, on cuda -- unwatched and unable to yield. Both now span the whole cell.",
+      "why": "launch-card-cell.sh passes --stop-when-inactive, so retracting the marker stood the host-side watches down. The marker's own comment already said 'marker present means a cell is on the card', and during evaluation a cell is on the card.",
+      "evidence": [
+        "datasphere/native/run_probe.sh:243",
+        "datasphere/native/run_probe.sh:554"
+      ],
+      "falsifier": "Any new early-return path in run_one_cell that skips retract_cell_from_card reopens the window at the other end.",
+      "pinned_by": [
+        "tests/test_yield_watch_spans_evaluation.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "whole-card-jobs",
+      "domain": "host-safety",
+      "status": "resolved",
+      "question": "Which cells may not share a GPU?",
+      "verdict": "ppg at its auxiliary phase (26,653 MiB of 32,768) and ctrl at the v100 profile (32,435 MiB, 329 MiB free). Both must have the card outright. ctrl at the datasphere profile peaks at 12,710 MiB and is co-tenantable.",
+      "why": "Measured per cell from resources.json. Six of eight cells on 2026-09-10 shared the card for 100% of samples and never pushed it past 8,025 MiB used or below 24.7 GiB free; the single exposure was ctrl at v100, harmless only because the co-tenant count was 0 in all 185 of its samples.",
+      "evidence": [
+        "notes/production-host/30-did-we-crowd-anyone-out.md:1",
+        "datasphere/native/families.json:1009"
+      ],
+      "falsifier": "A larger card, or a reduced n_pi for ppg, changes both figures and this must be re-measured rather than assumed to carry over.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "vram-cap-is-not-protection",
+      "domain": "host-safety",
+      "status": "resolved",
+      "question": "Does NATIVE_VRAM_CAP_MIB protect a co-tenant?",
+      "verdict": "No. All nine family launchers overwrite PYTHONPATH without preserving it, so the cap module never reaches a trainer -- ppg reached 26,653 MiB under a 10,240 cap. NATIVE_VRAM_CAP_APPLIED is printed by our monitors. The free-memory floor is the actual protection.",
+      "why": "A per-process cap is coercive, cannot see EGL render buffers or the CUDA context, and fails hardest late in a long run where the loss is largest.",
+      "evidence": [
+        "notes/production-host/26-the-vram-cap-never-reached-a-trainer.md:1",
+        "runnable/_launch/ppg_cell.sh:74"
+      ],
+      "falsifier": "Preserving PYTHONPATH in the launchers would make the cap bind; note 26 argues it should still not be treated as the protection.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": "The cost claim in note 26 that fixing the launchers moves evaluator revisions -- runnable/_launch is in no FAMILY_RUNTIME_MEMBERS entry and outside every source-reconstruction tree, so only payload bytes change."
+    },
+    {
+      "id": "places365-two-artifacts",
+      "domain": "disk",
+      "status": "resolved",
+      "question": "How large is Places365, and which copy does what?",
+      "verdict": "Two artifacts. The attestation FIXTURE is 1,000 images, 468 MB tar, 563 MB extracted, content digest c08327c5. The full TRAIN CORPUS is ~1,803,461 images, ~22 GB tar, 26.5 GiB extracted. The fixture certifies the code path, not the dataset.",
+      "why": "Quoting one number for 'Places365' conflates a 563 MB fixture with a 26.5 GiB corpus, which is a 47x error in any disk calculation.",
+      "evidence": [
+        "notes/BATTERY-LAUNCH-CONDITIONS.md:1",
+        "datasphere/native/family.py:460"
+      ],
+      "falsifier": "A different Places365 packaging (high-resolution, or val-only) has different figures and must be measured, not inferred.",
+      "pinned_by": [
+        "tests/test_places365_is_in_the_disk_model.py"
+      ],
+      "supersedes": "notes/local-disk-candidates.md's claim that this laptop holds a 26 GB train tree; it holds 546 MB."
+    },
+    {
+      "id": "places365-mount-never-archive",
+      "domain": "disk",
+      "status": "resolved",
+      "question": "Should production cells receive the Places365 archive or a mounted corpus?",
+      "verdict": "MOUNTED, always. Passing the archive makes run_probe.sh extract a private copy per cell and run_on_production_host.sh cp the tarball into each workdir. At the full corpus that is 9 cells x (26.5 + 22.4) = 440 GiB against 260 GiB free -- it does not fit. One read-only mount is 26.5 GiB total.",
+      "why": "Measured on the fixture: six attempts left six 563 MB extracted trees plus a staged tar. family.py already charges 0 GiB for a mounted corpus because it is on the disk whether we run or not.",
+      "evidence": [
+        "datasphere/native/battery-chain.sh:43",
+        "datasphere/native/run_probe.sh:2046",
+        "datasphere/native/family.py:588"
+      ],
+      "falsifier": "If run_probe.sh ever copies rather than symlinks a mounted corpus, the per-cell cost returns and this must be re-measured.",
+      "pinned_by": [
+        "tests/test_places365_is_in_the_disk_model.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "disk-bound-is-declared",
+      "domain": "disk",
+      "status": "resolved",
+      "question": "How do we avoid overusing a shared disk?",
+      "verdict": "Every host path that can write must state an upper bound before writing. run_on_production_host.sh runs check_disk; launch-card-cell.sh derives its allowance from family.py disk-requirement and arms a disk watch; host-run.sh now refuses a WRITABLE mount without HOST_RUN_DISK_BOUND_GIB and refuses a bound leaving less than NATIVE_DISK_ABS_FLOOR_GIB (50).",
+      "why": "The two drifts on 2026-09-10 both substituted a point-in-time reading (df, nvidia-smi) for a bound, and both went through the one path with no guard. The battery's own bound is 84.1 GiB peak -- a CEILING, not an allowance to spend to.",
+      "evidence": [
+        "datasphere/native/host-run.sh:58",
+        "notes/production-host/10-resource-upper-bound-rule.md:1"
+      ],
+      "falsifier": "A new host entry point that writes without passing through these three scripts reopens the gap.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "eval-is-most-of-the-campaign",
+      "domain": "eval-cost",
+      "status": "resolved",
+      "question": "What does the production battery actually cost?",
+      "verdict": "800.9 job-hours -- 33.4 card-days on one card. Training is 530.5, curve evaluation 165.1, endpoint evaluation 105.3. The previously published figure of 530.5 was TRAINING ONLY.",
+      "why": "plan_production.py computed job_hours as frames/fps and nothing else; curve_eval_hours existed, was correct, and had NO CALLERS, and the endpoint grid was not modelled at all. Measured on the one cell run to completion, evaluation is 2.04x the training it follows.",
+      "evidence": [
+        "datasphere/native/plan_production.py:433",
+        "notes/what-the-battery-costs-and-the-eval-paradigm-it-buys.md:1"
+      ],
+      "falsifier": "Changing episodes-per-stamp, the stamp grid, or ENDPOINT_EVAL_POLICY_MODES changes all three terms; regenerate rather than scale the old number.",
+      "pinned_by": [
+        "tests/test_production_schedule_not_stale.py"
+      ],
+      "supersedes": "production-schedule.json's wall_clock_days_at_two_parallel_jobs of 11.1, which described training alone."
+    },
+    {
+      "id": "keep-the-supplementary-mode-pass",
+      "domain": "eval-cost",
+      "status": "resolved",
+      "question": "Should the battery drop the supplementary `mode` endpoint pass to save time?",
+      "verdict": "No. It is ~21.6 GPU-h of a campaign near 893 -- about 2.4% -- and two of A25's three fixed cross-group pairs STRADDLE the policy-mode split, so dropping it confounds the mechanism with the action rule in exactly the comparisons the campaign exists to make.",
+      "why": "family.py had already costed and accepted it. I proposed dropping it, costed it from idaac's training time alone, and reversed the same day.",
+      "evidence": [
+        "datasphere/native/family.py:710",
+        "notes/SAME-AXES-VERDICT.md:1"
+      ],
+      "falsifier": "If A25's cross-group pairs are dropped from the paper, the pass loses its purpose and the 2.4% is worth reclaiming.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": "My own recommendation earlier the same day to drop it."
+    },
+    {
+      "id": "curve-depth-vs-endpoint-depth",
+      "domain": "eval-frequency",
+      "status": "resolved",
+      "question": "Where should evaluation depth be economised?",
+      "verdict": "On the CURVE, never the endpoint -- and even then not below 3 episodes. Intermediate points carry shape; the endpoint carries the reported number. Because every checkpoint is retained, any intermediate point can be re-evaluated at greater depth later, which is what makes curve depth the reversible choice.",
+      "why": "Shape at 1 episode on a task whose per-episode SD is comparable to its mean is noise, not a cheaper curve. Endpoint depth is what every reported interval rests on.",
+      "evidence": [
+        "notes/retention-and-eval-depth.md:1"
+      ],
+      "falsifier": "If checkpoints stop being retained, curve depth stops being reversible and the trade changes completely.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "reset-reproducibility-needs-multiple-passes",
+      "domain": "eval-validity",
+      "status": "resolved",
+      "question": "Are eval regimes paired, i.e. is the reset observation reproducible?",
+      "verdict": "train and eval-easy are (200/200). eval-medium varies in 62% of comparable slots and eval-hard in 13% of the 166 that are comparable, so NO PAIRED CLAIM is available for those two. Crucially, the check is vacuous on a single-pass file: a slot observed once cannot disagree with itself.",
+      "why": "audit_eval_validity check 4 reported '200/200 reproducible (0% vary)' over 800 slots it had never compared, and I published that as a measurement. It now counts observations per slot and prints NOT COMPARED where there are none.",
+      "evidence": [
+        "scripts/audit_eval_validity.py:160"
+      ],
+      "falsifier": "A regime whose visual perturbation is made deterministic would become pairable; RL-ViGen's design says otherwise.",
+      "pinned_by": [
+        "tests/test_reproducibility_check_counts_its_comparisons.py"
+      ],
+      "supersedes": "My own '200/200 reproducible in every regime' claim, which was vacuous."
+    },
+    {
+      "id": "random-floor-survives-closure-change",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "Can C55's random floor of 1.842 be compared against results from a different evaluator closure?",
+      "verdict": "Yes, and for a statable reason: probe_floor.py draws rng.uniform(-1,1) over the action space and NEVER READS THE OBSERVATION. It is therefore invariant to every axis whose change moves the revision -- frame stack, image size, crop policy, sampled-vs-mode -- and one floor serves all four regimes because a blind policy cannot tell them apart.",
+      "why": "It is sensitive to task, horizon, reward and placement, none of which has moved. This is why a floor comparison is available where a policy-result comparison across closures is not.",
+      "evidence": [
+        "scripts/probe_floor.py:110",
+        "scripts/rlvigen_reference.py:87"
+      ],
+      "falsifier": "Any change to Door's horizon, reward shaping, or placement distribution invalidates the floor and it must be re-measured.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": "My own claim that the floor was unknown for these grids."
+    },
+    {
+      "id": "attestation-is-what-makes-records-reportable",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "What makes a record reportable?",
+      "verdict": "Its evaluator_revision must equal the live one for its family. populate_evaluator_ledger.py refuses a stale record by assertion, and that refusal is the most valuable thing it does. Editing any CODE_MEMBER moves every family's revision and supersedes every standing attestation.",
+      "why": "families.json's CONTENTS are NOT part of the family revision -- evaluator_family_config_revision hashes identity_schema, semantics, family and scope_fields only -- so a pip_requirements change is environment, not evaluator identity, and costs no re-attestation.",
+      "evidence": [
+        "datasphere/native/evaluator_identity.py:29",
+        "scripts/populate_evaluator_ledger.py:1"
+      ],
+      "falsifier": "Adding families.json's contents to the config revision would make every constants edit cost a full re-attestation wave.",
+      "pinned_by": [
+        "tests/test_evaluator_identity_binding.py",
+        "tests/test_family_evaluator_revision.py"
+      ],
+      "supersedes": "My own claim that landing a jaxlib pin would move every family's revision; it does not."
+    },
+    {
+      "id": "note-citations-must-resolve",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "How do we stop notes citing code that has moved?",
+      "verdict": "scripts/verify_note_citations.py checks every path:line a note asserts -- file exists, line exists, and the named identifier is still near it. A bare basename matching several files is reported AMBIGUOUS rather than resolved to a guess.",
+      "why": "Fleet-wide it found 530 stale citations across 159 notes. The ambiguity check matters because `ppo.py:130` matches nine files here, and a citation that cannot say which file it read is how a stale story survives.",
+      "evidence": [
+        "scripts/verify_note_citations.py:1"
+      ],
+      "falsifier": "It checks that evidence still leads where a note says; it does NOT check that the reasoning is right, and must never be quoted as if it did.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": null
+    },
+    {
+      "id": "ctrl-cudnn-on-volta",
+      "domain": "host-safety",
+      "status": "traced",
+      "question": "Why does ctrl fail on cds2 with every cuDNN engine rejecting its first convolution?",
+      "verdict": "NOT RESOLVED. Lead: ctrl has succeeded only on an NVIDIA L4 (sm_89) and failed only on a Tesla V100 (sm_70). It is the fleet's only JAX/XLA baseline.",
+      "why": "Two theories were wrong and one was acted on. jax 0.4.35 against jaxlib 0.4.34 is upstream's INTENDED pairing -- pip: 'jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == cuda12' -- and pinning jaxlib made the environment uninstallable (ResolutionImpossible). Reverted.",
+      "evidence": [
+        "notes/ctrl-has-never-run-on-this-host-and-why.md:1"
+      ],
+      "falsifier": "A bare jax.lax.conv_general_dilated on this V100 in the same image: if a trivial conv also fails, the build does not target sm_70 and ctrl cannot run here at any profile.",
+      "pinned_by": [],
+      "supersedes": "Two of my own theories, both recorded as wrong in the note."
+    },
+    {
+      "id": "descriptor-has-three-layers",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "Where does a family's configuration actually live? `constants`, `production`, or a host profile?",
+      "verdict": "Three distinct layers, and confusing them silently changes fidelity. `constants` holds the TRAINER's CLI values (num_envs, nstep, lr, nminibatch) -- the fidelity layer. `production` holds CAMPAIGN/SCHEDULING values (curve_eval_episodes, offline_eval_episodes, save_every, replay_capacity). `host_profiles.<profile>` overrides into either.",
+      "why": "A test written against `production.num_envs` returns None for a perfectly correct repo, and a fix aimed at that None would edit the wrong layer. Worse in the other direction: `eval_episodes` (the ONLINE, training-time count that becomes EVAL_EPISODES) and `offline_eval_episodes` (the ENDPOINT GRID depth) are different settings that both read 20 for rlvigen -- so reading the wrong one passes by coincidence and fails silently elsewhere.",
+      "evidence": [
+        "datasphere/native/family.py:722",
+        "datasphere/native/families.json:1009"
+      ],
+      "falsifier": "If host_profiles ever overrides a key present in both layers, precedence must be stated rather than inferred from this row.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": "A first version of the register's own pinning test, which read num_envs from `production` and failed against a correct repo."
+    },
+    {
+      "id": "two-hashes-two-scopes",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "An edit to families.json costs no evaluator re-attestation. Does that mean it costs nothing?",
+      "verdict": "No. Two hashes cover families.json with DIFFERENT scopes. `evaluator_family_config_revision` hashes only identity_schema/semantics/family/scope_fields, so a pip_requirements edit does NOT move it and costs no re-attestation. `resolved_descriptor_sha256` in production-schedule-v100.json hashes the WHOLE resolved fleet descriptor, so the same edit DOES move it and the checked-in schedule goes stale.",
+      "why": "Observed live on 2026-09-10. A jaxlib pin was made, the v100 schedule regenerated for that pinned state (00dfe6e), then the pin reverted (8495758) without re-syncing. The artifact was left describing a families.json that no longer existed. Diffing generated-vs-checked-in showed ZERO rendered fields changed -- not one cost, hour or fidelity value -- and only resolved_descriptor_sha256 moved, which is precisely why 'nothing important changed' was the wrong reading.",
+      "evidence": [
+        "datasphere/native/plan_production.py:325",
+        "scripts/production_gates.py:1335"
+      ],
+      "falsifier": "Regenerating with --sync-schedule must return the hash to its pre-pin value 4c01ab66dbd2a7f5. It did, byte-identical to 00dfe6e^. If a future re-sync yields a THIRD value, something other than the revert moved the descriptor.",
+      "pinned_by": [
+        "tests/test_production_schedule_not_stale.py"
+      ],
+      "supersedes": "The reading that a pip_requirements edit is free because it does not move the evaluator revision.",
+      "gated_by": [
+        "scripts/production_gates.py"
+      ]
+    },
+    {
+      "id": "a-reverted-change-has-two-halves",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "Is reverting the source edit enough to undo a change?",
+      "verdict": "No. A revert must also undo every GENERATED artifact regenerated while the change was live. Reverting families.json restored the pre-pin bytes exactly, but production-schedule-v100.json had been regenerated in between and stayed at the pinned-state hash.",
+      "why": "The stale artifact is invisible to a source diff -- `git status` was clean and `git diff HEAD -- families.json` was empty, so every source-level check said the revert was complete. Only the generator comparison disagreed. gate_v100_schedule_matches_descriptor and tests/test_production_schedule_not_stale.py both catch it; neither had been re-run between the revert and this pass.",
+      "evidence": [
+        "tests/test_production_schedule_not_stale.py:122",
+        "scripts/production_gates.py:1320"
+      ],
+      "falsifier": "If a revert ever lands without re-running the generator comparison, this row is not being applied. Run the gate, not just the source diff.",
+      "pinned_by": [
+        "tests/test_production_schedule_not_stale.py"
+      ],
+      "supersedes": null,
+      "gated_by": [
+        "scripts/production_gates.py"
+      ]
+    },
+    {
+      "id": "the-verifier-must-fail-when-it-should",
+      "domain": "eval-validity",
+      "status": "resolved",
+      "question": "Did verify_resolved_register.py --run-tests ever actually report a failing pinning test?",
+      "verdict": "Not until 2026-09-10. It parsed `line.startswith('FAILED')` against COLOURED pytest output, where the line really begins `\\x1b[31mFAILED`. It matched nothing, reported `0 failure(s)`, and exited 0 while pytest exited 1. Now `--color=no` plus an ANSI strip parses the lines, and the EXIT CODE decides: a non-zero exit with no parsed line is reported rather than swallowed.",
+      "why": "This is the defect class the whole register exists to refuse -- an instrument that could not run reading as one that ran -- committed inside the instrument that enforces it. It hid a real failing test (the stale v100 artifact) on its first real run.",
+      "evidence": [
+        "scripts/verify_resolved_register.py:118"
+      ],
+      "falsifier": "Proven by construction on 2026-09-10: a deliberately failing test added to a row's pinned_by made the verifier exit 1 and name the test. Re-run that self-test if the parser changes.",
+      "pinned_by": [
+        "tests/test_resolved_register_claims_hold.py"
+      ],
+      "supersedes": "The first run's report of `pytest exit=1, 0 failure(s)` and overall exit 0.",
+      "gated_by": []
+    }
+  ]
+}
