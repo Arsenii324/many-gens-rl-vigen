@@ -46,7 +46,16 @@ def main() -> int:
         log = f"{WAVE}/{family}.log"
         markers = ssh(f"grep -aoE 'NATIVE_(CELL_COMPLETED|CELL_FAILED|CELL_YIELDED)[^=]*' {log} 2>/dev/null | tail -3")
         if not markers.strip():
-            print(f"  {family:10} no log yet -- not run")
+            # [Claude 2026-09-10] "no log" and "running" are DIFFERENT STATES and the first version
+            # printed the same line for both. A cell eight minutes into its bootstrap has a log with
+            # no terminal marker yet; a family that was never launched has no file at all. Reporting
+            # them alike is how a wave looks stalled when it is working, and vice versa.
+            exists = ssh(f"test -f {log} && echo yes || echo no").strip()
+            if exists == "yes":
+                size = ssh(f"wc -c < {log} 2>/dev/null").strip() or "?"
+                print(f"  {family:10} RUNNING -- log is {size} bytes, no terminal marker yet")
+            else:
+                print(f"  {family:10} not started -- no log file")
             continue
         if "NATIVE_CELL_COMPLETED" not in markers:
             state = markers.strip().splitlines()[-1].strip()
