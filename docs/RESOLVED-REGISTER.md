@@ -278,17 +278,17 @@ register exists to prevent.
 
 **Q.** Why does ctrl fail on cds2 with every cuDNN engine rejecting its first convolution?
 
-**Verdict.** CONFIRMED by direct measurement 2026-09-10. On this host's Tesla V100 (sm_70), jax 0.4.35 / jaxlib 0.4.34 computes a matmul correctly and CANNOT run a convolution: a minimal f32[1,3,64,64] x f32[32,3,3,3] conv fails with `INTERNAL: All algorithms tried ... failed`, every cuDNN engine rejected. ctrl therefore cannot run on cds2 with this build. It is 3 of the battery's 36 cells.
+**Verdict.** RESOLVED 2026-09-10, and NOT as first recorded. ctrl's conv failure is an INTERACTION between the card and the cuDNN version, not a property of either alone. Measured on one V100 (sm_70), same jax 0.4.35 / jaxlib 0.4.34, only nvidia-cudnn-cu12 varying: 9.26.0.51 FAILS, 9.5.1.17 OK, 9.1.0.70 OK. The successful L4 (sm_89) attestations ran 9.25.1.1 -- as new as the failing one -- so recent cuDNN dropped Volta kernels while keeping Ada. FIX: ctrl pins nvidia-cudnn-cu12==9.5.1.17, the highest version measured working on sm_70. ctrl IS runnable on this host.
 
-**Why.** The probe isolates the cause completely: 32 GB free so it is not memory, a passing matmul so it is not the card, the driver or XLA, and no ctrl code in the process so it is not the baseline. It also is NOT the jaxlib pin -- that was a separate, earlier failure of mine (ResolutionImpossible at the import gate, v212), now reverted; this probe's pip install resolved cleanly and still could not convolve. Two distinct failures wore the same label 'ctrl fails on the V100' and only one of them was real.
+**Why.** Three readings were recorded before the right one, and the first two were wrong in opposite directions. (1) 'sm_70 is uncovered' -- necessary but NOT sufficient: the same card convolves fine on older cuDNN. (2) 'plain version skew' -- refuted by the L4 having attested on 9.25.1.1, essentially as new as the failing 9.26.0.51. Only the 2x2 (card x cuDNN) separates them, and neither single-variable probe could. The tell that the first reading was unsafe was in the error all along: `<unknown cudnn status: 5003>` is XLA reporting a status ITS BUILD DOES NOT KNOW, which is a version statement, not an architecture one -- an arch problem prints a recognised ARCH_MISMATCH.
 
-**Evidence.** `results/logs/volta-conv-probe-2026-09-10.log:1`, `notes/ctrl-has-never-run-on-this-host-and-why.md:17`
+**Evidence.** `results/logs/volta-cudnn-pin-2026-09-10.log:1`, `results/logs/volta-conv-probe-2026-09-10.log:1`, `datasphere/native/families.json:1`
 
-**Falsified by.** A jax/jaxlib/cuDNN build whose kernels cover sm_70 running the same conv on this card. That is a DIFFERENT build, so it does not contradict this row -- it retires it. Re-run: ~/rlvigen-work/jax-volta-probe-v2.sh, exit 0 = refuted, 10 = confirmed.
+**Falsified by.** A cuDNN newer than 9.5.1.17 convolving on sm_70 would move the boundary; a 9.5.1.17 run FAILING on sm_70 would refute the fix outright. Re-run ~/rlvigen-work/jax-cudnn-pin.sh. Also: if ctrl's resolved_packages ever report a cudnn other than 9.5.1.17, the pin is not being honoured and this row's fix is not in force.
 
 **Pinned by.** `tests/test_resolved_register_claims_hold.py`
 
-**Supersedes.** Two of my own theories, both recorded as wrong in the note.
+**Supersedes.** My own commit c9fe641, which recorded the sm_70 lead as CONFIRMED and said 'ctrl cannot run on cds2 with this build'. Both halves are wrong: the mechanism is the cuDNN interaction, and ctrl can run here once pinned.
 
 ### `a-probe-in-the-wrong-image-exits-zero` — **resolved**
 

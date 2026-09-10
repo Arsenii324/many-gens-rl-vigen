@@ -199,3 +199,28 @@ def test_the_probe_was_not_the_void_one():
     text = PROBE_LOG.read_text(errors="replace")
     assert "command not found" not in text
     assert "probe python exit=10" in text, "exit 10 is the matmul-OK/conv-FAILED verdict"
+
+
+PIN_LOG = ROOT / "results" / "logs" / "volta-cudnn-pin-2026-09-10.log"
+
+
+def test_the_cudnn_pin_is_what_makes_ctrl_run_and_is_still_declared():
+    """The 2x2 that separated card from cuDNN, plus the pin that acts on it.
+
+    [Claude 2026-09-10] Written after recording the WRONG cause twice. A single-variable probe
+    could not tell 'sm_70 is uncovered' from 'cuDNN is too new'; only varying cuDNN on a FIXED
+    card did. This pins both halves: the measurement, and the fix actually being declared.
+    """
+    import json
+    text = PIN_LOG.read_text(errors="replace")
+    assert "cudnn=9.5.1.17: CONV OK" in text
+    assert "cudnn=9.1.0.70: CONV OK" in text
+    # 3465600 is the arithmetically exact result, so this pins a CORRECT conv, not merely one
+    # that raised no exception: 3844*27 + 248*18 + 4*12 = 108300 per channel, times 32 channels.
+    assert "sum=3465600" in text
+
+    families = json.loads((ROOT / "datasphere" / "native" / "families.json").read_text())
+    reqs = families["ctrl"]["pip_requirements"]
+    assert "nvidia-cudnn-cu12==9.5.1.17" in reqs, (
+        "ctrl no longer pins cuDNN. Unpinned, it resolves to the newest release, which on sm_70 "
+        "fails every conv engine with `<unknown cudnn status: 5003>`.")

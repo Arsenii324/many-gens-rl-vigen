@@ -792,9 +792,9 @@
       "frames_per_proc 128 is torch_rl's own PPO default and is unchanged."
     ],
     "environment": {
-    "TORCH_RL_STORAGE": "{run_dir}",
-    "RLVIGEN_FRAME_STACK": "3"
-  },
+      "TORCH_RL_STORAGE": "{run_dir}",
+      "RLVIGEN_FRAME_STACK": "3"
+    },
     "positional": [
       "{task}",
       "{procs}",
@@ -1010,7 +1010,8 @@
       "procgen==0.10.7",
       "flax==0.10.2",
       "optax==0.2.3",
-      "distrax==0.1.5"
+      "distrax==0.1.5",
+      "nvidia-cudnn-cu12==9.5.1.17"
     ],
     "import_gate": {
       "cwd": "runnable/ctrl",

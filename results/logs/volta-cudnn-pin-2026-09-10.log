@@ -1,0 +1,34 @@
+note:      mount is read-only, so the chown-back is skipped
+image:     nvidia/cuda@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000
+mount:     /home/varaksin_as/rlvigen-work:/work:ro
+gpus:      device=0
+container: rlvigen-cudnn-pin
+script:    54 line(s), passed as base64, never on a command line
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.2.2
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+Python 3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+
+=== pinning nvidia-cudnn-cu12==9.5.1.17 ===
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+installed cudnn: 9.5.1.17
+RESULT cudnn=9.5.1.17: CONV OK sum=3465600
+
+=== pinning nvidia-cudnn-cu12==9.1.0.70 ===
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+installed cudnn: 9.1.0.70
+RESULT cudnn=9.1.0.70: CONV OK sum=3465600
+=== PIN DIAG DONE ===

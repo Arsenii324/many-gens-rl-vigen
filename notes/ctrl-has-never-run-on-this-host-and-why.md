@@ -135,7 +135,7 @@ is fixed. The other eleven baselines are unaffected — this is a JAX-only stack
 
 ---
 
-## RESOLVED 2026-09-10 — the sm_70 lead is confirmed by direct measurement
+## SUPERSEDED — this section's conclusion is WRONG. See the correction below.
 
 Step 1 of the plan above ("run any trivial JAX convolution on this V100 in the same image") was
 executed. Artifact: [`../results/logs/volta-conv-probe-2026-09-10.log`](../results/logs/volta-conv-probe-2026-09-10.log).
@@ -180,3 +180,54 @@ refutes, exit 10 confirms.
 The queued probe ran in `ubuntu:24.04`, which has no interpreter. It printed `python3: command not
 found`, ran no convolution, and **exited rc=0**. A JAX probe has to run in the image carrying the
 JAX stack, and it must exit non-zero when it proves nothing. Recorded as its own register row.
+
+
+---
+
+## CORRECTION, same day — the cause is cuDNN x card, and ctrl RUNS here
+
+**The section above is wrong and is kept only so the reasoning that produced it stays visible.**
+It concluded "ctrl cannot run on cds2 with this build". ctrl can. Artifact:
+[`../results/logs/volta-cudnn-pin-2026-09-10.log`](../results/logs/volta-cudnn-pin-2026-09-10.log).
+
+Holding the card fixed at one V100 and jax fixed at 0.4.35 / jaxlib 0.4.34, varying only cuDNN:
+
+| card | nvidia-cudnn-cu12 | conv |
+|---|---|---|
+| L4, sm_89 (the attestations) | 9.25.1.1 | OK |
+| V100, sm_70 | 9.26.0.51 | **FAILS**, every engine |
+| V100, sm_70 | 9.5.1.17 | **OK**, sum=3465600 |
+| V100, sm_70 | 9.1.0.70 | **OK**, sum=3465600 |
+
+`3465600` is the arithmetically exact answer, so those runs computed correctly rather than merely
+not raising: 3844x27 + 248x18 + 4x12 = 108300 per channel, x32 channels.
+
+**Recent cuDNN dropped Volta kernels while keeping Ada.** That is why the L4 attested on a cuDNN
+essentially as new as the one failing here, and why no XLA flag helped: at
+`xla_gpu_autotune_level=0` the failure moved out of the autotuner and came straight from
+`cudnnConvolutionForward` with the same status.
+
+### The fix
+
+`ctrl` now pins `nvidia-cudnn-cu12==9.5.1.17` in `families.json` — the highest version measured
+working on sm_70. Its `pip_requirements` previously pinned `jax` and `jaxlib` and left every
+`nvidia-*` transitive floating, so the executed CUDA stack was whatever pip resolved **on the day
+the cell ran**. That is the reproducibility hole `gate_environment_manifest` carries as OWNER,
+materialising as a hard failure rather than as drift between two numbers.
+
+The pin does **not** move ctrl's evaluator revision (`pip_requirements` is not hashed by
+`evaluator_family_config_revision`), so it costs no re-attestation. It **does** move
+`resolved_descriptor_sha256`, so `production-schedule-v100.json` was re-synced in the same commit.
+
+### Why two wrong causes got recorded first
+
+Neither single-variable probe could separate them, and each looked conclusive alone:
+
+1. **"sm_70 is uncovered"** — necessary but not sufficient. The same card convolves fine on 9.5.
+2. **"plain version skew"** — refuted by the L4 having attested on 9.25.1.1.
+
+Only the 2x2 decides it. The tell was in the error from the beginning:
+`<unknown cudnn status: 5003>` is XLA reporting a status **its build does not recognise**, which is
+a version statement. A genuine architecture problem prints a recognised `ARCH_MISMATCH`. I read
+"every cuDNN engine rejects the conv" as being about the engines' hardware coverage when it was
+about the library's identity.
