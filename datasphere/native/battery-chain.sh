@@ -26,7 +26,10 @@ SEEDS="101 102 103"
 # run_on_production_host.sh reads them as $3 and $4 -- so they are passed as arguments, not exported.
 # Exporting RLVIGEN_ARCHIVE_HOST/PLACES365_ARCHIVE_HOST looks like it works and does nothing: that is
 # what made the svea attestation refuse with NATIVE_PLACES365_MISSING.
-PAYLOAD_PREFIX="${PAYLOAD_PREFIX:-payload-v211}"
+# v212 = the frozen tree the attestation wave validates: jaxlib pinned, episode ids carrying scope
+# and policy mode, the ibac_sni docstring corrected. A battery must run the payloads its attestation
+# certified, or its records are on a closure nothing validated.
+PAYLOAD_PREFIX="${PAYLOAD_PREFIX:-payload-v212}"
 RLVIGEN_ARCHIVE="${RLVIGEN_ARCHIVE:-$HOME/rlvigen-assets/rlvigen-door2-90d8b8c4.tgz}"
 [[ -f "$RLVIGEN_ARCHIVE" ]] || { echo "no RL-ViGen archive at $RLVIGEN_ARCHIVE" >&2; exit 2; }
 # Places365 is passed ONLY for the three baselines that enter its block. PLACES365_ARCHIVE must
