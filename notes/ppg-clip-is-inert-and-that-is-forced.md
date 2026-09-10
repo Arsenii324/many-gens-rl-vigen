@@ -27,7 +27,7 @@ contradicting a cited value.
 
 **Density and per-step batch size are exact matches. The clip term is not.**
 
-`ppo.py:130-134` computes `ratio = exp(newlogp - logp)` where `newlogp` is recomputed from the
+`runnable/ppg/phasic_policy_gradient/ppo.py:130-134` computes `ratio = exp(newlogp - logp)` where `newlogp` is recomputed from the
 *current* model. With one epoch and one minibatch the model has not moved since collection, so
 `ratio ≡ 1` exactly, `max(-adv·1, -adv·clamp(1, 1−ε, 1+ε))` is `-adv`, and the objective reduces to
 the vanilla advantage-weighted policy gradient. Upstream's eight sequential minibatch steps drift
