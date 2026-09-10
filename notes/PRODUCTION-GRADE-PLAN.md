@@ -75,6 +75,7 @@ implemented on 2026-09-10 and are **in the working tree awaiting the bump**; two
 | `ppg` `nminibatch` — assert like `idaac` does | executed config was not the declared one, silently | `runnable/ppg/…` (FAMILY_RUNTIME) | open |
 | write a frame-0 checkpoint | no family has a measured **initialised-network** floor | family runtimes | open — but see below |
 | `eval_grid.py:734` docstring says `general.py` reads `RLVIGEN_MODE`/`RLVIGEN_SCENE_ID` | it moved to `ibac_sni_runtime.py:65,77`; the BEHAVIOUR is intact, the pointer is stale | `scripts/eval_grid.py` (CODE) | open — docstring-only, but it moves every family's revision, so it waits for the bump |
+| pin `jaxlib==0.4.35` beside `jax[cuda12]==0.4.35` | jax 0.4.35 against jaxlib 0.4.34 makes every cuDNN engine reject `ctrl`'s first conv; **ctrl has never completed on this host** | `datasphere/native/families.json` (CONFIG) | open — blocks 3 of 36 battery cells |
 
 **The frame-0 item is no longer blocking interpretation.** C55's random-**action** floor (1.842,
 `rlvigen_reference.py:87`) applies to these grids and survives the closure change, because
