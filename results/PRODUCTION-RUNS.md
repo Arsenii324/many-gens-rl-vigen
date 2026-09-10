@@ -5,18 +5,18 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**71 job(s), 2849 record row(s), 12 baseline(s).**
+**76 job(s), 2888 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
-| `ibac_sni` | 1377 |
-| `idaac` | 645 |
+| `ibac_sni` | 1387 |
+| `idaac` | 657 |
 | `drqv2` | 323 |
 | `rad` | 147 |
+| `ppg` | 89 |
 | `soda` | 85 |
-| `ppg` | 79 |
 | `ctrl` | 56 |
-| `alda` | 44 |
+| `alda` | 51 |
 | `svea` | 36 |
 | `curl` | 19 |
 | `drq` | 19 |
@@ -24,13 +24,88 @@ Every run whose records this repository holds, with the circumstances each recor
 
 ## Runs
 
+### `attest-v210-alda` — alda
+
+- **cells** `alda-s1` · **seeds** `1` · **rows** 7
+- **frames** 10,000 → 10,000 (1 distinct)
+- **phases** {'eval': 3, 'offline-eval': 4}
+- **policy mode(s)** `mode`
+- **evaluator revision(s)** `b99664dba72e` **SUPERSEDED** (live is `0b7b90037b79`)
+- **records** [`results/records/attest-v210-alda__records.jsonl`](results/records/attest-v210-alda__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 1.19 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 1.18 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v210-ibac_sni` — ibac_sni
+
+- **cells** `ibac_sni-s1` · **seeds** `1` · **rows** 10
+- **frames** 2,048 → 10,240 (5 distinct)
+- **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `29e77cc34266` **SUPERSEDED** (live is `9b2d17b47fac`)
+- **records** [`results/records/attest-v210-ibac_sni__records.jsonl`](results/records/attest-v210-ibac_sni__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v210-idaac` — idaac
+
+- **cells** `idaac-s1` · **seeds** `1` · **rows** 6
+- **frames** 2,048 → 8,192 (2 distinct)
+- **phases** {'eval': 2, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `3d64ac77f946` **SUPERSEDED** (live is `1b092f978fdc`)
+- **records** [`results/records/attest-v210-idaac__records.jsonl`](results/records/attest-v210-idaac__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.74 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.73 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v210-ppg` — ppg
+
+- **cells** `ppg-s1` · **seeds** `1` · **rows** 10
+- **frames** 2,048 → 10,240 (5 distinct)
+- **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `a247633f7b23` **SUPERSEDED** (live is `248751f7caca`)
+- **records** [`results/records/attest-v210-ppg__records.jsonl`](results/records/attest-v210-ppg__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 7.28 | ± 1.90 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 5.69 | ± 2.02 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v212-idaac` — idaac
+
+- **cells** `idaac-s1` · **seeds** `1` · **rows** 6
+- **frames** 2,048 → 8,192 (2 distinct)
+- **phases** {'eval': 2, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `1b092f978fdc` **CURRENT**
+- **records** [`results/records/attest-v212-idaac__records.jsonl`](results/records/attest-v212-idaac__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.73 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+
 ### `bt1037211b64e17auo88` — idaac
 
 - **cells** `idaac-s1` · **seeds** `1` · **rows** 6
 - **frames** 2,048 → 8,192 (2 distinct)
 - **phases** {'eval': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `bd58a0a38e55`
+- **evaluator revision(s)** `bd58a0a38e55` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1037211b64e17auo88__records.jsonl`](results/records/bt1037211b64e17auo88__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -45,7 +120,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `2770875f4de3`
+- **evaluator revision(s)** `2770875f4de3` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt116j2650ohtkj8ev7q__records.jsonl`](results/records/bt116j2650ohtkj8ev7q__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -60,7 +135,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,240 → 10,240 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `1aaed80f2adb`
+- **evaluator revision(s)** `1aaed80f2adb` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt11o1l70msqkc4d2qnr__records.jsonl`](results/records/bt11o1l70msqkc4d2qnr__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -75,7 +150,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `4923f70de323`
+- **evaluator revision(s)** `4923f70de323` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt11qhufomconlujompu__records.jsonl`](results/records/bt11qhufomconlujompu__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -90,7 +165,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `7dcd6943a405`
+- **evaluator revision(s)** `7dcd6943a405` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1262ms5icvlmo5v8ar__records.jsonl`](results/records/bt1262ms5icvlmo5v8ar__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -105,7 +180,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `1a6bba90e042`
+- **evaluator revision(s)** `1a6bba90e042` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt13r293fit1pbt7ah4p__records.jsonl`](results/records/bt13r293fit1pbt7ah4p__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -120,7 +195,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,112 → 10,000 (3 distinct)
 - **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `2be1bc763799`
+- **evaluator revision(s)** `2be1bc763799` **SUPERSEDED** (live is `0be006e48012`)
 - **records** [`results/records/bt13vlerk8p1vop3bmep__records.jsonl`](results/records/bt13vlerk8p1vop3bmep__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -135,7 +210,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `48290f27af56`
+- **evaluator revision(s)** `48290f27af56` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt14gjjdtoa5j54dr2n6__records.jsonl`](results/records/bt14gjjdtoa5j54dr2n6__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -150,7 +225,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 40,960 (3 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `2fe1ee0956d3`
+- **evaluator revision(s)** `2fe1ee0956d3` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1596tjbdu1rv5senim__records.jsonl`](results/records/bt1596tjbdu1rv5senim__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -165,7 +240,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,112 → 10,112 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `dc201a558bb6`
+- **evaluator revision(s)** `dc201a558bb6` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt15dm9j6vm5r9m4cdri__records.jsonl`](results/records/bt15dm9j6vm5r9m4cdri__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -190,7 +265,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `57ed05c916b6`
+- **evaluator revision(s)** `57ed05c916b6` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt162oh478g2biv5efb9__records.jsonl`](results/records/bt162oh478g2biv5efb9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -205,7 +280,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `37bd76ed23e7`
+- **evaluator revision(s)** `37bd76ed23e7` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt169vanpqh4u7no7n8c__records.jsonl`](results/records/bt169vanpqh4u7no7n8c__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -220,7 +295,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `d00a2b1e4684`
+- **evaluator revision(s)** `d00a2b1e4684` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt16kl6q356klkg1v3vv__records.jsonl`](results/records/bt16kl6q356klkg1v3vv__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -235,7 +310,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 44}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `9ec56e449a3f`
+- **evaluator revision(s)** `9ec56e449a3f` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt17hai4org559f794t0__records.jsonl`](results/records/bt17hai4org559f794t0__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -252,7 +327,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `2306f138e6f4`
+- **evaluator revision(s)** `2306f138e6f4` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt18gmov8nbfkkd117s6__records.jsonl`](results/records/bt18gmov8nbfkkd117s6__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -267,7 +342,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `527f5293da65`
+- **evaluator revision(s)** `527f5293da65` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt19u2koj34i168otpkg__records.jsonl`](results/records/bt19u2koj34i168otpkg__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -282,7 +357,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,240 → 10,240 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `a8664a7f98dc`
+- **evaluator revision(s)** `a8664a7f98dc` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1ag9egnoj6n8qvsdkj__records.jsonl`](results/records/bt1ag9egnoj6n8qvsdkj__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -292,7 +367,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `8d5c1dd0b4b3`
+- **evaluator revision(s)** `8d5c1dd0b4b3` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1aj1snkvadphens74o__records.jsonl`](results/records/bt1aj1snkvadphens74o__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -311,7 +386,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `4ad7d3b878ad`
+- **evaluator revision(s)** `4ad7d3b878ad` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1aseskh66dnv9i3qe5__records.jsonl`](results/records/bt1aseskh66dnv9i3qe5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -321,7 +396,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `4ad7d3b878ad`
+- **evaluator revision(s)** `4ad7d3b878ad` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1baht74a35e6uq582c__records.jsonl`](results/records/bt1baht74a35e6uq582c__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -331,7 +406,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `f73ea91df759`
+- **evaluator revision(s)** `f73ea91df759` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1c4setfkq5ltaeog24__records.jsonl`](results/records/bt1c4setfkq5ltaeog24__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -356,7 +431,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `221eb86c1574`
+- **evaluator revision(s)** `221eb86c1574` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl`](results/records/bt1crbkhqkpi8s7ngqf9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -371,7 +446,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,112 → 10,000 (3 distinct)
 - **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `d3c8b96aaac7`
+- **evaluator revision(s)** `d3c8b96aaac7` **SUPERSEDED** (live is `0be006e48012`)
 - **records** [`results/records/bt1d8jicbkdu1jv87ogp__records.jsonl`](results/records/bt1d8jicbkdu1jv87ogp__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -386,7 +461,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `4ad7d3b878ad`
+- **evaluator revision(s)** `4ad7d3b878ad` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1dpq4tnemmkvp3sccg__records.jsonl`](results/records/bt1dpq4tnemmkvp3sccg__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -396,7 +471,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `4ad7d3b878ad`
+- **evaluator revision(s)** `4ad7d3b878ad` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1e78hbs4s946aje3q9__records.jsonl`](results/records/bt1e78hbs4s946aje3q9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -406,7 +481,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,000 → 100,000 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `4ad7d3b878ad`
+- **evaluator revision(s)** `4ad7d3b878ad` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1e81rq286p23d3l4l9__records.jsonl`](results/records/bt1e81rq286p23d3l4l9__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -416,7 +491,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `afb08ef39aac`
+- **evaluator revision(s)** `afb08ef39aac` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1efkde2vj17k5i1ptr__records.jsonl`](results/records/bt1efkde2vj17k5i1ptr__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -431,7 +506,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a59369ad1809`
+- **evaluator revision(s)** `a59369ad1809` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1f2sh036f97n55972v__records.jsonl`](results/records/bt1f2sh036f97n55972v__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -446,7 +521,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `f73ea91df759`
+- **evaluator revision(s)** `f73ea91df759` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl`](results/records/bt1f6t7lggvmuo5eg2b0__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -461,7 +536,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 8,192 (2 distinct)
 - **phases** {'eval': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `7d1a7bfe31d9`
+- **evaluator revision(s)** `7d1a7bfe31d9` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1felsu3m2p4q3rolnd__records.jsonl`](results/records/bt1felsu3m2p4q3rolnd__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -476,7 +551,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a9fe0cbf3b31`
+- **evaluator revision(s)** `a9fe0cbf3b31` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1fjub0768p8bovh2n8__records.jsonl`](results/records/bt1fjub0768p8bovh2n8__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -491,7 +566,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `3e852ba2c2d1`
+- **evaluator revision(s)** `3e852ba2c2d1` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1h73oou888t1duau73__records.jsonl`](results/records/bt1h73oou888t1duau73__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -506,7 +581,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `f1508942a8d4`
+- **evaluator revision(s)** `f1508942a8d4` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1hmjrbg4711e4nl32d__records.jsonl`](results/records/bt1hmjrbg4711e4nl32d__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -521,7 +596,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a9fe0cbf3b31`
+- **evaluator revision(s)** `a9fe0cbf3b31` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1hndutvnkl7mhc2njh__records.jsonl`](results/records/bt1hndutvnkl7mhc2njh__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -536,7 +611,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `a213fa620486`
+- **evaluator revision(s)** `a213fa620486` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt1ih8krm2glsh2tqd43__records.jsonl`](results/records/bt1ih8krm2glsh2tqd43__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -561,7 +636,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 100,096 → 100,096 (1 distinct)
 - **phases** {'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `a8664a7f98dc`
+- **evaluator revision(s)** `a8664a7f98dc` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt1jb9bpfb469s1l9602__records.jsonl`](results/records/bt1jb9bpfb469s1l9602__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -571,7 +646,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `19bf295ddfd9`
+- **evaluator revision(s)** `19bf295ddfd9` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1k600n8r2e4divs2dk__records.jsonl`](results/records/bt1k600n8r2e4divs2dk__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -586,7 +661,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a9fe0cbf3b31`
+- **evaluator revision(s)** `a9fe0cbf3b31` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1kj79a5o9gs61qkl96__records.jsonl`](results/records/bt1kj79a5o9gs61qkl96__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -601,7 +676,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,500 → 10,000 (12 distinct)
 - **phases** {'eval': 2, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `d4c73a87c0c3`
+- **evaluator revision(s)** `d4c73a87c0c3` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1kvirgvn7bq6271rtj__records.jsonl`](results/records/bt1kvirgvn7bq6271rtj__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -616,7 +691,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `184329928b51`
+- **evaluator revision(s)** `184329928b51` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1l6pjcb6ak5u17rmci__records.jsonl`](results/records/bt1l6pjcb6ak5u17rmci__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -631,7 +706,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 500 → 10,000 (20 distinct)
 - **phases** {'eval': 2, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `0d060c1be599`
+- **evaluator revision(s)** `0d060c1be599` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1leokcca12vda1enck__records.jsonl`](results/records/bt1leokcca12vda1enck__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -646,7 +721,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,112 → 10,000 (3 distinct)
 - **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `2c1c7cd5888e`
+- **evaluator revision(s)** `2c1c7cd5888e` **SUPERSEDED** (live is `0be006e48012`)
 - **records** [`results/records/bt1lj7qk3vofb21r6k6m__records.jsonl`](results/records/bt1lj7qk3vofb21r6k6m__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -661,7 +736,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `9ec56e449a3f`
+- **evaluator revision(s)** `9ec56e449a3f` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1lmtfcqafcpbh02ai7__records.jsonl`](results/records/bt1lmtfcqafcpbh02ai7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -686,7 +761,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 9,216 → 9,216 (1 distinct)
 - **phases** {'offline-eval': 2}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `204992902a6e`
+- **evaluator revision(s)** `204992902a6e` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl`](results/records/bt1lpo9v9o2d34bvrmo7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -701,7 +776,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `4006036846a6`
+- **evaluator revision(s)** `4006036846a6` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1m638bct3b2rs1g844__records.jsonl`](results/records/bt1m638bct3b2rs1g844__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -716,7 +791,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,112 → 10,000 (3 distinct)
 - **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `763de034c4ec`
+- **evaluator revision(s)** `763de034c4ec` **SUPERSEDED** (live is `0be006e48012`)
 - **records** [`results/records/bt1mg9ens1di936htjc7__records.jsonl`](results/records/bt1mg9ens1di936htjc7__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -731,7 +806,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 4,112 → 10,000 (3 distinct)
 - **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `49158cd2e03a`
+- **evaluator revision(s)** `49158cd2e03a` **SUPERSEDED** (live is `0be006e48012`)
 - **records** [`results/records/bt1n0in75mc91n6btmpv__records.jsonl`](results/records/bt1n0in75mc91n6btmpv__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -746,7 +821,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `92b3ace464e7`
+- **evaluator revision(s)** `92b3ace464e7` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1o6tli53fmgvh4elag__records.jsonl`](results/records/bt1o6tli53fmgvh4elag__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -761,7 +836,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a9fe0cbf3b31`
+- **evaluator revision(s)** `a9fe0cbf3b31` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1ouf9igefipsh0lfm8__records.jsonl`](results/records/bt1ouf9igefipsh0lfm8__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -776,7 +851,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `408acdb7ca58`
+- **evaluator revision(s)** `408acdb7ca58` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1plfp98967v0ouud7h__records.jsonl`](results/records/bt1plfp98967v0ouud7h__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -791,7 +866,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `e081b32ebf63`
+- **evaluator revision(s)** `e081b32ebf63` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1q6a427c9dnvucblr4__records.jsonl`](results/records/bt1q6a427c9dnvucblr4__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -806,7 +881,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a546b36a0b5a`
+- **evaluator revision(s)** `a546b36a0b5a` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl`](results/records/bt1qnn6kkfrqpj0gvrk5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -821,7 +896,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 128 → 10,112 (79 distinct)
 - **phases** {'train': 79, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `0b389baf520b`
+- **evaluator revision(s)** `0b389baf520b` **SUPERSEDED** (live is `9b2d17b47fac`)
 - **records** [`results/records/bt1qqsiccu983njs8fsl__records.jsonl`](results/records/bt1qqsiccu983njs8fsl__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -836,7 +911,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 8,192 (2 distinct)
 - **phases** {'eval': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `35f79dc39a15`
+- **evaluator revision(s)** `35f79dc39a15` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1r29b6em0m0cs74v70__records.jsonl`](results/records/bt1r29b6em0m0cs74v70__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -851,7 +926,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `not recorded`
-- **evaluator revision(s)** `a8664a7f98dc`
+- **evaluator revision(s)** `a8664a7f98dc` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1s4q60d8nsvd4771l5__records.jsonl`](results/records/bt1s4q60d8nsvd4771l5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -861,7 +936,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `06dd8fef0520`
+- **evaluator revision(s)** `06dd8fef0520` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1s71ot06mfqmei9qi5__records.jsonl`](results/records/bt1s71ot06mfqmei9qi5__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -876,7 +951,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `13a3225bba79`
+- **evaluator revision(s)** `13a3225bba79` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1s807o5pbap8ir3knl__records.jsonl`](results/records/bt1s807o5pbap8ir3knl__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -891,7 +966,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (21 distinct)
 - **phases** {'eval': 4, 'train': 21, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `d2a0f6254a07`
+- **evaluator revision(s)** `d2a0f6254a07` **SUPERSEDED** (live is `5851179a61ff`)
 - **records** [`results/records/bt1tjqjmpcnicb6ih739__records.jsonl`](results/records/bt1tjqjmpcnicb6ih739__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -906,7 +981,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 9,216 → 9,216 (1 distinct)
 - **phases** {'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `c1da1ce07f0f`
+- **evaluator revision(s)** `c1da1ce07f0f` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1tjsrd6oglrsq2g92m__records.jsonl`](results/records/bt1tjsrd6oglrsq2g92m__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -931,7 +1006,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 0 → 10,000 (13 distinct)
 - **phases** {'eval': 4, 'train': 11, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `a9fe0cbf3b31`
+- **evaluator revision(s)** `a9fe0cbf3b31` **SUPERSEDED** (live is `bf4be2d2f3d1`)
 - **records** [`results/records/bt1utl06n6mqffrt2jdn__records.jsonl`](results/records/bt1utl06n6mqffrt2jdn__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -946,7 +1021,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 10,240 (5 distinct)
 - **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `99b8332fcb5c`
+- **evaluator revision(s)** `99b8332fcb5c` **SUPERSEDED** (live is `248751f7caca`)
 - **records** [`results/records/bt1v89sh2c00bc1iop0j__records.jsonl`](results/records/bt1v89sh2c00bc1iop0j__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -961,7 +1036,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 8,192 (2 distinct)
 - **phases** {'eval': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `2fe1ee0956d3`
+- **evaluator revision(s)** `2fe1ee0956d3` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1vcs013fq6lk17crou__records.jsonl`](results/records/bt1vcs013fq6lk17crou__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -976,7 +1051,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 2,048 → 8,192 (2 distinct)
 - **phases** {'eval': 2, 'offline-eval': 4}
 - **policy mode(s)** `sample`
-- **evaluator revision(s)** `16e960b1f446`
+- **evaluator revision(s)** `16e960b1f446` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/bt1vo9iqoht83l9q8hun__records.jsonl`](results/records/bt1vo9iqoht83l9q8hun__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -991,7 +1066,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 10,000 → 10,000 (1 distinct)
 - **phases** {'eval': 3, 'offline-eval': 4}
 - **policy mode(s)** `mode`
-- **evaluator revision(s)** `688bd766c049`
+- **evaluator revision(s)** `688bd766c049` **SUPERSEDED** (live is `0b7b90037b79`)
 - **records** [`results/records/bt1vtciqmrt5m4jklupk__records.jsonl`](results/records/bt1vtciqmrt5m4jklupk__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 
@@ -1006,7 +1081,7 @@ Every run whose records this repository holds, with the circumstances each recor
 - **frames** 51,200 → 598,016 (12 distinct)
 - **phases** {'offline-eval': 569}
 - **policy mode(s)** `mode`, `sample`
-- **evaluator revision(s)** `16e960b1f446`
+- **evaluator revision(s)** `16e960b1f446` **SUPERSEDED** (live is `1b092f978fdc`)
 - **records** [`results/records/card0-20260909-035152__records.jsonl`](results/records/card0-20260909-035152__records.jsonl)
 - **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
 - ⚠ **569 row(s) were ASSEMBLED after a reaping**, not delivered by the runner (`scripts/assemble_reaped_delivery.py`). Each carries `_assembled_after_reaping`.
@@ -1034,7 +1109,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 2h ago**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 18h ago**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
@@ -1042,7 +1117,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 4h ago**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 19h ago**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 **1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
@@ -1061,7 +1136,7 @@ Listed rather than omitted, because a catalogue that silently drops what it cann
 6. **`paired?` says whether a difference involving that regime is attributable to the regime.** `train` and `eval-easy` replay identical initial conditions AND identical pixels, so a gap between them is the regime alone. `eval-medium` and `eval-hard` **resample their visual perturbation between passes** -- 62 %/67 % of slots on two independent families -- so their numbers carry perturbation variance on top of episode variance and **no paired claim is available for them**, including the two policy-mode passes on one checkpoint. Measured by `scripts/audit_eval_validity.py`; upstream and deliberate, not a fault.
 7. **Episode counts are NOT uniform, and rows without one are dropped from every weighted mean.** Across the collected fleet, `phase=eval` rows exist at 10, 5, 1 and **None** episodes and `phase=offline-eval` at 3, 5, 10, 20, 30, 100 and 200 -- a one-episode measurement in the same stream as a two-hundred-episode one. A row with no `episodes` cannot be weighted and is excluded; where that happens the episode cell above says `(+N unweightable)` rather than staying silent about it.
 8. **Most collected rows predate `eval_scope` and cannot be classified.** Counted at generation time: of the rows here, only those carrying `evaluator_scope.eval_scope` can be split into curve and endpoint; the rest are reported without that distinction and contribute to no curve or endpoint summary. **No currently collected run has curve-scoped rows at all**, so the curve line below appears only for runs collected after that field existed.
-9. **A superseded evaluator revision is still listed.** Whether a revision is current is `scripts/audit_row_closure.py`'s question, not this file's.
+9. **Superseded revisions are listed AND MARKED.** Each entry says `CURRENT` or `SUPERSEDED` against the live revision for that family, compared by prefix because this register truncates to 12 characters while the identity module returns 64. A record whose family cannot be resolved reads `currency unknown` rather than defaulting to either -- an unknown currency must never read as current. Whether the ROWS INSIDE one entry share a closure is still `scripts/audit_row_closure.py`'s question, not this file's.
 
 ## Overwrite safety
 

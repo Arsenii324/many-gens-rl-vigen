@@ -44,6 +44,24 @@ LOGS = ROOT / "results" / "logs"
 OUT = ROOT / "results" / "PRODUCTION-RUNS.md"
 
 
+def _live_revision_for(rows):
+    """The live evaluator revision for whichever family these rows belong to, or None.
+
+    Returns None rather than guessing when the family cannot be resolved: an unknown currency must
+    read as unknown, never as current.
+    """
+    families = {r.get("family") for r in rows if r.get("family")}
+    if len(families) != 1:
+        return None
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT))
+        from datasphere.native.evaluator_identity import evaluator_family_revision
+        return evaluator_family_revision(ROOT, next(iter(families)))
+    except Exception:                                    # noqa: BLE001 -- unknown stays unknown
+        return None
+
+
 def _rows(path: pathlib.Path) -> list[dict]:
     out = []
     for line in path.read_text(errors="replace").splitlines():
@@ -213,7 +231,27 @@ def build() -> str:
             add(f"- **frames** {frames[0]:,} → {frames[-1]:,} ({len(frames)} distinct)")
         add(f"- **phases** {dict(phases)}")
         add(f"- **policy mode(s)** {', '.join(f'`{m}`' for m in modes) or '`not recorded`'}")
-        add(f"- **evaluator revision(s)** {', '.join(f'`{r}`' for r in revs) or '`none`'}")
+        # [Claude 2026-09-10] MARK CURRENCY, do not merely list the revision. Caveat 9 said "a
+        # superseded evaluator revision is still listed" and left the reader to check. After a bump
+        # that is the single most important fact about a record: four families' records went
+        # superseded in one commit today, and the register presented them identically to the live
+        # one. A reader who cannot tell them apart will quote a number from a tree that no longer
+        # exists.
+        marked = []
+        for r in revs:
+            live = _live_revision_for(rows)
+            if live is None:
+                marked.append(f"`{r}` (currency unknown — family not resolvable)")
+            # PREFIX comparison, not equality: this register stores revisions TRUNCATED (12 chars)
+            # while evaluator_family_revision returns the full 64-char digest, so `r == live` was
+            # never true and the first version of this marked a CURRENT record as SUPERSEDED --
+            # `1b092f978fdc SUPERSEDED (live is 1b092f978fdc)`. Mislabelling a live record as stale
+            # is as bad as the reverse: it retires a number that is still good.
+            elif live.startswith(r) or r.startswith(live):
+                marked.append(f"`{r}` **CURRENT**")
+            else:
+                marked.append(f"`{r}` **SUPERSEDED** (live is `{live[:12]}`)")
+        add(f"- **evaluator revision(s)** {', '.join(marked) or '`none`'}")
         add(f"- **records** [`{path.relative_to(ROOT)}`]({path.relative_to(ROOT)})")
         log_hits = sorted(LOGS.glob(f"{job}*")) if LOGS.is_dir() else []
         if log_hits:
@@ -391,8 +429,12 @@ def build() -> str:
         "without that distinction and contribute to no curve or endpoint summary. **No currently "
         "collected run has curve-scoped rows at all**, so the curve line below appears only for "
         "runs collected after that field existed.")
-    add("9. **A superseded evaluator revision is still listed.** Whether a revision is current is "
-        "`scripts/audit_row_closure.py`'s question, not this file's.")
+    add("9. **Superseded revisions are listed AND MARKED.** Each entry says `CURRENT` or "
+        "`SUPERSEDED` against the live revision for that family, compared by prefix because this "
+        "register truncates to 12 characters while the identity module returns 64. A record whose "
+        "family cannot be resolved reads `currency unknown` rather than defaulting to either -- an "
+        "unknown currency must never read as current. Whether the ROWS INSIDE one entry share a "
+        "closure is still `scripts/audit_row_closure.py`'s question, not this file's.")
     add("")
     add("## Overwrite safety")
     add("")
