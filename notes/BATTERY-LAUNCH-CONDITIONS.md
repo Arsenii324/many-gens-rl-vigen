@@ -72,6 +72,19 @@ Both fixed today, and both mattered for a 45-hour cell:
    because records on a superseded revision are what `populate_evaluator_ledger.py` refuses.
 2. **Places365 train corpus on the host** — 26 GB. Only the 1000-image attestation fixture is
    there. Blocks `svea`, `sgqn`, `soda` production cells, not attestation.
+
+   > **The fixture's archive sha does not match the configs, and that is fine.** Our
+   > `places365-train-attest.tgz` hashes to `308e15c7…` while every config declares
+   > `PLACES365_EXPECTED_SHA256=c08327c5…`. Those answer different questions.
+   > `contract.py check-asset` hashes the **extracted content relative to the directory**, not the
+   > archive: `asset_digest` over the extracted train split returns exactly
+   > `(1000, 'c08327c5baf66746…')` and `check-asset` exits 0. The tarball was repackaged at some
+   > point; the images are the certified ones. **An archive-level digest would have rejected a
+   > legitimate fixture**, and the content digest is the one that certifies what was actually opened.
+   >
+   > Both `PLACES365_EXPECTED_COUNT` **and** `PLACES365_EXPECTED_SHA256` must be set: `run_probe.sh`
+   > reads the second under `set -u`, so omitting it aborts the cell *after* the bootstrap is paid,
+   > with `parameter null or not set` and no other explanation.
 3. **A frame-0 row per family** would give each result its own initialised-network floor. Not
    blocking: C55's random-**action** floor (1.842) already applies and survives the closure change,
    because `probe_floor.py` never reads the observation.
