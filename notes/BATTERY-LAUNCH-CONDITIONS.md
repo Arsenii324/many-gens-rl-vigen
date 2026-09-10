@@ -90,8 +90,24 @@ Both fixed today, and both mattered for a 45-hour cell:
 1. **7/7 evaluator families attested on the current closure.** In progress: idaac and ppg done,
    alda running, ibac_sni/ctrl/svea/soda chained. Nothing launched before this is reportable,
    because records on a superseded revision are what `populate_evaluator_ledger.py` refuses.
-2. **Places365 train corpus on the host** — 26 GB. Only the 1000-image attestation fixture is
-   there. Blocks `svea`, `sgqn`, `soda` production cells, not attestation.
+2. **Places365 — TWO ARTIFACTS, and "Places365" alone is ambiguous.** Say which every time:
+
+   | | images | tar | extracted | on the host? |
+   |---|---:|---:|---:|---|
+   | **attestation fixture** | 1,000 | 468 MB (`places365-train-attest.tgz`) | **563 MB** | **yes**, at `~/rlvigen-assets/places365`, digest `c08327c5` |
+   | **full train corpus** | ~1,803,461 | ~22 GB (`places365standard_easyformat.tar`) | **26.5 GiB** | **no** |
+
+   The fixture **certifies the code path, not the dataset**. It is what the seven-family attestation
+   wave uses and it is sufficient for that. The full corpus is what `svea`, `sgqn` and `soda`
+   *production* cells overlay from, and it is the outstanding acquisition.
+
+   **Mount it, never pass the archive.** `NATIVE_PLACES365_DIR_HOST` mounts one pre-extracted tree
+   read-only and `family.py` charges 0 GiB for it. Passing the archive makes `run_probe.sh` extract
+   a private copy per cell *and* makes `run_on_production_host.sh` `cp` the tarball into each
+   workdir: measured on the fixture, six attempts left six 563 MB trees plus a staged tar. At the
+   full corpus that is **9 cells × (26.5 + 22.4) = 440 GiB against 260 GiB free — it does not
+   fit.** `battery-chain.sh` now requires `PLACES365_DIR_HOST` and refuses with a stated reason
+   rather than passing an archive.
 
    > **The fixture's archive sha does not match the configs, and that is fine.** Our
    > `places365-train-attest.tgz` hashes to `308e15c7…` while every config declares

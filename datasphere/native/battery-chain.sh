@@ -32,10 +32,20 @@ SEEDS="101 102 103"
 PAYLOAD_PREFIX="${PAYLOAD_PREFIX:-payload-v212}"
 RLVIGEN_ARCHIVE="${RLVIGEN_ARCHIVE:-$HOME/rlvigen-assets/rlvigen-door2-90d8b8c4.tgz}"
 [[ -f "$RLVIGEN_ARCHIVE" ]] || { echo "no RL-ViGen archive at $RLVIGEN_ARCHIVE" >&2; exit 2; }
-# Places365 is passed ONLY for the three baselines that enter its block. PLACES365_ARCHIVE must
-# point at the FULL train corpus for production; the 1000-image attestation fixture certifies the
-# code path, not the dataset.
-PLACES365_ARCHIVE="${PLACES365_ARCHIVE:-}"
+# Places365 is MOUNTED, not passed as an archive, and the difference is whether the battery fits.
+#
+# Passing the archive makes run_probe.sh extract its own copy per cell AND makes
+# run_on_production_host.sh `cp` the tarball into that cell's workdir. Measured on the 1000-image
+# fixture: 6 attempts left 6 x 563 MB extracted trees plus a staged tar. At the FULL corpus that is
+# 26.5 GiB extracted + 22.4 GiB staged per cell, and 9 Places365 cells (svea, sgqn, soda x 3 seeds)
+# would need **440 GiB against 260 GiB free** -- it does not fit.
+#
+# NATIVE_PLACES365_DIR_HOST mounts ONE pre-extracted tree READ-ONLY into every cell:
+# 26.5 GiB total, extracted once, 17x less. `family.py` already models this correctly, charging
+# 0 GiB for a mounted corpus because it is on the disk whether we run or not, and run_probe.sh
+# reports `NATIVE_PLACES365_PREEXTRACTED ... (no copy, no extraction this job)`. `:ro` is the
+# wrapper's own choice so one cell cannot corrupt an asset every other cell depends on.
+PLACES365_DIR_HOST="${PLACES365_DIR_HOST:-}"
 
 # family:baseline:vram_mib:cell_timeout_seconds -- timeouts from production-schedule-v100 training
 # hours x 1.5, floored at 4h; the eval allowance is derived by launch-card-cell.sh on top of this.
@@ -72,22 +82,26 @@ for entry in $CELLS; do
     fi
     # Wait for card 0 to be free of OUR cells.
     while [[ -n "$(docker ps -q --filter 'name=cell-c0-')" ]]; do sleep 60; done
-    PLACES_ARG=""
+    PLACES_ENV=()
     case "$base" in
       svea|sgqn|soda)
-        if [[ -z "$PLACES365_ARCHIVE" || ! -f "$PLACES365_ARCHIVE" ]]; then
-          echo "=== $(date +%H:%M:%S) SKIP $tag -- needs Places365 and PLACES365_ARCHIVE is unset ==="
+        if [[ -z "$PLACES365_DIR_HOST" || ! -d "$PLACES365_DIR_HOST" ]]; then
+          echo "=== $(date +%H:%M:%S) SKIP $tag -- needs Places365; set PLACES365_DIR_HOST to a"
+          echo "    PRE-EXTRACTED corpus. Do not pass the archive: 9 such cells would extract"
+          echo "    440 GiB of per-cell copies."
           continue
         fi
-        PLACES_ARG="$PLACES365_ARCHIVE" ;;
+        PLACES_ENV=(NATIVE_PLACES365_DIR_HOST="$PLACES365_DIR_HOST"
+                    NATIVE_PLACES365_SPLIT=train) ;;
     esac
     echo "=== $(date +%H:%M:%S) START $tag  frames=$FRAMES timeout=${timeout_s}s ==="
     env CARD=0 CELLS="$base:$seed" FRAMES="$FRAMES" TASK=Door SEED="$seed" \
       NATIVE_PRODUCTION=1 CELL_TIMEOUT_SECONDS="$timeout_s" NATIVE_HOST_PROFILE=v100 \
       NATIVE_VRAM_CAP_MIB="$vram" CUDA_ROOT=/usr/local/cuda \
       CURVE_EVAL=1 ENDPOINT_EVAL=1 \
+      ${PLACES_ENV[@]+"${PLACES_ENV[@]}"} \
       bash datasphere/native/launch-card-cell.sh "$R/${PAYLOAD_PREFIX}-$fam.tgz" \
-        "$A/$tag-result.tgz" "$RLVIGEN_ARCHIVE" $PLACES_ARG > "$A/$tag.log" 2>&1
+        "$A/$tag-result.tgz" "$RLVIGEN_ARCHIVE" > "$A/$tag.log" 2>&1
     echo "=== $(date +%H:%M:%S) DONE $tag rc=$? ==="
     grep -oE "NATIVE_(CELL_COMPLETED|CELL_FAILED|RECORDS_EMITTED [0-9]+|ENDPOINT_SUPPLEMENTARY_INCOMPLETE)[^=]*" "$A/$tag.log" | tail -3
   done

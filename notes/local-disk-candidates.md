@@ -16,7 +16,13 @@
 
 ## A. MUST NOT be deleted yet — it is the only copy, and the host needs it
 
-### `data/places365_standard/train` — **26 GB**
+### `data/places365_standard/train` — **was 26 GB; now 546 MB**
+
+> **Stale as of 2026-09-10.** The full local tree is gone — `data/places365_standard` on this laptop
+> is **546 MB** (train + val), i.e. the fixture, not the corpus. So the 26 GB copy this section was
+> written about no longer exists locally and cannot be pushed to the host. The production corpus has
+> to be fetched **on the host**, under a declared disk bound. Everything below describes the tree as
+> it was.
 
 **Do not delete. Upload first.**
 
