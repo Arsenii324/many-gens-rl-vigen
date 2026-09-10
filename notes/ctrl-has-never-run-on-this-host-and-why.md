@@ -29,6 +29,41 @@ Nine input channels is `frame_stack=3 x RGB`, so this is the first conv of the p
 A40 REVISED-2. **Every engine failing on a single ordinary 3x3 convolution is a stack problem, not a
 model or memory problem** — the card had 32 GB free.
 
+## THE LEAD, found 2026-09-10 after the jaxlib theory collapsed: GPU ARCHITECTURE
+
+`ctrl` has succeeded exactly once and failed exactly twice, and the two sets differ by the card:
+
+| where | GPU | compute capability | outcome |
+|---|---|---|---|
+| DataSphere, job `bt1n0in75mc91n6btmpv` | **NVIDIA L4**, 23,034 MiB, driver 535.261.03 | **8.9** (Ada) | **attested** |
+| cds2 (this host) | **Tesla V100-SXM2-32GB**, driver 580.126.09 | **7.0** (Volta) | every cuDNN engine rejects the first conv |
+
+**`ctrl` has only ever run on sm_89 and only ever failed on sm_70.** No torch family shows this,
+because `ctrl` is the fleet's only JAX/XLA baseline — `audit_environment_drift.py` already records
+that its CUDA stack differs from every other family's by design.
+
+That reframes the failure. `All algorithms tried for (f32[10,16,64,64], u8[0]) custom-call(...)
+failed` with 32 GB free is what XLA's autotuner reports when **no cuDNN engine it knows covers this
+shape on this architecture** — not a resource problem and not a version mismatch between jax and
+jaxlib, which pip has since confirmed is the pairing upstream intends.
+
+### What would confirm or kill it, cheapest first
+
+1. **Run any trivial JAX convolution on this V100** in the same image. If a bare
+   `jax.lax.conv_general_dilated` on `f32[1,3,8,8]` also fails, the stack does not support Volta at
+   all and nothing about `ctrl` is special.
+2. **`XLA_FLAGS=--xla_gpu_autotune_level=0`** — if the failure is autotuner-only, a default
+   algorithm may run. Changes numerics selection, so it is a diagnostic, not a fix.
+3. **An older jax/jaxlib that predates the Volta drop**, if there is one. `runnable/ctrl`'s own
+   `requirements.txt` still pins `jax[cuda110]==0.2.17`, which is the era when Volta was primary.
+
+### What it means for the battery if confirmed
+
+`ctrl` is 3 of the 36 cells. If this JAX build cannot target sm_70, `ctrl` cannot run on cds2 at
+any profile, and the options are an older JAX, a different card, or reporting `ctrl` as
+not-run-on-this-host. **It is not a configuration mistake to be found by more careful reading** --
+which is where the previous two theories both went wrong.
+
 ## CORRECTION 2026-09-10 — the jax/jaxlib split is NOT the cause, and pinning it made things worse
 
 Everything below about `jax 0.4.35 against jaxlib 0.4.34` being a mismatch is **wrong**. pip's own
