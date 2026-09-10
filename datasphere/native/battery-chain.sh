@@ -33,11 +33,17 @@ alda:alda:8192:103000
 rlvigen:drqv2:4096:35000
 rlvigen:drq:4096:72000
 rlvigen:curl:4096:69000
+dmc_gb:rad:4096:147000
 rlvigen:svea:6144:90000
 rlvigen:sgqn:12288:139000
-dmc_gb:rad:4096:147000
 dmc_gb:soda:8192:277000
 "
+
+# ORDER MATTERS. The last three -- svea, sgqn, soda -- are the only baselines that enter the
+# Places365 block, and the 26 GB train corpus is NOT on the host (only the 1000-image attestation
+# fixture is). Everything above them is runnable today: 27 of the 36 cells. Ordering them last means
+# the corpus acquisition blocks the tail of the campaign rather than its start.
+[[ -n "${PLACES365_ARCHIVE_HOST:-}" ]] || echo "NOTE: PLACES365_ARCHIVE_HOST unset -- svea/sgqn/soda will refuse; the other nine run."
 
 for entry in $CELLS; do
   fam="${entry%%:*}"; rest="${entry#*:}"
