@@ -5,11 +5,11 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**78 job(s), 2905 record row(s), 12 baseline(s).**
+**79 job(s), 2915 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
-| `ibac_sni` | 1387 |
+| `ibac_sni` | 1397 |
 | `idaac` | 657 |
 | `drqv2` | 323 |
 | `rad` | 147 |
@@ -98,6 +98,21 @@ Every run whose records this repository holds, with the circumstances each recor
   |---|---|---:|---:|---:|---:|---:|---|
   | `mode` | eval-easy | 1.32 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
   | `mode` | train | 1.34 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v212-ibac_sni` — ibac_sni
+
+- **cells** `ibac_sni-s1` · **seeds** `1` · **rows** 10
+- **frames** 2,048 → 10,240 (5 distinct)
+- **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `9b2d17b47fac` **CURRENT**
+- **records** [`results/records/attest-v212-ibac_sni__records.jsonl`](results/records/attest-v212-ibac_sni__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 0.70 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
 
 ### `attest-v212-idaac` — idaac
 
