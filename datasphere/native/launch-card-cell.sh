@@ -196,14 +196,55 @@ echo "  both armed and alive"
 #
 # So the container gets the same budget the watches do. If it is still up when that expires, it has
 # already exceeded everything anyone declared for it, and it stops.
+# [Claude 2026-09-10] THE BUDGET NOW STARTS THE CHECK, IT NO LONGER PERFORMS THE KILL.
+#
+# The version above was `sleep $WATCH_SECONDS; docker stop`. Blind wall-clock: a cell one minute
+# from writing its delivery died exactly like a hung one. The comment 60 lines up records how close
+# that came -- an endpoint projected to finish at 18:36 against a reaper at 18:37 -- and what it
+# would have cost: not a lost pass but a lost DELIVERY, because `collect_record_delivery` runs after
+# evaluation, so every record of a 12-hour cell would have been left unassembled.
+#
+# Deriving a better estimate does not fix this, it only moves the cliff. Any budget is a guess, and
+# on a 45-hour cell a guess 10% low destroys the run. So the budget now decides WHEN TO LOOK, and
+# evidence decides whether to stop.
+#
+# The evidence is the container's own output in the last `_stall_window` seconds. run_probe.sh emits
+# continuously -- training rows, per-stamp eval markers, per-row endpoint markers -- and it exports
+# PYTHONUNBUFFERED=1, so silence means stopped rather than buffered. A cell still emitting is doing
+# the work we are waiting for; a cell silent for 15 minutes is hung, and hung is what the reaper is
+# for.
+#
+# Bounded, so this cannot become "no reaper at all": grace is granted in `_stall_window` steps up to
+# NATIVE_REAP_MAX_GRACE_SECONDS, and a silent cell is stopped at the first check regardless of how
+# much grace remains.
 (
   sleep "$WATCH_SECONDS"
-  if [[ -n "$(docker ps -q --filter "name=^${CELL_NAME}$")" ]]; then
-    echo "!! REAPING $CELL_NAME: still running after ${WATCH_SECONDS}s, which is the whole declared" >&2
-    echo "!! budget (cell timeout + bootstrap allowance + slack). Artifacts on the bind mounts are" >&2
-    echo "!! durable; the container is not." >&2
+  _grace_used=0
+  _grace_max="${NATIVE_REAP_MAX_GRACE_SECONDS:-10800}"
+  _stall_window="${NATIVE_REAP_STALL_SECONDS:-900}"
+  while :; do
+    [[ -n "$(docker ps -q --filter "name=^${CELL_NAME}$")" ]] || break
+    _emitted="$(docker logs --since "${_stall_window}s" "$CELL_NAME" 2>&1 | wc -c | tr -d ' ')"
+    if [[ "${_emitted:-0}" -gt 0 && "$_grace_used" -lt "$_grace_max" ]]; then
+      echo "!! $CELL_NAME is OVER BUDGET (${WATCH_SECONDS}s) but STILL EMITTING" >&2
+      echo "!! (${_emitted} bytes in the last ${_stall_window}s). Granting ${_stall_window}s more;" >&2
+      echo "!! ${_grace_used}s of ${_grace_max}s grace used. It is stopped the moment it goes" >&2
+      echo "!! silent, or when the grace runs out." >&2
+      sleep "$_stall_window"
+      _grace_used=$(( _grace_used + _stall_window ))
+      continue
+    fi
+    if [[ "${_emitted:-0}" -gt 0 ]]; then
+      echo "!! REAPING $CELL_NAME: over budget AND out of grace (${_grace_max}s). It was still" >&2
+      echo "!! emitting, so this stop DOES cost work -- raise NATIVE_EVAL_ALLOWANCE_SECONDS or" >&2
+      echo "!! NATIVE_REAP_MAX_GRACE_SECONDS if this recurs." >&2
+    else
+      echo "!! REAPING $CELL_NAME: over budget and SILENT for ${_stall_window}s. Not progressing." >&2
+    fi
+    echo "!! Artifacts on the bind mounts are durable; the container is not." >&2
     docker stop "$CELL_NAME" >/dev/null 2>&1
-  fi
+    break
+  done
 ) &
 reaper_pid="$!"
 
