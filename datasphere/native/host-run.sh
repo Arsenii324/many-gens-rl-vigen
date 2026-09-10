@@ -55,6 +55,45 @@ while getopts ":i:m:rg:n:kd" opt; do
 done
 shift $((OPTIND - 1))
 
+# [Claude 2026-09-10] A WRITABLE MOUNT NEEDS A DECLARED UPPER BOUND. Added after this script was
+# used to start a ~24 GB download onto the shared disk having checked only `df` -- which is a
+# point-in-time observation, not a bound, and is exactly what
+# `notes/production-host/10-resource-upper-bound-rule.md` forbids:
+#
+#   "If you do not know an upper bound on the resources you will occupy, do not run it."
+#
+# Every other host path already enforces this. `run_on_production_host.sh` runs check_disk and
+# refuses; `launch-card-cell.sh` derives an allowance from `family.py disk-requirement` and arms a
+# disk watch. This script had NO disk check at all, so it was the one way to write to a shared
+# filesystem without stating what the write would cost -- and that is the path the drift took.
+#
+# The bound is DECLARED, not derived, because this runner has no cell to derive from: a caller who
+# cannot state a number does not have a bound. The floor reuses the project's own absolute floor
+# rather than inventing a threshold. READ-ONLY mounts (-r) skip the check: they cannot consume.
+if [[ -z "$READONLY" ]]; then
+  _abs_floor="${NATIVE_DISK_ABS_FLOOR_GIB:-50}"
+  # `df -PBG` is a GNU extension: on macOS it exits 64 and, under `set -euo pipefail`, aborted this
+  # script with NO message -- a refusal indistinguishable from a crash, which is the failure mode
+  # this repo has paid for repeatedly. POSIX `-Pk` works on both, and `|| true` keeps a df failure
+  # from aborting before the refusal can be printed.
+  _free="$( { df -Pk "$MOUNT" 2>/dev/null || true; } | awk 'NR==2 {printf "%d", $4/1048576}')"
+  if [[ -z "${HOST_RUN_DISK_BOUND_GIB:-}" ]]; then
+    echo "refusing: $MOUNT is mounted WRITABLE and HOST_RUN_DISK_BOUND_GIB is unset." >&2
+    echo "  State an upper bound in GiB on what this script may write. Not a typical value and not" >&2
+    echo "  a previous run's size: a number the run cannot exceed, with a reason." >&2
+    echo "  Free on $MOUNT right now: ${_free:-unknown} GiB. Absolute floor: ${_abs_floor} GiB." >&2
+    echo "  Mount read-only with -r if the script only reads." >&2
+    exit 2
+  fi
+  if [[ -n "$_free" ]] && (( _free - HOST_RUN_DISK_BOUND_GIB < _abs_floor )); then
+    echo "refusing: bound ${HOST_RUN_DISK_BOUND_GIB} GiB against ${_free} GiB free would leave" >&2
+    echo "  $(( _free - HOST_RUN_DISK_BOUND_GIB )) GiB, below the ${_abs_floor} GiB absolute floor." >&2
+    echo "  This filesystem is SHARED. Filling it breaks every writer on the machine at once." >&2
+    exit 2
+  fi
+  echo "disk bound: ${HOST_RUN_DISK_BOUND_GIB} GiB declared, ${_free:-?} GiB free, floor ${_abs_floor} GiB" >&2
+fi
+
 SCRIPT="${1:?usage: host-run.sh [options] <script-file>|-   (see the header)}"
 if [[ "$SCRIPT" == "-" ]]; then
   BODY="$(cat)"
