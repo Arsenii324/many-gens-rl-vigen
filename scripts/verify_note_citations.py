@@ -59,6 +59,28 @@ CITATION = re.compile(
 IDENTIFIER = re.compile(r"`([A-Za-z_][A-Za-z0-9_.]{2,})`")
 
 
+_BASENAME_INDEX: dict[str, list[pathlib.Path]] | None = None
+
+
+def _basename_index() -> dict[str, list[pathlib.Path]]:
+    """One walk of the tree, not one per citation.
+
+    The first version called `ROOT.rglob(basename)` inside the per-citation loop. Against a tree
+    carrying RL-ViGen, six vendored clones and `ext/`, that is a full walk per reference and the
+    fleet-wide run did not finish in ten minutes. The index is built once and reused.
+    """
+    global _BASENAME_INDEX
+    if _BASENAME_INDEX is None:
+        skip = {".git", "__pycache__", ".venv", "node_modules", ".mypy_cache", ".pytest_cache"}
+        found: dict[str, list[pathlib.Path]] = {}
+        for path in ROOT.rglob("*"):
+            if not path.is_file() or skip.intersection(path.parts):
+                continue
+            found.setdefault(path.name, []).append(path)
+        _BASENAME_INDEX = found
+    return _BASENAME_INDEX
+
+
 def check_note(note: pathlib.Path, window: int) -> list[str]:
     problems: list[str] = []
     lines = note.read_text(errors="replace").splitlines()
@@ -72,8 +94,7 @@ def check_note(note: pathlib.Path, window: int) -> list[str]:
                 # BOTH the live `runnable/ppg/` and the retired `rlgen/algos/ppg/_upstream_*` port,
                 # and a citation that cannot say which is exactly how a stale story survives.
                 if "/" not in rel:
-                    matches = [m for m in ROOT.rglob(rel)
-                               if ".git" not in m.parts and "__pycache__" not in m.parts]
+                    matches = _basename_index().get(rel, [])
                     if len(matches) == 1:
                         target = matches[0]
                     elif len(matches) > 1:
