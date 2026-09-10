@@ -60,6 +60,24 @@ counts against the host's 113 GiB, and the three baselines that need it are mode
 each, so this is under 6 % of one cell's own footprint. The value is printed at launch so a run
 records what it had.
 
+## Constraint 1c — `ctrl` may not be runnable on this host at all
+
+`ctrl` has succeeded **once**, on an **NVIDIA L4** (compute capability **8.9**, Ada) under
+DataSphere, and failed **every** time on cds2's **Tesla V100** (compute capability **7.0**, Volta),
+with every cuDNN engine rejecting its first convolution while 32 GB of the card was free. It is the
+fleet's only JAX/XLA baseline.
+
+Two theories have already been wrong: a jax/jaxlib "mismatch" that pip confirms is upstream's
+intended pairing (`jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == "cuda12"`), and pinning
+jaxlib, which made the environment uninstallable. **The architecture difference is the current
+lead and it is not a configuration mistake findable by more careful reading.**
+
+A queued probe runs a bare `jax.lax.conv_general_dilated` on this V100 in the same image. If a
+trivial conv also fails, this JAX build does not target sm_70 and `ctrl` cannot run here at any
+profile — 3 of the 36 cells — leaving an older JAX, a different card, or reporting `ctrl` as
+not-run-on-this-host. See
+[`ctrl-has-never-run-on-this-host-and-why.md`](ctrl-has-never-run-on-this-host-and-why.md).
+
 ## Constraint 2 — `ppg` is a whole-card job
 
 **26,653 MiB of 32,494** at its auxiliary phase. It cannot be packed with anything. Schedule it
