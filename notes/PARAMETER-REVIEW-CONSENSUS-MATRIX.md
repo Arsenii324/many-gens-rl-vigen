@@ -497,6 +497,16 @@ Review 23 independently confirms the same three upstream facts against the pinne
   rollout truncation, temporal correlation, the distribution of per-update episode phases."* The
   project then measured: 8x256 gives 78.54 IPS against 1x2048's 59.44, worth ~+8.3 GPU-h against a
   ~893 GPU-h campaign, under 1%. **Adopted 1x2048.**
+  > **[Claude 2026-09-10] A36 also made `nminibatch` inexpressible, and four reviews missed it.**
+  > Reviews 17-20 compared the two geometries on sample count, auxiliary cadence, GAE boundaries and
+  > temporal correlation. None asked whether `nminibatch` still *runs*. `minibatch_optimize` splits
+  > the LEADING axis (`Roller.singles_to_multi`: "(batch, time)"), so `ntrain = num_envs`. At
+  > **8x256** the declared `nminibatch=8` fits exactly. At **1x2048** the declared 32 is clamped to
+  > **1**, silently, with a warning that printed 293 times on `card0-20260909-115331` while the cell
+  > recorded `--nminibatch 32`. The axis that mattered was expressibility, and no review had a row
+  > for it. Resolved: `nminibatch: 1` declared, the clamp made fatal, and the arithmetic showing 1
+  > is the *correct* value (it matches PPG's released density and per-step batch size exactly) is in
+  > [`ppg-clip-is-inert-and-that-is-forced.md`](ppg-clip-is-inert-and-that-is-forced.md).
 - **Identity / LR decay**: a source-traced reversal within one day (A36's three "IDENTITY FROZEN"
   sub-entries): frozen as "no decay, because OpenAI PPG has none", then corrected on
   `raileanu21a-supp.pdf` §E's literal sentence — *"We use gamma = 0.99… and linear rate decay over

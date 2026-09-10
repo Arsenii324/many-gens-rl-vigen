@@ -180,6 +180,28 @@ simultaneously; not derivable from any single document.
   idaac-only write-up. **Carries an inline correction**: its SE column and its "400 episodes" are
   both wrong, for the two reasons above.
 
+### 5a. The cross-review matrices — **reachable from here as of 2026-09-10, and they were not**
+
+These are the surfaces that answer "has this axis already been argued about, and by whom". All
+three were unreferenced from this index while being exactly what a reader needs before re-deciding
+anything. On 2026-09-10 a session nearly re-derived a settled ppg question because it found
+`FINDING-on-policy-update-density.md` by grep and never opened the matrix.
+
+- [`PARAMETER-REVIEW-CONSENSUS-MATRIX.md`](PARAMETER-REVIEW-CONSENSUS-MATRIX.md) — **every
+  parameter axis any review has touched, per family**, framed as *dispositions* rather than values
+  because several reviews' position is "keep the value and declare it unfaithful". Start here before
+  changing any constant.
+- [`OPEN-QUESTIONS-LEDGER.md`](OPEN-QUESTIONS-LEDGER.md) — the curated entry point above
+  `scripts/where_is_this_decided.py`, carrying `REVERSED` rows whose content is that a confident
+  position was wrong.
+- [`CONSOLIDATION-DESIGN-2026-09-09.md`](CONSOLIDATION-DESIGN-2026-09-09.md) — why this repo is
+  navigated rather than merged, and the Phase 0 instruction to *measure* navigation cost on real
+  questions first. Its own §4(b) names `where_is_this_decided.py` as the cheap 80 %.
+
+**A known gap in that tool, fixed 2026-09-10**: it is a literal substring search, so a multi-word
+question returned `no occurrences` — a confident false negative. It now decomposes a phrase and
+reports per-term hits instead.
+
 ### 5b. Current exhaustive source-review inputs — **evidence to reconcile, not a replacement for the authority surfaces**
 
 - [`PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md`](PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md) —

@@ -99,7 +99,42 @@ def main() -> int:
 
     hits = search(args.term)
     if not hits:
+        # [Claude 2026-09-10] A MULTI-WORD QUERY MUST NEVER REPORT A BARE ABSENCE.
+        #
+        # `search` is a literal substring test, so a multi-word phrase (a family name plus two
+        # or three parameter names) matches nothing almost by construction -- and
+        # the old message, "no occurrences of ... under notes, docs, ...", reads as "this project
+        # has not considered it". On 2026-09-10 that answer was returned for a question the repo
+        # HAD answered, in notes/FINDING-on-policy-update-density.md, which carried the decisive
+        # arithmetic. A term-by-term grep found it seconds later.
+        #
+        # An instrument that could not run must never read as one that ran, and a phrase search
+        # that found nothing has not searched for the topic. Decompose and report per term.
+        words = [w for w in re.split(r"[^A-Za-z0-9_.\-]+", args.term) if len(w) > 2]
+        if len(words) > 1:
+            print(f"The literal phrase {args.term!r} does not occur. **That is not evidence of "
+                  f"absence** -- this is a substring search, and a phrase rarely appears verbatim.")
+            print("Searching each term separately:\n")
+            any_hit = False
+            for word in words:
+                word_hits = search(word)
+                if not word_hits:
+                    print(f"  {word:<24} 0")
+                    continue
+                any_hit = True
+                by_file = {}
+                for hit in word_hits:
+                    by_file.setdefault(hit["path"], hit)
+                newest = sorted(by_file.values(), key=lambda h: h["date"], reverse=True)[:3]
+                print(f"  {word:<24} {len(word_hits):>4} hit(s) in {len(by_file)} file(s); newest:")
+                for hit in newest:
+                    print(f"  {'':<24}   {hit['date']}  {hit['path']}")
+            if any_hit:
+                print("\nRe-run on the single term that looks closest before concluding anything.")
+            return 1
         print(f"no occurrences of {args.term!r} under {', '.join(SEARCH_DIRS)}")
+        print("Single term, searched literally. Try a shorter or differently-spelled identifier "
+              "before treating this as an absence.")
         return 1
 
     hits.sort(key=lambda h: (h["date"], str(h["path"])), reverse=True)
