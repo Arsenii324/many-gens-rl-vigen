@@ -240,7 +240,7 @@ run_measured() {
   # Killing it here left the ENTIRE evaluation phase unable to see a yield request -- and evaluation
   # is 2.04x the training it follows (measured: 4.95 h train, 10.12 h eval, idaac 600k). Handed to
   # run_one_cell, which retracts it once the cell is genuinely off the card.
-  NATIVE_YIELD_POLLER_PID="$yield_pid"
+  _yield_poller_pid="$yield_pid"
   # [Claude 2026-09-08] Retract the marker. Creating it closed the bootstrap blind spot; never
   # removing it opened a symmetric one at the other end. After the cell exits, our count returns to
   # zero but the observers go on expecting one process of ours -- so a neighbour who takes the card
@@ -552,10 +552,10 @@ json.dump({
 # Idempotent, because `run_one_cell` has several `|| return 1` paths and this must run on all of
 # them; the caller invokes it again on the failure path.
 retract_cell_from_card() {
-  if [[ -n "${NATIVE_YIELD_POLLER_PID:-}" ]]; then
-    kill "$NATIVE_YIELD_POLLER_PID" 2>/dev/null
-    wait "$NATIVE_YIELD_POLLER_PID" 2>/dev/null
-    NATIVE_YIELD_POLLER_PID=""
+  if [[ -n "${_yield_poller_pid:-}" ]]; then
+    kill "$_yield_poller_pid" 2>/dev/null
+    wait "$_yield_poller_pid" 2>/dev/null
+    _yield_poller_pid=""
   fi
   if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
     local _marker="$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"

@@ -18,7 +18,20 @@ def _ppg_descriptor():
 
 
 def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
-    """Descriptor values, not train.py defaults, define production PPG C2."""
+    """Descriptor values, not train.py defaults, define production PPG C2.
+
+    [Claude 2026-09-10] `nminibatch` is 1, not SS E's 32, and that is a correction rather than a
+    drift from the comparator. `minibatch_optimize` splits the LEADING axis and
+    `Roller.singles_to_multi` documents it as "(batch, time)", so `ntrain` is `num_envs`: at SS E's
+    own "1 process" any `nminibatch > 1` is INEXPRESSIBLE. Upstream clamped and warned, 293 times on
+    card0-20260909-115331, while the cell recorded `--nminibatch 32` and executed 1.
+
+    Which value is right is arithmetic, not taste. PPG's released 1-rank recipe is 64x256 = 16384
+    with 1 epoch x 8 minibatches: 8 gradient steps of 2048 samples, 0.00048828 per env frame. Ours
+    at 1x2048 with nminibatch=1 is one step of 2048 samples per 2048 frames -- the SAME density and
+    the SAME per-step batch size. Declaring 32 would have been 32x upstream density on 64-sample
+    steps. See notes/ppg-clip-is-inert-and-that-is-forced.md.
+    """
     ppg = _ppg_descriptor()
     assert ppg["constants"] == {
         # [A36 RESOLVED 2026-09-07] SS E's geometry, adopted after a same-tier paired probe put
@@ -35,7 +48,9 @@ def test_ppg_descriptor_declares_effective_dmc_comparator_parameters():
         # recipe means passing `--lr 3e-4` and leaving the auxiliary optimizer alone. 3e-4 was an
         # inference that one searched rate governed both, applied as if it were a cited value.
         "aux_lr": "5e-4",
-        "nminibatch": "32",
+        # [Claude 2026-09-10] 1, not 32: inexpressible at num_envs=1, and 1 reproduces PPG's own
+        # released update density and per-step batch size exactly. The clamp is now fatal.
+        "nminibatch": "1",
         "entcoef": "0",
         # [Claude 2026-09-07, A36 corrected] SS E's shared grid includes "linear rate decay over
         # 1 million environment steps", and its PPG-specific search covers only

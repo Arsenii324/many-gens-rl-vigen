@@ -56,7 +56,7 @@ def test_the_poller_is_not_killed_before_evaluation_runs():
     text = source()
     endpoint = _line_of(text, 'run_endpoint_eval "$cell_out"')
     for number, line in enumerate(text.splitlines(), 1):
-        if re.search(r'kill "\$(yield_pid|NATIVE_YIELD_POLLER_PID)"', line) and number < endpoint:
+        if re.search(r'kill "\$(yield_pid|_yield_poller_pid)"', line) and number < endpoint:
             raise AssertionError(
                 f"the yield poller is killed at line {number}, before evaluation at {endpoint}; "
                 f"the cell cannot act on a yield request during evaluation"
@@ -70,7 +70,7 @@ def test_retraction_exists_and_is_idempotent():
     block = text[text.index("retract_cell_from_card()"):]
     block = block[:block.index("\n}\n") + 3]
     assert '[[ -e "$_marker" ]]' in block, block
-    assert 'NATIVE_YIELD_POLLER_PID=""' in block, block
+    assert '_yield_poller_pid=""' in block, block
 
 
 def test_retraction_runs_on_the_failure_path_too():
