@@ -29,6 +29,34 @@ Nine input channels is `frame_stack=3 x RGB`, so this is the first conv of the p
 A40 REVISED-2. **Every engine failing on a single ordinary 3x3 convolution is a stack problem, not a
 model or memory problem** — the card had 32 GB free.
 
+## CORRECTION 2026-09-10 — the jax/jaxlib split is NOT the cause, and pinning it made things worse
+
+Everything below about `jax 0.4.35 against jaxlib 0.4.34` being a mismatch is **wrong**. pip's own
+resolver states the intent:
+
+    jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == "cuda12"
+
+**`jax[cuda12]==0.4.35` requires jaxlib 0.4.34 by design.** The cuda12 extra pins it. What I read as
+a broken pair is the pairing upstream ships.
+
+Adding `jaxlib==0.4.35` to `families.json` therefore did not fix ctrl — it made the environment
+**uninstallable**: `ERROR: ResolutionImpossible`, `NATIVE_IMPORT_GATE_SKIPPED ctrl (its dependencies
+did not install)`, and the cell failed in 3.5 minutes instead of reaching a convolution at all.
+Reverted.
+
+**A second thing I got wrong, in the other direction.** I recorded that landing this pin would move
+every family's evaluator revision, and built a plan reordering on it. It does not.
+`evaluator_family_config_revision` hashes `identity_schema`, `semantics`, `family` and
+`scope_fields` — **it never reads families.json's contents**. `pip_requirements` is environment, not
+evaluator-configuration identity, and `gate_environment_manifest` is what covers it. The pin could
+have landed at any time for free, and reverting it cost nothing: all seven revisions are byte-identical
+before and after, so the four attestations completed against the frozen tree still stand.
+
+**So ctrl's real cause is still unknown.** What is established: every cuDNN engine rejects a
+`f32[10,9,64,64]` 3x3 convolution with 32 GB free, and ctrl has never completed on this host while
+its DataSphere attestation succeeded. The environment difference between the two hosts is the place
+to look, not the jax pin.
+
 ## The cause
 
 What the job installed:

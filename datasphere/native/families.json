@@ -1007,7 +1007,6 @@
     "pip_requirements": [
       "numpy==1.26.4",
       "jax[cuda12]==0.4.35",
-      "jaxlib==0.4.35",
       "procgen==0.10.7",
       "flax==0.10.2",
       "optax==0.2.3",

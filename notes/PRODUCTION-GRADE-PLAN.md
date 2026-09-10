@@ -87,6 +87,14 @@ and cannot construct one.
 
 ### Step 2b — the ordering constraint found on 2026-09-10, and it inverts the plan
 
+> **CORRECTED 2026-09-10.** The premise below is false. The `jaxlib` pin lives in
+> `families.json`'s `pip_requirements`, and `evaluator_family_config_revision` never reads that
+> file's contents — it hashes `identity_schema`, `semantics`, `family` and `scope_fields` only. A
+> pip requirement is environment, not evaluator identity. The bump *did* move revisions, but from
+> the `eval_grid.py` edits alone; the pin was free to land at any time and reverting it cost
+> nothing. **The reordering argument stands on its own merits — batching member changes is still
+> right — but not for the reason given here.**
+
 **7/7 is not reachable before the bump, because one of the bump's own items is what unblocks the
 seventh family.** `ctrl` fails on this host with jax 0.4.35 against jaxlib 0.4.34 (every cuDNN engine
 rejects its first convolution). The fix is a `jaxlib` pin in `families.json` — a `CONFIG_MEMBER` —
