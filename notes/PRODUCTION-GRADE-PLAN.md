@@ -85,6 +85,26 @@ revision. Both cells are 6.2×–18.3× it. What frame-0 would add is the *initi
 a different question. It needs a per-family trainer change, since `eval_grid.py` unpickles agents
 and cannot construct one.
 
+### Step 2b — the ordering constraint found on 2026-09-10, and it inverts the plan
+
+**7/7 is not reachable before the bump, because one of the bump's own items is what unblocks the
+seventh family.** `ctrl` fails on this host with jax 0.4.35 against jaxlib 0.4.34 (every cuDNN engine
+rejects its first convolution). The fix is a `jaxlib` pin in `families.json` — a `CONFIG_MEMBER` —
+so applying it moves every family's evaluator revision and voids any attestation standing at the
+time.
+
+Attesting first and fixing second therefore costs two waves of seven. **Land every pending member
+change, freeze, then attest once.** That is Q47's rule — accumulate fixes, validate once against the
+final frozen tree — and it was learned again the hard way here.
+
+The four families attested on 2026-09-10 (`idaac`, `ppg`, `alda`, `ibac_sni`) are **provisional**:
+they will be superseded by the bump. Their value was not the ledger entry. They were the first
+end-to-end runs of this pipeline on the V100 and they found two defects nothing static would have:
+
+- `ctrl`'s jax/jaxlib split, and that **ctrl has never completed on this host**;
+- `launch-card-cell.sh` silently dropping both asset archives, which made `svea`, `sgqn` and `soda`
+  unrunnable through it — 9 of the 36 battery cells.
+
 ### Step 3 — re-attest, then verify on one short cell
 `production_gates.py` back to 7/7, then a single short cell checked with
 `scripts/audit_eval_validity.py --strict`: ids unique, summaries self-consistent, placement paired.
