@@ -280,13 +280,27 @@ register exists to prevent.
 
 **Verdict.** NOT RESOLVED. Lead: ctrl has succeeded only on an NVIDIA L4 (sm_89) and failed only on a Tesla V100 (sm_70). It is the fleet's only JAX/XLA baseline.
 
-**Why.** Two theories were wrong and one was acted on. jax 0.4.35 against jaxlib 0.4.34 is upstream's INTENDED pairing -- pip: 'jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == cuda12' -- and pinning jaxlib made the environment uninstallable (ResolutionImpossible). Reverted.
+**Why.** Two theories were wrong and one was acted on. jax 0.4.35 against jaxlib 0.4.34 is upstream's INTENDED pairing -- pip: 'jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == cuda12' -- and pinning jaxlib made the environment uninstallable (ResolutionImpossible). Reverted. [2026-09-10] The queued probe did NOT test this and must not be read as evidence either way: it ran `ubuntu:24.04`, which has no interpreter, so it printed `pip3: command not found` / `python3: command not found`, measured no convolution at all, and exited rc=0. The hypothesis is exactly as open as before the probe ran.
 
 **Evidence.** `notes/ctrl-has-never-run-on-this-host-and-why.md:1`
 
 **Falsified by.** A bare jax.lax.conv_general_dilated on this V100 in the same image: if a trivial conv also fails, the build does not target sm_70 and ctrl cannot run here at any profile.
 
 **Supersedes.** Two of my own theories, both recorded as wrong in the note.
+
+### `a-probe-in-the-wrong-image-exits-zero` — **traced**
+
+**Q.** The Volta probe ran and reported rc=0. Does that mean ctrl's convolutions work on sm_70?
+
+**Verdict.** No. It measured nothing. The probe ran in `ubuntu:24.04`, a base image with no Python, so both of its commands died with `pip3: command not found` and `python3: command not found` -- and the wrapper still exited rc=0, because the shell's status was the last command's, not the probe's. `~/rlvigen-runs/volta-probe.log` reads as a clean run.
+
+**Why.** This is the project's own rule broken by the instrument meant to settle its last open question: an instrument that could not run must never read as one that ran. A caller keying on rc would have marked the sm_70 lead tested. The image is the defect -- a JAX/XLA probe has to run in the image that HAS the JAX stack, not a bare OS image.
+
+**Evidence.** `docs/resolved-register.json:1`
+
+**Falsified by.** A valid probe must print an actual convolution result or an actual CUDA/XLA error. If its log contains `command not found`, the probe is void whatever its exit code says.
+
+**Supersedes.** Any reading of volta-probe.log rc=0 as evidence about sm_70.
 
 ## reproducibility
 
