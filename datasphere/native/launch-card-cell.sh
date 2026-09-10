@@ -25,8 +25,33 @@
 # typed three times (--gpus, and --device on each watcher) with nothing checking they agreed.
 set -uo pipefail
 
-PAYLOAD="${1:?usage: launch-card-cell.sh <payload.tgz> <result.tgz>}"
-RESULT="${2:?usage: launch-card-cell.sh <payload.tgz> <result.tgz>}"
+PAYLOAD="${1:?usage: launch-card-cell.sh <payload.tgz> <result.tgz> [rlvigen.tgz] [places365.tgz]}"
+RESULT="${2:?usage: launch-card-cell.sh <payload.tgz> <result.tgz> [rlvigen.tgz] [places365.tgz]}"
+# [Claude 2026-09-10] ASSET ARCHIVES MUST REACH THE RUNNER, and until today they could not.
+# `run_on_production_host.sh` takes the RL-ViGen archive as $3 and Places365 as $4, POSITIONALLY --
+# `RLVIGEN_ARCHIVE_HOST="${3:-}"` and `PLACES365_ARCHIVE_HOST="${4:-}"` overwrite whatever the
+# environment holds. This script called it with two arguments, so both were always empty here, and
+# setting them as environment variables looked like it worked and did nothing.
+#
+# It cost the svea attestation: the cell refused with `NATIVE_PLACES365_MISSING these cells need the
+# Places365 val set and no asset archive was passed`, having been launched with
+# PLACES365_ARCHIVE_HOST exported. svea, sgqn and soda are the three baselines that enter the
+# Places365 block, so through this launcher none of them could run at all.
+RLVIGEN_ARCHIVE_ARG="${3:-}"
+PLACES365_ARCHIVE_ARG="${4:-}"
+[[ -z "$RLVIGEN_ARCHIVE_ARG" || -f "$RLVIGEN_ARCHIVE_ARG" ]] || {
+  echo "no such RL-ViGen archive: $RLVIGEN_ARCHIVE_ARG" >&2; exit 2; }
+[[ -z "$PLACES365_ARCHIVE_ARG" || -f "$PLACES365_ARCHIVE_ARG" ]] || {
+  echo "no such Places365 archive: $PLACES365_ARCHIVE_ARG" >&2; exit 2; }
+# These are POSITIONAL downstream, so an empty $3 with a non-empty $4 would shift Places365 into the
+# RL-ViGen slot and be extracted as the wrong asset. Refuse rather than silently mis-place it.
+if [[ -n "$PLACES365_ARCHIVE_ARG" && -z "$RLVIGEN_ARCHIVE_ARG" ]]; then
+  echo "refusing: a Places365 archive was given without an RL-ViGen archive." >&2
+  echo "  run_on_production_host.sh takes them POSITIONALLY (\$3 then \$4), so passing the second" >&2
+  echo "  without the first would hand Places365 to the RL-ViGen slot." >&2
+  echo "  Pass both, in order: launch-card-cell.sh <payload> <result> <rlvigen.tgz> <places365.tgz>" >&2
+  exit 2
+fi
 CARD="${CARD:?set CARD to the GPU index this cell may use}"
 CELLS="${CELLS:?set CELLS, e.g. idaac:101}"
 CELL_TIMEOUT_SECONDS="${CELL_TIMEOUT_SECONDS:?set CELL_TIMEOUT_SECONDS; the watch budget is derived from it}"
@@ -320,7 +345,8 @@ DOCKER_GPUS="\"device=${CARD}\"" \
 NATIVE_YIELD_SENTINEL=/tmp/native-work/yield.sentinel \
 NATIVE_WORK_HOST_DIR="$W/native-work" NATIVE_OUT_HOST_DIR="$W/native-out" \
 NATIVE_RESULT_MIRROR="$W/mirror" \
-  bash datasphere/native/run_on_production_host.sh "$PAYLOAD" "$RESULT"
+  bash datasphere/native/run_on_production_host.sh "$PAYLOAD" "$RESULT" \
+    ${RLVIGEN_ARCHIVE_ARG:+"$RLVIGEN_ARCHIVE_ARG"} ${PLACES365_ARCHIVE_ARG:+"$PLACES365_ARCHIVE_ARG"}
 cell=$?
 echo "=== CELL EXIT=$cell"
 exit "$cell"
