@@ -731,7 +731,7 @@ def _ibac_sni_setup() -> None:
     """ibac_sni evaluates through its OWN `utils.Agent` and its own gym env.
 
     64x64 and `torch_rl` on the path, matching `runnable/_launch/ibac_sni_cell.sh`. The regime and
-    the scene are passed through the environment, because `general.py` reads `RLVIGEN_MODE` and
+    the scene are passed through the environment, because `ibac_sni_runtime.py:65,77` reads `RLVIGEN_MODE` and
     (since 2026-09-03) `RLVIGEN_SCENE_ID` rather than taking arguments -- the clone's own callers
     are its scripts, and widening their signatures would be a deviation for no gain.
     """
@@ -1282,8 +1282,21 @@ def _run_grid(a, agent, record, regimes, scenes, context, frame) -> int:
                                        # join, a re-evaluation, or a query about one anomalous
                                        # episode actually needs. Composite rather than a counter so
                                        # it stays stable under re-runs and unique across the fleet.
+                                       #
+                                       # [Claude 2026-09-10] IT WAS NOT UNIQUE ACROSS THE FLEET.
+                                       # The scope and the action rule were missing, so the endpoint
+                                       # `mode` pass reproduced every id the `sample` pass had
+                                       # already used: on card0-20260909-035152 all 760 mode ids
+                                       # collided, e.g. `idaac-s101-f598016-eval-easy-sc0-e0` naming
+                                       # two episodes with different returns under different action
+                                       # rules. `audit_eval_validity.py` did not see it because it
+                                       # checks uniqueness per FILE and each pass writes its own.
+                                       # An id that names two measurements silently merges the two
+                                       # estimands SAME-AXES-VERDICT forbids pooling.
                                        "eval_episode_ids": [
                                            f"{context['baseline']}-s{context['seed']}-f{frame}"
+                                           f"-{context['eval_scope']}"
+                                           f"-{EVALUATOR_SCOPE.get('eval_policy_mode', 'native')}"
                                            f"-{regime}-sc{scene}-e{i}"
                                            for i in range(len(returns))],
                                        "episode_diagnostics": diagnostics}))

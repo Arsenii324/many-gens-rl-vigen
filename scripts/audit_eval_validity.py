@@ -63,7 +63,14 @@ import re
 import statistics
 import sys
 
-ID = re.compile(r"^(?P<baseline>.+)-s(?P<seed>\d+)-f(?P<frame>\d+)-(?P<regime>[a-z-]+)"
+#: `<baseline>-s<seed>-f<frame>[-<scope>-<policy_mode>]-<regime>-sc<scene>-e<index>`.
+#: The scope and policy-mode fields were added 2026-09-10 because without them the endpoint `mode`
+#: pass reproduced every id the `sample` pass had used -- 760 collisions on one cell. They are
+#: OPTIONAL here so records written before that date still parse: an id that lacks them is old, not
+#: malformed, and refusing to read it would make this audit unusable on the existing corpus.
+ID = re.compile(r"^(?P<baseline>.+?)-s(?P<seed>\d+)-f(?P<frame>\d+)"
+                r"(?:-(?P<scope>curve|endpoint)-(?P<mode>native|sample|mode))?"
+                r"-(?P<regime>train|eval-easy|eval-medium|eval-hard)"
                 r"-sc(?P<scene>\d+)-e(?P<idx>\d+)$")
 
 
