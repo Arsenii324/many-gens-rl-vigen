@@ -5,7 +5,7 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**76 job(s), 2888 record row(s), 12 baseline(s).**
+**77 job(s), 2898 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
@@ -13,7 +13,7 @@ Every run whose records this repository holds, with the circumstances each recor
 | `idaac` | 657 |
 | `drqv2` | 323 |
 | `rad` | 147 |
-| `ppg` | 89 |
+| `ppg` | 99 |
 | `soda` | 85 |
 | `ctrl` | 56 |
 | `alda` | 51 |
@@ -98,6 +98,21 @@ Every run whose records this repository holds, with the circumstances each recor
   |---|---|---:|---:|---:|---:|---:|---|
   | `sample` | eval-easy | 0.73 | ± 0.03 | 0.000 | 5 | 1 | **paired** |
   | `sample` | train | 0.71 | ± 0.01 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v212-ppg` — ppg
+
+- **cells** `ppg-s1` · **seeds** `1` · **rows** 10
+- **frames** 2,048 → 10,240 (5 distinct)
+- **phases** {'train': 5, 'eval': 1, 'offline-eval': 4}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `248751f7caca` **CURRENT**
+- **records** [`results/records/attest-v212-ppg__records.jsonl`](results/records/attest-v212-ppg__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `sample` | eval-easy | 4.66 | ± 1.42 | 0.000 | 5 | 1 | **paired** |
+  | `sample` | train | 3.57 | ± 1.30 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1037211b64e17auo88` — idaac
 
