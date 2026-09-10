@@ -40,6 +40,26 @@ buffers and other tenants, and cannot fail late from fragmentation.
 **Fixing the nine launchers is a hashed-tree edit — `runnable/_launch/*` are payload members — and
 note 26 rules it an owner decision.** It buys predictability, not safety. Not done here.
 
+## Constraint 1b — `/dev/shm` at Docker's 64 MB default kills `svea`, `sgqn` and `soda`
+
+The Places365 overlay loader is the only DataLoader in this fleet, and DataLoader workers pass
+tensors through `/dev/shm`. Neither `run_on_production_host.sh` nor `launch-card-cell.sh` set
+`--shm-size`, so every cell got Docker's 64 MB. `svea` died with
+
+    RuntimeError: DataLoader worker (pid 3676) is killed by signal: Bus error.
+    It is possible that dataloader's workers are out of shared memory.
+
+followed by a wall of `EGLError` from `MjRenderContext.__del__`. **The EGL errors are what the
+failure looks like and are not what it is** — they are the interpreter unwinding after the worker
+died, and chasing them would have led straight into
+[`20-egl-renderer-problem-STATEMENT.md`](production-host/20-egl-renderer-problem-STATEMENT.md) for a
+problem that was not the renderer's.
+
+Set to **2 GiB** (`NATIVE_SHM_SIZE`), stated as a bound rather than a comfort: shm is RAM-backed and
+counts against the host's 113 GiB, and the three baselines that need it are modelled at ~39 GiB RAM
+each, so this is under 6 % of one cell's own footprint. The value is printed at launch so a run
+records what it had.
+
 ## Constraint 2 — `ppg` is a whole-card job
 
 **26,653 MiB of 32,494** at its auxiliary phase. It cannot be packed with anything. Schedule it

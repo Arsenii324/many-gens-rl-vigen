@@ -751,7 +751,26 @@ if [[ -n "${NATIVE_VENV_HOST:-}" ]]; then
   echo "prebuilt env: ${NATIVE_VENV_HOST} -> /opt/rlvigen-env (READ-ONLY), image $_img_digest" >&2
 fi
 
-DOCKER_MOUNT_ARGS=(-v "$WORKDIR:/work"
+# [Claude 2026-09-10] /dev/shm, WITHOUT WHICH svea, sgqn AND soda CANNOT RUN.
+#
+# Docker gives a container 64 MB of /dev/shm. PyTorch DataLoader workers pass tensors through it,
+# and the Places365 overlay loader is the only thing in this fleet that uses one. svea died with
+#
+#   RuntimeError: DataLoader worker (pid 3676) is killed by signal: Bus error.
+#   It is possible that dataloader's workers are out of shared memory.
+#
+# followed by a wall of EGLError teardown noise from `MjRenderContext.__del__`, which is what the
+# failure LOOKS like and is not what it IS -- the renderer errors are the interpreter unwinding
+# after the worker died.
+#
+# 2 GiB is a declared bound, not a guess at comfort: shm is RAM-backed and therefore counts against
+# the host's 113 GiB, and the three baselines that need it are modelled at ~39 GiB RAM each in
+# production-schedule-v100.json, so this is under 6% of one cell's own footprint. Overridable, and
+# the value is printed so a run says what it had.
+NATIVE_SHM_SIZE="${NATIVE_SHM_SIZE:-2g}"
+echo "shm size:       $NATIVE_SHM_SIZE (Docker default is 64m; the Places365 loader needs more)" >&2
+DOCKER_MOUNT_ARGS=(--shm-size "$NATIVE_SHM_SIZE"
+                   -v "$WORKDIR:/work"
                    -v "$NATIVE_OUT_HOST_DIR:/tmp/native-out"
                    -v "$NATIVE_WORK_HOST_DIR:/tmp/native-work"
                    ${PLACES365_RO_ARGS[@]+"${PLACES365_RO_ARGS[@]}"}
