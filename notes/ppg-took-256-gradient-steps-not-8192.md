@@ -1,5 +1,36 @@
 # `ppg`'s policy took 256 gradient steps, not 8,192 — and the trainer said so 291 times
 
+> ## RESOLVED 2026-09-10 — and the conclusion below is inverted, not merely completed
+>
+> This note calls the run *"a severe under-optimisation of PPG"*. **It is not.** Comparing the
+> executed configuration against PPG's own released recipe rather than against our declaration:
+>
+> | | rollout | grad steps | samples/step | steps per env frame |
+> |---|---|---:|---:|---:|
+> | PPG released, 1 rank | 64×256 = 16384 | 8 | 2048 | **0.00048828** |
+> | ours, as executed | 1×2048 = 2048 | 1 | **2048** | **0.00048828** |
+> | ours, as declared (32) | 1×2048 | 32 | 64 | 0.01562500 — **32× upstream** |
+>
+> **Density and per-step batch size are both identical to the release.** The clamp did not damage
+> fidelity to PPG; the declared 32 would have, by a factor of 32. So the defect was the
+> *declaration*, and `families.json` now says `nminibatch: 1` with the derivation recorded there.
+> `minibatch_optimize` raises instead of clamping, so a configuration that cannot execute can no
+> longer be recorded as if it had.
+>
+> **`clipfrac` 0.000 and `approxkl` 1e-13 are therefore correct, not vacuous.** With one minibatch
+> per rollout every update is exactly on-policy, so the ratio *is* 1 by construction. PPG's own 8
+> minibatches sit inside one rollout and drift off-policy across them, which is what makes its
+> clipfrac non-zero. Ours is the more on-policy of the two, not the broken one.
+>
+> **No ppg re-run is required**, and the geometry is unchanged: `32×64` would have made §E's 32
+> expressible but appears in neither PPG's released code nor `raileanu21a-supp.pdf` §E, so it would
+> have traded a false declaration for an unsourced one.
+>
+> What stands unchanged below: the mechanism, the 293 warnings, the auxiliary/policy asymmetry, and
+> that **600k frames is 2.4 % of PPG's native 25M schedule** — 293 policy updates in total. That
+> budget, not the minibatch count, is why ppg reaches shaping-only returns, and it is a stated
+> limitation rather than a defect (`retention-and-eval-depth.md` §3).
+
 **2026-09-09**, from the live `ppg` production cell `card0-20260909-115331`. This supersedes the
 "either the policy is not moving or the diagnostics are vacuous" dilemma left open in
 [`ppg-and-idaac-fail-in-opposite-directions.md`](ppg-and-idaac-fail-in-opposite-directions.md).

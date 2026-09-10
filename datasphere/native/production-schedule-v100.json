@@ -398,7 +398,7 @@
         "gamma": ".99",
         "lr": "3e-4",
         "aux_lr": "5e-4",
-        "nminibatch": "32",
+        "nminibatch": "1",
         "entcoef": "0",
         "lr_decay_env_steps": "1000000"
       },

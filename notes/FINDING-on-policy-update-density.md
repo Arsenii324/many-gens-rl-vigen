@@ -43,6 +43,15 @@
 > still right, and applying it to `ppg` today gives **declared 0.015625, executed 0.000488,
 > upstream 0.000488**. Do not quote the `ppg` number below either.
 >
+> ### Resolved 2026-09-10: the executed value was the right one, and is now the declared one
+>
+> "Exactly PPG's released density, by accident" understates it — the **per-step batch size matches
+> too** (2048 samples in both), so the executed run is a faithful PPG on both axes of its
+> optimisation budget, not merely on their ratio. `families.json` now declares `nminibatch: 1`,
+> making declared = executed = upstream = **0.000488**, and `minibatch_optimize` raises rather than
+> clamping so the two can never diverge silently again. **All four on-policy families are now at
+> 1× their own upstream update density.** No ppg re-run is needed.
+>
 > Left in place rather than deleted: the arithmetic is still the right method, and a note that
 > quietly vanished would take its reasoning with it. But do not quote an `idaac` number from below.
 
