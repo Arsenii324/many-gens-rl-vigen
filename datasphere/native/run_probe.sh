@@ -236,7 +236,11 @@ run_measured() {
   local training_status="$?"
   if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
   if [[ -n "$health_pid" ]]; then kill "$health_pid" 2>/dev/null; wait "$health_pid" 2>/dev/null; fi
-  if [[ -n "$yield_pid" ]]; then kill "$yield_pid" 2>/dev/null; wait "$yield_pid" 2>/dev/null; fi
+  # [Claude 2026-09-10] THE YIELD POLLER OUTLIVES TRAINING, because the card does.
+  # Killing it here left the ENTIRE evaluation phase unable to see a yield request -- and evaluation
+  # is 2.04x the training it follows (measured: 4.95 h train, 10.12 h eval, idaac 600k). Handed to
+  # run_one_cell, which retracts it once the cell is genuinely off the card.
+  NATIVE_YIELD_POLLER_PID="$yield_pid"
   # [Claude 2026-09-08] Retract the marker. Creating it closed the bootstrap blind spot; never
   # removing it opened a symmetric one at the other end. After the cell exits, our count returns to
   # zero but the observers go on expecting one process of ours -- so a neighbour who takes the card
@@ -244,10 +248,12 @@ run_measured() {
   # card is legitimately theirs, and an instrument that cries wolf once it has stopped mattering is
   # one an operator learns to ignore. Marker present means a cell is on the card, and now that is
   # true in both directions.
-  if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
-    rm -f "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
-    echo "=== NATIVE_CELL_ACTIVE_MARKER_CLEARED ===" >&2
-  fi
+  # [Claude 2026-09-10] The marker is NOT retracted here. Its own comment above says "Marker
+  # present means a cell is on the card" -- and during evaluation a cell IS on the card, on `cuda`,
+  # for twice as long as it just trained. Retracting it at the end of TRAINING stood the host-side
+  # exclusivity and yield watches down (`--stop-when-inactive`) for two thirds of the cell's GPU
+  # life. `run_one_cell` retracts it after evaluation instead, which is what the comment already
+  # described and the placement did not do.
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"
@@ -531,7 +537,33 @@ json.dump({
     # number, and that must be visible in the log rather than discovered during analysis.
     echo "=== NATIVE_NO_ENDPOINT_GRID $baseline (set ENDPOINT_EVAL=1 to evaluate the final checkpoint) ===" >&2
   fi
+  retract_cell_from_card
   return 0
+}
+
+# [Claude 2026-09-10] Retract the cell's presence AFTER evaluation, not after training.
+#
+# Two things told the host that a cell was on the card: the in-container sentinel poller (which
+# makes a yield request actionable) and the `cell-active` marker (which keeps the host-side
+# exclusivity and yield watches armed via `--stop-when-inactive`). Both were released when training
+# returned, leaving evaluation -- 2.04x the training time, on `cuda` -- unwatched and unable to
+# yield. A neighbour arriving during those hours would have found us resident and unresponsive.
+#
+# Idempotent, because `run_one_cell` has several `|| return 1` paths and this must run on all of
+# them; the caller invokes it again on the failure path.
+retract_cell_from_card() {
+  if [[ -n "${NATIVE_YIELD_POLLER_PID:-}" ]]; then
+    kill "$NATIVE_YIELD_POLLER_PID" 2>/dev/null
+    wait "$NATIVE_YIELD_POLLER_PID" 2>/dev/null
+    NATIVE_YIELD_POLLER_PID=""
+  fi
+  if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
+    local _marker="$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
+    if [[ -e "$_marker" ]]; then
+      rm -f "$_marker"
+      echo "=== NATIVE_CELL_ACTIVE_MARKER_CLEARED ===" >&2
+    fi
+  fi
 }
 
 # [Claude 2026-09-02 01:50 MSK: run every requested cell even after one fails, then fail the job.
@@ -632,6 +664,11 @@ run_cell_list() {
         echo "=== NATIVE_CELL_FAILED $(cell_id "$spec") ===" >&2
         failed="$failed $(cell_id "$spec")"
       fi
+      # [Claude 2026-09-10] `run_one_cell` has several `|| return 1` paths that skip its own
+      # retraction, and a FAILED cell that leaves the marker up keeps the host watches armed against
+      # a card nobody is using -- a false breach raised exactly when the card is legitimately free.
+      # Idempotent, so calling it on the success path too costs nothing.
+      retract_cell_from_card
     done
   fi
   FAILED_CELLS="${failed# }"
