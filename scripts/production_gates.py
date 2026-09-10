@@ -508,11 +508,76 @@ def gate_environment_manifest():
                    "production host, and the driver/runtime pairing is the specific thing to fix")
 
 
+#: A cell counts as production length at or above this many frames. The battery runs 6e5; IDAAC
+#: floors a requested budget and PPG ceils it, so an exact equality would reject both.
+CANARY_RECORDS_DIR = ROOT / "results" / "records"
+
+CANARY_PRODUCTION_FRAMES = 500_000
+
+#: 4 regimes x (10 certified scenes + the pooled aggregate).
+CANARY_COMPLETE_GRID = 44
+
+
+def _canary_families():
+    """Families whose records show a COMPLETE endpoint grid at production length.
+
+    Derived, not declared. The chain this gate is about -- train, checkpoint, clean reload, full
+    offline grid, records -- leaves exactly one trace that cannot be faked from a short cell: a
+    full-width endpoint grid at a production frame, carrying the checkpoint digest it was measured
+    from. `eval_grid.py` is a separate process invocation, so a row at all IS the clean reload.
+    """
+    import collections
+    grids = collections.defaultdict(set)
+    digests = {}
+    for path in sorted(CANARY_RECORDS_DIR.glob("*.jsonl")) if CANARY_RECORDS_DIR.is_dir() else []:
+        for line in path.read_text(errors="replace").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("phase") != "offline-eval" or row.get("eval_scope") != "endpoint":
+                continue
+            frame = row.get("frame")
+            if not isinstance(frame, int) or frame < CANARY_PRODUCTION_FRAMES:
+                continue
+            mode = ((row.get("evaluator_scope") or {}).get("eval_policy_mode")
+                    or (row.get("conventions") or {}).get("eval_policy_mode") or "?")
+            key = (row.get("baseline"), row.get("cell"), frame, mode)
+            grids[key].add((row.get("regime"), str(row.get("scene_set"))))
+            if row.get("checkpoint_sha256"):
+                digests[key] = row["checkpoint_sha256"]
+    return {k: len(v) for k, v in grids.items() if len(v) >= CANARY_COMPLETE_GRID}, digests
+
+
 def gate_production_canary():
-    """Review 2 gate #15. The full shape, once, per runtime family."""
-    return OWNER, ("train -> checkpoint -> clean reload -> full offline grid -> records -> "
-                   "statistics has never run end to end at production length for any family. The "
-                   "longest real cell is 5.1 h; a 6e5 soda cell is projected at 45 h")
+    """Review 2 gate #15. The full shape, once, per runtime family.
+
+    [Claude 2026-09-10] This returned OWNER from a HARDCODED string asserting the chain "has never
+    run end to end at production length for any family" and that "the longest real cell is 5.1 h".
+    Both became false on 2026-09-09 without the gate noticing, because it inspected nothing:
+    card0-20260909-035152 (idaac, 598016) and card0-20260909-115331 (ppg, 600064) each trained to
+    production length and produced a complete 44-row endpoint grid, and the ppg cell ran 11.5 h.
+
+    The RULING stays the owner's -- one family's chain is not twelve, and a 45 h soda cell is still
+    unattempted. What changes is that the owner now rules on what the records say rather than on a
+    sentence that stopped being true. A gate that states stale evidence produces a wrong decision
+    just as surely as one that computes a wrong value.
+    """
+    complete, digests = _canary_families()
+    if not complete:
+        return OWNER, ("train -> checkpoint -> clean reload -> full offline grid -> records -> "
+                       "statistics has not run end to end at production length for any family in "
+                       "results/records. A 6e5 soda cell is projected at 45 h")
+    shown = ", ".join(f"{baseline} @{frame} ({mode}, {n}/{CANARY_COMPLETE_GRID} rows)"
+                      for (baseline, _cell, frame, mode), n in sorted(complete.items()))
+    return OWNER, (f"the chain HAS run end to end at production length for "
+                   f"{len({k[0] for k in complete})} family(ies): {shown}. Each grid carries the "
+                   f"checkpoint digest it was measured from, and eval_grid.py runs as its own "
+                   f"process, so the clean reload is evidenced rather than assumed. Still OWNER: "
+                   f"one family's chain is not twelve, and the 45 h soda cell is unattempted")
 
 
 def gate_placement_provenance():
