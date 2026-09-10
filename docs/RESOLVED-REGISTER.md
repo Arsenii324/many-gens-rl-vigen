@@ -274,21 +274,23 @@ register exists to prevent.
 
 **Supersedes.** The cost claim in note 26 that fixing the launchers moves evaluator revisions -- runnable/_launch is in no FAMILY_RUNTIME_MEMBERS entry and outside every source-reconstruction tree, so only payload bytes change.
 
-### `ctrl-cudnn-on-volta` — **traced**
+### `ctrl-cudnn-on-volta` — **resolved**
 
 **Q.** Why does ctrl fail on cds2 with every cuDNN engine rejecting its first convolution?
 
-**Verdict.** NOT RESOLVED. Lead: ctrl has succeeded only on an NVIDIA L4 (sm_89) and failed only on a Tesla V100 (sm_70). It is the fleet's only JAX/XLA baseline.
+**Verdict.** CONFIRMED by direct measurement 2026-09-10. On this host's Tesla V100 (sm_70), jax 0.4.35 / jaxlib 0.4.34 computes a matmul correctly and CANNOT run a convolution: a minimal f32[1,3,64,64] x f32[32,3,3,3] conv fails with `INTERNAL: All algorithms tried ... failed`, every cuDNN engine rejected. ctrl therefore cannot run on cds2 with this build. It is 3 of the battery's 36 cells.
 
-**Why.** Two theories were wrong and one was acted on. jax 0.4.35 against jaxlib 0.4.34 is upstream's INTENDED pairing -- pip: 'jax[cuda12] 0.4.35 depends on jaxlib==0.4.34; extra == cuda12' -- and pinning jaxlib made the environment uninstallable (ResolutionImpossible). Reverted. [2026-09-10] The queued probe did NOT test this and must not be read as evidence either way: it ran `ubuntu:24.04`, which has no interpreter, so it printed `pip3: command not found` / `python3: command not found`, measured no convolution at all, and exited rc=0. The hypothesis is exactly as open as before the probe ran.
+**Why.** The probe isolates the cause completely: 32 GB free so it is not memory, a passing matmul so it is not the card, the driver or XLA, and no ctrl code in the process so it is not the baseline. It also is NOT the jaxlib pin -- that was a separate, earlier failure of mine (ResolutionImpossible at the import gate, v212), now reverted; this probe's pip install resolved cleanly and still could not convolve. Two distinct failures wore the same label 'ctrl fails on the V100' and only one of them was real.
 
-**Evidence.** `notes/ctrl-has-never-run-on-this-host-and-why.md:1`
+**Evidence.** `results/logs/volta-conv-probe-2026-09-10.log:1`, `notes/ctrl-has-never-run-on-this-host-and-why.md:17`
 
-**Falsified by.** A bare jax.lax.conv_general_dilated on this V100 in the same image: if a trivial conv also fails, the build does not target sm_70 and ctrl cannot run here at any profile.
+**Falsified by.** A jax/jaxlib/cuDNN build whose kernels cover sm_70 running the same conv on this card. That is a DIFFERENT build, so it does not contradict this row -- it retires it. Re-run: ~/rlvigen-work/jax-volta-probe-v2.sh, exit 0 = refuted, 10 = confirmed.
+
+**Pinned by.** `tests/test_resolved_register_claims_hold.py`
 
 **Supersedes.** Two of my own theories, both recorded as wrong in the note.
 
-### `a-probe-in-the-wrong-image-exits-zero` — **traced**
+### `a-probe-in-the-wrong-image-exits-zero` — **resolved**
 
 **Q.** The Volta probe ran and reported rc=0. Does that mean ctrl's convolutions work on sm_70?
 
@@ -299,6 +301,8 @@ register exists to prevent.
 **Evidence.** `docs/resolved-register.json:1`
 
 **Falsified by.** A valid probe must print an actual convolution result or an actual CUDA/XLA error. If its log contains `command not found`, the probe is void whatever its exit code says.
+
+**Pinned by.** `tests/test_resolved_register_claims_hold.py`
 
 **Supersedes.** Any reading of volta-probe.log rc=0 as evidence about sm_70.
 

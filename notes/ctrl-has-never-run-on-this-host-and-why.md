@@ -132,3 +132,51 @@ the `eval_grid.py` docstring correction. Recorded in
 **Consequence for the battery:** `ctrl` is 3 of the 36 cells and cannot run on this host until this
 is fixed. The other eleven baselines are unaffected — this is a JAX-only stack, and
 `audit_environment_drift.py` already records that `ctrl`'s CUDA differs from every torch family's.
+
+---
+
+## RESOLVED 2026-09-10 — the sm_70 lead is confirmed by direct measurement
+
+Step 1 of the plan above ("run any trivial JAX convolution on this V100 in the same image") was
+executed. Artifact: [`../results/logs/volta-conv-probe-2026-09-10.log`](../results/logs/volta-conv-probe-2026-09-10.log).
+
+```
+jax=0.4.35 jaxlib=0.4.34
+device: Tesla V100-SXM2-32GB compute_capability=7.0
+MATMUL OK  sum=134217728
+CONV FAILED  INTERNAL: All algorithms tried for %cudnn-conv ... failed
+```
+
+The probe isolates the cause completely. 32 GB free, so it is not memory. A matmul returning the
+exactly-correct 134217728, so it is not the card, the driver or XLA. No ctrl code in the process,
+so it is not the baseline. A minimal `f32[1,3,64,64] x f32[32,3,3,3]` convolution — the smallest
+case that could fail — and every cuDNN engine rejects it.
+
+**`ctrl` cannot run on cds2 with this build.** It is 3 of the battery's 36 cells.
+
+### Two failures wore the same label, and only one was real
+
+This note previously held both, correctly, and the distinction is the thing to preserve:
+
+- **Attempt 2** — a real conv failure at `CUDNN_STATUS_EXECUTION_FAILED`. This is the finding, now
+  reproduced in isolation.
+- **v212** — `ERROR: ResolutionImpossible`, `NATIVE_IMPORT_GATE_SKIPPED ctrl (its dependencies did
+  not install)`, dead in 3.5 minutes without reaching a convolution. That was the jaxlib pin, an
+  error of mine, since reverted. **The revert works**: this probe's `pip install 'jax[cuda12]==0.4.35'`
+  resolved cleanly to jaxlib 0.4.34 and still could not convolve.
+
+Had the pin not been reverted first, this probe would have died at the import gate and the sm_70
+question would have stayed open behind a fixable install error.
+
+### What this does NOT say
+
+It does not say ctrl is broken, or that sm_70 cannot do convolutions. It says *this jax/cuDNN
+build* has no engine covering this conv on this card. A build whose kernels cover sm_70 retires
+this row rather than contradicting it. Re-run `~/rlvigen-work/jax-volta-probe-v2.sh`: exit 0
+refutes, exit 10 confirms.
+
+### The first probe measured nothing and reported success
+
+The queued probe ran in `ubuntu:24.04`, which has no interpreter. It printed `python3: command not
+found`, ran no convolution, and **exited rc=0**. A JAX probe has to run in the image carrying the
+JAX stack, and it must exit non-zero when it proves nothing. Recorded as its own register row.

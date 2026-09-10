@@ -171,3 +171,31 @@ def test_a_nonzero_exit_with_nothing_parsed_is_reported_not_swallowed():
 def test_a_clean_run_reports_nothing():
     """The check must still be able to pass, or it is noise rather than a gate."""
     assert _verifier().parse_pytest_outcome("12 passed in 4.2s", 0) == []
+
+
+# --- ctrl-cudnn-on-volta ------------------------------------------------------------------------
+# [Claude 2026-09-10] A hardware fact cannot be re-measured in CI, so what this pins is the CLAIM
+# against drift: the committed probe artifact must keep saying what the register says it says. If
+# someone edits the verdict without a new measurement, or deletes the evidence, this fails.
+
+PROBE_LOG = ROOT / "results" / "logs" / "volta-conv-probe-2026-09-10.log"
+
+
+def test_the_volta_probe_artifact_still_says_what_the_register_claims():
+    assert PROBE_LOG.is_file(), "the probe artifact backing ctrl-cudnn-on-volta is gone"
+    text = PROBE_LOG.read_text(errors="replace")
+    # The card it ran on, so the claim cannot be re-pointed at different hardware.
+    assert "Tesla V100-SXM2-32GB" in text and "compute_capability=7.0" in text
+    # The two halves that make this a CONV finding rather than a broken-GPU finding.
+    assert "MATMUL OK" in text, "without a passing matmul this proves nothing specific to conv"
+    assert "CONV FAILED" in text
+    assert "All algorithms tried" in text
+    # The build measured. A different jaxlib is a different question, not this answer.
+    assert "jax=0.4.35 jaxlib=0.4.34" in text
+
+
+def test_the_probe_was_not_the_void_one():
+    """The first probe exited 0 having run nothing. Absence of these strings is the tell."""
+    text = PROBE_LOG.read_text(errors="replace")
+    assert "command not found" not in text
+    assert "probe python exit=10" in text, "exit 10 is the matmul-OK/conv-FAILED verdict"
