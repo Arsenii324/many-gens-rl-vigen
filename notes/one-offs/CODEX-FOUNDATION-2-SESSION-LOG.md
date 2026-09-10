@@ -3766,11 +3766,11 @@ description: Verify ibac_sni's regime env var and Agent signature
 command: cd /Users/a2mogus/build-projs/ccm-intro-native-recovery-workspace-2026-08-31/projects/many-gens-rl-vigen && grep -rn "RLVIGEN_MODE\|RLVIGEN_EVAL_MODE\|RLVIGEN_SCENE_ID" runnable/ibac_sni/torch_rl/utils/*.py 2>/dev/null | head -5; echo "=== Agent signature ==="; grep -rn "class Agent" -A 6 runnable/ibac_sni/torch_rl/utils/agent.py 2>/dev/null | head -8
 [/external_agent_tool_call]
 [external_agent_tool_result]
-runnable/ibac_sni/torch_rl/utils/general.py:49:    `mode` comes from RLVIGEN_MODE so train / eval-easy / eval-medium / eval-hard select the
-runnable/ibac_sni/torch_rl/utils/general.py:52:    `scene_id` comes from RLVIGEN_SCENE_ID the same way, and for the same reason. It was hardcoded
-runnable/ibac_sni/torch_rl/utils/general.py:81:        scene_id = int(os.environ.get("RLVIGEN_SCENE_ID", "0"))
-runnable/ibac_sni/torch_rl/utils/general.py:84:            "RLVIGEN_SCENE_ID=%r is not an integer; a scene axis that silently falls back to 0 "
-runnable/ibac_sni/torch_rl/utils/general.py:86:            % os.environ.get("RLVIGEN_SCENE_ID"))
+runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:49:    `mode` comes from RLVIGEN_MODE so train / eval-easy / eval-medium / eval-hard select the
+runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:52:    `scene_id` comes from RLVIGEN_SCENE_ID the same way, and for the same reason. It was hardcoded
+runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:81:        scene_id = int(os.environ.get("RLVIGEN_SCENE_ID", "0"))
+runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:84:            "RLVIGEN_SCENE_ID=%r is not an integer; a scene axis that silently falls back to 0 "
+runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:86:            % os.environ.get("RLVIGEN_SCENE_ID"))
 === Agent signature ===
 runnable/ibac_sni/torch_rl/utils/agent.py:5:class Agent:
 runnable/ibac_sni/torch_rl/utils/agent.py-6-    """An abstraction of the behavior of an agent. The agent is able:

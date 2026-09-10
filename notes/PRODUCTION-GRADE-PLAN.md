@@ -74,6 +74,7 @@ implemented on 2026-09-10 and are **in the working tree awaiting the bump**; two
 | `runtime_import_manifest` → digest per row, manifest to a sidecar | 74 % of a 19.7 MB bundle; 2 distinct values over 569 rows; nothing reads it | `scripts/eval_grid.py` (CODE) | open |
 | `ppg` `nminibatch` — assert like `idaac` does | executed config was not the declared one, silently | `runnable/ppg/…` (FAMILY_RUNTIME) | open |
 | write a frame-0 checkpoint | no family has a measured **initialised-network** floor | family runtimes | open — but see below |
+| `eval_grid.py:734` docstring says `general.py` reads `RLVIGEN_MODE`/`RLVIGEN_SCENE_ID` | it moved to `ibac_sni_runtime.py:65,77`; the BEHAVIOUR is intact, the pointer is stale | `scripts/eval_grid.py` (CODE) | open — docstring-only, but it moves every family's revision, so it waits for the bump |
 
 **The frame-0 item is no longer blocking interpretation.** C55's random-**action** floor (1.842,
 `rlvigen_reference.py:87`) applies to these grids and survives the closure change, because

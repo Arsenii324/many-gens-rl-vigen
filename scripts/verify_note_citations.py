@@ -87,7 +87,24 @@ def check_note(note: pathlib.Path, window: int) -> list[str]:
     for index, line in enumerate(lines):
         for match in CITATION.finditer(line):
             rel, number = match.group(1), int(match.group(2))
+            # [Claude 2026-09-10] A BARE BASENAME IS CHECKED FOR AMBIGUITY FIRST, even when
+            # `ROOT/<basename>` happens to exist. The first version tested `ROOT/rel` before the
+            # ambiguity branch, so a bare `train.py` resolved silently to the repo-root train.py --
+            # 123 lines -- while 22 files in this tree carry that name. It then reported 16
+            # citations as "PAST END" that were nothing of the kind. The tool committed the exact
+            # error it exists to catch: resolving an ambiguous reference to whichever file it
+            # happened to find, and reporting the consequence with confidence.
             target = ROOT / rel
+            if "/" not in rel:
+                matches = _basename_index().get(rel, [])
+                if len(matches) > 1:
+                    shown = ", ".join(str(m.relative_to(ROOT)) for m in matches[:3])
+                    problems.append(
+                        f"{note.name}:{index + 1}  cites bare {rel}:{number}, AMBIGUOUS across "
+                        f"{len(matches)} files ({shown}) -- qualify the path")
+                    continue
+                if len(matches) == 1:
+                    target = matches[0]
             if not target.is_file():
                 # A BARE BASENAME is the common case in prose (`ppo.py:130`). Resolve it, and treat
                 # an ambiguous one as a finding rather than picking a winner: `nminibatch` lives in

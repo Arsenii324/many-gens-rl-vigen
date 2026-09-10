@@ -19,7 +19,7 @@ third. Please don't apply one fix to all three.**
 - **`ibac_sni` — traversal is the wrong mechanism and will keep abstaining however many attributes
   you add.** The regime never arrives as a constructor argument: it travels through the
   **environment variables `RLVIGEN_MODE` and `RLVIGEN_SCENE_ID`**, read at
-  `runnable/ibac_sni/torch_rl/utils/general.py:49` and `:81`. So there may be no `_mode` anywhere in
+  `runnable/ibac_sni/torch_rl/ibac_sni_runtime.py:49` and `:81`. So there may be no `_mode` anywhere in
   that chain to find, and an absent attribute is not evidence about the regime. Verify instead that
   the variable equals what was requested *and* that the constructed env reports it back. Note
   `general.py:84` already fails closed on a non-integer `RLVIGEN_SCENE_ID`, so that axis has a
