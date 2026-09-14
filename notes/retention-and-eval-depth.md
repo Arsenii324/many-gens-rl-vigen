@@ -1,5 +1,15 @@
 # What the production run must emit — retention, eval depth, and the cross-scale problem
 
+> **SUPERSEDED IN PART — read this first (stamped 2026-09-14).**
+> Section 1's recommendation of **5 episodes per intermediate stamp is not what ships.**
+> **A20 decided three**, 2026-09-05, and `families.json`'s `curve_eval_episodes: 3` is what every
+> family actually runs — see `docs/EVAL-PROTOCOL.md:490` and each family's
+> `curve_eval_episodes_reason`. This note is kept for the **cost shape** (how eval hours scale with
+> stamps and episodes), which is unchanged and still correct; its specific 5-episode figure is not.
+> Section 0's retention argument — that retained checkpoints make curve depth a reversible choice —
+> is current and was re-verified 2026-09-14 against the host.
+
+
 Written 2026-09-05 at the owner's direction: *don't commit to only derivative results; fine-grained
 train metrics, fine-grained during-training eval results that are not over-aggregated, checkpoints
 from across training that we can actually retrieve and evaluate, and eval runs that report richly so

@@ -129,14 +129,48 @@ evidence they are scientifically intact, formally inadmissible until re-measured
 on the 14 retained ppg policies reproduces an admissible 600k curve and endpoint without the ~4-10
 GPU-hours of training. That is the single most valuable recoverable asset on the host.
 
-## 7. One unverified gap, flagged rather than assumed
+## 7. RETRACTED — the ctrl checkpoint "gap" was my error, not a defect
 
-`ctrl` declares `models/robosuite:{task}/checkpoint_*.msgpack`, but its completed attestation run
-left only `snapshot.pt` and `snapshot_10000.pt` — **no `.msgpack` at all**. At 10k frames with
-`SAVE_EVERY_FRAMES=10000` a single save is expected, so this is not yet evidence of a broken glob.
-But it has never been observed matching. If it does not match, a ctrl production run would retain
-no intermediates and its curve would be the one curve that cannot be re-evaluated after a closure
-change. Worth one check before ctrl runs at 600k, not after.
+An earlier version of this note flagged that `ctrl` declares
+`models/robosuite:{task}/checkpoint_*.msgpack` while its completed run left only `snapshot.pt`,
+and suggested its curve might be non-re-evaluable. **That is wrong and the repo already handles
+it.**
+
+`family.py:1147` dispatches on **content, not filename**, and says why: the runner copies every
+family's checkpoint to `snapshot.pt` whatever it was called, so ctrl's flax msgpack arrives as a
+`.pt`. Verified on the artifact itself — ctrl's `snapshot.pt` is 39,852,774 bytes beginning
+`83 a4 73 74 65 70`, a msgpack map whose first key is `step`. It is the msgpack, renamed.
+`snapshot_10000.pt` is its retained intermediate.
+
+The comment at that line also records that this project made the inverse mistake before — an alda
+terminal save "verified" by its filename rather than its bytes — which is exactly the error I then
+repeated in the opposite direction. Checking the repo first would have cost one grep.
+
+## 7b. What cross-checking the report against the rest of the project turned up
+
+Verified each claim against the docs, descriptors, decision records and operator guide rather than
+only against the host. Two real defects, both now fixed, plus one confirmation:
+
+**The register cited a superseded note.** `curve-depth-vs-endpoint-depth` cited only
+`notes/retention-and-eval-depth.md`, whose section 1 recommends **five** episodes per intermediate
+stamp. The shipped value is **three** — A20, 2026-09-05, recorded in every family's
+`curve_eval_episodes_reason` and in `docs/EVAL-PROTOCOL.md:490`. The decision was correct and
+recorded; the note simply carried no supersession stamp, so a reader opening it directly saw the
+five-episode recommendation as current. EVAL-PROTOCOL.md:490 warns about this exact pattern in its
+own words. The note now carries a stamp at its head, and the row cites the authority first.
+
+**A citation that resolved but pointed at the wrong line.** My corrected row cited
+`families.json:1083` for the curve-depth decision. That line resolves — the file is long enough —
+but holds `save_every_reason` for ctrl; the text meant is at `:166`.
+`verify_resolved_register.py` passed it, because it checked only that a citation RESOLVES.
+Rows may now declare `evidence_expect`, mapping a citation to a substring the cited line must
+actually contain, and the verifier fails when it does not. Falsified before use: pointing an
+anchor at the wrong content makes it exit 1 with the citation named.
+
+**Confirmed rather than corrected:** `campaign_status.py` independently reports
+`36 cells: 35 MISSING, 1 SUPERSEDED`, naming `idaac:101` at frame 598016 on a stale closure. That
+agrees with this audit, and its silence about the 600k ppg run is consistent too — that run was
+never collected, so the campaign tracker cannot see it.
 
 ## 8. Storage, and what is where
 

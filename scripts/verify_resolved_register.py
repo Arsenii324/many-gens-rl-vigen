@@ -99,6 +99,38 @@ def parse_pytest_outcome(stdout: str, returncode: int) -> list[str]:
     return problems
 
 
+
+def check_evidence_semantics(entry: dict, root) -> list[str]:
+    """A citation that resolves can still point at the wrong line.
+
+    [Claude 2026-09-14] Found live: a row cited `families.json:1083` for a curve-depth decision.
+    The line resolves -- the file has 1083 lines -- but it holds `save_every_reason`, a different
+    field entirely; the text meant was at :166. Line-range checking cannot catch that, and the row
+    read as verified. So a row may declare `evidence_expect`, mapping a citation to a substring the
+    cited line (or the two around it) MUST contain. Optional, because most citations point at a
+    file rather than a claim; mandatory in effect wherever a row leans on one exact line.
+    """
+    problems = []
+    for citation, expected in (entry.get("evidence_expect") or {}).items():
+        path, _, lineno = citation.rpartition(":")
+        target = root / path
+        if not target.is_file():
+            problems.append(f"{entry['id']}: evidence_expect cites missing file {path}")
+            continue
+        try:
+            lines = target.read_text(errors="replace").splitlines()
+            i = int(lineno)
+        except (ValueError, OSError):
+            problems.append(f"{entry['id']}: evidence_expect citation {citation} is unparseable")
+            continue
+        window = "\n".join(lines[max(0, i - 2):i + 1])
+        if expected not in window:
+            problems.append(
+                f"{entry['id']}: {citation} does not contain {expected!r} -- the citation resolves "
+                f"but points at the wrong content")
+    return problems
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--run-tests", action="store_true")
@@ -134,6 +166,9 @@ def main() -> int:
                 problems.append(f"{eid}: pinning test {t} does not exist")
             if not pinned:
                 downgraded.append(eid)
+
+    for entry in entries:
+        problems.extend(check_evidence_semantics(entry, ROOT))
 
     if args.run_tests:
         tests = sorted({t for e in entries for t in (e.get("pinned_by") or [])
