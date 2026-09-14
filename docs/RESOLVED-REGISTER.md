@@ -64,6 +64,22 @@ register exists to prevent.
 
 **Pinned by.** `tests/test_resolved_register_claims_hold.py`
 
+### `places365-train-corpus-is-absent-on-purpose` — **resolved**
+
+**Q.** Why is the full Places365 train corpus (~24-26 GB) not on the production host, when 9 of the battery's 36 cells need it?
+
+**Verdict.** Deliberately deferred under the host disk bound, not overlooked. Present on the host: ~/rlvigen-assets/places365/{train,val}, 563 MB, 37,500 images across 21 class directories -- a SUBSET. Full Places365-standard train is 365 classes and ~1.8M images. svea/sgqn/soda production cells need `verify_datasets.py --split train` to see 365 classes, so they refuse today and battery-chain.sh orders them LAST precisely so the missing corpus blocks the tail of the campaign rather than its start.
+
+**Why.** The host filesystem is 20 TB at 99% used with 269 GB free, and the owner's standing rule is that the free remainder is a HARD BOUND on what we ever occupy, not an allowance to fill. Adding ~26 GB extracted (plus any transient archive) spends roughly a tenth of that headroom on a shared machine. An earlier 24 GB download of mine, made after checking `df` but without establishing a bound, was caught as a drift -- the mechanism being substitution of a point-in-time observation for a bound. Attestation never needed it: a fixture certifies the CODE PATH, the dataset is what production needs, and those are different requirements.
+
+**Evidence.** `datasphere/native/battery-chain.sh:68`, `notes/production-host/31-state-at-the-pause-2026-09-10.md:1`
+
+**Falsified by.** If the corpus is acquired, `verify_datasets.py --split train` must report 365 classes ONCE per host before the first svea/sgqn/soda cell, and the disk check must be a bound computed before the download rather than a `df` read after it.
+
+**Pinned by.** `tests/test_card_one_must_process_yield.py`
+
+**Supersedes.** My own description of the on-host asset as a '1000-image fixture'. 1000 is PLACES365_EXPECTED_COUNT, which validates the attestation ARCHIVE; the folder on the host holds 37,500 images across 21 class directories. Both are subsets, but the number was wrong.
+
 ## eval-cost
 
 ### `eval-is-most-of-the-campaign` — **resolved**
