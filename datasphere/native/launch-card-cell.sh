@@ -114,7 +114,45 @@ SLACK="${NATIVE_WATCH_SLACK_SECONDS:-900}"
 # actually scheduled, times a measured seconds-per-episode, times a safety factor. Both evaluation
 # phases cost the same per episode (11.4 s curve, 11.2 s endpoint), so one constant covers both.
 # Floored at the old default, so this can only ever be MORE generous than what ran today.
+# [Claude 2026-09-14] REPO and IMAGE are defined HERE, above the budget block, because the budget
+# now has to ask the descriptor what the eval will actually be. They used to sit below it.
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+IMAGE="${NATIVE_HELPER_IMAGE:-python:3.11-slim}"
+
 _csv_count() { local s="${1:-}"; [[ -z "$s" ]] && { printf 0; return; }; awk -F, '{print NF}' <<<"$s"; }
+# [Claude 2026-09-14] ASK THE DESCRIPTOR, DO NOT GUESS. The eval grid is decided INSIDE the
+# container by `production_env` from families.json; this budget is computed OUT HERE, before the
+# container exists. They had drifted apart, and only one of them governs.
+#
+# Measured: the host assumed 2 curve regimes x 2 scene sets and one policy mode = 316 episodes
+# (1.6 h). production_env actually emits 4 regimes x 11 scene sets over 13 stamps plus a 44-row
+# endpoint at TWO policy modes = 3,476 episodes (17.4 h) -- an 11x underestimate. Corroborated by
+# card0-20260909-115331, whose offline_eval_curve.jsonl holds 572 rows = 13 stamps x 44.
+#
+# With EVAL_ALLOWANCE = max(derived, CELL_TIMEOUT), that left FIVE of twelve baselines -- idaac,
+# ppg, ibac_sni, ctrl, drqv2, so 15 of 36 cells -- with a watch shorter than their evaluation. A
+# reaped cell never reaches `collect_record_delivery`, so the loss is not a lost pass but every
+# record of the run. That is exactly how idaac card0-20260909-035152 died: "STOPPED by watch budget
+# 18:37 MSK during endpoint pass 2".
+#
+# Same class as the curve_eval_episodes 5-vs-3 case: two homes for one number, and the home that is
+# read is not the home that governs. Read the governing one.
+if [[ "${NATIVE_PRODUCTION:-0}" == "1" ]]; then
+  _scope="$(docker run --rm -v "$REPO:/repo:ro" -w /repo "$IMAGE" \
+      python3 datasphere/native/family.py production-env --cells "$CELLS" 2>/dev/null \
+      | grep -E '^(CURVE|ENDPOINT)_EVAL_(REGIMES|SCENES|EPISODES|POLICY_MODES)=' || true)"
+  if [[ -n "$_scope" ]]; then
+    while IFS='=' read -r _k _v; do
+      [[ -n "$_k" ]] && printf -v "$_k" '%s' "$_v"
+    done <<< "$_scope"
+    echo "eval scope:     read from production-env (descriptor), not host defaults"
+  else
+    echo "ABORTING: NATIVE_PRODUCTION=1 but production-env could not be read, so the watch budget"
+    echo "  would be sized from host defaults that underestimate the real grid by ~11x. A cell"
+    echo "  reaped mid-eval loses every record it produced. Refusing rather than guessing."
+    exit 4
+  fi
+fi
 _c_regimes="$(_csv_count "${CURVE_EVAL_REGIMES:-train,eval-easy}")"
 _c_scenes="$(_csv_count "${CURVE_EVAL_SCENES:-0}")"
 _e_regimes="$(_csv_count "${ENDPOINT_EVAL_REGIMES:-train,eval-easy,eval-medium,eval-hard}")"
@@ -136,9 +174,7 @@ echo "                -> ${_derived}s derived at ${_sec_per_episode}s/episode x1
 MUST_COVER=$(( CELL_TIMEOUT_SECONDS + EVAL_ALLOWANCE + BOOTSTRAP_ALLOWANCE ))
 WATCH_SECONDS=$(( MUST_COVER + SLACK ))
 
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 W="${NATIVE_RUN_DIR:-$HOME/rlvigen-runs/card${CARD}-$(date +%Y%m%d-%H%M%S)}"
-IMAGE="${NATIVE_HELPER_IMAGE:-python:3.11-slim}"
 CELL_NAME="cell-c${CARD}-$$"
 EXCL="cell-c${CARD}-exclusivity-$$"
 DISK="cell-c${CARD}-disk-$$"
