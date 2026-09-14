@@ -56,3 +56,64 @@ def test_the_battery_still_only_uses_card_zero():
     chain = (ROOT / "datasphere" / "native" / "battery-chain.sh").read_text()
     cards = set(re.findall(r"\bCARD=(\d+)", chain))
     assert cards == {"0"}, f"battery-chain.sh now targets cards {sorted(cards)}"
+
+
+# --- preflight must refuse a card someone else is already on -------------------------------------
+# [Claude 2026-09-14] Measured on the live host: card 0 held a colleague's job at 5173 MiB / 42%
+# util with 27,322 MiB free, and the preflight printed "OK to start" and exited 0. The memory floor
+# saw 27 GB of room; the util test only fires above --max-util 50. Both thresholds are about how
+# BUSY a card is, and neither answers whether it is OURS. At preflight our cell has not started, so
+# any compute process on the card belongs to someone else -- which needs no ownership test at all.
+
+def _headroom():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_headroom", ROOT / "scripts" / "watch_gpu_headroom.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _row(**kw):
+    base = dict(index=0, used_mib=5173, free_mib=27322, utilization_pct=42, compute_processes=1)
+    base.update(kw)
+    return base
+
+
+def test_preflight_refuses_a_card_with_a_foreign_process(monkeypatch):
+    m = _headroom()
+    monkeypatch.setattr(m, "read", lambda device: _row())
+    assert m.preflight(0, 4000, 50, require_exclusive=True) == 1
+
+
+def test_the_same_card_passes_without_the_flag_which_is_the_bug_this_fixes(monkeypatch):
+    """Pins the old behaviour so the fix cannot be silently reverted to it."""
+    m = _headroom()
+    monkeypatch.setattr(m, "read", lambda device: _row())
+    assert m.preflight(0, 4000, 50) == 0
+
+
+def test_an_empty_card_still_passes_with_the_flag(monkeypatch):
+    """The check must not refuse everything -- that would be a gate nobody can satisfy."""
+    m = _headroom()
+    monkeypatch.setattr(m, "read", lambda device: _row(compute_processes=0, used_mib=0,
+                                                       free_mib=32768, utilization_pct=0))
+    assert m.preflight(0, 4000, 50, require_exclusive=True) == 0
+
+
+def test_the_launcher_passes_require_exclusive_by_default():
+    source = LAUNCHER.read_text()
+    assert "EXCLUSIVE=(--require-exclusive)" in source
+    assert "NATIVE_ALLOW_SHARED_CARD" in source, "the deliberate override must exist"
+    pre = source.index("watch_gpu_headroom.py --preflight")
+    assert "EXCLUSIVE[@]" in source[pre:pre + 300], "the flag is built but never reaches preflight"
+
+
+def test_the_neighbour_yield_is_in_the_repo_and_wired():
+    """It lived only on the host, unversioned and referenced by nothing."""
+    script = ROOT / "datasphere" / "native" / "neighbour-yield.sh"
+    assert script.is_file(), "neighbour-yield.sh is not in the repo"
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    source = LAUNCHER.read_text()
+    assert "NEIGHBOUR_YIELD=" in source and "$REPO/datasphere/native/neighbour-yield.sh" in source
+    assert "nohup bash \"$NEIGHBOUR_YIELD\"" in source, "declared but never started"

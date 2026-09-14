@@ -143,6 +143,9 @@ CELL_NAME="cell-c${CARD}-$$"
 EXCL="cell-c${CARD}-exclusivity-$$"
 DISK="cell-c${CARD}-disk-$$"
 YIELD="cell-c${CARD}-yield-$$"
+# The repo copy is authoritative; it used to exist only on the host, which meant it was
+# unversioned, undeployed and -- as the fork found -- not actually wired to anything.
+NEIGHBOUR_YIELD="${NATIVE_NEIGHBOUR_YIELD:-$REPO/datasphere/native/neighbour-yield.sh}"
 
 mkdir -p "$W/native-work" "$W/native-out" "$W/mirror" || exit 2
 echo "run dir:        $W"
@@ -173,9 +176,16 @@ stand_down() {
 trap stand_down EXIT
 
 echo "=== STEP 0: preflight on card $CARD"
+# [Claude 2026-09-14] --require-exclusive, because every threshold we had could miss a real
+# neighbour. Measured on card 0 while a colleague's job ran: 5173 MiB used, 27,322 MiB free, 42%
+# util, 1 compute process -- the memory floor sees 27 GB of room, the util test only fires above
+# --max-util 50, and the preflight printed "OK to start". At preflight OUR cell does not exist, so
+# any compute process on the card is someone else's and no ownership test is needed to know it.
+EXCLUSIVE=(--require-exclusive)
+[[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]] && { EXCLUSIVE=(); echo "  NOTE: NATIVE_ALLOW_SHARED_CARD=1, preflight will permit a shared card"; }
 docker run --rm -v "$REPO:/repo:ro" -w /repo --gpus "\"device=${CARD}\"" "$IMAGE" \
   python3 scripts/watch_gpu_headroom.py --preflight --device "$CARD" \
-    --need-mib "${NATIVE_NEED_MIB:-4000}"
+    --need-mib "${NATIVE_NEED_MIB:-4000}" ${EXCLUSIVE[@]+"${EXCLUSIVE[@]}"}
 pf=$?
 echo "preflight exit=$pf"
 [[ $pf -ne 0 ]] && { echo "ABORTING: preflight refused the card."; exit 3; }
@@ -227,6 +237,21 @@ docker run -d --rm --name "$YIELD" \
     --max-seconds "$WATCH_SECONDS" --must-cover-seconds "$MUST_COVER" \
     --interval 20 --floor-mib "${NATIVE_FLOOR_MIB:-4000}" >/dev/null \
   || { echo "ABORTING: the yield watch refused to arm."; exit 4; }
+
+# [Claude 2026-09-14] STEP 2b: the PID-based neighbour yield, which until now existed only as a
+# script I ran by hand and therefore protected nothing. The memory floor fires below 4000 MiB free
+# and so cannot see a co-tenant who takes 2 GB of a 32 GB card; the exclusivity watch sees it and
+# only speaks. This acts. It runs on the HOST because it decides ownership with `docker ps`/`docker
+# top` over our OWN containers, which no watcher may do from inside a container -- none of them
+# mounts /var/run/docker.sock, and none should start.
+if [[ -x "$NEIGHBOUR_YIELD" || -f "$NEIGHBOUR_YIELD" ]]; then
+  nohup bash "$NEIGHBOUR_YIELD" "$W/native-work" > "$W/neighbour-yield.log" 2>&1 &
+  NEIGHBOUR_PID=$!
+  echo "  neighbour yield armed on the host, pid $NEIGHBOUR_PID (6 strikes x 30s before yielding)"
+else
+  echo "  NOTE: $NEIGHBOUR_YIELD absent; only the memory floor protects this cell from a co-tenant"
+  NEIGHBOUR_PID=""
+fi
 
 sleep 10
 for c in "$EXCL" "$YIELD"; do

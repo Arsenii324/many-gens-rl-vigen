@@ -118,7 +118,8 @@ def read(device: int) -> dict | None:
     return row
 
 
-def preflight(device: int, need_mib: int, max_util: int) -> int:
+def preflight(device: int, need_mib: int, max_util: int,
+              require_exclusive: bool = False) -> int:
     row = read(device)
     if row is None:
         print("REFUSING: could not read the card. Not knowing is a reason not to run.")
@@ -128,6 +129,22 @@ def preflight(device: int, need_mib: int, max_util: int) -> int:
     verdict = 0
     if row["free_mib"] < need_mib:
         print(f"REFUSING: {row['free_mib']} MiB free is below the {need_mib} MiB this run needs.")
+        verdict = 1
+    # [Claude 2026-09-14] AT PREFLIGHT, OUR CELL DOES NOT EXIST YET. Every compute process on the
+    # card therefore belongs to someone else, and no counting or PID ownership test is needed to
+    # know it -- which is what makes this check trustworthy where a mid-run one is delicate.
+    #
+    # Found live: card 0 held a colleague's job at 42% util with 5173 MiB, and this preflight
+    # PASSED, because the util test only fires above --max-util (default 50). A launch would have
+    # timeshared SMs with a running job that had been going two hours. The memory floor could not
+    # catch it either: 27,595 MiB were free, nowhere near the 4000 MiB floor. The card looked
+    # empty to every threshold we had and was not empty at all.
+    if require_exclusive and row["compute_processes"] > 0:
+        print(f"REFUSING: {row['compute_processes']} compute process(es) already on card "
+              f"{row['index']}, and none of them can be ours -- our cell has not started. "
+              f"The card is not ours to take.")
+        print("  Override deliberately with NATIVE_ALLOW_SHARED_CARD=1 if the owner has said "
+              "sharing this card is acceptable.")
         verdict = 1
     if row["utilization_pct"] > max_util and row["compute_processes"] > 0:
         print(f"REFUSING: the card is at {row['utilization_pct']}% with another process on it. "
@@ -219,6 +236,10 @@ def main() -> int:
     ap.add_argument("--watch", action="store_true")
     ap.add_argument("--need-mib", type=int, default=4000)
     ap.add_argument("--max-util", type=int, default=50)
+    ap.add_argument("--require-exclusive", action="store_true",
+                    help="refuse if ANY compute process is on the card. At preflight "
+                         "our cell does not exist, so every one of them is someone "
+                         "else's.")
     ap.add_argument("--seconds", type=float, default=1800)
     ap.add_argument("--interval", type=float, default=15)
     ap.add_argument("--out")
@@ -230,7 +251,7 @@ def main() -> int:
         if args.device == "all" or "," in args.device:
             print("--preflight is a verdict about ONE card: the one we would run on. Name it.")
             return 2
-        return preflight(int(args.device), args.need_mib, args.max_util)
+        return preflight(int(args.device), args.need_mib, args.max_util, args.require_exclusive)
     devices = visible_devices() if args.device == "all" else [
         int(d) for d in args.device.split(",") if d.strip()]
     if not devices:
