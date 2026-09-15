@@ -25,7 +25,31 @@ groups, clip, process count) has silently moved a deviation past its bound.
 |---|---|---|
 | deviations enumerated and classified | **INHERITED** | `docs/FAITHFULNESS.md`, `notes/faithfulness-reconciliation.md`, patch classes PLATFORM/RESTORES/ENABLES visible in every cell log ("29 already present, 0 unresolved") |
 | deviation review closed | **INHERITED** | five external reviews triaged; `notes/external-review-triage.md`, `review-4-5-triage.md` |
-| hardware-dependent settings do not breach a deviation bound | **OPEN** | This is the owner's specific concern and I have NOT verified it. `num_envs`, `nminibatch`, `procs` differ by host profile; whether any combination moves an effective batch or update count outside what the deviation record allows is unchecked. |
+| hardware-dependent settings do not breach a deviation bound | **HELD** | Checked 2026-09-15. Exactly TWO constants move with host profile, and both move TOWARD upstream. See below. |
+
+### The hardware-vs-fidelity interaction, checked
+
+Enumerated by resolving every family's `constants` under both profiles and diffing. Only two keys
+differ anywhere:
+
+| family | key | datasphere | v100 | what the descriptor says |
+|---|---|---|---|---|
+| `ctrl` | `num_envs` | 16 | **64** | *"the upstream 64-env rollout ... Restore the author's parallelism on the host with enough RAM; DataSphere remains at 16 because its 27 GiB usable envelope cannot hold the estimate"* |
+| `ibac_sni` | `procs` | 1 | **16** | *"Use the upstream IBAC-SNI process count after the Door-specific spawn/factory repair"* |
+
+`n_steps`, `n_minibatch`, `n_minibatch_ctrl` and `frames_per_proc` are FIXED across profiles, so the
+effective batch does scale -- 4x for ctrl, 16x for ibac_sni -- with nothing compensating. **That
+scaling restores upstream rather than departing from it.** The deviation was the small-envelope
+DataSphere setting; the production host is the faithful configuration. I nearly filed this as a
+risk, which is the failure the owner warned about: a parameter that looks wrong alone and is right
+in combination.
+
+**One residual, and it is real.** `ctrl` at the v100 profile is modelled at `cell_ram_gib 54.28` by
+the descriptor's own words "linear extrapolation of the measured 13.57 GiB 16-env peak to 64 envs;
+direct V100 measurement still required", and at 64 envs it takes ~31 GB of a 32 GB card, which is
+why v212 deliberately ran ctrl at the DATASPHERE profile. So ctrl is the one family where fidelity
+(64 envs) and runnability (16 envs) currently disagree, and the disagreement is unmeasured. Any
+ctrl production number must state which profile produced it.
 
 **I am not re-deriving stage 1.** Prior work did it and the project has been bitten by an agent
 "finding" a wrong parameter that was right in combination. The one thing I would add is the OPEN
