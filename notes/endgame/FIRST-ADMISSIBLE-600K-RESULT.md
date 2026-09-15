@@ -42,3 +42,51 @@ landed thirty minutes earlier it would have destroyed a seven-hour run.
 
 **Rule: never write to a script that is running.** Deploy to a new name, or stop the process first.
 The same applies to `rsync` over a live tree, which is how the file came to be replaced at all.
+
+
+---
+
+## The numbers, and the anomaly that is not one
+
+Mean over the ten individual scenes, 20 episodes each, endpoint checkpoint:
+
+| policy mode | train | eval-easy | eval-medium | eval-hard |
+|---|---:|---:|---:|---:|
+| `sample` (ppg's own rule) | 22.69 | 17.96 | **11.67** | 16.70 |
+| `mode` (supplementary pass) | 42.86 | 38.89 | **33.94** | 40.58 |
+
+Two things stand out and both are explained rather than assumed.
+
+**eval-medium scores BELOW eval-hard, in both passes.** That is not a defect and not noise: the
+regimes are not one ordered difficulty axis. `audit_eval_validity.py` records that `eval-medium`
+alone sets **`except_robot=False`**, so it randomises the ROBOT'S OWN APPEARANCE, while eval-easy
+and eval-hard perturb background, colour and lighting with the robot held fixed. A policy trained
+on one robot appearance can reasonably find robot randomisation harder than a moving light. The
+ordering in the names is not an ordering in the distributions.
+
+**`mode` returns are roughly double `sample` returns.** This is the policy-mode split the project
+already blocks comparisons on: ppg, idaac and ibac_sni report a SAMPLED return, the other nine a
+mode return, and `comparison_blocks.py` refuses to rank across that boundary. This measurement is a
+direct quantification of why -- for ppg on Door the same weights score 22.69 or 42.86 depending on
+the action rule alone.
+
+## Validity, checked with the project's own instrument on the new rows
+
+`audit_eval_validity.py` on this file:
+
+```
+1. row summaries match their own raw episodes: PASS
+2. episode ids unique and agreeing with their row: PASS  [1600 ids, 0 duplicated, 0 mismatched]
+3. placement seed identical across regimes and frames: PASS
+4. eval-easy 0% vary | eval-hard 6% | eval-medium 60% | train 1 of 200
+```
+
+The eval-medium rate of 60% reproduces the 62% measured on `card0-20260909-035152` in September --
+an independent run, a different closure, the same property. That is the benchmark behaving as
+documented.
+
+**One new detail worth keeping:** `train` shows **1 of 200** slots varying, where the earlier
+reference measured 0 of 200. Small, but train is supposed to be fully reproducible, so it is either
+the evaluator nondeterminism measured earlier this session (~0.095 SE) surfacing in a reset
+observation, or a single perturbed slot. Not chased further tonight; recorded so it is not
+rediscovered as new.
