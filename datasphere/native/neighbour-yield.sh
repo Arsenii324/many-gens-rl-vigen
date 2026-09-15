@@ -19,7 +19,13 @@
 # Acting = writing the same sentinel yield_gpu_to_neighbour.py writes: the CELL stops itself and
 # checkpoints already on the bind mount survive. No `ps`, no other user's containers inspected.
 set -uo pipefail
-WORK="${1:?usage: neighbour-yield.sh <native-work dir>}"
+WORK="${1:?usage: neighbour-yield.sh <native-work dir> [card]}"
+# [Claude 2026-09-15] THE CARD IS AN ARGUMENT. It was hardcoded to `cell-c0-`, so when the launcher
+# armed this for a cell on card 1 it found none of our containers and printed
+# "no cell of ours on card 0; standing down" three seconds after launch. The card-1 cell then ran
+# for an hour with NO process-level yield at all -- the exact protection card 1 is required to have.
+# It failed silently in the safe direction for the neighbour and the unsafe direction for the rule.
+CARD="${2:-0}"
 SENTINEL="$WORK/yield.sentinel"
 STRIKES_NEEDED=6
 strikes=0
@@ -27,7 +33,7 @@ strikes=0
 our_pids () {                       # every container we own, whatever its role
   local names
   names="$(docker ps --format '{{.Names}}' 2>/dev/null \
-           | grep -E '^(cell-c0-|rlvigen-)' || true)"
+           | grep -E "^(cell-c${CARD}-|rlvigen-)" || true)"
   [[ -z "$names" ]] && return 1
   local any=0
   while read -r c; do
@@ -42,14 +48,14 @@ our_pids () {                       # every container we own, whatever its role
 while :; do
   if ! mapfile -t ours < <(our_pids); then ours=(); fi
   if [[ ${#ours[@]} -eq 0 ]]; then
-    if [[ -z "$(docker ps -q --filter 'name=cell-c0-' 2>/dev/null)" ]]; then
-      echo "$(date +%H:%M:%S) no cell of ours on card 0; standing down"; exit 0
+    if [[ -z "$(docker ps -q --filter "name=cell-c${CARD}-" 2>/dev/null)" ]]; then
+      echo "$(date +%H:%M:%S) no cell of ours on card ${CARD}; standing down"; exit 0
     fi
     echo "$(date +%H:%M:%S) UNKNOWN: our containers exist but docker top gave no pids; strikes reset"
     strikes=0; sleep 30; continue
   fi
 
-  oncard="$(nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader -i 0 2>/dev/null)" \
+  oncard="$(nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader -i "$CARD" 2>/dev/null)" \
     || { echo "$(date +%H:%M:%S) UNKNOWN: nvidia-smi failed; strikes reset"; strikes=0; sleep 30; continue; }
 
   foreign=()
@@ -64,15 +70,15 @@ while :; do
 
   if [[ ${#foreign[@]} -gt 0 ]]; then
     strikes=$((strikes+1))
-    echo "$(date +%H:%M:%S) FOREIGN on card 0 (strike $strikes/$STRIKES_NEEDED), ours=${#ours[@]} pids:"
+    echo "$(date +%H:%M:%S) FOREIGN on card ${CARD} (strike $strikes/$STRIKES_NEEDED), ours=${#ours[@]} pids:"
     printf '    %s\n' "${foreign[@]}"
     if [[ $strikes -ge $STRIKES_NEEDED ]]; then
-      echo "$(date +%H:%M:%S) YIELDING: card 0 held by another party for $((STRIKES_NEEDED*30))s."
-      printf 'yielded at %s: foreign on card 0: %s\n' "$(date +%s)" "${foreign[*]}" > "$SENTINEL"
+      echo "$(date +%H:%M:%S) YIELDING: card ${CARD} held by another party for $((STRIKES_NEEDED*30))s."
+      printf 'yielded at %s: foreign on card ${CARD}: %s\n' "$(date +%s)" "${foreign[*]}" > "$SENTINEL"
       exit 0
     fi
   else
-    [[ $strikes -gt 0 ]] && echo "$(date +%H:%M:%S) card 0 ours alone again; strikes reset"
+    [[ $strikes -gt 0 ]] && echo "$(date +%H:%M:%S) card ${CARD} ours alone again; strikes reset"
     strikes=0
   fi
   sleep 30

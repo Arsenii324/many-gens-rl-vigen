@@ -285,7 +285,7 @@ docker run -d --rm --name "$YIELD" \
 # top` over our OWN containers, which no watcher may do from inside a container -- none of them
 # mounts /var/run/docker.sock, and none should start.
 if [[ -x "$NEIGHBOUR_YIELD" || -f "$NEIGHBOUR_YIELD" ]]; then
-  nohup bash "$NEIGHBOUR_YIELD" "$W/native-work" > "$W/neighbour-yield.log" 2>&1 &
+  nohup bash "$NEIGHBOUR_YIELD" "$W/native-work" "$CARD" > "$W/neighbour-yield.log" 2>&1 &
   NEIGHBOUR_PID=$!
   echo "  neighbour yield armed on the host, pid $NEIGHBOUR_PID (6 strikes x 30s before yielding)"
 else
