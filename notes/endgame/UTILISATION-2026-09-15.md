@@ -59,3 +59,40 @@ carries the reported number, was not.
 1 held (profile constants restore upstream). 2 traced, model unwritten -- weakest claim.
 3 four defects found and fixed today; ctrl's 54.28 GiB extrapolation still unmeasured.
 4 answered by the measurement above and now acted on. 5 running, four cells.
+
+
+---
+
+## Revision, 22:55 MSK — no new training run this booking
+
+**`CURVE_EVAL=0` is refused at production scale, and the refusal is correct.**
+
+```
+=== NATIVE_PRODUCTION_CONFLICT CURVE_EVAL=0 expected=1 ===
+    production settings are frozen at scale; remove the job-config override or set
+    NATIVE_PRODUCTION_STRICT=0 only for a deliberately non-production rehearsal
+```
+
+I had reasoned that the curve is descriptive, the checkpoints are retained, and a curve can be
+rebuilt afterwards -- so skipping it cost nothing recoverable. The guard disagrees with the PREMISE:
+at production scale the protocol is not a menu. Trimming it produces a cell that is not a production
+cell, whatever its frames say, and the only sanctioned escape says "rehearsal" in its own name.
+
+With the full protocol ibac_sni is ~23.7 h (6.3 train + 5.7 curve + 11.7 endpoint) against ~25 h
+left, and card 1 had **902 MiB free** at the time because a colleague grew to 21 GB across three
+processes. A run that cannot finish produces nothing -- a partial training cell has no endpoint and
+therefore no reportable number. **Decision: no new training this booking.** The window goes to
+completing the two banked baselines, which is certain value.
+
+## The recurring self-destruct, fixed at the source
+
+Twice today a packed cell armed a neighbour yield that then stopped it within three minutes: on
+card 1 against a group colleague, on card 0 against two. `NATIVE_ALLOW_SHARED_CARD=1` says
+co-tenants are expected here; the neighbour yield says stop the moment one appears. Arming both is
+incoherent, and the launcher no longer does: in shared mode the memory floor and disk watch stay
+armed, the neighbour yield does not. Harm stays guarded; PRESENCE is what we just agreed to.
+
+## Card placement is now a decision, not a default
+
+Card 1 filled (902 MiB free) while card 0 still had 6.4 GB. `curve-sweep.sh` takes the card as a
+parameter, so the ppg sweep moved to card 0 rather than idling behind a colleague's growth.

@@ -17,8 +17,11 @@
 # by every family launcher), so headroom is the only real protection we have.
 set -uo pipefail
 FAMILY="${FAMILY:?}"; BASELINE="${BASELINE:?}"; SEED="${SEED:?}"; CKPT_DIR="${CKPT_DIR:?}"
+CARD="${CARD:-1}"          # [Claude 2026-09-15] the card is a parameter: card 1 filled up when a
+                           # colleague grew to 21 GB, while card 0 still had 6.4 GB free. A sweep
+                           # pinned to one card idles while the other card is usable.
 MAXCELLS="${MAXCELLS:-6}"; MIN_FREE_MIB="${MIN_FREE_MIB:-6000}"; MIN_FREE_GIB="${MIN_FREE_GIB:-100}"
-LOG="$HOME/rlvigen-runs/curve-sweep-$BASELINE.log"
+LOG="$HOME/rlvigen-runs/curve-sweep-$BASELINE-c$CARD.log"
 say() { printf '%s %s\n' "$(date -Is)" "$*" >> "$LOG"; }
 
 mapfile -t STAMPS < <(ls "$CKPT_DIR" 2>/dev/null | grep -E '\.(pt|jd|msgpack)$' | sort)
@@ -41,8 +44,8 @@ for f in "${STAMPS[@]}"; do
   [[ -f "$HOME/rlvigen-runs/reeval-v214/$tag-result.tgz" ]] && { say "SKIP $tag (result present)"; continue; }
 
   while :; do
-    ours=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -cE '^cell-c1-[0-9]+$')
-    freemib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i 1 2>/dev/null)
+    ours=$(docker ps --format '{{.Names}}' 2>/dev/null | grep -cE "^cell-c${CARD}-[0-9]+$")
+    freemib=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$CARD" 2>/dev/null)
     freegib=$(df -Pk "$HOME" | awk 'NR==2{printf "%d", $4/1048576}')
     if (( ours < MAXCELLS )) && (( ${freemib:-0} > MIN_FREE_MIB )) && (( ${freegib:-0} > MIN_FREE_GIB )); then break; fi
     say "waiting: cells=$ours/$MAXCELLS vram_free=${freemib}MiB disk_free=${freegib}GiB"
@@ -51,7 +54,7 @@ for f in "${STAMPS[@]}"; do
 
   say "launching $tag (frame=$frame, file=$f)"
   FAMILY="$FAMILY" BASELINE="$BASELINE" SEED="$SEED" FRAME="$frame" TAG="$tag" \
-    SNAP="$CKPT_DIR/$f" EXPECT_OURS="$MAXCELLS" TIMEOUT_S=3600 ALLOWANCE_S=14400 \
+    SNAP="$CKPT_DIR/$f" EXPECT_OURS="$MAXCELLS" TIMEOUT_S=3600 ALLOWANCE_S=14400 CARD="$CARD" \
     nohup setsid bash "$HOME/rlvigen-work/reeval-cell.sh" curve >> "$LOG" 2>&1 &
   sleep 90    # let the launcher take its slot before the next occupancy count
 done

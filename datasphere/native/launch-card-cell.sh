@@ -296,7 +296,19 @@ docker run -d --rm --name "$YIELD" \
 # only speaks. This acts. It runs on the HOST because it decides ownership with `docker ps`/`docker
 # top` over our OWN containers, which no watcher may do from inside a container -- none of them
 # mounts /var/run/docker.sock, and none should start.
-if [[ -x "$NEIGHBOUR_YIELD" || -f "$NEIGHBOUR_YIELD" ]]; then
+# [Claude 2026-09-15] DO NOT arm the neighbour yield on a card we have deliberately chosen to
+# share. NATIVE_ALLOW_SHARED_CARD says "co-tenants are expected and acceptable here"; the neighbour
+# yield says "stop the moment a co-tenant appears". Arming both means every packed cell stops
+# itself within three minutes of starting, which is exactly what happened twice today -- once on
+# card 1 against a group colleague, once on card 0 against two.
+#
+# The memory floor and the disk watch stay armed in both modes. They protect against harm; the
+# neighbour yield protects against PRESENCE, and presence is the thing we just agreed to.
+if [[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]]; then
+  echo "  neighbour yield NOT armed: this card is shared by choice (NATIVE_ALLOW_SHARED_CARD=1)."
+  echo "        The memory floor and disk watch remain armed."
+  NEIGHBOUR_PID=""
+elif [[ -x "$NEIGHBOUR_YIELD" || -f "$NEIGHBOUR_YIELD" ]]; then
   nohup bash "$NEIGHBOUR_YIELD" "$W/native-work" "$CARD" > "$W/neighbour-yield.log" 2>&1 &
   NEIGHBOUR_PID=$!
   echo "  neighbour yield armed on the host, pid $NEIGHBOUR_PID (6 strikes x 30s before yielding)"
