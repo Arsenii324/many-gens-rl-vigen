@@ -1,7 +1,10 @@
-# OPEN — re-evaluating ppg's 600k checkpoint does not reproduce its recorded value
+# RESOLVED — the evaluator is slightly nondeterministic; the estimand did not change
 
-**Status: OPEN. Nothing else should run until this is understood.** That rule is from this
-session's own plan, written before the result was known.
+**Status: RESOLVED 2026-09-15.** It blocked for about an hour and the block was correct to apply.
+The conclusion reverses: the difference is evaluator noise, not a changed measurement, and my own
+STOP condition was mis-specified -- it said "differs", where it should have said "differs beyond
+evaluator noise". Comparing two numbers without first measuring the instrument's own spread is
+exactly the error [[a-scale-is-not-a-result]] names.
 
 ## The measurement
 
@@ -79,3 +82,51 @@ If a row's value depends on sweep breadth, then two things this project relies o
 
 Neither is established yet. Both are cheap to test and must be, before any sampling baseline's
 numbers are reported.
+
+
+---
+
+## RESOLUTION — repeat the identical invocation, then put it in scale
+
+A second run of the **byte-identical** invocation did not reproduce the first:
+
+| run | value | sd |
+|---|---|---|
+| run 1, narrow sweep | 25.794515705108644 | 14.246 |
+| run 2, narrow sweep, identical command | **26.052958893775940** | 14.390 |
+| recorded 2026-09-09, full grid | 26.099544954299926 | 14.257 |
+
+So the evaluator is **nondeterministic run to run**, despite every row recording
+`deterministic_setting={'enabled': True, 'mode': 'torch.use_deterministic_algorithms'}`. That is a
+real property and it is now documented rather than assumed away. It also means the test I designed
+-- "reproduce the old number exactly" -- could never have passed, whatever the truth was.
+
+**In scale, the effect is small:**
+
+```
+spread across the three runs : 0.3050
+one standard error at n=20   : 3.1971      (sd 14.3 / sqrt 20)
+spread as a fraction of 1 SE : 0.095
+old vs mean(new)             : +0.176  =  0.055 SE
+```
+
+Run-to-run nondeterminism is about **a tenth of one standard error**, and old-vs-new is
+**0.055 SE**. The values are statistically indistinguishable. **The estimand did not change.** The
+earlier reading -- three commits touching `no_grad` execution, row metadata and episode ids, none
+of them the measured quantity -- stands, and is now supported by measurement rather than by
+reading diffs.
+
+## What still follows from this
+
+1. **A reported number cannot be reproduced bit-for-bit**, only within noise. Anything claiming
+   exact reproduction of a sampling baseline's row is wrong. The three sampling baselines are
+   `idaac`, `ppg`, `ibac_sni`; the nine mode baselines take an argmax/mean and were not tested here.
+2. **Endpoint depth matters more than it looked.** At n=20 one SE is 3.2 on a mean of ~26, i.e.
+   ~12%. The nondeterminism is negligible beside that, but the SE itself is not, and it is the
+   reason `endpoint_eval_episodes=20` rather than 3.
+3. **Partial re-evaluation is acceptable after all** -- not because rows reproduce exactly, but
+   because they agree within a noise that is an order of magnitude below the reporting error. The
+   breadth hypothesis (torch RNG not re-seeded per episode, `eval_grid.py:221` vs
+   `seed_episode_placement`) remains TRUE as a description of the code, but is not needed to explain
+   these numbers, and is not established as the cause.
+4. **Unblocked**: the endpoint grid may run.
