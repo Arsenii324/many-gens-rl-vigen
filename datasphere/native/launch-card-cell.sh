@@ -273,8 +273,19 @@ if [[ "$CARD" != "0" ]]; then
     echo "  count this cell legitimately puts on the card) or run on card 0."
     exit 4
   fi
-  YIELD_PROCS=(--yield-on-processes)
-  echo "  card $CARD is not ours: process yield ARMED, --expect-ours $EXPECT_OURS"
+  if [[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]]; then
+    # [Claude 2026-09-16] Shared mode and process yield are the same contradiction the neighbour
+    # yield had, and it cost a production TRAINING cell: ibac_sni-s1 was killed ten minutes in by
+    # "NATIVE_CELL_YIELDED ... reason follows from the sentinel", because the count trigger saw two
+    # colleagues on a card we had deliberately chosen to share. An OFFLINE cell survives this (it
+    # never polls the sentinel); a TRAINING cell polls it and obeys, so the failure mode is
+    # invisible until the one run that matters.
+    YIELD_PROCS=()
+    echo "  card $CARD shared by choice: process yield NOT armed (memory floor and disk watch remain)"
+  else
+    YIELD_PROCS=(--yield-on-processes)
+    echo "  card $CARD is not ours: process yield ARMED, --expect-ours $EXPECT_OURS"
+  fi
 elif [[ "${NATIVE_YIELD_ON_PROCESSES:-0}" == "1" ]]; then
   YIELD_PROCS=(--yield-on-processes)          # opt-in on card 0 too, if a caller wants it
   echo "  process yield armed on card 0 by request, --expect-ours $EXPECT_OURS"
