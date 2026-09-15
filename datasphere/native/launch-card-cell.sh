@@ -219,7 +219,11 @@ echo "=== STEP 0: preflight on card $CARD"
 # any compute process on the card is someone else's and no ownership test is needed to know it.
 EXCLUSIVE=(--require-exclusive)
 [[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]] && { EXCLUSIVE=(); echo "  NOTE: NATIVE_ALLOW_SHARED_CARD=1, preflight will permit a shared card"; }
-docker run --rm -v "$REPO:/repo:ro" -w /repo --gpus "\"device=${CARD}\"" "$IMAGE" \
+# [Claude 2026-09-15] `--gpus all`, not `device=$CARD`, for the same reason the two watches below
+# give: inside a container exposed to ONE card, that card is renumbered to index 0, so
+# `--device 1` finds nothing and the preflight exits 2 with "could not read the card". Card 0 never
+# showed it, because 0 maps to 0. Found by the first real CARD=1 launch. The preflight only READS.
+docker run --rm -v "$REPO:/repo:ro" -w /repo --gpus all "$IMAGE" \
   python3 scripts/watch_gpu_headroom.py --preflight --device "$CARD" \
     --need-mib "${NATIVE_NEED_MIB:-4000}" ${EXCLUSIVE[@]+"${EXCLUSIVE[@]}"}
 pf=$?
