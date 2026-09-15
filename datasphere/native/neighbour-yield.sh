@@ -26,6 +26,15 @@ WORK="${1:?usage: neighbour-yield.sh <native-work dir> [card]}"
 # for an hour with NO process-level yield at all -- the exact protection card 1 is required to have.
 # It failed silently in the safe direction for the neighbour and the unsafe direction for the rule.
 CARD="${2:-0}"
+# [Claude 2026-09-15] STOP_CONTAINER: the name of OUR OWN cell container to stop when a neighbour
+# is confirmed. Writing the sentinel is not enough for an OFFLINE-EVAL cell and that is structural,
+# not a bug in the watch: the sentinel poller lives inside `run_measured` keyed to $training_pid,
+# so a cell that runs `run_offline_eval` instead of training has nobody listening. Without this the
+# card-1 rule is satisfied on paper and absent in fact.
+#
+# It stops exactly one container, by exact name, and only one we created. It never touches another
+# user's container, never kills a bare PID, and never uses a pattern.
+STOP_CONTAINER="${3:-}"
 SENTINEL="$WORK/yield.sentinel"
 STRIKES_NEEDED=6
 strikes=0
@@ -75,6 +84,16 @@ while :; do
     if [[ $strikes -ge $STRIKES_NEEDED ]]; then
       echo "$(date +%H:%M:%S) YIELDING: card ${CARD} held by another party for $((STRIKES_NEEDED*30))s."
       printf 'yielded at %s: foreign on card ${CARD}: %s\n' "$(date +%s)" "${foreign[*]}" > "$SENTINEL"
+      if [[ -n "$STOP_CONTAINER" ]]; then
+        if docker ps --format '{{.Names}}' | grep -qx "$STOP_CONTAINER"; then
+          echo "$(date +%H:%M:%S) stopping OUR container $STOP_CONTAINER (SIGTERM, 60s grace)"
+          docker stop --time 60 "$STOP_CONTAINER" >/dev/null 2>&1 \
+            && echo "$(date +%H:%M:%S) stopped $STOP_CONTAINER; artifacts on the bind mounts survive" \
+            || echo "$(date +%H:%M:%S) docker stop failed for $STOP_CONTAINER -- REPORT, nothing else attempted"
+        else
+          echo "$(date +%H:%M:%S) $STOP_CONTAINER is not running; nothing to stop"
+        fi
+      fi
       exit 0
     fi
   else

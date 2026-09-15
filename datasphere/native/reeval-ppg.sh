@@ -32,7 +32,7 @@ set -uo pipefail
 MODE="${1:?usage: reeval-ppg.sh smoke|endpoint|curve}"
 A="$HOME/rlvigen-runs/reeval-v214"
 R="$HOME/rlvigen-work"
-SNAP="$HOME/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/snapshot.pt"
+SNAP="${SNAPSHOT_OVERRIDE:-$HOME/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/snapshot.pt}"
 mkdir -p "$A"
 cd "$R/repo"
 [[ -f "$SNAP" ]] || { echo "no snapshot at $SNAP"; exit 2; }
@@ -40,6 +40,7 @@ cd "$R/repo"
 case "$MODE" in
   smoke)    REGIMES=train;                          SCENES=0;                   EPS=20;  SCOPE=endpoint; MODES=native ;;
   endpoint) REGIMES=train,eval-easy,eval-medium,eval-hard; SCENES=0,1,2,3,4,5,6,7,8,9; EPS=20;  SCOPE=endpoint; MODES=native,mode ;;
+  curve)    REGIMES=train,eval-easy,eval-medium,eval-hard; SCENES=0,1,2,3,4,5,6,7,8,9; EPS=3;   SCOPE=curve;    MODES=native ;;
   *) echo "unknown mode $MODE"; exit 2 ;;
 esac
 
