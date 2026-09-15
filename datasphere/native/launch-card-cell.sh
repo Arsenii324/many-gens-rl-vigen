@@ -218,7 +218,19 @@ echo "=== STEP 0: preflight on card $CARD"
 # --max-util 50, and the preflight printed "OK to start". At preflight OUR cell does not exist, so
 # any compute process on the card is someone else's and no ownership test is needed to know it.
 EXCLUSIVE=(--require-exclusive)
-[[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]] && { EXCLUSIVE=(); echo "  NOTE: NATIVE_ALLOW_SHARED_CARD=1, preflight will permit a shared card"; }
+if [[ "${NATIVE_ALLOW_SHARED_CARD:-0}" == "1" ]]; then
+  # [Claude 2026-09-15] Sharing means accepting UTILISATION contention as well as presence. The
+  # first version cleared --require-exclusive only, and the launch still refused: preflight's other
+  # clause fires when utilisation exceeds --max-util (default 50) AND any compute process is on the
+  # card, which is true by definition of a card we have chosen to share. Clearing one and not the
+  # other made NATIVE_ALLOW_SHARED_CARD a flag that could never do what it says.
+  #
+  # The MEMORY floor is deliberately NOT relaxed. Utilisation contention costs time; memory
+  # exhaustion costs somebody else's run, and our own per-process cap does not bind.
+  EXCLUSIVE=(--max-util 100)
+  echo "  NOTE: NATIVE_ALLOW_SHARED_CARD=1 -- exclusivity and the utilisation ceiling are waived,"
+  echo "        the ${NATIVE_NEED_MIB:-4000} MiB free-memory floor is NOT."
+fi
 # [Claude 2026-09-15] `--gpus all`, not `device=$CARD`, for the same reason the two watches below
 # give: inside a container exposed to ONE card, that card is renumbered to index 0, so
 # `--device 1` finds nothing and the preflight exits 2 with "could not read the card". Card 0 never
