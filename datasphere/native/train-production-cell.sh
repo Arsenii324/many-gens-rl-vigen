@@ -5,11 +5,18 @@
 # curve plus endpoint: for ibac_sni that is ~6.3 h + ~5.7 h + ~11.7 h = most of the window for one
 # baseline, with no slack for anything going wrong.
 #
-# CURVE_EVAL=0 is therefore deliberate and is NOT a quality cut. The curve is the descriptive half
-# (endpoint-as-headline is the standing default), the checkpoints are retained either way, and this
-# session has now demonstrated that a curve can be rebuilt afterwards from retained stamps at
-# 3 episodes per cell -- so the only thing skipped is work that can be redone later from artifacts
-# we keep. The endpoint, which carries the reported number, is NOT skipped.
+# [Claude 2026-09-16] CURVE_EVAL=0 was REMOVED. run_probe refuses it at production scale --
+# "NATIVE_PRODUCTION_CONFLICT CURVE_EVAL=0 expected=1 ... production settings are frozen at scale"
+# -- and the refusal is right: trimming the protocol produces a cell that is not a production cell
+# whatever its frame count says. The full protocol is ~23.7 h (6.3 train + 5.7 curve + 11.7
+# endpoint) and the booking's SOFT end is ~17 Sep 09:00, giving 32.2 h. It fits with slack.
+#
+# And a run cut short is not a loss of everything. Intermediate checkpoints are written every
+# save_every frames and each one is EVALUABLE afterwards by exactly the sweep used for ppg and
+# idaac, so a cell that reaches 400k yields a gradeable 400k measurement. What is NOT available is
+# RESUMING: families.json:160 records that keys_to_save omits the replay buffer, so an off-policy
+# run restarted from a snapshot is a different experiment. ibac_sni is on-policy, but the run is
+# sized to finish rather than to be resumed.
 #
 # Chosen baseline: ibac_sni. ppg and idaac are already banked at 600k and are both on-policy PPO
 # variants, so a third on-policy baseline turns two isolated numbers into THREE primary pairs
@@ -33,7 +40,7 @@ env CARD="${CARD:-1}" NATIVE_YIELD_ON_PROCESSES=1 NATIVE_EXPECT_OURS="${EXPECT_O
   CELL_TIMEOUT_SECONDS="${TIMEOUT_S:-43200}" NATIVE_HOST_PROFILE=v100 \
   NATIVE_VRAM_CAP_MIB="${VRAM_MIB:-4096}" NATIVE_PRODUCTION=1 NATIVE_ACCEPT_SAME_DEVICE=1 \
   CUDA_ROOT=/usr/local/cuda \
-  CURVE_EVAL=0 ENDPOINT_EVAL=1 \
+  ENDPOINT_EVAL=1 \
   bash datasphere/native/launch-card-cell.sh "$R/payload-v214-$FAMILY.tgz" \
     "$A/$TAG-result.tgz" "$HOME/rlvigen-assets/rlvigen-door2-90d8b8c4.tgz" \
     > "$A/$TAG.log" 2>&1
