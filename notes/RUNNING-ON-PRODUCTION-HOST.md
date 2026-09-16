@@ -401,9 +401,27 @@ digest, wrong requirement hash — **refuses** with exit 3 and never falls back 
 would restore the two-hour bootstrap silently and execute an environment nobody verified. Design:
 `production-host/19-environment-lifecycle-vs-run-lifecycle.md`.
 
-Lighter alternative if you do not want a prebuilt environment:
-`NATIVE_PIP_CACHE_HOST=$HOME/.cache/pip-rlvigen` persists the wheels between cells, so only the
-first pays the download.
+> **[Claude 2026-09-16] The "lighter alternative" below DOES NOT WORK on this image, and the code
+> already knows it.** `run_probe.sh` says so in full: *"A cache is therefore NOT ACHIEVABLE on this
+> image, whatever flags are passed. Debian patches pip's caching out, so `pip cache dir` reports
+> 'cache is disabled' with no PIP_NO_CACHE_DIR and no pip.conf in sight."* The feature announced
+> success twice while doing nothing — first with `--no-cache-dir` merely omitted, then with
+> `--cache-dir` passed explicitly, which pip **accepts and does not honour**.
+>
+> Verified again today on a live cell: the mount is present
+> (`~/.cache/rlvigen-pip -> /root/.cache/pip`), the directory holds **0 files**, and the cell had
+> 243 pip download lines. So every cell pays the full download, and any script promising otherwise
+> is promising something the image cannot give.
+>
+> **The prebuilt environment is the real remedy** and one already exists on the host:
+> `~/rlvigen-env/torch-02805cc0-94c1577b2cd9`, 5.8 GB, built for `cells: idaac:1`. Read its
+> `ENVIRONMENT.json` before reusing it — this one reports `"editable": []`, which per the box above
+> means it cannot run an `rlvigen` cell; `run_probe.sh` refuses with `NATIVE_EDITABLE_NOT_INSTALLED`
+> rather than running the wrong thing, so trying it costs a refusal, not a bad result.
+
+Lighter alternative if you do not want a prebuilt environment, **kept for the record and not
+usable here**: `NATIVE_PIP_CACHE_HOST=$HOME/.cache/pip-rlvigen` was meant to persist the wheels
+between cells so only the first pays the download.
 
 ### 3.0c Rendering: the container needs `graphics`, and `--gpus` does not give it
 **The container needs the `graphics` driver capability, and `--gpus` does not give it.** The wrapper now sets `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` (override with

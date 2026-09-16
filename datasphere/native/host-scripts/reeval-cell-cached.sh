@@ -6,6 +6,17 @@
 # load 7.4 and the card has ~16 GB free, so running these one at a time uses about a sixteenth of
 # the node while the booking expires. They pack.
 #
+# [Claude 2026-09-16, later the same day] THE CACHE THIS SCRIPT IS NAMED FOR DOES NOT WORK, and the
+# paragraph below overstates what it buys. run_probe.sh's own comment settles it: "A cache is
+# therefore NOT ACHIEVABLE on this image, whatever flags are passed" -- Debian patches pip's caching
+# out, and pip ACCEPTS --cache-dir without honouring it. Verified on a live cell today: the mount is
+# in place, the host directory holds 0 files, and the cell logged 243 pip download lines.
+#
+# The script is still the right one to use -- everything else about it is correct, and the mount is
+# harmless -- but budget a cell at FULL bootstrap, not at "minutes with a warm cache". The real
+# remedy is a prebuilt environment via NATIVE_VENV_HOST, which removes pip from the cell entirely;
+# see the operator guide's section 3.0b, and check ENVIRONMENT.json before reusing one.
+#
 # [Claude 2026-09-16] NATIVE_PIP_CACHE_HOST, because bootstrap DOMINATES a short cell. Measured on
 # idaac-s101-curve-100352: 257 pip lines against 25 evaluation lines, ~15-20 minutes of downloading
 # before ~26 minutes of work. Across eleven stamps that is roughly three hours spent re-fetching
