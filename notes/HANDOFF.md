@@ -25,6 +25,23 @@ replaces that plan entirely.
 4. **Then a third seed, not a new baseline.** Three seeds of two baselines is a reportable result
    under the n=3 policy; one seed of six baselines is not. I would resist the pull toward breadth.
 
+## The peer session ended, and one thing it offered is now unowned
+
+A second agent (`foundation-verification-audit-prod ⑂`) worked this tree in parallel for ~3 hours
+and exited cleanly at ~16:20 — **nothing uncommitted, nothing unpushed**, which is worth saying
+because the known failure mode with parallel sessions here is the opposite. Its work is in the
+history: the evidence bundles under `results/evidence/`, `docs/resolved-register.json` rows
+including `vram-ours-peak-sums-the-whole-card`, and the ppg endpoint double-run analysis.
+
+**It had offered to do one thing it did not get to**: a curve join of idaac's rows against the 11
+intermediate checkpoints, which it said were already hashed in its bundle. Those rows landed at
+16:00 (`reeval-v214-idaac-curve__records.jsonl`, 484 rows). If that join matters, it is unowned.
+
+Two of its catches are load-bearing and should not be re-litigated: `measure_vram_bounds.py` summed
+every compute process on the card under a field named `ours_peak_mib`, and the ppg endpoint ran
+twice to completion so mode rows could be paired — which is what refuted "the nine mode baselines
+are unaffected".
+
 ## Suspicions I have NOT proven
 
 - **The evaluator-nondeterminism mechanism.** `VGBWrapper`'s `random_state` drives
