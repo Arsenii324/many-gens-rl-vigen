@@ -35,6 +35,14 @@
 # It is LOUD. Every sample goes to the log, the trip is announced with the number that caused it,
 # and the marker string is greppable, because a stop mechanism nobody can see fire is the defect
 # this file exists to answer, not a feature.
+# [Claude 2026-09-16, evening] WHAT THIS CAP CANNOT SEE. It sums used_memory over the
+# nvidia-smi compute apps belonging to our container. EGL render contexts are not compute apps, so
+# they are invisible to it. Measured on ibac_sni at procs=16 on an exclusive card: this watcher read
+# ours=2199 MiB while the card held 7,421 MiB for that one cell -- 5,222 MiB it could not count. So
+# a cap of N bounds only the compute part; the true footprint can exceed N by the EGL share and the
+# cap will not trip. On an exclusive card that is harmless. On a shared card, size the cap against
+# the family's TOTAL footprint (measured-vram-bounds.json measurement_notes, where one exists), or
+# the neighbour is protected by the card-level floor alone.
 set -uo pipefail
 CELL="${1:?usage: self-vram-cap.sh <container> <card> <cap_mib> [log]}"
 CARD="${2:?}"; CAP="${3:?}"; LOG="${4:-$HOME/rlvigen-runs/self-vram-cap-$CELL.log}"

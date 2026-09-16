@@ -60,7 +60,12 @@ def test_it_runs_without_a_host_and_names_the_blocked_baselines():
     assert "the floor is not the obstacle" in out.stdout, (
         "ctrl's peak alone is 99.8% of the card; saying peak+floor exceeds it invites the wrong "
         "fix, which is lowering the floor")
-    assert "UNMEASURED" in out.stdout, "ibac_sni's missing figure must read as unmeasured"
+    # ibac_sni was UNMEASURED until 2026-09-16 20:49 and is now 7,421 MiB. Assert what is true of
+    # the live data, and test the unmeasured PATH separately below rather than pinning a state that
+    # a measurement is supposed to change.
+    assert "11421" in out.stdout, "ibac_sni's measured need (7,421 + 4,000 floor) must be reported"
+    assert "COMPUTE-APP figure" in out.stdout, (
+        "the other peaks exclude EGL; the output must say so rather than present them as totals")
 
 
 def test_ctrl_is_blocked_by_its_own_size_not_by_the_floor():
@@ -78,3 +83,19 @@ def test_strict_fails_while_baselines_are_blocked():
     out = subprocess.run([sys.executable, str(ROOT / "scripts/campaign_feasibility.py"), "--strict"],
                          capture_output=True, text=True, cwd=ROOT, timeout=300)
     assert out.returncode == 1, "strict passed while baselines are blocked on assets and card size"
+
+
+def test_a_family_with_no_measurement_reads_unmeasured(tmp_path, monkeypatch):
+    """The mechanism, independent of which families happen to be measured today."""
+    import json
+    fake = tmp_path / "measured-vram-bounds.json"
+    fake.write_text(json.dumps({"per_family_observed_peak_mib": {"idaac": 2638}}))
+    monkeypatch.setattr(cf, "_bounds", lambda: json.loads(fake.read_text())["per_family_observed_peak_mib"])
+    monkeypatch.setattr(cf, "_disk_gib", lambda cells: None)
+    import io, contextlib
+    buf = io.StringIO()
+    monkeypatch.setattr(sys, "argv", ["campaign_feasibility.py"])
+    with contextlib.redirect_stdout(buf):
+        cf.main()
+    out = buf.getvalue()
+    assert "UNMEASURED" in out, "a family absent from the bounds must read UNMEASURED, not a guess"

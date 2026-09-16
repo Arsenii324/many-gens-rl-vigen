@@ -195,6 +195,13 @@ def main() -> int:
         print(f"  {baseline:10} {fam:9} {pk:>9} {wd:>8} {dk:>9}  {verdict}")
 
     print()
+    print("  CAVEAT ON THE PEAKS ABOVE. Except ibac_sni, each is a COMPUTE-APP figure, which excludes")
+    print("  EGL render contexts. Measured on ibac_sni at procs=16 on an exclusive card: 2,199 MiB of")
+    print("  compute beside 5,222 MiB of non-compute memory, 7,421 total. So the other rows UNDER-state")
+    print("  their true need by their own EGL share, which grows with rendering workers. Treat a")
+    print("  RUNNABLE verdict near the capacity line as unconfirmed until that family is measured the")
+    print("  same way.")
+    print()
     print(f"  An EVAL cell is {EVAL_CELL_MIB} MiB and coexists with the co-tenant; eleven completed")
     print("  on card 0 on 2026-09-16 while co-tenants held 26 GiB of it. Where a baseline already")
     print("  has retained checkpoints, evaluation is available even when training is not.")

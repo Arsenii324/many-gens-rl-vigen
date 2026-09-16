@@ -36,7 +36,18 @@
     "",
     "A real bound needs a cell that is not stood down in its first minute. One is running now on a",
     "near-exclusive card 1 under self-vram-cap.sh at 22,000 MiB; card_delta on that run is the",
-    "measurement, because it is the only attribution that includes EGL."
+    "measurement, because it is the only attribution that includes EGL.",
+    "",
+    "[Claude 2026-09-16, third entry today] ibac_sni is now MEASURED: 7,421 MiB, recorded as a card",
+    "delta on an exclusive card at steady state -- see measurement_notes.ibac_sni. The earlier",
+    "retraction said its footprint was unknown with a ~6.6 GiB lower bound; that bound was right.",
+    "",
+    "READ THIS BEFORE USING ANY OTHER NUMBER IN THIS FILE: every other per-family value is a",
+    "COMPUTE-APP figure (all_procs_peak_mib on an exclusive card). Measured on ibac_sni, the",
+    "non-compute part -- EGL render contexts, which every family on the Door task uses -- was 5,222",
+    "MiB beside 2,199 of compute. So the other rows UNDER-state total footprint by their own EGL",
+    "share, which grows with the number of rendering workers. They remain valid as compute figures;",
+    "they are not safe as total-card-occupancy bounds without adding that share."
   ],
   "cells": [
     {
@@ -502,9 +513,20 @@
     "dmc_gb": 2529,
     "idaac": 2638,
     "ppg": 7146,
-    "rlvigen": 4549
+    "rlvigen": 4549,
+    "ibac_sni": 7421
   },
-  "families_without_measurement": [
-    "ibac_sni"
-  ]
+  "families_without_measurement": [],
+  "measurement_notes": {
+    "ibac_sni": {
+      "value_mib": 7421,
+      "kind": "card_delta on an EXCLUSIVE card at steady state -- total footprint INCLUDING non-compute (EGL) memory",
+      "compute_apps_mib": 2199,
+      "non_compute_mib": 5222,
+      "configuration": "procs=16, host_profile=v100, 600k production cell",
+      "run": "card1-20260916-203534 (ibac_sni-s101-prod)",
+      "evidence": "self-vram-cap-ibac_sni-s101-prod.log: ours=2199 card_used=7421 on three consecutive 20-second samples, 20:48:34-20:49:15, with training advancing F 8192 -> 12288 and no co-tenant process on card 1",
+      "why_card_delta": "per-process sums count compute apps only. The 5,222 MiB of EGL render contexts never appears in them, so the 2,199 MiB that every failed attempt reported was the stable compute part, not a ramp point and not the footprint"
+    }
+  }
 }
