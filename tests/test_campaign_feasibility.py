@@ -52,13 +52,29 @@ def test_it_runs_without_a_host_and_names_the_blocked_baselines():
     assert out.returncode == 0, out.stdout + out.stderr
     for blocked in ("svea", "sgqn", "soda"):
         assert blocked in out.stdout
-    assert "BLOCKED ON ASSET" in out.stdout, "the Places365 blocker must be named, not implied"
+    assert "TRAIN SPLIT ABSENT" in out.stdout, (
+        "the Places365 situation must be named precisely: the VAL split is present and complete, "
+        "so those three need a recorded deviation (NATIVE_PLACES365_ACCEPT_VAL=1), not a card. "
+        "Calling it BLOCKED overstated it.")
     assert "NEEDS AN EMPTY CARD" in out.stdout, "ctrl's card-size problem must be named"
+    assert "the floor is not the obstacle" in out.stdout, (
+        "ctrl's peak alone is 99.8% of the card; saying peak+floor exceeds it invites the wrong "
+        "fix, which is lowering the floor")
     assert "UNMEASURED" in out.stdout, "ibac_sni's missing figure must read as unmeasured"
 
 
+def test_ctrl_is_blocked_by_its_own_size_not_by_the_floor():
+    """The floor is 4,000 MiB; ctrl's peak alone leaves 59 MiB of a 32,494 MiB card.
+
+    Stated as a test because 'peak+floor exceeds the card' invites the wrong remedy -- lowering the
+    floor -- and that would buy 59 MiB against an OBSERVED PEAK that is not an upper bound.
+    """
+    assert cf.CARD_TOTAL_MIB - 32_435 == 59
+    assert 32_435 > cf.CARD_TOTAL_MIB - 500, "ctrl must trip the peak-alone branch, not the floor one"
+
+
 def test_strict_fails_while_baselines_are_blocked():
-    """Five baselines cannot be scheduled by adding GPU time. --strict must say so."""
+    """ctrl and ibac_sni cannot be scheduled by adding GPU time. --strict must say so."""
     out = subprocess.run([sys.executable, str(ROOT / "scripts/campaign_feasibility.py"), "--strict"],
                          capture_output=True, text=True, cwd=ROOT, timeout=300)
     assert out.returncode == 1, "strict passed while baselines are blocked on assets and card size"

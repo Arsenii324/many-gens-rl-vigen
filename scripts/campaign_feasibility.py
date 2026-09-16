@@ -154,7 +154,8 @@ def main() -> int:
           f"\n  every capacity above is an UPPER bound on what we can durably take.\n")
     print(f"  {'baseline':10} {'family':9} {'peak MiB':>9} {'need':>8} {'disk GiB':>9}  verdict")
 
-    blocked = []
+    blocked: list[str] = []
+    deviation: list[str] = []
     for baseline in sorted(fam_of):
         fam = fam_of[baseline]
         peak = bounds.get(fam)
@@ -164,8 +165,13 @@ def main() -> int:
         need = None if peak is None else peak + FLOOR_MIB
         if peak is None:
             verdict = "UNMEASURED -- no VRAM figure; cannot be sized, so cannot be scheduled"
+        elif peak > CARD_TOTAL_MIB - 500:
+            # ctrl is 32,435 of 32,494 MiB -- 99.8% of the card. The FLOOR is not what blocks it:
+            # even at floor 0 there are 59 MiB spare, and 32,435 is an OBSERVED PEAK, not a bound.
+            verdict = (f"NEEDS AN EMPTY CARD -- peak alone is {100*peak//CARD_TOTAL_MIB}% of the "
+                       "card; the floor is not the obstacle")
         elif need > CARD_TOTAL_MIB:
-            verdict = "NEEDS AN EMPTY CARD -- peak+floor exceeds one whole card, and a floor decision"
+            verdict = ("NEEDS AN EMPTY CARD and a floor decision -- peak fits, peak+floor does not")
         elif capacity is not None:
             best = max(capacity.values())
             where = max(capacity, key=lambda k: capacity[k])
@@ -176,9 +182,12 @@ def main() -> int:
         else:
             verdict = f"needs {need} MiB beside the co-tenant's peak"
         if needs_places:
-            verdict = "BLOCKED ON ASSET -- Places365 corpus absent; the host holds the 20-class fixture"
-        if peak is None or needs_places or "EMPTY CARD" in verdict:
+            verdict = ("TRAIN SPLIT ABSENT -- val IS present (36,500 images); runnable with "
+                       "NATIVE_PLACES365_ACCEPT_VAL=1 as a recorded deviation from A22")
+        if peak is None or "EMPTY CARD" in verdict:
             blocked.append(baseline)
+        elif needs_places:
+            deviation.append(baseline)
 
         pk = f"{peak}" if peak else "--"
         wd = f"{need}" if need else "--"
@@ -190,10 +199,18 @@ def main() -> int:
     print("  on card 0 on 2026-09-16 while co-tenants held 26 GiB of it. Where a baseline already")
     print("  has retained checkpoints, evaluation is available even when training is not.")
     print()
+    if deviation:
+        print(f"  {len(deviation)} baseline(s) need the Places365 TRAIN split, which is absent: "
+              f"{', '.join(deviation)}")
+        print("  The VAL split is present and complete (36,500 images). They can run against it")
+        print("  with NATIVE_PLACES365_ACCEPT_VAL=1, which run_probe.sh requires explicitly -- a")
+        print("  recorded deviation from A22, not a silent one. Fetching train was attempted and")
+        print("  abandoned: ~24 GB at ~55 kB/s, a five-day ETA (rlvigen-runs/places365-fetch.log).")
+        print()
     if blocked:
         print(f"  {len(blocked)} baseline(s) cannot be scheduled by adding GPU time alone: "
               f"{', '.join(blocked)}")
-        print("  Those are asset, card-size and measurement problems, not queue problems.")
+        print("  Those are card-size and measurement problems, not queue problems.")
     return 1 if (blocked and args.strict) else 0
 
 
