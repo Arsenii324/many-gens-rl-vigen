@@ -127,6 +127,29 @@ with 28,858 MiB free and our idaac s102 (2,635 MiB) resident:
 So the second cell does not cost a coin-flip on itself; it costs the cell already running. Declining
 to launch was the higher-value action, and that is the opposite of what "use the free card" suggests.
 
+**A co-tenant can take 6.2 GiB in TWENTY SECONDS, which changes what monitoring can protect.**
+Measured from our own cap watcher's samples on idaac s102, twenty seconds apart:
+
+```
+17:54:27  ours=2640MiB  peak=2640MiB  card_free=6422MiB
+17:54:47  ours=2640MiB  peak=2640MiB  card_free=224MiB
+```
+
+The floor fired at `free memory 224 MiB is below the 4000 MiB floor` and stood our cell down at 41%
+of 600k. Our own usage never moved — peak 2,640 MiB against a 5,000 cap — so we did not cause it.
+
+The lesson is not "watch the card longer". **No poll can see a 6.2 GiB step that completes between
+two samples**, and ours runs at 20 s. What protected the colleague was the sentinel check inside the
+cell, which acts in-process at the moment of the breach. Monitoring tells the OPERATOR what
+happened; only the floor acts in time. Sizing against the co-tenant's return (below) remains the
+right planning rule, and it is a planning rule, not a defence.
+
+**Nothing was lost that the protocol cares about.** Five checkpoints were retained (51,200 through
+251,904) and each is separately evaluable, so the run is partial rather than void. idaac cannot
+RESUME — `families.json`'s checkpoint semantics give it policy plus observation statistics, no
+optimizer or RNG state — so the rerun policy applies: rerun from zero under the identical seed,
+never resume.
+
 **Confirmed by the event rather than left as a prediction.** At 16:05 the co-tenant returned to card
 1 with 10,650 + 11,246 = 21,896 MiB, leaving **6,422 MiB free**. idaac s102 was at 21% and survived,
 because 6,422 is above the 4,000 floor. Had the ppg cell been added an hour earlier, free would have
