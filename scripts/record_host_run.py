@@ -105,6 +105,45 @@ def main() -> int:
     args = ap.parse_args()
 
     run_dir = pathlib.Path(args.run_dir)
+
+    # [Claude 2026-09-16] A status update must not require the run directory. Every field this
+    # script derives comes from the cell's own effective_config.json, which lives ON THE HOST -- so
+    # `--update-status` demanded a directory that is never present on the laptop, and the one
+    # operation the ledger exists for (moving a run off `running` to a terminal status) could not be
+    # performed from where the operator sits. audit_attempt_ledger --strict fails on exactly that
+    # missing terminal status, so the check and the tool disagreed.
+    #
+    # When the entry already exists, its derived fields were recorded at launch and are not in
+    # question; only status, note and status_as_of are. Update those in place and leave the rest
+    # untouched. Refuse when the entry does NOT exist: without the config there is nothing to
+    # derive a new entry from, and inventing one would put an unsourced row in the ledger.
+    if args.update_status and not run_dir.is_dir():
+        existing = _entries()
+        prior = [x for x in existing if x.get("run_id") == run_dir.name]
+        if not prior:
+            print(f"REFUSING: {run_dir.name} is not in {LEDGER.relative_to(ROOT)}, and without")
+            print("  its run directory there is no effective_config.json to derive an entry from.")
+            print("  Record it from the directory first, or fetch the directory.")
+            return 2
+        updated = dict(prior[-1])
+        updated["status"] = args.status
+        updated["status_as_of"] = (datetime.datetime.now(datetime.timezone.utc)
+                                   .replace(microsecond=0).isoformat())
+        if args.note:
+            updated["note"] = args.note
+        updated["recorded_by"] = (prior[-1].get("recorded_by", "") +
+                                  "; status updated by scripts/record_host_run.py --update-status "
+                                  "without the run directory, which is on the host")
+        if args.dry_run:
+            print(json.dumps(updated, sort_keys=True))
+            return 0
+        out = [updated if x.get("run_id") == run_dir.name else x for x in existing]
+        LEDGER.write_text("".join(json.dumps(x, sort_keys=True) + "\n" for x in out))
+        print(f"updated {run_dir.name} -> status={args.status}")
+        print("  Derived fields were left as recorded at launch; only status/note/status_as_of moved.")
+        print("  Regenerate the register: python scripts/production_run_register.py")
+        return 0
+
     if not run_dir.is_dir():
         print(f"not a directory: {run_dir}")
         return 2

@@ -1277,7 +1277,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 170h ago** ⚠ **likely stale**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 171h ago** ⚠ **likely stale**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
@@ -1332,7 +1332,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T18:25 MSK · **run dir** `~/rlvigen-runs/card1-20260916-182538` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 2h ago**
+- **status** failed — **status recorded 3h ago**
 - ⚠ attempt 6. Co-tenant reclaimed the card 8 min after launch, mid-ramp: our cap log shows card_free 8883->2595 MiB while ours grew 616->1375. Floor fired at free 2575 < 4000 with ours at 2199 MiB and still climbing. 2199 is a RAMP POINT, not a peak -- ibac_sni's procs=16 footprint remains unmeasured for the same reason it remains unrun.
 
 ### `card1-20260916-203537` — ibac_sni — **not yet collected**
@@ -1341,7 +1341,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **launched** 2026-09-16T20:35 MSK · **run dir** `~/rlvigen-runs/card1-20260916-203537` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
 - **status** running — status recorded under an hour ago
-- ⚠ attempt 7, launched 20:35 by wait-and-train-v3.sh after card 1 held >=15000 MiB free for ten polls. First ibac cell past its ramp: 7,421 MiB total at procs=16 (2,199 compute + 5,222 EGL). Learning: return 7 -> 71, entropy falling, sigma 0.996 -> 0.833.
+- ⚠ attempt 7, launched 20:35 by wait-and-train-v3.sh after card 1 held >=15000 MiB free for ten polls. TRAINING COMPLETE 21:19 MSK at F 600064 -- 44 minutes of wall clock, and the first ibac cell ever to finish its 600k. Held 7,421 MiB at procs=16 (2,199 compute + 5,222 EGL). On entering NATIVE_CURVE_EVAL_BEGIN the card delta fell to 839 MiB, matching the 841 MiB eval-cell figure measured separately, so the EGL contexts really do go away at num_envs=1 -- checked against the card rather than assumed. Learning through training: return 7 -> 91, entropy 9.90 -> 7.88, sigma 0.996 -> 0.746 read from its own lns field, SR 0.000 throughout, which is what Door's shaped reward gives. Now in the in-cell grid. Watch budget 115,668s from 20:35 expires 04:43 on 09-18 against an estimated finish of ~14:50 on 09-17, so there is about 14 hours of slack.
 
 **8 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
