@@ -28,6 +28,84 @@ what order — is summarized in the arrival sequence below and derived in
 [`PRODUCTION-RUNBOOK.md`](PRODUCTION-RUNBOOK.md). The companion carries the reasoning; this file
 carries the executable mechanism and the host-arrival sequence.
 
+## 0a. The model, and the words — read this before §0
+
+Everything below §0 uses these words as technical terms. They are defined here because the rest of
+the file assumes them, and because two of them (a *cell*, a *closure*) mean something narrower than
+their ordinary sense.
+
+### What the campaign is
+
+Twelve **baselines** — twelve published RL methods — each trained on the **Door** task of RL-ViGen
+for 600,000 frames, at **three seeds**, and each evaluated on the same grid so the numbers land on
+one axis. That is 36 **cells**. The point is not any single score; it is that the twelve are
+measured the same way, so a difference between them is attributable to the method.
+
+### The objects, in the order they come into existence
+
+| term | what it is |
+|---|---|
+| **baseline** | one of the twelve methods: `drqv2 svea drq sgqn curl rad soda alda idaac ppg ibac_sni ctrl` |
+| **family** | a group of baselines sharing one payload and one evaluator. Seven of them: `rlvigen`(5), `dmc_gb`(2), then `alda`, `idaac`, `ppg`, `ibac_sni`, `ctrl` alone |
+| **payload** | a source-only `.tgz` built by `contract.py build-payload`. No results, no weights, no `.git`. Third-party code is fetched inside the container at run time |
+| **cell** | ONE (baseline, seed) unit of work — `idaac:102`. Not a container, not a run: one container may hold several cells |
+| **run** / **run dir** | one launcher invocation, on the host as `cardN-YYYYMMDD-HHMMSS`, holding `native-out/` (artifacts) and `native-work/` (live run state). Both bind-mounted, so both survive the container |
+| **stamp** | a checkpoint frame count. `save_every_frames=50000`, so a 600k cell writes twelve plus the endpoint. Actual values are 51,200 / 100,352 / … because stamps quantise to the rollout size |
+| **regime** | `train`, `eval-easy`, `eval-medium`, `eval-hard`. **Distributions over visual conditions, not a difficulty ladder** — `eval-medium` alone randomises the robot's own appearance, and measured, it scores BELOW eval-hard |
+| **scene set** | scenes 0–9 plus the pooled set = 11 |
+| **policy mode** | `sample` or `mode`. `idaac`, `ppg`, `ibac_sni` report a SAMPLED return; the other nine a MODE return. **Different estimands** — rows differing here may not be ranked against each other |
+| **grid** | the evaluation sweep. **curve** = 3 episodes per stamp; **endpoint** = 20 episodes at the final stamp, run TWICE (once per policy mode). One 600k cell = 3,476 episodes ≈ 17.4 h |
+| **row** | one measurement: (cell, stamp, regime, scene set, policy mode) → mean return, sd, success rate |
+| **record** | a JSONL line carrying a row plus its provenance: `evaluator_revision`, `checkpoint_sha256`, scope |
+| **closure** / **evaluator revision** | a hash over the evaluator's code and config members. It answers "does the tree that produced this row still exist". Change a hashed file — comment bytes count — and every family's revision moves |
+
+### The machinery that stops things, named once
+
+| term | what it does |
+|---|---|
+| **floor** (`NATIVE_NEED_MIB`, default 4000) | minimum FREE card memory. Checked at preflight **and** for the life of the cell. Never waived by shared mode |
+| **sentinel** (`/work/yield.sentinel`) | the file a watcher writes on a breach. A **training** cell polls it and stops; an **offline eval** cell never polls it |
+| **self-cap** (`self-vram-cap.sh`) | bounds OUR container's own usage, which the floor does not. The floor protects the card; the cap protects the neighbour from us |
+| **watch budget** | how long the watchers are armed. Must cover bootstrap + training + evaluation, or a watcher expires mid-run and exits 0 |
+
+### The layers, and why a failure is usually in the one below the one you are looking at
+
+```
+laptop          scripts/*.py, contract.py, collection, audits, monitoring
+  └─ ssh
+host            docker + the shell scripts in ~/rlvigen-work. NOTHING else runs here
+  └─ train-production-cell-v5.sh / curve-sweep-v3.sh / reeval-cell-cached.sh   (§9.2)
+       └─ launch-card-cell.sh     preflight, watches, reaper, stand-down       (§3.0)
+            └─ run_on_production_host.sh     mounts, env allow-list, docker run
+                 └─ run_probe.sh   IN CONTAINER: apt+pip, train, retain, grids, delivery
+```
+
+### The lifecycle of a number, which is what "is this a result" means
+
+```
+payload ──> cell ──> checkpoints ──> grid ──> records_delivery.jsonl
+                                                │
+                    results/records/<tag>__records.jsonl   (collection, §9.6)
+                                                │
+                    populate_evaluator_ledger.py  ── refuses a stale closure
+                                                │
+                    campaign_status / export_fleet / production_gates
+```
+
+A number is a **result** only when four things hold, each checked by a tool that refuses: its
+closure is live, its job's rows agree on that closure, no reported row pools two closures, and it
+carries the `checkpoint_sha256` it was measured from. §10.1 has the table and the commands.
+
+### Three facts that are not obvious and change what you do
+
+1. **Evaluation is the expensive half.** Measured: 4.95 h training, 4.60 h curve, 5.52 h endpoint.
+   Budget the whole cell, not the training (§0b, §3b).
+2. **Exact reproduction is not available.** Two runs of the SAME invocation reproduce ~35% of
+   episodes, in both policy modes. It is ~0.2–0.3 SE and the mechanism is open (§10.3).
+3. **The host is shared and the two cards differ in kind.** Card 0's co-tenants are stable and
+   large; card 1's is intermittent — median hold zero, but it returns within tens of minutes.
+   Over two days, a training cell fits 13.7% of the time on card 0 and 87.8% on card 1 (§9.1).
+
 ## 0. When the production host becomes available — do this in order
 
 This is the entry sequence for the first real host session. It is deliberately short: details of
@@ -1284,7 +1362,7 @@ current with `--check` (the release suite does).
 | `self-vram-cap.sh` | Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's. |
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 
-**`datasphere/native/host-scripts/*.sh`** — 28 file(s)
+**`datasphere/native/host-scripts/*.sh`** — 29 file(s)
 
 | script | what it is for |
 |---|---|
@@ -1316,8 +1394,9 @@ current with `--check` (the release suite does).
 | `train-production-cell-v5.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 | `verify-places-folder.sh` | (no summary) |
+| `wait-and-train-v3.sh` | Launch ONE production cell when a card's capacity for us clears a threshold and STAYS clear. |
 
-*160 entry points. Generated; do not edit by hand.*
+*161 entry points. Generated; do not edit by hand.*
 
 <!-- END script-inventory -->
 

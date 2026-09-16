@@ -55,6 +55,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 NEEDS: tuple[tuple[str, str, str, str, str | None], ...] = (
     ("A orient", "read-the-directory-first rule and the index",
      "notes/production-host/README.md", "", None),
+    ("A orient", "the vocabulary and the model, before the words are used",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "The model, and the words", None),
     ("A orient", "the absolute prohibitions",
      "notes/production-host/02-absolute-prohibitions.md", "", None),
     ("A orient", "docker discipline and what may be deleted",
