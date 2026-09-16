@@ -1253,7 +1253,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 162h ago** ⚠ **likely stale**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 164h ago** ⚠ **likely stale**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
@@ -1261,10 +1261,50 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 164h ago** ⚠ **likely stale**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 166h ago** ⚠ **likely stale**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
-**1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
+### `card0-20260916-005601` — ibac_sni — **not yet collected**
+
+- **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
+- **launched** 2026-09-16T00:56 MSK · **run dir** `~/rlvigen-runs/card0-20260916-005601` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** failed — status recorded under an hour ago
+- ⚠ stood down by the memory floor: free memory 3705 MiB below the 4000 MiB floor. No checkpoints.
+
+### `card0-20260916-010515` — ibac_sni — **not yet collected**
+
+- **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
+- **launched** 2026-09-16T01:05 MSK · **run dir** `~/rlvigen-runs/card0-20260916-010515` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** failed — status recorded under an hour ago
+- ⚠ NATIVE_CELL_FAILED, no checkpoints. Same window as 005601.
+
+### `card1-20260916-115450` — ibac_sni — **not yet collected**
+
+- **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 1 · **profile** `v100`
+- **launched** 2026-09-16T11:54 MSK · **run dir** `~/rlvigen-runs/card1-20260916-115450` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** failed — status recorded under an hour ago
+- ⚠ reached F 100352 then stood down by the memory floor: free memory 125 MiB below 4000. Furthest any ibac_sni cell has trained.
+
+### `card1-20260916-141636` — ibac_sni — **not yet collected**
+
+- **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
+- **launched** 2026-09-16T14:16 MSK · **run dir** `~/rlvigen-runs/card1-20260916-141636` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** failed — status recorded under an hour ago
+- ⚠ started training, then the floor fired: free memory 3063 MiB below 4000, co-tenant holding ~21.3 GiB. Its resources.json gave the card-delta lower bound of ~6.6 GiB for ibac_sni at procs=16.
+
+### `card1-20260916-143204` — idaac — **not yet collected**
+
+- **cell** `idaac-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
+- **launched** 2026-09-16T14:32 MSK · **run dir** `~/rlvigen-runs/card1-20260916-143204` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** running — status recorded under an hour ago
+- ⚠ second seed for idaac, giving {101,102}. Launched 14:32 MSK on card 1 under self-vram-cap.sh at 5000 MiB.
+
+**6 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
 ## Caveats — what this register cannot see
 

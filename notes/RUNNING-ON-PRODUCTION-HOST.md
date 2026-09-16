@@ -1,5 +1,19 @@
 # Running a cell on the production host
 
+> **This is the operator's guide. Read §0 first; it is the arrival sequence.**
+>
+> §0-§8 are the mechanism and were written before the host was reachable. **§9 is the campaign
+> layer** added 2026-09-16: who else is on the cards, the convenience wrappers above
+> `launch-card-cell.sh`, the measured GPU-memory table, the stop mechanisms, monitoring, and the
+> steps that turn a collected cell into a result.
+>
+> Two sections were corrected on 2026-09-16 because they had become false: "What this does NOT
+> establish" still said the host had never been used, and the packing note still said the booking
+> named one card. Both are marked in place.
+>
+> `python scripts/operator_readiness.py` checks that every operator need still routes somewhere in
+> here, and that each live script's real interface is documented. Run it after changing a script.
+
 Operator runbook for `varaksin_as@cds2` (`notes/remote-infra.txt`: 16 cores, 113 GiB RAM,
 2x Tesla V100-SXM2-32GB, plain SSH). The host is not behind DataSphere's job API, so `job.sh`,
 `contract.py`'s submit path and every `cfg-*.yaml` are inapplicable here — those talk to
@@ -141,6 +155,26 @@ and [`production-host/28-eval-is-sixty-percent-of-a-cell.md`](production-host/28
 `audit_record_frame_provenance.py` (refusing on a mismatch) and `audit_training_diagnostics.py`
 (reporting) on every result. The second exists because both cells of 2026-09-09 produced nulls whose
 cause was invisible in every artifact the pipeline checked.
+
+## 0c. Which Python runs the laptop-side scripts
+
+Everything under `scripts/` and `datasphere/native/*.py` runs **on the laptop**, not on the host —
+the host rule is that nothing but `docker`, `git`, and the shell scripts in `~/rlvigen-work` runs
+outside a container. So an operator needs one local interpreter, and it needs `numpy` at minimum;
+`scripts/measure_vram_bounds.py`, `export_fleet.py` and `production_gates.py` all import it.
+
+```bash
+python3 -c "import numpy, json, pathlib; print('ok', numpy.__version__)"
+```
+
+Any Python 3.10+ with `numpy` will run the audit and reporting scripts. Plotting scripts also want
+`matplotlib`.
+
+**In the maintainer's workspace** the interpreter is
+`/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python`, and the workspace note describing the
+available environments is `docs/local-envs.md` **in the parent workspace, not in this repository** —
+a clone from GitHub will not contain it, which is why the requirement is stated here rather than
+linked. If `$BP` is set in your shell it already points at that interpreter.
 
 ## 1. Preconditions, checked on the host every time
 
@@ -468,6 +502,13 @@ would fail.
 > ours whether or not it is idle. Two-card packing is therefore not available, and `--gpus all`
 > would silently take both.
 >
+> **[Claude 2026-09-16] The assignment has changed and this block is now doubly stale: the booking
+> covers BOTH cards.** That does not make `--gpus all` safe, and the reason is different from the
+> one above. Both cards carry other groups' containers in practice (§9.1) — the booking says the
+> cards are ours, the occupancy says we share them — so naming a card explicitly remains correct,
+> and `launch-card-cell.sh` still requires it. What changed is only that card 0 is no longer
+> off-limits by assignment.
+>
 > **[Claude 2026-09-08] This is no longer a default.** `DOCKER_GPUS` is now mandatory — the script
 > refuses with no card named, before it starts any container. `all` remains available but has to be
 > typed, which is the point.
@@ -666,14 +707,224 @@ process it the way `job.sh diagnose` does internally. Weights stay on the host: 
 evaluating a container-trained checkpoint on the laptop, since the renderer differs (EGL there,
 glfw here). Records travel; weights do not.
 
+## 9. The 2026-09 campaign layer — co-tenants, wrappers, and what is measured
+
+Everything above describes the mechanism. This section describes running it on **this** host, in
+**this** booking, and it exists because §0-§8 were written before the host was ever reachable and
+before anyone else was observed on the cards.
+
+### 9.1 You are sharing the cards, whatever the booking says
+
+The booking covers both cards. The occupancy does not agree, and the occupancy is what your cell
+meets. Observed containers, by name:
+
+| container | typical hold | behaviour |
+|---|---|---|
+| `rlvigen_kalugin_df` | **two processes, ~10,650 MiB each = ~21.3 GiB** | releases the whole block and reclaims it minutes later |
+| `rl4vla_cudagl` | ~14,700 MiB | long-lived |
+| `sg_sam2` | ~3,800 MiB | long-lived |
+
+**A card that just became free is not a free card.** On 2026-09-16 a 600k cell was launched into a
+five-minute vacancy on card 1 and the co-tenant returned within minutes. Watch a card for a
+sustained period before committing a multi-hour job to it. Card 0 went 12,354 -> 6,190 MiB free in
+ten minutes on the same day.
+
+Read occupancy with the aggregate queries only — never `ps aux`, never another user's directories:
+
+```bash
+nvidia-smi --query-gpu=index,memory.used,memory.free,utilization.gpu --format=csv,noheader,nounits
+nvidia-smi --query-compute-apps=pid,used_memory --format=csv,noheader -i 1
+```
+
+### 9.2 The convenience wrappers above `launch-card-cell.sh`
+
+§3.0's launcher is still the mechanism. These sit on top of it, live in
+[`../datasphere/native/host-scripts/`](../datasphere/native/host-scripts/) and are deployed to
+`~/rlvigen-work/`. Their interfaces are checked against this section by
+`python scripts/operator_readiness.py --interfaces`, so a script that gains an option and does not
+gain a line here **fails a check** rather than drifting.
+
+**`train-production-cell-v5.sh`** — one 600k cell, train + endpoint grid. No required variables;
+every parameter has a default:
+
+| var | default | note |
+|---|---|---|
+| `FAMILY` / `BASELINE` | `ibac_sni` | set both |
+| `SEED` | `101` | the schedule's seeds are `[101,102,103]` |
+| `FRAMES` | `600000` | |
+| `CARD` | `0` | any other card needs `YIELD_PROCS=1` (below) |
+| `YIELD_PROCS` | `0` | `NATIVE_YIELD_ON_PROCESSES` |
+| `EXPECT_OURS` | `8` | processes this cell legitimately puts on the card |
+| `TIMEOUT_S` | `43200` | `CELL_TIMEOUT_SECONDS`, 12 h |
+| `VRAM_MIB` | `4096` | `NATIVE_VRAM_CAP_MIB`; **does not bind** — every family launcher overwrites `PYTHONPATH` |
+
+**The `CARD`/`YIELD_PROCS` interaction is not obvious and has cost a cell.** `launch-card-cell.sh`
+refuses any non-zero card unless `NATIVE_YIELD_ON_PROCESSES=1` — "a card that is not ours is not
+ours to take". But v5 also sets `NATIVE_ALLOW_SHARED_CARD=1`, and on a non-zero card that
+combination sets `YIELD_PROCS=()`: the gate is satisfied and the process yield is then deliberately
+**not applied**. The launcher's own comment records why — the count trigger once killed a
+production training cell ten minutes in, because it saw two colleagues on a card we had chosen to
+share. The memory floor and the disk watch are never waived.
+
+**`curve-sweep-v3.sh`** — evaluates every retained checkpoint, several cells at a time.
+Requires `FAMILY`, `BASELINE`, `SEED`, `CKPT_DIR`. Options: `CARD` (1), `MAXCELLS` (6),
+`MIN_FREE_MIB` (6000), `MIN_FREE_GIB` (100). It **skips stamps whose result tgz already exists**, so
+restarting after a crash is safe and prints `SKIP <tag> (result present)`. Sitting at
+`waiting: cells=N/N vram_free=...` is correct behaviour, not a stall.
+
+**`reeval-cell-cached.sh <endpoint|curve>`** — one eval cell against one checkpoint.
+Requires `FAMILY`, `BASELINE`, `SEED`, `FRAME`, `SNAP`. Options: `CARD` (1), `TAG`
+(`$BASELINE-s$SEED-$MODE`), `TIMEOUT_S` (3600), `ALLOWANCE_S` (36000), `NEED_MIB` (**1500**, not the
+4000 training floor — an eval cell is measured at 841 MiB), `EXPECT_OURS` (1),
+`PIP_CACHE` (`$HOME/.cache/rlvigen-pip`), `POLICY_MODES` (`native`).
+
+> `POLICY_MODES` defaults to `native` here, while the **endpoint** protocol is `native,mode` and
+> sweeps the grid twice (§0b). If you are reproducing an endpoint grid rather than a curve, set it
+> explicitly.
+
+**`self-vram-cap.sh <container> <card> <cap_mib> [log]`** — option `INTERVAL` (20 s). Stops **our**
+container, by exact name, when **our** usage crosses the cap. See §9.4.
+
+### 9.3 Measured GPU memory, and one number that was wrong three times
+
+From `datasphere/native/measured-vram-bounds.json` via `scripts/measure_vram_bounds.py`.
+
+| family | peak | | family | peak |
+|---|---|---|---|---|
+| `ctrl` | 32,435 MiB — needs a card to itself | | `dmc_gb` | 2,529 MiB |
+| `ppg` | 7,146 MiB | | `alda` | 2,397 MiB |
+| `rlvigen` | 4,549 MiB | | one eval cell | 841 MiB, 1 core, 2.1 GiB RAM |
+| `idaac` | 2,638 MiB | | `ibac_sni` | **UNMEASURED** |
+
+**`ibac_sni` is the cautionary case.** Three figures for its `procs=16` VRAM circulated on
+2026-09-16 and all three were wrong:
+
+- *~15 GiB* — never measured. An estimate in a comment in `reeval-cell.sh`, quoted back as a
+  measurement by two agents deciding whether a card had room.
+- *2,199 MiB* — real, but a 3-process cell, and it **under-counts**: the same cell's card delta is
+  6,804 MiB and the ~4.6 GiB gap is EGL render contexts, which are not compute apps and so never
+  appear in a per-process sum. At `procs=16`, one context per worker, that term dominates.
+- *22,675 MiB* — reported as measured; **21,300 MiB of it was a colleague's two processes.**
+  `measure_vram_bounds.py` summed every compute process on the card while its docstring claimed it
+  filtered to our process tree.
+
+The instrument is fixed — the field is now `all_procs_peak_mib`, rows carry `shared_card` and
+`steady_state`, and the aggregation refuses a shared or still-ramping row. The number is still
+unknown: the only figure the data supports is a **lower bound of ~6.6 GiB** (card delta when the
+floor stood the cell down 42.4 s in, process count still climbing 2 -> 20).
+
+**So: before using a number to decide anything, find where it was produced. If it came from a
+comment, it is not a measurement.**
+
+### 9.4 Stop mechanisms — the operational summary
+
+Full treatment, including two retracted claims, in
+[`model/STOP-MECHANISMS.md`](model/STOP-MECHANISMS.md).
+
+- **The memory floor is enforced for the whole run**, not just at preflight.
+  `yield_gpu_to_neighbour.py` (STEP 2) polls free memory against `NATIVE_NEED_MIB` and writes
+  `/work/yield.sentinel` on a breach. `NATIVE_ALLOW_SHARED_CARD=1` waives exclusivity and the
+  utilisation ceiling; it never waives the floor. `scripts/watch_gpu_headroom.py`'s `watch()` is
+  only a **recorder** — reading that function alone will mislead you, and it did: a claim that the
+  floor was preflight-only was published in STOP-MECHANISMS and retracted a day later.
+- **Only a TRAINING cell obeys the sentinel.** An offline eval cell never polls it, so a sweep
+  survives a breach that stands a training cell down. Do not read "the eval cells are still going"
+  as "the floor is not working".
+- **The floor protects the CARD, not us.** It fires when free memory is already low, which on a
+  shared card can mean our own growth pushed a co-tenant to the edge. `self-vram-cap.sh` is the
+  other half: it bounds our own footprint. Size the cap as
+  `card_total - (our other cells) - 4000`, then leave the co-tenant room to return. On a 32,494 MiB
+  card with a 2,635 MiB cell of ours resident, the floor trips at 25,859; with `rlvigen_kalugin_df`
+  taking 21.3 GiB when present, 8,000-10,000 MiB is the considerate cap.
+
+### 9.5 Monitoring that reports to a person
+
+A monitor writing to a file on the host is not monitoring. Run the poll from the laptop. Three
+traps, each of which has produced a false reading here:
+
+- **`pgrep -f <script>` matches your own ssh shell**, whose command line contains the script name.
+  `pkill -f ibac-waiter.sh` killed the operator's own session; `pgrep -fc` self-counts, which is
+  what launched three duplicate sweeps. Resolve `argv[1]` from `/proc/<pid>/cmdline` and check it
+  ends with the script name.
+- **Never grep a run directory for a marker.** `native-work/` contains `run_probe.sh`, which
+  contains the literal string `NATIVE_CELL_FAILED`. Grepping the run dir reports a failure for
+  every healthy run. Grep the **log file**.
+- **Progress strings differ by family.** `ibac_sni` and `ppg` log `F {:06}`; `idaac` logs a
+  key/value table with `train/total_num_steps`. A monitor matching only `F [0-9]+` reads zero
+  forever against an idaac cell. Match both, and alarm on `NATIVE_CELL_FAILED`,
+  `NATIVE_CELL_YIELDED`, `Traceback`, `Killed` and `OOM` as well — a filter that matches only
+  success signals stays silent through a crash.
+
+Also useful, from §7b: `docker logs -f <container>`, `docker stats <container>`,
+`scripts/watch_divergence.py`, and `scripts/watch_policy_health.py --log <training.log>` for
+saturation/collapse (it warns and never kills, deliberately).
+
+### 9.6 After a run — the steps that turn a cell into a result
+
+A collected archive is not yet a result. In order:
+
+```bash
+# 1. record the run exists -- see 3.0a, and do it at LAUNCH, not after
+python scripts/record_host_run.py ./fetched/<run-id> --status running
+python scripts/production_run_register.py
+
+# 2. collect, with the audits that refuse rather than warn
+bash datasphere/native/collect-host-run.sh <family> ./fetched/<run-id>
+bash datasphere/native/collect-wave.sh --from-submissions <tag>   # a whole wave
+
+# 3. records -> ledger. A record that is not in the ledger is not a result.
+python scripts/populate_evaluator_ledger.py <family> <job>
+
+# 4. read the campaign, not the run
+python scripts/campaign_status.py
+python scripts/export_fleet.py --csv fleet.csv     # flat table + documented schema
+python scripts/production_gates.py | tail -3
+```
+
+`populate_evaluator_ledger.py` **refuses a record whose evaluator revision is not the live one**,
+and that refusal is the most valuable thing it does. Never pipe it through `tail` and read `$?` —
+the pipe returns the filter's status, and this exact mistake made the collector print
+"Do NOT write this entry" and exit 0.
+
+### 9.7 Before you finish a session
+
+```bash
+python scripts/operator_readiness.py     # does every operator need still route somewhere?
+python scripts/production_gates.py | tail -3
+git status --porcelain                   # stage BY PATH; a second agent shares this tree
+python -m pytest tests/ -q               # slow; at real checkpoints, not every iteration
+```
+
+`source tree frozen` is a gate and it **fails on uncommitted paths**, deliberately: a commit is what
+makes "the code whose results we report" well defined. Never `git add -A` here.
+
 ## What this does NOT establish
 
-- **Never executed on `cds2`.** No SSH access from the session that wrote it. Every command is
-  derived from `run_probe.sh`'s own exercised contract and ordinary `docker run` semantics.
-- **Outbound network access, Docker, and NVIDIA Container Toolkit on the host are assumed** — §1's
-  checks are how you find out, and they have not been run.
-- **Free disk on the host is unknown**, so §5's floor has never been checked against reality.
-- **Concurrent use of the host is the owner's to arbitrate.** This script reserves nothing.
+**[Claude 2026-09-16] Rewritten. Every bullet that used to be here was true when written and is
+false now**, which is the worst state for a section whose whole job is to mark the boundary of what
+is known. It read "Never executed on `cds2`. No SSH access from the session that wrote it", and
+that has not been the case since 2026-09-08: the host has since run attestation waves, two complete
+600k production cells, and dozens of evaluation cells. A reader trusting the old text would have
+discounted instructions that are now the most heavily exercised part of this file.
+
+Established since, by execution rather than derivation:
+
+- **The host runs this pipeline.** Docker, the NVIDIA Container Toolkit and outbound network all
+  work; §1's `preflight_production_host.sh` has been run many times and passes.
+- **§5's disk floor has been checked against reality** repeatedly, and disk has been the binding
+  constraint more than once. Free space is ~100 GiB at the time of writing, ~57 GiB of it ours.
+- **Two 600k cells completed end to end** (`ppg` seed 1, `idaac` seed 101), each with a full
+  endpoint grid, and `ppg` with a full curve as well.
+
+Genuinely still not established:
+
+- **`ctrl` has never run at 600k**, and at 32,435 MiB observed it needs a card to itself.
+- **`ibac_sni` has never completed a 600k cell.** Five attempts; the furthest reached F 100352
+  before the memory floor stood it down. Its VRAM at `procs=16` remains unmeasured (§9.3).
+- **Nine of twelve baselines have never produced a production record**, so most of the fleet's
+  runtime behaviour at length is still inference from short cells.
+- **Concurrent use of the host is the owner's to arbitrate.** This script reserves nothing, and §9.1
+  describes what the co-tenants actually do.
 
 ## Recording an attempt that failed before it wrote anything
 
