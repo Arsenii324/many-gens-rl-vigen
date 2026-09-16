@@ -1053,6 +1053,37 @@ Also useful, from §7b: `docker logs -f <container>`, `docker stats <container>`
 `scripts/watch_divergence.py`, and `scripts/watch_policy_health.py --log <training.log>` for
 saturation/collapse (it warns and never kills, deliberately).
 
+### 9.5b Two cells on one card: measured, not assumed
+
+`wait-and-train-v3.sh` takes a `flock` and holds it for the whole life of the cell it launches, so
+it enforces **one launcher at a time**. Its stated reason is a real incident: two 600k cells once
+landed on this 16-core host, "neither errored, and the only symptom was halved throughput".
+
+That rule is about CPU, so it can be checked rather than obeyed blindly. Measured on 2026-09-16,
+with `ibac_sni` s101 in its in-cell grid and `idaac` s102 training from zero on the same card:
+
+| | ibac eval throughput | host load | per-cell CPU |
+|---|---|---|---|
+| solo (21:22–21:32) | 1.872 log-lines/min | ~2.5 | — |
+| packed (21:35–21:45) | 1.680 log-lines/min | ~3.5 | 98.9% and 100.3% |
+
+**r = packed/solo = 0.90.** The runbook's threshold is `r < 0.5` means packing loses; 0.90 does not
+come close. `docker stats --no-stream` is the decisive instrument here: each container sits at
+about **one core**, not sixteen, so two cells are nowhere near saturating the host. A later load
+average of 42.67 on 16 cores was *other people's* jobs — our two cells accounted for ~2 of it.
+
+So the one-launcher lock is a duplicate-prevention rule, not a capacity limit. Launch a second cell
+by calling `train-production-cell-v5.sh` directly, which is what the waiter does anyway, and know
+that you are doing it: the lock will still be held by the first cell's waiter, and that is correct
+rather than stale. The two conditions that actually bound a second cell are **VRAM** (see the
+capacity model in §9.3) and **disk** — each cell pip-installs torch into its own venv, and the host
+fell 116 → 109 GiB while the second one bootstrapped, against a floor of 98 GiB that the cells
+enforce on themselves.
+
+**What packing does not change:** on card 1 with `NATIVE_ALLOW_SHARED_CARD=1`, process yield is not
+armed (`launch-card-cell.sh:276`), so a second cell of ours does not trip the other's count trigger.
+The 4,000 MiB memory floor stays armed for both, independently, for the life of each cell.
+
 ### 9.6 After a run — the steps that turn a cell into a result
 
 A collected archive is not yet a result. In order:
