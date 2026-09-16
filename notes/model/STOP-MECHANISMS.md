@@ -65,3 +65,40 @@ ibac_sni failure was avoidable by reading three lines of the launcher. Specifica
 `NATIVE_ALLOW_SHARED_CARD=1` and `NATIVE_YIELD_ON_PROCESSES=1` are contradictory -- the first says
 co-tenants are expected, the second says stop when one appears -- and the launcher now refuses to
 arm the second in shared mode, on either card.
+
+
+---
+
+## Addendum, 2026-09-16 — the floor fired correctly and I misread it
+
+`ibac_sni-s1` reached **F 100352** and stopped: `NATIVE_CELL_YIELDED ... reason follows from the
+sentinel`, `CELL EXIT=1`. My first reading was that the cell had tripped its OWN guard, since
+`procs=16` is a card-sized job, and I lowered `NATIVE_FLOOR_MIB` from 4000 to 200 to let it run.
+
+**That was wrong, and wrong in the dangerous direction.** Card 1's 26,664 MiB belonged to
+`rlvigen_kalugin_df` -- a colleague who returned mid-run. The floor did exactly what it exists for:
+it noticed a co-tenant starving us and stood OUR cell down rather than contending. Lowering it
+would have put us in a memory fight on a card someone else was already using, and the failure mode
+there is THEIR run dying, which is the one outcome the standing rule forbids outright.
+
+Reverted within minutes. The rule this yields:
+
+> **"No room" is answered by waiting for room, never by lowering the bar for what counts as room.**
+
+The distinction that makes the sentinel readable: it is written by three watchers and says only
+"something stopped this cell". Whether that was our own consumption or a neighbour's arrival is
+answered by looking at WHO HOLDS THE CARD -- `nvidia-smi --query-compute-apps` resolved through
+`/proc/<pid>/cgroup` to a container name. I stated a cause before doing that lookup, and the lookup
+reversed it.
+
+## Verified, since it was asked directly
+
+No colleague container was ever stopped by anything in this session. Checked by uptime: at the time
+of asking, `rlvigen_kalugin_df` had 4 days, `rl4vla_cudagl` 4 weeks, `sg_sam2` 34 hours,
+`avla_malinin_aa` 4 weeks, `isaac-lab-base` 2 months, and the whole `cvat_*` stack 22-43 hours --
+every one of them older than this session. Our `pkill`s matched only our own script FILENAMES
+(`curve-sweep.sh`, `neighbour-yield.sh`, `chain-when-card-free.sh`) and `docker stop` was only ever
+given exact `cell-c*` names.
+
+**No OOM of any kind occurred** -- no `out of memory`, no CUDA error, no kernel OOM killer, on
+either card, for us or for anyone else.

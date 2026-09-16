@@ -52,9 +52,21 @@ for f in "${STAMPS[@]}"; do
     sleep 120
   done
 
-  say "launching $tag (frame=$frame, file=$f)"
+  # [Claude 2026-09-16] STAGE THE STAMP UNDER A COLON-FREE NAME. idaac writes
+  # `agent-robosuite:Door-idaac-s101_200704.pt`, and EXTRA_MOUNT_1 is parsed as
+  # host:container:ENVVAR -- so the colon inside the FILENAME truncated the path at
+  # "agent-robosuite" and every idaac stamp died with
+  # "EXTRA_MOUNT_1 names a missing file". ppg was unaffected only because its stamps are
+  # model000.jd. Copy, do not symlink: the mount resolves on the host side and a link would
+  # point back at the colon.
+  STAGE="$HOME/rlvigen-runs/stamp-staging"; mkdir -p "$STAGE"
+  staged="$STAGE/${BASELINE}-s${SEED}-${frame}$([[ "$f" == *.jd ]] && echo .jd || echo .pt)"
+  if [[ ! -f "$staged" ]]; then
+    cp "$CKPT_DIR/$f" "$staged" || { say "SKIP $tag -- could not stage $f"; continue; }
+  fi
+  say "launching $tag (frame=$frame, file=$f, staged as $(basename "$staged"))"
   FAMILY="$FAMILY" BASELINE="$BASELINE" SEED="$SEED" FRAME="$frame" TAG="$tag" \
-    SNAP="$CKPT_DIR/$f" EXPECT_OURS="$MAXCELLS" TIMEOUT_S=3600 ALLOWANCE_S=14400 CARD="$CARD" \
+    SNAP="$staged" EXPECT_OURS="$MAXCELLS" TIMEOUT_S=3600 ALLOWANCE_S=14400 CARD="$CARD" \
     nohup setsid bash "$HOME/rlvigen-work/reeval-cell.sh" curve >> "$LOG" 2>&1 &
   sleep 90    # let the launcher take its slot before the next occupancy count
 done
