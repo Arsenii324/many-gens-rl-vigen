@@ -127,6 +127,12 @@ with 28,858 MiB free and our idaac s102 (2,635 MiB) resident:
 So the second cell does not cost a coin-flip on itself; it costs the cell already running. Declining
 to launch was the higher-value action, and that is the opposite of what "use the free card" suggests.
 
+**Confirmed by the event rather than left as a prediction.** At 16:05 the co-tenant returned to card
+1 with 10,650 + 11,246 = 21,896 MiB, leaving **6,422 MiB free**. idaac s102 was at 21% and survived,
+because 6,422 is above the 4,000 floor. Had the ppg cell been added an hour earlier, free would have
+gone below zero and the floor would have stood **both** cells down — losing 1.5 h of training to gain
+a cell that would also have died. The arithmetic was not conservative; it was correct.
+
 ## 6. Two published claims of mine, retracted in place
 
 Both were wrong in the direction that flatters the writer, which is why they are recorded here
