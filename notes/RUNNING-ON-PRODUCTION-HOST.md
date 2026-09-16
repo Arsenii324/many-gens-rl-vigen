@@ -224,16 +224,41 @@ the container at run time by `run_probe.sh`, so **the host needs outbound networ
 These three overlay Places365 images as their augmentation, so the dataset is a
 **learning-affecting input**, not a fixture. A22 decided the upstream **train** split.
 
-On the host, once:
+> **[Claude 2026-09-16] STATE OF THIS ON THE ACTUAL HOST — read before following the commands.**
+> Checked first-hand today:
+>
+> - **`/data/places365` does not exist and `/data` is not writable.** The commands below name a path
+>   this host does not have. The assets live under `~/rlvigen-assets/`.
+> - **What is present is `~/rlvigen-assets/places365`, 563 MB**, whose `train/` holds **20 class
+>   directories and 1,000 files**. That is the attestation FIXTURE — the thing this very section
+>   warns about at its end: it "certifies the code path, not the dataset".
+> - **So `svea`, `sgqn` and `soda` cannot produce a valid production record today.** Three of the
+>   twelve baselines are blocked on an asset nobody has fetched, and this was not written down as a
+>   blocker anywhere until now.
+> - **Nothing mechanical will stop you.** `run_probe.sh` requires `PLACES365_EXPECTED_COUNT` and
+>   `PLACES365_EXPECTED_SHA256` and verifies them, but that checks the corpus against what the
+>   OPERATOR DECLARED — declare the fixture's own count and hash and it passes. No gate in
+>   `production_gates.py` ties a production run to the production dataset, and `family.py
+>   needs-places365` only answers whether a cell needs one at all. The augmentation corpus is a
+>   **learning-affecting input**, so a cell trained against the fixture is not a wrong-looking
+>   cell — it is a wrong cell that looks right.
+> - **Cost, so the decision is informed:** the train split is ~24 GB against **97 GiB free** on a
+>   filesystem already at 100% use. It fits, and it is a quarter of the remaining headroom, and
+>   §5's per-cell disk table then applies on top (`svea`/`sgqn` need 93 GiB copied, or 48 GiB with
+>   the corpus bind-mounted via `NATIVE_PLACES365_DIR_HOST` — which is the reason that flag exists).
+
+On the host, once — with the path corrected to somewhere writable:
 
 ```bash
-bash setup/fetch_overlay_dataset.sh /data/places365 train    # ~24 GB
-PLACES365_ROOT=/data/places365 python3 setup/verify_datasets.py --split train
+bash setup/fetch_overlay_dataset.sh ~/rlvigen-assets/places365-train train    # ~24 GB
+PLACES365_ROOT=~/rlvigen-assets/places365-train python3 setup/verify_datasets.py --split train
 ```
 
 Require `dataset usable: PASS` with `class directories: 365` **before the first svea/sgqn/soda
 cell**, and do it ONCE for the host rather than per cell — a million-image integrity scan on every
-cell is the kind of check people switch off.
+cell is the kind of check people switch off. `setup/verify_datasets.py` hardcodes
+`EXPECTED_CLASSES = 365`, so it is the check that distinguishes the corpus from the fixture; run it
+and read the class count rather than assuming the directory that exists is the right one.
 
 Then pass the archive as the FOURTH positional argument and name the split:
 

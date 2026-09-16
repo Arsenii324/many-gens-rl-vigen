@@ -169,3 +169,15 @@ No deletion has been performed and none is proposed.
 - **Nine of twelve baselines have no production record at all.**
 - **The evaluator-nondeterminism mechanism is unexplained**, and it affects every baseline rather
   than the three sampling ones.
+- **`svea`, `sgqn` and `soda` are blocked on Places365 and nobody had written that down.** The host
+  holds `~/rlvigen-assets/places365` at 563 MB, whose `train/` is **20 class directories and 1,000
+  files** — the attestation fixture, not the corpus. The operator guide's §2b told an operator to
+  fetch to `/data/places365`, a path that does not exist on this host on a `/data` that is not
+  writable. The real corpus is ~24 GB against 97 GiB free.
+
+  The part worth pausing on: **nothing mechanical would have caught a cell trained against the
+  fixture.** `run_probe.sh` verifies `PLACES365_EXPECTED_COUNT`/`_SHA256` against what the operator
+  DECLARED, no gate ties a production run to the production dataset, and `family.py
+  needs-places365` only answers whether a cell needs one. The augmentation corpus is a
+  learning-affecting input, so such a cell is not a wrong-looking cell — it is a wrong cell that
+  looks right, for a quarter of the fleet.

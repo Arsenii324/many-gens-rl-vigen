@@ -44,9 +44,17 @@ outcome-selected, which is what `docs/EVAL-PROTOCOL.md` §4b requires. **Impleme
 ratification: keep the run and record ppg's seed set as `{1, 102, 103}`** rather than spend eight
 GPU-hours reproducing a number we have.
 
-**Nine of twelve baselines have no production record at all.** `ibac_sni` has never completed a 600k
-cell (five attempts, four stopped by the memory floor on a card a colleague was holding). `ctrl` has
-never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a 32,494 MiB card.
+**Nine of twelve baselines have no production record at all**, and three of them are blocked on
+things that are not compute:
+
+- `ibac_sni` has never completed a 600k cell — five attempts, four stopped by the memory floor on a
+  card a colleague was holding. It needs ~11 GiB that *stays* free.
+- `ctrl` has never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a
+  32,494 MiB card at all. It needs an empty card and an explicit decision about the floor.
+- **`svea`, `sgqn` and `soda` are blocked on Places365**, found 2026-09-16 and not previously
+  recorded. The host holds only the 20-class/1,000-image attestation fixture; the corpus is ~24 GB
+  and has never been fetched. **No gate ties a production run to the production dataset**, so a
+  cell trained against the fixture would look correct — the corpus is a learning-affecting input.
 
 Full audit with every number read first-hand:
 [`production-host/33-what-we-actually-have-2026-09-16.md`](production-host/33-what-we-actually-have-2026-09-16.md).
