@@ -1,0 +1,11 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: invocation-keys-not-in-diff
+# note: absence: none of the invocation-defining manifest keys is among the changed lines
+# source-kind: local-command
+# source: sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt
+# repo-head: 51d0b0db98bd29635e2414001e234257553bdbc6
+# inputs: results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt=b7bf3b976fe59405
+# extraction: ( sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt ) | grep -n -E 'payload_sha256|requirements_native_sha256|container_image|command|cells_requested|eval_|frames|host_profile|torch' | head -n 200
+# matched-lines: 0  shown-lines: 0
+# captured-at: 2026-09-16T11:01:58+00:00
+#---------------------------------------------------------------------------------------------------

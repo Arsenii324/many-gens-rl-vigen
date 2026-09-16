@@ -1,0 +1,32 @@
+"""Pins register rows whose evidence lives in `results/evidence/` and whose premise is a code fact.
+
+Each test asserts the premise as it stands. A failure means the code moved under the row, so the
+row and its bundle's CLAIM.md must be re-derived, not that the code is wrong.
+"""
+from __future__ import annotations
+
+import ast
+import pathlib
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def _function_source(path: pathlib.Path, name: str) -> str:
+    text = path.read_text()
+    node = next(n for n in ast.parse(text).body if isinstance(n, ast.FunctionDef) and n.name == name)
+    return ast.get_source_segment(text, node)
+
+
+def test_evaluator_sampling_rows_reproduce_within_noise():
+    """`evaluator-sampling-rows-reproduce-within-noise`: per-episode reseeding leaves torch alone.
+
+    The row explains identical placements with differing returns by this asymmetry. If torch
+    joins the per-episode reseed, sampling rows may become bit-reproducible and the measured noise
+    no longer describes the evaluator.
+    """
+    grid = ROOT / "scripts" / "eval_grid.py"
+    per_episode = _function_source(grid, "seed_episode_placement")
+    assert "np.random.seed(condition)" in per_episode and "_random.seed(condition)" in per_episode
+    assert "torch" not in per_episode, "seed_episode_placement now touches torch; re-derive the row"
+    ppg = (ROOT / "runnable" / "ppg" / "phasic_policy_gradient" / "ppg.py").read_text()
+    assert "ac = pd.sample()" in ppg, "ppg no longer samples its action from the torch distribution"

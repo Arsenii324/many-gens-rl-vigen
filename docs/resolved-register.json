@@ -510,6 +510,39 @@
       ],
       "gated_by": [],
       "supersedes": "My own description of the on-host asset as a '1000-image fixture'. 1000 is PLACES365_EXPECTED_COUNT, which validates the attestation ARCHIVE; the folder on the host holds 37,500 images across 21 class directories. Both are subsets, but the number was wrong."
+    },
+    {
+      "id": "evaluator-sampling-rows-reproduce-within-noise",
+      "domain": "eval-validity",
+      "status": "resolved",
+      "question": "The same ppg checkpoint, re-evaluated under a newer evaluator revision, gave 25.79 then 26.05 against the recorded 26.10. Did the estimand change, and can a sampling-policy row be reproduced?",
+      "verdict": "No change of estimand; the evaluator is nondeterministic run to run. Two byte-identical invocations gave 25.795 and 26.053; with the original 26.100 the spread is 0.305 = 0.095 SE at n=20 (SE 3.197), and old vs mean(new) is 0.055 SE. Placement seeds are identical in all three rows while 16 of 20 episode returns differ, so the noise is in the action stream, not the placements. A sampling-policy row (idaac, ppg, ibac_sni) reproduces within noise, never bit-for-bit, despite recording torch.use_deterministic_algorithms as enabled. Partial re-evaluation is acceptable on that basis.",
+      "why": "seed_episode_placement re-seeds random and numpy per episode (the placement half), but torch is seeded once per family setup and ppg samples its actions from torch, so the action stream is not per-episode deterministic. Measured on ppg train/scene 0 only; the nine mode baselines take argmax/mean and were not tested. Recomputed from the captured per-episode returns, not the recorded means. Narrative: notes/endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md.",
+      "evidence": [
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:60",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:64",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:61",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-row.txt:16",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-row.txt:16",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/seeding-code.txt:38",
+        "scripts/eval_grid.py:236"
+      ],
+      "evidence_expect": {
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:60": "placement seeds identical run1/run2/old: True",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:64": "spread in SE 0.095",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:61": "episodes whose return differs run1 vs run2: 16 of 20",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-row.txt:16": "\"episode_return_mean\": 25.794515705108644",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-row.txt:16": "\"episode_return_mean\": 26.05295889377594",
+        "results/evidence/evaluator-run-to-run-noise-ppg/raw/seeding-code.txt:38": "np.random.seed(condition)",
+        "scripts/eval_grid.py:236": "def seed_episode_placement"
+      },
+      "falsifier": "A third identical run landing several SE away falsifies 'a tenth of an SE'. If per-episode reseeding starts covering torch, sampling rows may become reproducible and the breadth dependence must be re-measured; tests/test_evidence_backed_register_rows.py fails the moment seed_episode_placement touches torch.",
+      "pinned_by": [
+        "tests/test_evidence_backed_register_rows.py",
+        "tests/test_evidence_bundles_hold.py"
+      ],
+      "gated_by": [],
+      "supersedes": "The pre-measurement claim that the ppg/idaac re-evaluation was 'superseded by re-hashing, not by a change of estimand' as a matter of reading diffs; it now rests on measurement."
     }
   ]
 }

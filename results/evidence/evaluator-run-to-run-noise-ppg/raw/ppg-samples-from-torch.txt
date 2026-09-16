@@ -1,0 +1,20 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: ppg-samples-from-torch
+# note: ppg act() samples its action from the torch distribution
+# source-kind: repo-file
+# source: runnable/ppg/phasic_policy_gradient/ppg.py
+# source-bytes: 10223  source-sha256: 92d4bf7bdc37348638976c156046d4fd66ba44b7777886045ba410afd23f5785  source-mtime: 
+# extraction: cat runnable/ppg/phasic_policy_gradient/ppg.py | grep -n '' | sed -n '27,36p' | head -n 200
+# matched-lines: 10  shown-lines: 10
+# captured-at: 2026-09-16T11:01:58+00:00
+#---------------------------------------------------------------------------------------------------
+27:    def act(self, ob, first, state_in):
+28:        pd, vpred, _, state_out = self(
+29:            ob=tree_map(lambda x: x[:, None], ob),
+30:            first=first[:, None],
+31:            state_in=state_in,
+32:        )
+33:        ac = pd.sample()
+34:        logp = sum_nonbatch(pd.log_prob(ac))
+35:        return (
+36:            tree_map(lambda x: x[:, 0], ac),

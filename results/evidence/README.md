@@ -16,6 +16,7 @@ answer without re-running anything:
 | bundle | question | status |
 |---|---|---|
 | [ppg-nminibatch-declared-32-executed-1](ppg-nminibatch-declared-32-executed-1/CLAIM.md) | ppg declared `--nminibatch 32`. What executed, and is the executed run faithful? | resolved (policy phase) |
+| [evaluator-run-to-run-noise-ppg](evaluator-run-to-run-noise-ppg/CLAIM.md) | Re-evaluating the same ppg checkpoint gave a different mean. Changed estimand, or evaluator noise? | resolved (noise, 0.095 SE; placements identical, actions differ) |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 
 ## Finding something
@@ -60,6 +61,9 @@ are for.
 3. **Absence is evidence too.** Use `--allow-empty` with `--anchor 'header:# matched-lines: 0 '`.
    The tool runs the source command alone first, so a failing command cannot pass as "no
    matches".
+   For long lines such as JSON rows, add `--only-matching` to keep only the matched fields.
+   A capture can read excerpts already taken, e.g. `--command "sed '1,/^#---/d' raw/a.txt"`.
+   That is how a diff or a recomputation over captured data becomes evidence itself.
 4. Run `bash results/evidence/<slug>/capture.sh`. Write `CLAIM.md`. Add the bundle to the index
    above. Cite its `raw/` lines from the register row, with `evidence_expect`.
 
@@ -71,3 +75,5 @@ are for.
   the test. The body/header split exists because the header quotes the grep pattern, and an
   anchor must not be "found" in the command that searched for it.
 - **Truncation.** A capped excerpt says `TRUNCATED`, and `matched-lines` is always the full count.
+- **Removing an excerpt** means deleting `raw/<name>.txt`, its `manifest.json` entry and its
+  facts, and its line in `capture.sh`. The test fails while any of the three disagree.

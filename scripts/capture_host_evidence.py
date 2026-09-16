@@ -128,6 +128,10 @@ def command_inputs(command: str) -> dict[str, str]:
 def _extract(args) -> tuple[str, str, int]:
     """Return (excerpt text, the exact extraction command, total matching lines)."""
     cap = f" | head -n {args.max}" if args.max else ""
+    # -o prints each match on its own line, so a 27 KB JSON row can be cut to the fields that matter
+    gflags = "-n -o -E" if args.only_matching else "-n -E"
+    cflags = "-o -E" if args.only_matching else "-c -E"
+    ccount = " | wc -l" if args.only_matching else " || true"
     if args.host_path:
         p = _q(_host_path(args.host_path))
         if args.tar_member:
@@ -138,8 +142,8 @@ def _extract(args) -> tuple[str, str, int]:
             src = f"cat {p}"
         if args.grep:
             pat = shlex.quote(args.grep)
-            body = f"{src} | grep -n -E {pat}"
-            count_cmd = f"{src} | grep -c -E {pat} || true"
+            body = f"{src} | grep {gflags} {pat}"
+            count_cmd = f"{src} | grep {cflags} {pat}{ccount}"
         elif args.lines:
             a, b = args.lines.split(":")
             body = f"{src} | grep -n '' | sed -n '{int(a)},{int(b)}p'"
@@ -161,8 +165,8 @@ def _extract(args) -> tuple[str, str, int]:
         # as an empty excerpt; run it alone first so a failure is a failure
         _local(base + " > /dev/null")
     if args.grep:
-        body = f"{base} | grep -n -E {shlex.quote(args.grep)}"
-        count_cmd = f"{base} | grep -c -E {shlex.quote(args.grep)} || true"
+        body = f"{base} | grep {gflags} {shlex.quote(args.grep)}"
+        count_cmd = f"{base} | grep {cflags} {shlex.quote(args.grep)}{ccount}"
     elif args.lines:
         a, b = args.lines.split(":")
         body = f"{base} | grep -n '' | sed -n '{int(a)},{int(b)}p'"
@@ -213,6 +217,8 @@ def main() -> int:
     ap.add_argument("--tar-member", help="with --host-path: read this member of a .tgz")
     how = ap.add_mutually_exclusive_group()
     how.add_argument("--grep", help="extended regex; matching lines, with line numbers")
+    ap.add_argument("--only-matching", action="store_true",
+                    help="with --grep: keep only the matched text (grep -o), one match per line")
     how.add_argument("--lines", help="A:B inclusive line range, numbered like --grep output")
     ap.add_argument("--max", type=int, default=200, help="cap on excerpt lines (0 = no cap)")
     ap.add_argument("--allow-empty", action="store_true",

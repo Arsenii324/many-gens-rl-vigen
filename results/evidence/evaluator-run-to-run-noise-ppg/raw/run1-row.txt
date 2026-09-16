@@ -1,0 +1,47 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: run1-row
+# note: run 1 of the narrow re-evaluation (train, scene 0, 20 sampled episodes), 2026-09-15 15:40 MSK
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz
+# source-bytes: 39265  source-sha256: bc2f9277305945ad798f77f46df8e75b10847bce90e93debf2610c8fa418b6ff  source-mtime: 2026-09-15T12:40:33+00:00
+# tar-member: ./offline_eval_cuda.jsonl
+# extraction: tar -xzOf "$HOME"/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz ./offline_eval_cuda.jsonl | grep -n -o -E '"(phase|regime|scene_set|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|episode_seed|regimes|scenes|eval_policy_mode|eval_scope|episodes|returns|placement_condition_seeds|deterministic_setting)": *(\[[^]]*\]|\{[^}]*\}|"[^"]*"|[-0-9.e]+)'
+# matched-lines: 36  shown-lines: 36
+# captured-at: 2026-09-16T11:01:40+00:00
+#---------------------------------------------------------------------------------------------------
+1:"phase": "offline-eval"
+1:"regime": "train"
+1:"scene_set": "0"
+1:"episodes": 20
+1:"episode_return_mean": 25.794515705108644
+1:"episode_return_sd": 14.245690545714764
+1:"checkpoint_sha256": "a328e63e6ffa96f8cde493dfef15e70589d9811bad0cb387a194f9cc4ab0d220"
+1:"evaluator_revision": "248751f7caca3dae5be9f0046301073beaeb2a0dc7d64fdef79380607235cf90"
+1:"eval_scope": "endpoint"
+1:"regimes": ["train"]
+1:"scenes": [0]
+1:"episodes": 20
+1:"episode_seed": 20260903
+1:"deterministic_setting": {"backend": "torch", "enabled": true, "mode": "torch.use_deterministic_algorithms"}
+1:"eval_policy_mode": "sample"
+1:"eval_policy_mode": "sample"
+1:"returns": [35.546669006347656, 26.527223587036133, 31.026884078979492, 15.56033992767334, 34.706302642822266, 20.02076530456543, 6.039895057678223, 6.64451789855957, 16.2319278717041, 53.29465103149414, 20.317413330078125, 16.71776008605957, 13.028759956359863, 9.697137832641602, 46.15979766845703, 15.587380409240723, 51.92295455932617, 32.18817901611328, 27.431127548217773, 37.24062728881836]
+1:"placement_condition_seeds": [246415859, 1095573727, 3771752622, 172242467, 1682051426, 908769553, 2839421769, 3731922373, 979745648, 3756646263, 3680066375, 148748536, 2538810858, 4260431490, 62778687, 2318870867, 1479091971, 887342641, 1599280671, 2491598128]
+1:"eval_scope": "endpoint"
+2:"phase": "offline-eval"
+2:"regime": "train"
+2:"scene_set": "0"
+2:"episodes": 20
+2:"episode_return_mean": 25.794515705108644
+2:"episode_return_sd": 14.245690545714764
+2:"checkpoint_sha256": "a328e63e6ffa96f8cde493dfef15e70589d9811bad0cb387a194f9cc4ab0d220"
+2:"evaluator_revision": "248751f7caca3dae5be9f0046301073beaeb2a0dc7d64fdef79380607235cf90"
+2:"eval_scope": "endpoint"
+2:"regimes": ["train"]
+2:"scenes": [0]
+2:"episodes": 20
+2:"episode_seed": 20260903
+2:"deterministic_setting": {"backend": "torch", "enabled": true, "mode": "torch.use_deterministic_algorithms"}
+2:"eval_policy_mode": "sample"
+2:"eval_policy_mode": "sample"
+2:"eval_scope": "endpoint"

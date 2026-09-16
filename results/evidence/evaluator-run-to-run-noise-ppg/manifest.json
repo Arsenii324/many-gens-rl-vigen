@@ -1,0 +1,380 @@
+{
+  "slug": "evaluator-run-to-run-noise-ppg",
+  "excerpts": {
+    "run1-row": {
+      "file": "raw/run1-row.txt",
+      "sha256": "88fc2baadec74a5fc0fb7f98d9f3b936b5f78cd1b7279880f23a6f0159e7cb50",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz",
+        "bytes": 39265,
+        "sha256": "bc2f9277305945ad798f77f46df8e75b10847bce90e93debf2610c8fa418b6ff",
+        "mtime": "2026-09-15T12:40:33+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz ./offline_eval_cuda.jsonl | grep -n -o -E '\"(phase|regime|scene_set|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|episode_seed|regimes|scenes|eval_policy_mode|eval_scope|episodes|returns|placement_condition_seeds|deterministic_setting)\": *(\\[[^]]*\\]|\\{[^}]*\\}|\"[^\"]*\"|[-0-9.e]+)'",
+      "tar_member": "./offline_eval_cuda.jsonl",
+      "matched_lines": 36,
+      "shown_lines": 36,
+      "captured_at": "2026-09-16T11:01:40+00:00",
+      "note": "run 1 of the narrow re-evaluation (train, scene 0, 20 sampled episodes), 2026-09-15 15:40 MSK"
+    },
+    "run2-row": {
+      "file": "raw/run2-row.txt",
+      "sha256": "f3c251b9d96c6af12060d640a41e521ddfe8cd049905b427a470e4b941675dc7",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-smoke-result.tgz",
+        "bytes": 39281,
+        "sha256": "cf16811e2df187efc73214715f632609aa134e7da52b8de61e4ef749d832592c",
+        "mtime": "2026-09-15T12:56:03+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-smoke-result.tgz ./offline_eval_cuda.jsonl | grep -n -o -E '\"(phase|regime|scene_set|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|episode_seed|regimes|scenes|eval_policy_mode|eval_scope|episodes|returns|placement_condition_seeds|deterministic_setting)\": *(\\[[^]]*\\]|\\{[^}]*\\}|\"[^\"]*\"|[-0-9.e]+)'",
+      "tar_member": "./offline_eval_cuda.jsonl",
+      "matched_lines": 36,
+      "shown_lines": 36,
+      "captured_at": "2026-09-16T11:01:46+00:00",
+      "note": "run 2: the same invocation repeated, 2026-09-15 15:56 MSK"
+    },
+    "old-row": {
+      "file": "raw/old-row.txt",
+      "sha256": "d973e6193ec5ac55ff625ee4eb09690bfcfde5ae5c3e8313205b7b6032887951",
+      "source": {
+        "kind": "local-command",
+        "command": "grep -m1 '\"episode_return_mean\": 26.099544954299926' results/superseded-runs/card0-20260909-115331__records.jsonl",
+        "repo_head": "51d0b0db98bd29635e2414001e234257553bdbc6",
+        "inputs": {
+          "results/superseded-runs/card0-20260909-115331__records.jsonl": "4fc2bde6829a8045baac617c3e9662e777008ed3eda73ad1c9d15097ea8406b0"
+        }
+      },
+      "extraction": "( grep -m1 '\"episode_return_mean\": 26.099544954299926' results/superseded-runs/card0-20260909-115331__records.jsonl ) | grep -n -o -E '\"(phase|regime|scene_set|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|episode_seed|regimes|scenes|eval_policy_mode|eval_scope|episodes|returns|placement_condition_seeds|deterministic_setting)\": *(\\[[^]]*\\]|\\{[^}]*\\}|\"[^\"]*\"|[-0-9.e]+)'",
+      "tar_member": null,
+      "matched_lines": 19,
+      "shown_lines": 19,
+      "captured_at": "2026-09-16T11:01:47+00:00",
+      "note": "the row recorded 2026-09-09 by the full grid (four regimes x ten scenes), same checkpoint"
+    },
+    "run1-manifest": {
+      "file": "raw/run1-manifest.txt",
+      "sha256": "b1c4c251f5a8a5a96482623dd097747a628c21792f15477885a4a644eff7c29c",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz",
+        "bytes": 39265,
+        "sha256": "bc2f9277305945ad798f77f46df8e75b10847bce90e93debf2610c8fa418b6ff",
+        "mtime": "2026-09-15T12:40:33+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz ./run_manifest.json",
+      "tar_member": "./run_manifest.json",
+      "matched_lines": 204,
+      "shown_lines": 204,
+      "captured_at": "2026-09-16T11:01:52+00:00",
+      "note": "run 1 run_manifest.json, whole"
+    },
+    "run2-manifest": {
+      "file": "raw/run2-manifest.txt",
+      "sha256": "a36c4c9f618ad542aa9d5895a25666946101ac4610034859868f2ae62975a43e",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-smoke-result.tgz",
+        "bytes": 39281,
+        "sha256": "cf16811e2df187efc73214715f632609aa134e7da52b8de61e4ef749d832592c",
+        "mtime": "2026-09-15T12:56:03+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-smoke-result.tgz ./run_manifest.json",
+      "tar_member": "./run_manifest.json",
+      "matched_lines": 204,
+      "shown_lines": 204,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "run 2 run_manifest.json, whole"
+    },
+    "manifest-diff": {
+      "file": "raw/manifest-diff.txt",
+      "sha256": "b7bf3b976fe594052b487d19822d8f7b2a4d62acda6fc1e5cf592e9d6ca4a410",
+      "source": {
+        "kind": "local-command",
+        "command": "bash -c 'diff <(sed \"1,/^#---/d\" results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt) <(sed \"1,/^#---/d\" results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt); true'",
+        "repo_head": "51d0b0db98bd29635e2414001e234257553bdbc6",
+        "inputs": {
+          "results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt": "b1c4c251f5a8a5a96482623dd097747a628c21792f15477885a4a644eff7c29c",
+          "results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt": "a36c4c9f618ad542aa9d5895a25666946101ac4610034859868f2ae62975a43e"
+        }
+      },
+      "extraction": "( bash -c 'diff <(sed \"1,/^#---/d\" results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt) <(sed \"1,/^#---/d\" results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt); true' ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 36,
+      "shown_lines": 36,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "every line on which the two run manifests differ: disk free/used and the result hashes, nothing about the invocation"
+    },
+    "derived": {
+      "file": "raw/derived.txt",
+      "sha256": "ce56b34c06cbb7103c9f15d9942912fffe539fd58b759990a5af9210e977694b",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json, math, re, statistics as st\ndef rows(name):\n    body = open('results/evidence/evaluator-run-to-run-noise-ppg/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    out = {}\n    for line in body.splitlines():\n        m = re.match(r'\\d+:\\\"(\\w+)\\\": *(.*)', line)\n        if m and m.group(1) not in out:\n            out[m.group(1)] = json.loads(m.group(2))\n    return out\nr1, r2, old = rows('run1-row'), rows('run2-row'), rows('old-row')\nfor name, r in (('run1', r1), ('run2', r2), ('old', old)):\n    x = r['returns']\n    print(name, 'n', len(x), 'mean-of-returns', round(st.mean(x), 12), 'recorded', r['episode_return_mean'], 'sd', round(st.stdev(x), 6))\nprint('placement seeds identical run1/run2/old:', r1['placement_condition_seeds'] == r2['placement_condition_seeds'] == old['placement_condition_seeds'])\nprint('episodes whose return differs run1 vs run2:', sum(a != b for a, b in zip(r1['returns'], r2['returns'])), 'of', len(r1['returns']))\nmeans = [r1['episode_return_mean'], r2['episode_return_mean'], old['episode_return_mean']]\nse = st.mean([r1['episode_return_sd'], r2['episode_return_sd'], old['episode_return_sd']]) / math.sqrt(20)\nspread = max(means) - min(means)\nprint('spread of three means', round(spread, 4))\nprint('one SE at n=20', round(se, 4))\nprint('spread in SE', round(spread / se, 3))\nprint('old minus mean(new) in SE', round((old['episode_return_mean'] - (means[0] + means[1]) / 2) / se, 3))\n\"",
+        "repo_head": "51d0b0db98bd29635e2414001e234257553bdbc6",
+        "inputs": {}
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json, math, re, statistics as st\ndef rows(name):\n    body = open('results/evidence/evaluator-run-to-run-noise-ppg/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    out = {}\n    for line in body.splitlines():\n        m = re.match(r'\\d+:\\\"(\\w+)\\\": *(.*)', line)\n        if m and m.group(1) not in out:\n            out[m.group(1)] = json.loads(m.group(2))\n    return out\nr1, r2, old = rows('run1-row'), rows('run2-row'), rows('old-row')\nfor name, r in (('run1', r1), ('run2', r2), ('old', old)):\n    x = r['returns']\n    print(name, 'n', len(x), 'mean-of-returns', round(st.mean(x), 12), 'recorded', r['episode_return_mean'], 'sd', round(st.stdev(x), 6))\nprint('placement seeds identical run1/run2/old:', r1['placement_condition_seeds'] == r2['placement_condition_seeds'] == old['placement_condition_seeds'])\nprint('episodes whose return differs run1 vs run2:', sum(a != b for a, b in zip(r1['returns'], r2['returns'])), 'of', len(r1['returns']))\nmeans = [r1['episode_return_mean'], r2['episode_return_mean'], old['episode_return_mean']]\nse = st.mean([r1['episode_return_sd'], r2['episode_return_sd'], old['episode_return_sd']]) / math.sqrt(20)\nspread = max(means) - min(means)\nprint('spread of three means', round(spread, 4))\nprint('one SE at n=20', round(se, 4))\nprint('spread in SE', round(spread / se, 3))\nprint('old minus mean(new) in SE', round((old['episode_return_mean'] - (means[0] + means[1]) / 2) / se, 3))\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 9,
+      "shown_lines": 9,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "recomputed from the captured per-episode returns, not from the recorded means"
+    },
+    "seeding-code": {
+      "file": "raw/seeding-code.txt",
+      "sha256": "18931abb32351c6b568129389484c96625576f041c944413f9ecc2b1e02d7ad0",
+      "source": {
+        "kind": "repo-file",
+        "path": "scripts/eval_grid.py",
+        "bytes": 91674,
+        "sha256": "10da2c0ae5709325b2f5486e4f096b1cd66d064b2806167906166c5c00782855"
+      },
+      "extraction": "cat scripts/eval_grid.py | grep -n '' | sed -n '213,242p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 30,
+      "shown_lines": 30,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "eval_grid.py: family setup seeds random/numpy/torch once; per-episode reseeding touches random and numpy only"
+    },
+    "ppg-samples-from-torch": {
+      "file": "raw/ppg-samples-from-torch.txt",
+      "sha256": "2218b69736abd6d4e37d20541a7683a9d5b79d33a9f8f7f3d6a6f47d83e69363",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/ppg/phasic_policy_gradient/ppg.py",
+        "bytes": 10223,
+        "sha256": "92d4bf7bdc37348638976c156046d4fd66ba44b7777886045ba410afd23f5785"
+      },
+      "extraction": "cat runnable/ppg/phasic_policy_gradient/ppg.py | grep -n '' | sed -n '27,36p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 10,
+      "shown_lines": 10,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "ppg act() samples its action from the torch distribution"
+    },
+    "determinism-flag-recorded": {
+      "file": "raw/determinism-flag-recorded.txt",
+      "sha256": "6137d8235d145a8632f82ab781576583dc3f601e6c94238384263b5b7a629234",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz",
+        "bytes": 39265,
+        "sha256": "bc2f9277305945ad798f77f46df8e75b10847bce90e93debf2610c8fa418b6ff",
+        "mtime": "2026-09-15T12:40:33+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz ./offline_eval_cuda.jsonl | grep -n -o -E '\"deterministic_setting\": *\\{[^}]*\\}' | head -n 1",
+      "tar_member": "./offline_eval_cuda.jsonl",
+      "matched_lines": 2,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:02:04+00:00",
+      "note": "every row records torch.use_deterministic_algorithms as enabled, and the runs still differ"
+    },
+    "invocation-keys-not-in-diff": {
+      "file": "raw/invocation-keys-not-in-diff.txt",
+      "sha256": "6011a746054afee06fc3e8e739a1ca4dd15b5310601ac97069d0e5bb38987b38",
+      "source": {
+        "kind": "local-command",
+        "command": "sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt",
+        "repo_head": "51d0b0db98bd29635e2414001e234257553bdbc6",
+        "inputs": {
+          "results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt": "b7bf3b976fe594052b487d19822d8f7b2a4d62acda6fc1e5cf592e9d6ca4a410"
+        }
+      },
+      "extraction": "( sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/manifest-diff.txt ) | grep -n -E 'payload_sha256|requirements_native_sha256|container_image|command|cells_requested|eval_|frames|host_profile|torch' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "absence: none of the invocation-defining manifest keys is among the changed lines"
+    },
+    "run1-invocation": {
+      "file": "raw/run1-invocation.txt",
+      "sha256": "74995ea1b97ef4a6d3c053c045bafb10c03482e38914e798c2fe87a1aa37a230",
+      "source": {
+        "kind": "local-command",
+        "command": "sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt",
+        "repo_head": "51d0b0db98bd29635e2414001e234257553bdbc6",
+        "inputs": {
+          "results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt": "b1c4c251f5a8a5a96482623dd097747a628c21792f15477885a4a644eff7c29c"
+        }
+      },
+      "extraction": "( sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt ) | grep -n -E '\"(payload_sha256|requirements_native_sha256|container_image|command|eval_episodes|host_profile|frames)\"' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 7,
+      "shown_lines": 7,
+      "captured_at": "2026-09-16T11:01:58+00:00",
+      "note": "the invocation-defining keys, as run 1 recorded them (run 2 differs from these nowhere; see manifest-diff)"
+    }
+  },
+  "facts": [
+    {
+      "key": "run1_mean",
+      "value": "25.794515705108644",
+      "excerpt": "run1-row",
+      "anchor": "\"episode_return_mean\": 25.794515705108644"
+    },
+    {
+      "key": "run1_sd",
+      "value": "14.245690545714764",
+      "excerpt": "run1-row",
+      "anchor": "\"episode_return_sd\": 14.245690545714764"
+    },
+    {
+      "key": "checkpoint",
+      "value": "a328e63e6ffa96f8",
+      "excerpt": "run1-row",
+      "anchor": "\"checkpoint_sha256\": \"a328e63e6ffa96f8"
+    },
+    {
+      "key": "new_evaluator_revision",
+      "value": "248751f7caca",
+      "excerpt": "run1-row",
+      "anchor": "\"evaluator_revision\": \"248751f7caca"
+    },
+    {
+      "key": "narrow_scope_regimes",
+      "value": "[\"train\"]",
+      "excerpt": "run1-row",
+      "anchor": "\"regimes\": [\"train\"]"
+    },
+    {
+      "key": "run2_mean",
+      "value": "26.05295889377594",
+      "excerpt": "run2-row",
+      "anchor": "\"episode_return_mean\": 26.05295889377594"
+    },
+    {
+      "key": "run2_sd",
+      "value": "14.39036276163836",
+      "excerpt": "run2-row",
+      "anchor": "\"episode_return_sd\": 14.39036276163836"
+    },
+    {
+      "key": "run2_checkpoint",
+      "value": "a328e63e6ffa96f8",
+      "excerpt": "run2-row",
+      "anchor": "\"checkpoint_sha256\": \"a328e63e6ffa96f8"
+    },
+    {
+      "key": "run2_evaluator_revision",
+      "value": "248751f7caca",
+      "excerpt": "run2-row",
+      "anchor": "\"evaluator_revision\": \"248751f7caca"
+    },
+    {
+      "key": "old_mean",
+      "value": "26.099544954299926",
+      "excerpt": "old-row",
+      "anchor": "\"episode_return_mean\": 26.099544954299926"
+    },
+    {
+      "key": "old_evaluator_revision",
+      "value": "184329928b51",
+      "excerpt": "old-row",
+      "anchor": "\"evaluator_revision\": \"184329928b51"
+    },
+    {
+      "key": "old_checkpoint",
+      "value": "a328e63e6ffa96f8",
+      "excerpt": "old-row",
+      "anchor": "\"checkpoint_sha256\": \"a328e63e6ffa96f8"
+    },
+    {
+      "key": "full_scope_regimes",
+      "value": "4 regimes",
+      "excerpt": "old-row",
+      "anchor": "\"regimes\": [\"train\", \"eval-easy\", \"eval-medium\", \"eval-hard\"]"
+    },
+    {
+      "key": "manifest_diff_lines",
+      "value": "36",
+      "excerpt": "manifest-diff",
+      "anchor": "header:# matched-lines: 36 "
+    },
+    {
+      "key": "diff_touches_free",
+      "value": "true",
+      "excerpt": "manifest-diff",
+      "anchor": "<         \"free\": 159380615168,"
+    },
+    {
+      "key": "invocation_keys_changed",
+      "value": "0",
+      "excerpt": "invocation-keys-not-in-diff",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "payload_sha256",
+      "value": "404a766c848e",
+      "excerpt": "run1-invocation",
+      "anchor": "\"payload_sha256\": \"404a766c848e"
+    },
+    {
+      "key": "placement_seeds_identical",
+      "value": "True",
+      "excerpt": "derived",
+      "anchor": "placement seeds identical run1/run2/old: True"
+    },
+    {
+      "key": "episodes_differing_run1_run2",
+      "value": "16/20",
+      "excerpt": "derived",
+      "anchor": "episodes whose return differs run1 vs run2: 16 of 20"
+    },
+    {
+      "key": "spread",
+      "value": "0.305",
+      "excerpt": "derived",
+      "anchor": "spread of three means 0.305"
+    },
+    {
+      "key": "se_n20",
+      "value": "3.197",
+      "excerpt": "derived",
+      "anchor": "one SE at n=20 3.19"
+    },
+    {
+      "key": "spread_in_se",
+      "value": "0.095",
+      "excerpt": "derived",
+      "anchor": "spread in SE 0.095"
+    },
+    {
+      "key": "old_vs_new_in_se",
+      "value": "0.055",
+      "excerpt": "derived",
+      "anchor": "old minus mean(new) in SE 0.055"
+    },
+    {
+      "key": "torch_seeded_once",
+      "value": "true",
+      "excerpt": "seeding-code",
+      "anchor": "_torch.manual_seed(seed)"
+    },
+    {
+      "key": "per_episode_reseeds_numpy",
+      "value": "true",
+      "excerpt": "seeding-code",
+      "anchor": "np.random.seed(condition)"
+    },
+    {
+      "key": "ppg_act_samples",
+      "value": "true",
+      "excerpt": "ppg-samples-from-torch",
+      "anchor": "ac = pd.sample()"
+    },
+    {
+      "key": "deterministic_flag_enabled",
+      "value": "true",
+      "excerpt": "determinism-flag-recorded",
+      "anchor": "\"enabled\": true"
+    }
+  ]
+}

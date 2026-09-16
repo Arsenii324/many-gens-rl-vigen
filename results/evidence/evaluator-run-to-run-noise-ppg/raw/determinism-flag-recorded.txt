@@ -1,0 +1,12 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: determinism-flag-recorded
+# note: every row records torch.use_deterministic_algorithms as enabled, and the runs still differ
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz
+# source-bytes: 39265  source-sha256: bc2f9277305945ad798f77f46df8e75b10847bce90e93debf2610c8fa418b6ff  source-mtime: 2026-09-15T12:40:33+00:00
+# tar-member: ./offline_eval_cuda.jsonl
+# extraction: tar -xzOf "$HOME"/rlvigen-runs/reeval-v214/ppg-smoke-run1.tgz ./offline_eval_cuda.jsonl | grep -n -o -E '"deterministic_setting": *\{[^}]*\}' | head -n 1
+# matched-lines: 2  shown-lines: 1  (TRUNCATED -- the excerpt is capped; matched-lines is the full count)
+# captured-at: 2026-09-16T11:02:04+00:00
+#---------------------------------------------------------------------------------------------------
+1:"deterministic_setting": {"backend": "torch", "enabled": true, "mode": "torch.use_deterministic_algorithms"}

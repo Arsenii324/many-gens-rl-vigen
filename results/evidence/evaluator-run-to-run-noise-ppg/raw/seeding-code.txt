@@ -1,0 +1,40 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: seeding-code
+# note: eval_grid.py: family setup seeds random/numpy/torch once; per-episode reseeding touches random and numpy only
+# source-kind: repo-file
+# source: scripts/eval_grid.py
+# source-bytes: 91674  source-sha256: 10da2c0ae5709325b2f5486e4f096b1cd66d064b2806167906166c5c00782855  source-mtime: 
+# extraction: cat scripts/eval_grid.py | grep -n '' | sed -n '213,242p' | head -n 200
+# matched-lines: 30  shown-lines: 30
+# captured-at: 2026-09-16T11:01:58+00:00
+#---------------------------------------------------------------------------------------------------
+213:    """
+214:    import random as _random
+215:
+216:    import numpy as _np
+217:    _random.seed(seed)
+218:    _np.random.seed(seed)
+219:    try:
+220:        import torch as _torch
+221:        _torch.manual_seed(seed)
+222:        if _torch.cuda.is_available():
+223:            _torch.cuda.manual_seed_all(seed)
+224:    except Exception:
+225:        # torch is absent in a JAX-only family's environment; the placement RNG is numpy's and is
+226:        # already seeded above, which is the half that decides the door.
+227:        pass
+228:
+229:
+230:def placement_condition_seed(eval_seed: int, scene_id: int, episode_index: int) -> int:
+231:    """Stable per-episode seed, independent of family-specific construction/reset machinery."""
+232:    return int(np.random.SeedSequence([int(eval_seed), int(scene_id), int(episode_index)])
+233:               .generate_state(1, dtype=np.uint32)[0])
+234:
+235:
+236:def seed_episode_placement(eval_seed: int, scene_id: int, episode_index: int) -> int:
+237:    condition = placement_condition_seed(eval_seed, scene_id, episode_index)
+238:    import random as _random
+239:    _random.seed(condition)
+240:    np.random.seed(condition)
+241:    return condition
+242:

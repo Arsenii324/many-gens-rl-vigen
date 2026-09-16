@@ -1,0 +1,18 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: run1-invocation
+# note: the invocation-defining keys, as run 1 recorded them (run 2 differs from these nowhere; see manifest-diff)
+# source-kind: local-command
+# source: sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt
+# repo-head: 51d0b0db98bd29635e2414001e234257553bdbc6
+# inputs: results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt=b1c4c251f5a8a5a9
+# extraction: ( sed '1,/^#---/d' results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt ) | grep -n -E '"(payload_sha256|requirements_native_sha256|container_image|command|eval_episodes|host_profile|frames)"' | head -n 200
+# matched-lines: 7  shown-lines: 7
+# captured-at: 2026-09-16T11:01:58+00:00
+#---------------------------------------------------------------------------------------------------
+29:  "command": "datasphere/native/run_probe.sh",
+31:  "container_image": "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000",
+56:  "eval_episodes": "2",
+64:  "frames": "600064",
+66:  "host_profile": "v100",
+67:  "payload_sha256": "404a766c848ec6b1e44e2ad1213fca4114d0fd5b4fc2ea4a81935f7a43005c1f",
+102:  "requirements_native_sha256": "43983f2374fa7b6c8598f6586111fa5478a950b1c5caf978a1aa9bcfae04ee8b",

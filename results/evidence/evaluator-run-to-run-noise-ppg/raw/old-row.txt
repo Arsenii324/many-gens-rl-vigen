@@ -1,0 +1,30 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: old-row
+# note: the row recorded 2026-09-09 by the full grid (four regimes x ten scenes), same checkpoint
+# source-kind: local-command
+# source: grep -m1 '"episode_return_mean": 26.099544954299926' results/superseded-runs/card0-20260909-115331__records.jsonl
+# repo-head: 51d0b0db98bd29635e2414001e234257553bdbc6
+# inputs: results/superseded-runs/card0-20260909-115331__records.jsonl=4fc2bde6829a8045
+# extraction: ( grep -m1 '"episode_return_mean": 26.099544954299926' results/superseded-runs/card0-20260909-115331__records.jsonl ) | grep -n -o -E '"(phase|regime|scene_set|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|episode_seed|regimes|scenes|eval_policy_mode|eval_scope|episodes|returns|placement_condition_seeds|deterministic_setting)": *(\[[^]]*\]|\{[^}]*\}|"[^"]*"|[-0-9.e]+)'
+# matched-lines: 19  shown-lines: 19
+# captured-at: 2026-09-16T11:01:47+00:00
+#---------------------------------------------------------------------------------------------------
+1:"checkpoint_sha256": "a328e63e6ffa96f8cde493dfef15e70589d9811bad0cb387a194f9cc4ab0d220"
+1:"eval_policy_mode": "sample"
+1:"episode_return_mean": 26.099544954299926
+1:"episode_return_sd": 14.257017218363774
+1:"episodes": 20
+1:"eval_scope": "endpoint"
+1:"evaluator_revision": "184329928b51da31de8e314b87db805154f823dbd0edfec1c533ed9d7ea49a2c"
+1:"deterministic_setting": {"backend": "torch", "enabled": true, "mode": "torch.use_deterministic_algorithms"}
+1:"episode_seed": 20260903
+1:"episodes": 20
+1:"eval_policy_mode": "sample"
+1:"eval_scope": "endpoint"
+1:"regimes": ["train", "eval-easy", "eval-medium", "eval-hard"]
+1:"scenes": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+1:"placement_condition_seeds": [246415859, 1095573727, 3771752622, 172242467, 1682051426, 908769553, 2839421769, 3731922373, 979745648, 3756646263, 3680066375, 148748536, 2538810858, 4260431490, 62778687, 2318870867, 1479091971, 887342641, 1599280671, 2491598128]
+1:"returns": [35.546669006347656, 26.527223587036133, 31.026884078979492, 15.56033992767334, 34.706302642822266, 20.277484893798828, 6.039895057678223, 6.64451789855957, 16.14395523071289, 53.22159957885742, 20.317413330078125, 19.323467254638672, 13.05710506439209, 9.697426795959473, 46.15979766845703, 15.587380409240723, 51.92295455932617, 35.5587272644043, 27.431127548217773, 37.24062728881836]
+1:"phase": "offline-eval"
+1:"regime": "train"
+1:"scene_set": "0"

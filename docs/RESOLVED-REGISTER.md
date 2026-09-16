@@ -246,6 +246,22 @@ register exists to prevent.
 
 **Supersedes.** The first run's report of `pytest exit=1, 0 failure(s)` and overall exit 0.
 
+### `evaluator-sampling-rows-reproduce-within-noise` — **resolved**
+
+**Q.** The same ppg checkpoint, re-evaluated under a newer evaluator revision, gave 25.79 then 26.05 against the recorded 26.10. Did the estimand change, and can a sampling-policy row be reproduced?
+
+**Verdict.** No change of estimand; the evaluator is nondeterministic run to run. Two byte-identical invocations gave 25.795 and 26.053; with the original 26.100 the spread is 0.305 = 0.095 SE at n=20 (SE 3.197), and old vs mean(new) is 0.055 SE. Placement seeds are identical in all three rows while 16 of 20 episode returns differ, so the noise is in the action stream, not the placements. A sampling-policy row (idaac, ppg, ibac_sni) reproduces within noise, never bit-for-bit, despite recording torch.use_deterministic_algorithms as enabled. Partial re-evaluation is acceptable on that basis.
+
+**Why.** seed_episode_placement re-seeds random and numpy per episode (the placement half), but torch is seeded once per family setup and ppg samples its actions from torch, so the action stream is not per-episode deterministic. Measured on ppg train/scene 0 only; the nine mode baselines take argmax/mean and were not tested. Recomputed from the captured per-episode returns, not the recorded means. Narrative: notes/endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md.
+
+**Evidence.** `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:60`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:64`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:61`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-row.txt:16`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-row.txt:16`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/seeding-code.txt:38`, `scripts/eval_grid.py:236`
+
+**Falsified by.** A third identical run landing several SE away falsifies 'a tenth of an SE'. If per-episode reseeding starts covering torch, sampling rows may become reproducible and the breadth dependence must be re-measured; tests/test_evidence_backed_register_rows.py fails the moment seed_episode_placement touches torch.
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** The pre-measurement claim that the ppg/idaac re-evaluation was 'superseded by re-hashing, not by a change of estimand' as a matter of reading diffs; it now rests on measurement.
+
 ## host-safety
 
 ### `yield-is-memory-not-process` — **resolved**

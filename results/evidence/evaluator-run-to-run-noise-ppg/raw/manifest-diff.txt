@@ -1,0 +1,47 @@
+# evidence-slug: evaluator-run-to-run-noise-ppg
+# excerpt: manifest-diff
+# note: every line on which the two run manifests differ: disk free/used and the result hashes, nothing about the invocation
+# source-kind: local-command
+# source: bash -c 'diff <(sed "1,/^#---/d" results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt) <(sed "1,/^#---/d" results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt); true'
+# repo-head: 51d0b0db98bd29635e2414001e234257553bdbc6
+# inputs: results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt=b1c4c251f5a8a5a9  results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt=a36c4c9f618ad542
+# extraction: ( bash -c 'diff <(sed "1,/^#---/d" results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-manifest.txt) <(sed "1,/^#---/d" results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-manifest.txt); true' ) | head -n 200
+# matched-lines: 36  shown-lines: 36
+# captured-at: 2026-09-16T11:01:58+00:00
+#---------------------------------------------------------------------------------------------------
+41c41
+<         "free": 159380615168,
+---
+>         "free": 159011733504,
+43c43
+<         "used": 20599804018688
+---
+>         "used": 20600172900352
+46c46
+<         "free": 159380615168,
+---
+>         "free": 159011733504,
+48c48
+<         "used": 20599804018688
+---
+>         "used": 20600172900352
+71c71
+<       "canonical_sha256": "be372027463a6e409975dc0a77e65cb9f38122951bf9cb1be21873028c8a5e38",
+---
+>       "canonical_sha256": "ae24f70ac8771495e5a47596b810e7dceeca831426ad062a555299758f994a36",
+84c84
+<         "canonical_sha256": "be372027463a6e409975dc0a77e65cb9f38122951bf9cb1be21873028c8a5e38",
+---
+>         "canonical_sha256": "ae24f70ac8771495e5a47596b810e7dceeca831426ad062a555299758f994a36",
+87c87
+<         "sha256": "e6353a6c60d6b49bc05b31217d96b4d6f0c80c594f6953def44be46ba8631cdd"
+---
+>         "sha256": "2c764a4f21d05b9c74e45c164413f856aef53c744f2bddefa94723447615991a"
+92c92
+<       "canonical_sha256": "be372027463a6e409975dc0a77e65cb9f38122951bf9cb1be21873028c8a5e38",
+---
+>       "canonical_sha256": "ae24f70ac8771495e5a47596b810e7dceeca831426ad062a555299758f994a36",
+95c95
+<       "sha256": "bc523136043eb8894d6388664de39cc8b3aeb537623305f023b0cbaaaacb3f81"
+---
+>       "sha256": "df51377cf90b400652007f9e3dbb09e0c8798a547c3d003ff2caa5e1b1bec2b6"
