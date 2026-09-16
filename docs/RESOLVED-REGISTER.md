@@ -386,6 +386,22 @@ register exists to prevent.
 
 **Supersedes.** Any reading of volta-probe.log rc=0 as evidence about sm_70.
 
+### `ibac-sni-16sep-stops-were-the-floor` — **resolved**
+
+**Q.** What stopped each of ibac_sni-s1's three production attempts on 2026-09-16, and was any of them the process-count yield?
+
+**Verdict.** None was the process-count yield. Attempt 1 (card 0, 01:03 MSK): the memory floor (free 3705 < 4000 MiB, procs=6), on a card holding rl4vla_cudagl, sg_sam2, a second cell of ours and ibac_sni, before its first PPO update. Attempt 2 (card 0): no yield; an env worker's pipe closed during the first reset with EGL_NOT_INITIALIZED, 24 s in, exit 1. Attempt 3 (card 1, 12:12 MSK): the memory floor (125 MiB) a minute after rlvigen_kalugin_df arrived, at F 100352. commit bb05db6 and STOP-MECHANISMS.md row 2 said the process-count yield killed attempt 1; the row is corrected in place.
+
+**Why.** The watcher writes 'compute processes went ...' when its process branch fires and the floor text otherwise, so the attempt-1 sentinel identifies the floor. The attribution in bb05db6 was made from the configuration (shared mode plus process yield is contradictory, which is true) rather than from the sentinel's contents -- the very reading STOP-MECHANISMS.md says is required. Occupancy lines come from the on-host gpu-occupancy.log, resolved to container names.
+
+**Evidence.** `results/evidence/ibac-sni-16sep-three-stops/raw/a1-stop.txt:14`, `results/evidence/ibac-sni-16sep-three-stops/raw/a1-occupancy.txt:14`, `results/evidence/ibac-sni-16sep-three-stops/raw/a2-death.txt:16`, `results/evidence/ibac-sni-16sep-three-stops/raw/a3-stop.txt:14`, `results/evidence/ibac-sni-16sep-three-stops/raw/a3-occupancy.txt:13`, `results/evidence/ibac-sni-16sep-three-stops/raw/stated-cause.txt:12`, `results/evidence/ibac-sni-16sep-three-stops/raw/watcher-branch.txt:19`
+
+**Falsified by.** An attempt-1 sentinel reading 'compute processes went ...', or a watcher change that writes the floor text regardless of branch (tests/test_evidence_backed_register_rows.py pins the branch selection and the corrected row).
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** bb05db6's 'The cause was our own process-count yield' and STOP-MECHANISMS.md row 2's 'it killed ibac_sni-s1' (struck through in place). d0899fb's account of attempt 3 stands and is now evidenced.
+
 ## reproducibility
 
 ### `random-floor-survives-closure-change` — **resolved**

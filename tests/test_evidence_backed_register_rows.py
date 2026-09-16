@@ -83,3 +83,19 @@ def test_idaac_600k_endpoint_binds_to_host_weights():
     assert {r["frame"] for r in rows} == {598016}
     cover = collections.Counter((r["conventions"]["eval_policy_mode"], r["regime"]) for r in rows)
     assert set(cover.values()) == {11} and len(cover) == 8, cover
+
+
+def test_ibac_sni_16sep_stops_were_the_floor_not_the_process_count():
+    """`ibac-sni-16sep-stops-were-the-floor`: the sentinel's text still identifies its branch.
+
+    The row reads the attempt-1 sentinel as the memory floor BECAUSE the watcher writes the floor
+    text only when the process-count branch did not fire. If that selection changes, the captured
+    text no longer identifies the branch and the row must be re-derived.
+    """
+    watcher = (ROOT / "scripts" / "yield_gpu_to_neighbour.py").read_text()
+    assert 'f"compute processes went {baseline_procs}(+ours) -> {now[\'procs\']}"' in watcher
+    assert "if neighbour" in watcher and "free memory {now['free_mib']} MiB is below the" in watcher
+    notes = (ROOT / "notes" / "model" / "STOP-MECHANISMS.md").read_text()
+    row2 = next(line for line in notes.splitlines() if line.startswith("| 2 |"))
+    assert "it killed ibac_sni-s1" not in row2.replace("~~it killed ibac_sni-s1~~", ""), (
+        "STOP-MECHANISMS.md row 2 asserts the process-count yield killed ibac_sni-s1 again")

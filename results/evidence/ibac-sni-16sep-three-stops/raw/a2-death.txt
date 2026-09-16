@@ -1,0 +1,20 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a2-death
+# note: attempt 2: an env worker pipe closed during the first reset, with EGL_NOT_INITIALIZED, 24 s in
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260916-010515/native-out/cells/ibac_sni-s1/training.log
+# source-bytes: 46932  source-sha256: a7add6ae70dadebaadad64778bb986bc57b280486f4c76658884ec930d71935a  source-mtime: 2026-09-15T22:15:16+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260916-010515/native-out/cells/ibac_sni-s1/training.log | grep -n -E 'EGL_NOT_INITIALIZED|^EOFError|in reset|Exit status|Elapsed \(wall' | head -n 200
+# matched-lines: 10  shown-lines: 10
+# captured-at: 2026-09-16T11:20:45+00:00
+#---------------------------------------------------------------------------------------------------
+458:  File "/tmp/native-work/runnable/ibac_sni/torch_rl/ibac_sni_runtime.py", line 162, in reset
+460:  File "/usr/local/lib/python3.10/dist-packages/gym/core.py", line 479, in reset
+462:  File "/tmp/native-work/RL-ViGen-upstream/envs/robosuiteVGB/robosuitevgb/vgb_wrapper.py", line 293, in reset
+466:  File "/tmp/native-work/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 561, in reset_from_xml_string
+468:  File "/tmp/native-work/RL-ViGen-upstream/third_party/robosuite/robosuite/environments/base.py", line 263, in reset
+497:	err = EGL_NOT_INITIALIZED,
+516:  File "/tmp/native-work/runnable/ibac_sni/torch_rl/torch_rl/torch_rl/utils/penv.py", line 53, in reset
+526:EOFError
+544:	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:24.18
+562:	Exit status: 1

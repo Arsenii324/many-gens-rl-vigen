@@ -1,0 +1,14 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a2-stop
+# note: attempt 2: no sentinel; the trainer itself exited 1
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260916-010515/native-out/job.log
+# source-bytes: 227956  source-sha256: 0b81f64433a0647bdae33def0d5f9548fa5955a4a5fb59ea3463435f4577b84e  source-mtime: 2026-09-15T22:15:28+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260916-010515/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED|Exit status' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T11:20:49+00:00
+#---------------------------------------------------------------------------------------------------
+2154:=== NATIVE_CELL_BEGIN ibac_sni-s1 ===
+2160:=== NATIVE_YIELD_WATCH_ARMED sentinel=/tmp/native-work/yield.sentinel ===
+2724:	Exit status: 1
+2725:=== NATIVE_CELL_FAILED ibac_sni-s1 ===

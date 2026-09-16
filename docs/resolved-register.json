@@ -607,6 +607,39 @@
       ],
       "gated_by": [],
       "supersedes": "notes/endgame/STAGE-TRACKER.md's 'idaac's 3 missing eval-hard mode rows | NOT STARTED' (and PLAN-2026-09-16-BOOKING.md item 3), which describe the in-run endpoint and are closed by reeval-v214-idaac-endpoint."
+    },
+    {
+      "id": "ibac-sni-16sep-stops-were-the-floor",
+      "domain": "host-safety",
+      "status": "resolved",
+      "question": "What stopped each of ibac_sni-s1's three production attempts on 2026-09-16, and was any of them the process-count yield?",
+      "verdict": "None was the process-count yield. Attempt 1 (card 0, 01:03 MSK): the memory floor (free 3705 < 4000 MiB, procs=6), on a card holding rl4vla_cudagl, sg_sam2, a second cell of ours and ibac_sni, before its first PPO update. Attempt 2 (card 0): no yield; an env worker's pipe closed during the first reset with EGL_NOT_INITIALIZED, 24 s in, exit 1. Attempt 3 (card 1, 12:12 MSK): the memory floor (125 MiB) a minute after rlvigen_kalugin_df arrived, at F 100352. commit bb05db6 and STOP-MECHANISMS.md row 2 said the process-count yield killed attempt 1; the row is corrected in place.",
+      "why": "The watcher writes 'compute processes went ...' when its process branch fires and the floor text otherwise, so the attempt-1 sentinel identifies the floor. The attribution in bb05db6 was made from the configuration (shared mode plus process yield is contradictory, which is true) rather than from the sentinel's contents -- the very reading STOP-MECHANISMS.md says is required. Occupancy lines come from the on-host gpu-occupancy.log, resolved to container names.",
+      "evidence": [
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a1-stop.txt:14",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a1-occupancy.txt:14",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a2-death.txt:16",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a3-stop.txt:14",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a3-occupancy.txt:13",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/stated-cause.txt:12",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/watcher-branch.txt:19"
+      ],
+      "evidence_expect": {
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a1-stop.txt:14": "free memory 3705 MiB is below the 4000 MiB floor",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a1-occupancy.txt:14": "card=0 mem=28445",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a2-death.txt:16": "err = EGL_NOT_INITIALIZED",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a3-stop.txt:14": "free memory 125 MiB is below the 4000 MiB floor",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/a3-occupancy.txt:13": "holders=cell-c1-207974,cell-c1-207974,cell-c1-207974,rlvigen_kalugin_df",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/stated-cause.txt:12": "The cause was our own process-count yield",
+        "results/evidence/ibac-sni-16sep-three-stops/raw/watcher-branch.txt:19": "if neighbour"
+      },
+      "falsifier": "An attempt-1 sentinel reading 'compute processes went ...', or a watcher change that writes the floor text regardless of branch (tests/test_evidence_backed_register_rows.py pins the branch selection and the corrected row).",
+      "pinned_by": [
+        "tests/test_evidence_backed_register_rows.py",
+        "tests/test_evidence_bundles_hold.py"
+      ],
+      "gated_by": [],
+      "supersedes": "bb05db6's 'The cause was our own process-count yield' and STOP-MECHANISMS.md row 2's 'it killed ibac_sni-s1' (struck through in place). d0899fb's account of attempt 3 stands and is now evidenced."
     }
   ]
 }

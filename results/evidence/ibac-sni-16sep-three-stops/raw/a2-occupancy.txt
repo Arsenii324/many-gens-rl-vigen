@@ -1,0 +1,15 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a2-occupancy
+# note: card 0 while attempt 2 started and died
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/gpu-occupancy.log
+# source-bytes: 425374  source-sha256: 8e74a25b33b2550e37ccb2cb01ea2cfa6989a172d4df97603cf63fe679606e8b  source-mtime: 2026-09-16T11:20:48+00:00
+# extraction: cat "$HOME"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T01:0[5-9].*card=0' | head -n 200
+# matched-lines: 5  shown-lines: 5
+# captured-at: 2026-09-16T11:20:54+00:00
+#---------------------------------------------------------------------------------------------------
+3144:2026-09-16T01:05:06+03:00 card=0 mem=27159 util=91 procs=3 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898
+3146:2026-09-16T01:06:07+03:00 card=0 mem=27991 util=92 procs=4 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3245210
+3148:2026-09-16T01:07:08+03:00 card=0 mem=27965 util=93 procs=4 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3245210
+3150:2026-09-16T01:08:08+03:00 card=0 mem=27999 util=99 procs=4 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3245210
+3152:2026-09-16T01:09:09+03:00 card=0 mem=28007 util=94 procs=4 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3245210

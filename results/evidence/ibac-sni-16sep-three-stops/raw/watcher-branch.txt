@@ -1,0 +1,25 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: watcher-branch
+# note: the floor message is written only when the process-count branch did NOT fire
+# source-kind: repo-file
+# source: scripts/yield_gpu_to_neighbour.py
+# source-bytes: 16997  source-sha256: e9657a1921124a5518d83578853fba9016952b13e6cd159114c6eef13d8eff82  source-mtime: 
+# extraction: cat scripts/yield_gpu_to_neighbour.py | grep -n '' | sed -n '238,252p' | head -n 200
+# matched-lines: 15  shown-lines: 15
+# captured-at: 2026-09-16T11:21:07+00:00
+#---------------------------------------------------------------------------------------------------
+238:        starved = now["free_mib"] < args.floor_mib
+239:        crowded = args.yield_on_processes and now["procs"] > expected
+240:        consecutive = consecutive + 1 if crowded else 0
+241:        neighbour = crowded and consecutive >= args.yield_after_checks
+242:        if crowded and not neighbour:
+243:            print(f"  {now['procs']} process(es) on the card, expected {expected} "
+244:                  f"({consecutive}/{args.yield_after_checks} checks) -- waiting before yielding",
+245:                  flush=True)
+246:        if neighbour or starved:
+247:            why = (f"compute processes went {baseline_procs}(+ours) -> {now['procs']}"
+248:                   if neighbour
+249:                   else f"free memory {now['free_mib']} MiB is below the {args.floor_mib} MiB floor")
+250:            print(f"=== NATIVE_YIELDING_TO_NEIGHBOUR {why} ===", file=sys.stderr, flush=True)
+251:            print(f"    writing the sentinel; the CELL stops itself. Checkpoints already written "
+252:                  f"survive on the bind mounts.", file=sys.stderr)

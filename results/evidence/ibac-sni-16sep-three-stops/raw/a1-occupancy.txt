@@ -1,0 +1,14 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a1-occupancy
+# note: card 0 around the stop: two colleague containers, one other cell of ours, and ibac_sni (cell-c0-3252469)
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/gpu-occupancy.log
+# source-bytes: 425180  source-sha256: eb8e8034aeb343167856c64b6815073f0af106d6627a319b5a5d95fff17f809b  source-mtime: 2026-09-16T11:19:48+00:00
+# extraction: cat "$HOME"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T01:0[0-3].*card=0' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T11:20:41+00:00
+#---------------------------------------------------------------------------------------------------
+3134:2026-09-16T01:00:03+03:00 card=0 mem=27181 util=89 procs=3 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898
+3136:2026-09-16T01:01:04+03:00 card=0 mem=27175 util=99 procs=3 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898
+3138:2026-09-16T01:02:04+03:00 card=0 mem=27137 util=85 procs=3 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898
+3140:2026-09-16T01:03:05+03:00 card=0 mem=28445 util=84 procs=6 holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3252469,cell-c0-3252469,cell-c0-3252469

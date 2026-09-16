@@ -1,0 +1,16 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a3-stop
+# note: attempt 3: the memory floor again, with 125 MiB left
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-115450/native-out/job.log
+# source-bytes: 233754  source-sha256: 635d4941d600cddc93be0a6bab6cca4e64a0fe136b3347e823cbb88a34ce0c5d  source-mtime: 2026-09-16T09:12:37+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card1-20260916-115450/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED' | head -n 200
+# matched-lines: 6  shown-lines: 6
+# captured-at: 2026-09-16T11:20:58+00:00
+#---------------------------------------------------------------------------------------------------
+2154:=== NATIVE_CELL_BEGIN ibac_sni-s1 ===
+2160:=== NATIVE_YIELD_WATCH_ARMED sentinel=/tmp/native-work/yield.sentinel ===
+2710:=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===
+2711:yielded at 1789549938: free memory 125 MiB is below the 4000 MiB floor
+2712:free_mib=125 procs=4 util=80
+2714:=== NATIVE_CELL_FAILED ibac_sni-s1 ===

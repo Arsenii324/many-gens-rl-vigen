@@ -1,0 +1,371 @@
+{
+  "slug": "ibac-sni-16sep-three-stops",
+  "excerpts": {
+    "a1-stop": {
+      "file": "raw/a1-stop.txt",
+      "sha256": "97d46785a7dd2f450d6e4b96bc0a5760879333ffa80735500c541860471c49ac",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260916-005601/native-out/job.log",
+        "bytes": 220889,
+        "sha256": "b631013642e645d429c4db1ee781b0bc993cde4914dcb767a06ef5bb337fe5a7",
+        "mtime": "2026-09-15T22:03:32+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260916-005601/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:20:32+00:00",
+      "note": "attempt 1: the sentinel text, which names the watcher branch that fired"
+    },
+    "a1-progress": {
+      "file": "raw/a1-progress.txt",
+      "sha256": "8eb71b9cecc1c9ea65fbb79a7d8bbac7424204a32434d2adbf77e277288d2f2c",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260916-005601/native-out/cells/ibac_sni-s1/training.log",
+        "bytes": 39601,
+        "sha256": "49e9b2c3ba889e847630cc289c10eb726c4c6e0014e5e252c4a0fd714f69a5db",
+        "mtime": "2026-09-15T22:03:11+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260916-005601/native-out/cells/ibac_sni-s1/training.log | grep -n -E '^U [0-9]+ \\| F [0-9]+' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T11:20:36+00:00",
+      "note": "absence: attempt 1 was stopped before its first PPO update was logged"
+    },
+    "a1-occupancy": {
+      "file": "raw/a1-occupancy.txt",
+      "sha256": "289fcc01641d3525b8027fe52f73679d536fca176829f4794b6b4e4d24c77190",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/gpu-occupancy.log",
+        "bytes": 425180,
+        "sha256": "eb8e8034aeb343167856c64b6815073f0af106d6627a319b5a5d95fff17f809b",
+        "mtime": "2026-09-16T11:19:48+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T01:0[0-3].*card=0' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T11:20:41+00:00",
+      "note": "card 0 around the stop: two colleague containers, one other cell of ours, and ibac_sni (cell-c0-3252469)"
+    },
+    "a2-death": {
+      "file": "raw/a2-death.txt",
+      "sha256": "f5f746b3287feb9aec0372c1b99874b37d91a07362a4310dfce260b6c260478b",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260916-010515/native-out/cells/ibac_sni-s1/training.log",
+        "bytes": 46932,
+        "sha256": "a7add6ae70dadebaadad64778bb986bc57b280486f4c76658884ec930d71935a",
+        "mtime": "2026-09-15T22:15:16+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260916-010515/native-out/cells/ibac_sni-s1/training.log | grep -n -E 'EGL_NOT_INITIALIZED|^EOFError|in reset|Exit status|Elapsed \\(wall' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 10,
+      "shown_lines": 10,
+      "captured_at": "2026-09-16T11:20:45+00:00",
+      "note": "attempt 2: an env worker pipe closed during the first reset, with EGL_NOT_INITIALIZED, 24 s in"
+    },
+    "a2-stop": {
+      "file": "raw/a2-stop.txt",
+      "sha256": "8cdd553e677df9ab279d23724d6d5acaf452c7673d587f4ea8974f02f21148e4",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260916-010515/native-out/job.log",
+        "bytes": 227956,
+        "sha256": "0b81f64433a0647bdae33def0d5f9548fa5955a4a5fb59ea3463435f4577b84e",
+        "mtime": "2026-09-15T22:15:28+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260916-010515/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED|Exit status' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T11:20:49+00:00",
+      "note": "attempt 2: no sentinel; the trainer itself exited 1"
+    },
+    "a2-occupancy": {
+      "file": "raw/a2-occupancy.txt",
+      "sha256": "fb519b8deac754db5c0f1e3a19656a34674eae03980a0f5ef13acf72fa91c10a",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/gpu-occupancy.log",
+        "bytes": 425374,
+        "sha256": "8e74a25b33b2550e37ccb2cb01ea2cfa6989a172d4df97603cf63fe679606e8b",
+        "mtime": "2026-09-16T11:20:48+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T01:0[5-9].*card=0' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T11:20:54+00:00",
+      "note": "card 0 while attempt 2 started and died"
+    },
+    "a3-stop": {
+      "file": "raw/a3-stop.txt",
+      "sha256": "9e13fe3db52a7f84cbe35a20ff8b6003cb491b970c2300ca8bc11e16d5504ed5",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-115450/native-out/job.log",
+        "bytes": 233754,
+        "sha256": "635d4941d600cddc93be0a6bab6cca4e64a0fe136b3347e823cbb88a34ce0c5d",
+        "mtime": "2026-09-16T09:12:37+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-115450/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:20:58+00:00",
+      "note": "attempt 3: the memory floor again, with 125 MiB left"
+    },
+    "a3-progress": {
+      "file": "raw/a3-progress.txt",
+      "sha256": "488e4aa17d25391382b31da147bb5a06a991b60374767aa1eb3edf41a10831e6",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-115450/native-out/cells/ibac_sni-s1/training.log",
+        "bytes": 52468,
+        "sha256": "5647cbc5dcd643ee789de0f302ed0d93dcf751bc852e4e7237536c2ca7b04d22",
+        "mtime": "2026-09-16T09:12:19+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-115450/native-out/cells/ibac_sni-s1/training.log | grep -n -E '^U [0-9]+ \\| F [0-9]+' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 49,
+      "shown_lines": 49,
+      "captured_at": "2026-09-16T11:21:03+00:00",
+      "note": "attempt 3: training updates logged before the stop"
+    },
+    "a3-occupancy": {
+      "file": "raw/a3-occupancy.txt",
+      "sha256": "566b08daf017ae5f24d2d0717f438245e0b9d2a209011eb1ea077431369eebc2",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/gpu-occupancy.log",
+        "bytes": 425374,
+        "sha256": "8e74a25b33b2550e37ccb2cb01ea2cfa6989a172d4df97603cf63fe679606e8b",
+        "mtime": "2026-09-16T11:20:48+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T12:(09|1[0-4]).*card=1' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:21:07+00:00",
+      "note": "card 1 around the stop: ours alone, then a colleague arrives, then the colleague alone"
+    },
+    "watcher-branch": {
+      "file": "raw/watcher-branch.txt",
+      "sha256": "4c05c8cce543b29280cadda776911460fbff92e21f157a3809693e571edcd846",
+      "source": {
+        "kind": "repo-file",
+        "path": "scripts/yield_gpu_to_neighbour.py",
+        "bytes": 16997,
+        "sha256": "e9657a1921124a5518d83578853fba9016952b13e6cd159114c6eef13d8eff82"
+      },
+      "extraction": "cat scripts/yield_gpu_to_neighbour.py | grep -n '' | sed -n '238,252p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 15,
+      "shown_lines": 15,
+      "captured_at": "2026-09-16T11:21:07+00:00",
+      "note": "the floor message is written only when the process-count branch did NOT fire"
+    },
+    "stated-cause": {
+      "file": "raw/stated-cause.txt",
+      "sha256": "a245cc8db1477cfcecf6e93639a466532e32f191b1b393707173b2355109e1b8",
+      "source": {
+        "kind": "local-command",
+        "command": "git log -1 --format=%B bb05db6",
+        "repo_head": "d43952a3cad52ba32b7d68e1c4ee0cfe42177e52",
+        "inputs": {}
+      },
+      "extraction": "( git log -1 --format=%B bb05db6 ) | grep -n -E 'cause was our own process-count yield|ten minutes' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:21:07+00:00",
+      "note": "the commit that enumerated the stop mechanisms attributed attempt 1 to the process-count yield"
+    },
+    "stated-row": {
+      "file": "raw/stated-row.txt",
+      "sha256": "763131fce7fab1f9ab3ba120087c83da4c9e4d786f8beb5405b104f789cf00ec",
+      "source": {
+        "kind": "local-command",
+        "command": "git show d43952a:notes/model/STOP-MECHANISMS.md",
+        "repo_head": "d43952a3cad52ba32b7d68e1c4ee0cfe42177e52",
+        "inputs": {}
+      },
+      "extraction": "( git show d43952a:notes/model/STOP-MECHANISMS.md ) | grep -n -E '^\\| 2 \\|' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:21:07+00:00",
+      "note": "STOP-MECHANISMS.md row 2 as it stood at d43952a, before this bundle corrected it"
+    },
+    "times": {
+      "file": "raw/times.txt",
+      "sha256": "6da05d62d5aff4bec370c5250a81e2a0fbb6f36328763db17749cc43ae8ce6ac",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport datetime as d\nz = d.timezone(d.timedelta(hours=3))\nfor label, t in (('attempt 1 yield', 1789509788), ('attempt 3 yield', 1789549938)):\n    print(label, t, d.datetime.fromtimestamp(t, z).isoformat())\n\"",
+        "repo_head": "d43952a3cad52ba32b7d68e1c4ee0cfe42177e52",
+        "inputs": {}
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport datetime as d\nz = d.timezone(d.timedelta(hours=3))\nfor label, t in (('attempt 1 yield', 1789509788), ('attempt 3 yield', 1789549938)):\n    print(label, t, d.datetime.fromtimestamp(t, z).isoformat())\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:21:07+00:00",
+      "note": "sentinel epochs in Moscow time"
+    },
+    "next-attempt": {
+      "file": "raw/next-attempt.txt",
+      "sha256": "16ce903bde0376497cecc98d18c4ce13d753bfcdfa4e03644a5cb689e2dd9268",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/ibac-waiter.log",
+        "bytes": 387,
+        "sha256": "e72472bbe728fa7b5e5951e922615ffe0a0a59ae8d3ac070aa77a34a39fa83f6",
+        "mtime": "2026-09-16T11:16:20+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/ibac-waiter.log",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T11:21:12+00:00",
+      "note": "the waiter that replaced blind retries: it launches only when a card has 18 GB free"
+    }
+  },
+  "facts": [
+    {
+      "key": "a1_reason",
+      "value": "memory-floor",
+      "excerpt": "a1-stop",
+      "anchor": "yielded at 1789509788: free memory 3705 MiB is below the 4000 MiB floor"
+    },
+    {
+      "key": "a1_procs_on_card",
+      "value": "6",
+      "excerpt": "a1-stop",
+      "anchor": "free_mib=3705 procs=6"
+    },
+    {
+      "key": "a1_updates_logged",
+      "value": "0",
+      "excerpt": "a1-progress",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "a1_colleagues",
+      "value": "rl4vla_cudagl,sg_sam2",
+      "excerpt": "a1-occupancy",
+      "anchor": "holders=rl4vla_cudagl,sg_sam2,cell-c0-3157898,cell-c0-3252469"
+    },
+    {
+      "key": "a1_card_used_mib",
+      "value": "28445",
+      "excerpt": "a1-occupancy",
+      "anchor": "card=0 mem=28445"
+    },
+    {
+      "key": "a2_error",
+      "value": "EOFError",
+      "excerpt": "a2-death",
+      "anchor": "EOFError"
+    },
+    {
+      "key": "a2_egl",
+      "value": "EGL_NOT_INITIALIZED",
+      "excerpt": "a2-death",
+      "anchor": "err = EGL_NOT_INITIALIZED"
+    },
+    {
+      "key": "a2_wall_clock",
+      "value": "0:24.18",
+      "excerpt": "a2-death",
+      "anchor": "Elapsed (wall clock) time (h:mm:ss or m:ss): 0:24.18"
+    },
+    {
+      "key": "a2_no_sentinel",
+      "value": "true",
+      "excerpt": "a2-stop",
+      "anchor": "Exit status: 1"
+    },
+    {
+      "key": "a3_reason",
+      "value": "memory-floor",
+      "excerpt": "a3-stop",
+      "anchor": "yielded at 1789549938: free memory 125 MiB is below the 4000 MiB floor"
+    },
+    {
+      "key": "a3_last_frame",
+      "value": "100352",
+      "excerpt": "a3-progress",
+      "anchor": "U 49 | F 100352"
+    },
+    {
+      "key": "a3_ours_alone_mib",
+      "value": "7712",
+      "excerpt": "a3-occupancy",
+      "anchor": "card=1 mem=7712 util=57 procs=3 holders=cell-c1-207974,cell-c1-207974,cell-c1-207974"
+    },
+    {
+      "key": "a3_colleague_arrives",
+      "value": "rlvigen_kalugin_df",
+      "excerpt": "a3-occupancy",
+      "anchor": "card=1 mem=25713 util=48 procs=4 holders=cell-c1-207974,cell-c1-207974,cell-c1-207974,rlvigen_kalugin_df"
+    },
+    {
+      "key": "a3_after_we_left_mib",
+      "value": "32344",
+      "excerpt": "a3-occupancy",
+      "anchor": "card=1 mem=32344 util=0 procs=1 holders=rlvigen_kalugin_df"
+    },
+    {
+      "key": "floor_text_implies_not_process_branch",
+      "value": "true",
+      "excerpt": "watcher-branch",
+      "anchor": "if neighbour"
+    },
+    {
+      "key": "stated_cause",
+      "value": "process-count",
+      "excerpt": "stated-cause",
+      "anchor": "The cause was our own process-count yield"
+    },
+    {
+      "key": "row2_claim",
+      "value": "it killed ibac_sni-s1",
+      "excerpt": "stated-row",
+      "anchor": "it killed ibac_sni-s1"
+    },
+    {
+      "key": "a1_yield_time",
+      "value": "2026-09-16T01:03:08+03:00",
+      "excerpt": "times",
+      "anchor": "1789509788 2026-09-16T01:03:08+03:00"
+    },
+    {
+      "key": "a3_yield_time",
+      "value": "2026-09-16T12:12:18+03:00",
+      "excerpt": "times",
+      "anchor": "1789549938 2026-09-16T12:12:18+03:00"
+    },
+    {
+      "key": "waiter_threshold_mib",
+      "value": "18000",
+      "excerpt": "next-attempt",
+      "anchor": "waiting for >= 18000 MiB free on either card"
+    }
+  ]
+}

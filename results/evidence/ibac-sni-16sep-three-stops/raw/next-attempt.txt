@@ -1,0 +1,14 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: next-attempt
+# note: the waiter that replaced blind retries: it launches only when a card has 18 GB free
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/ibac-waiter.log
+# source-bytes: 387  source-sha256: e72472bbe728fa7b5e5951e922615ffe0a0a59ae8d3ac070aa77a34a39fa83f6  source-mtime: 2026-09-16T11:16:20+00:00
+# extraction: cat "$HOME"/rlvigen-runs/ibac-waiter.log
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T11:21:12+00:00
+#---------------------------------------------------------------------------------------------------
+2026-09-16T12:15:54+03:00 waiting for >= 18000 MiB free on either card (ibac_sni procs=16 measured ~15 GiB)
+2026-09-16T12:16:17+03:00 waiting for >= 18000 MiB free on either card (ibac_sni procs=16 measured ~15 GiB)
+2026-09-16T14:16:20+03:00 card 1 has 18755 MiB free -- launching ibac_sni there
+=== 14:16:20 START ibac_sni-s1-prod frames=600000 (train + endpoint, no in-cell curve) ===

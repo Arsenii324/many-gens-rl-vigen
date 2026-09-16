@@ -1,0 +1,11 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: stated-row
+# note: STOP-MECHANISMS.md row 2 as it stood at d43952a, before this bundle corrected it
+# source-kind: local-command
+# source: git show d43952a:notes/model/STOP-MECHANISMS.md
+# repo-head: d43952a3cad52ba32b7d68e1c4ee0cfe42177e52
+# extraction: ( git show d43952a:notes/model/STOP-MECHANISMS.md ) | grep -n -E '^\| 2 \|' | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:21:07+00:00
+#---------------------------------------------------------------------------------------------------
+24:| 2 | same, `--yield-on-processes` | compute procs > `--expect-ours` | sentinel | training only | **yes** | **DISARMED**; it killed ibac_sni-s1 |

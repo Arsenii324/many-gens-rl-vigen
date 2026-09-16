@@ -1,0 +1,16 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a1-stop
+# note: attempt 1: the sentinel text, which names the watcher branch that fired
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260916-005601/native-out/job.log
+# source-bytes: 220889  source-sha256: b631013642e645d429c4db1ee781b0bc993cde4914dcb767a06ef5bb337fe5a7  source-mtime: 2026-09-15T22:03:32+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260916-005601/native-out/job.log | grep -n -E 'NATIVE_CELL_BEGIN|NATIVE_YIELD_WATCH_ARMED|NATIVE_YIELDING_TO_NEIGHBOUR|NATIVE_CELL_YIELDED|^yielded at|^free_mib=|NATIVE_CELL_FAILED' | head -n 200
+# matched-lines: 6  shown-lines: 6
+# captured-at: 2026-09-16T11:20:32+00:00
+#---------------------------------------------------------------------------------------------------
+2154:=== NATIVE_CELL_BEGIN ibac_sni-s1 ===
+2160:=== NATIVE_YIELD_WATCH_ARMED sentinel=/tmp/native-work/yield.sentinel ===
+2612:=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===
+2613:yielded at 1789509788: free memory 3705 MiB is below the 4000 MiB floor
+2614:free_mib=3705 procs=6 util=91
+2616:=== NATIVE_CELL_FAILED ibac_sni-s1 ===

@@ -1,0 +1,12 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: stated-cause
+# note: the commit that enumerated the stop mechanisms attributed attempt 1 to the process-count yield
+# source-kind: local-command
+# source: git log -1 --format=%B bb05db6
+# repo-head: d43952a3cad52ba32b7d68e1c4ee0cfe42177e52
+# extraction: ( git log -1 --format=%B bb05db6 ) | grep -n -E 'cause was our own process-count yield|ten minutes' | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:21:07+00:00
+#---------------------------------------------------------------------------------------------------
+3:ibac_sni-s1 died ten minutes into a 600k training run with "NATIVE_CELL_YIELDED
+4:... reason follows from the sentinel". The cause was our own process-count yield

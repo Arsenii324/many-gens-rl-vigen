@@ -1,0 +1,10 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: a1-progress
+# note: absence: attempt 1 was stopped before its first PPO update was logged
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260916-005601/native-out/cells/ibac_sni-s1/training.log
+# source-bytes: 39601  source-sha256: 49e9b2c3ba889e847630cc289c10eb726c4c6e0014e5e252c4a0fd714f69a5db  source-mtime: 2026-09-15T22:03:11+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260916-005601/native-out/cells/ibac_sni-s1/training.log | grep -n -E '^U [0-9]+ \| F [0-9]+' | head -n 200
+# matched-lines: 0  shown-lines: 0
+# captured-at: 2026-09-16T11:20:36+00:00
+#---------------------------------------------------------------------------------------------------

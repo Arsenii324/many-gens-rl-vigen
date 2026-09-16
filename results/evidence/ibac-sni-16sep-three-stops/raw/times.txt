@@ -1,0 +1,22 @@
+# evidence-slug: ibac-sni-16sep-three-stops
+# excerpt: times
+# note: sentinel epochs in Moscow time
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import datetime as d
+#   z = d.timezone(d.timedelta(hours=3))
+#   for label, t in (('attempt 1 yield', 1789509788), ('attempt 3 yield', 1789549938)):
+#       print(label, t, d.datetime.fromtimestamp(t, z).isoformat())
+#   "
+# repo-head: d43952a3cad52ba32b7d68e1c4ee0cfe42177e52
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import datetime as d
+#   z = d.timezone(d.timedelta(hours=3))
+#   for label, t in (('attempt 1 yield', 1789509788), ('attempt 3 yield', 1789549938)):
+#       print(label, t, d.datetime.fromtimestamp(t, z).isoformat())
+#   " ) | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:21:07+00:00
+#---------------------------------------------------------------------------------------------------
+attempt 1 yield 1789509788 2026-09-16T01:03:08+03:00
+attempt 3 yield 1789549938 2026-09-16T12:12:18+03:00
