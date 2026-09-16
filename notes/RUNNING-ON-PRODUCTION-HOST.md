@@ -1342,7 +1342,7 @@ current with `--check` (the release suite does).
 | `summarize_result.py` | Turn one returned result archive into the per-cell numbers a scheduling decision needs. |
 | `vram_cap.py` | Bound this process's GPU reservation, so a co-tenant's growth cannot be starved by ours. |
 
-**`datasphere/native/*.sh`** — 24 file(s)
+**`datasphere/native/*.sh`** — 25 file(s)
 
 | script | what it is for |
 |---|---|
@@ -1363,6 +1363,7 @@ current with `--check` (the release suite does).
 | `launch-when-free.sh` | Retry a cell launch until a card is genuinely free, then stop retrying. |
 | `neighbour-yield.sh` | Yield card 0 to a REAL neighbour -- including a small one the 4000 MiB floor cannot see -- |
 | `preflight_production_host.sh` | Check every assumption notes/RUNNING-ON-PRODUCTION-HOST.md makes about the production host, |
+| `prod-monitor-laptop.sh` | Run with bash explicitly. The first version ran under zsh, which does NOT word-split an unquoted |
 | `reeval-cell.sh` | Re-evaluate ANY banked checkpoint on the current evaluator closure. No training. |
 | `reeval-ppg.sh` | Re-evaluate ppg's banked 600k checkpoints on the CURRENT evaluator closure. |
 | `require_container.sh` | Refuse to run outside a container. Source this at the top of any script whose body installs |
@@ -1405,7 +1406,7 @@ current with `--check` (the release suite does).
 | `verify-places-folder.sh` | (no summary) |
 | `wait-and-train-v3.sh` | Launch ONE production cell when a card's capacity for us clears a threshold and STAYS clear. |
 
-*161 entry points. Generated; do not edit by hand.*
+*162 entry points. Generated; do not edit by hand.*
 
 <!-- END script-inventory -->
 
