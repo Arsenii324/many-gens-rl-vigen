@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's.
 #
-# [Claude 2026-09-16] This fills the gap recorded in notes/model/STOP-MECHANISMS.md addendum 1:
-# the 4000 MiB floor is a PREFLIGHT check, watch_gpu_headroom's watch() only records samples, and
-# shared mode does not arm neighbour-yield -- so a cell can run for hours with nothing enforcing
-# headroom. That is tolerable when we are sized well below the card. It is not tolerable here.
+# [Claude 2026-09-16] This fills the gap recorded in notes/model/STOP-MECHANISMS.md addendum 1.
+#
+# THE SENTENCE THAT USED TO BE HERE IS RETRACTED, and it is retracted further down this same file,
+# which is why it is corrected rather than deleted. It read: "the 4000 MiB floor is a PREFLIGHT
+# check, watch_gpu_headroom's watch() only records samples, and shared mode does not arm
+# neighbour-yield -- so a cell can run for hours with nothing enforcing headroom."
+#
+# Two mechanisms are both called "yield" and I collapsed them. yield_gpu_to_neighbour.py
+# (launch-card-cell.sh:294) is armed UNCONDITIONALLY and re-checks the 4000 MiB floor every 20
+# seconds for the life of the cell. Only the host-side PID neighbour yield is skipped in shared
+# mode. So the floor IS enforced throughout, and launch-card-cell.sh:320 says so at launch.
+#
+# This file is still worth having, for the reason given below: the floor protects the CARD, and
+# fires once free memory is already low. It does not bound OUR OWN footprint, which on a shared
+# card is what may have pushed a co-tenant toward the edge. That is what this bounds.
 #
 # The situation that produced it, and the measurement that settled it. ibac_sni runs procs=16 with
 # MuJoCo/EGL rendering per worker. Its VRAM at that configuration had NEVER been measured: the

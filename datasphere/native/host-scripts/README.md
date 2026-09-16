@@ -33,6 +33,13 @@ only on the host until 2026-09-16, so the host copy has been the newer one befor
 
 ### Pending deployment
 
+- `self-vram-cap.sh` — **the host copy still carries a disproven number in its header.** It states
+  22,675 MiB as "The true figure, measured" for ibac_sni and concludes the family "cannot share a
+  card with a co-tenant larger than ~6 GiB". That figure was a colleague's memory on a shared card;
+  ibac_sni was measured at **7,421 MiB** on an exclusive card on 2026-09-16 and has since trained a
+  full 600k cell. The two copies in this repo had also drifted from each other; they now agree, and
+  **0 executable lines differ** between them and the host — the whole divergence is comment.
+  Deploy once no `self-vram-cap.sh` instance is running.
 - `train-production-cell-v5.sh` — the repo copy's header was corrected on 2026-09-16 to retract
   "between launch and finish, nothing on the host enforces headroom" (the memory floor *is* armed
   for the life of every cell; only the host-side PID neighbour yield is skipped in shared mode).

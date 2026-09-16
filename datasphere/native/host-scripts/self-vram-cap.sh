@@ -1,10 +1,21 @@
 #!/usr/bin/env bash
 # Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's.
 #
-# [Claude 2026-09-16] This fills the gap recorded in notes/model/STOP-MECHANISMS.md addendum 1:
-# the 4000 MiB floor is a PREFLIGHT check, watch_gpu_headroom's watch() only records samples, and
-# shared mode does not arm neighbour-yield -- so a cell can run for hours with nothing enforcing
-# headroom. That is tolerable when we are sized well below the card. It is not tolerable here.
+# [Claude 2026-09-16] This fills the gap recorded in notes/model/STOP-MECHANISMS.md addendum 1.
+#
+# THE SENTENCE THAT USED TO BE HERE IS RETRACTED, and it is retracted further down this same file,
+# which is why it is corrected rather than deleted. It read: "the 4000 MiB floor is a PREFLIGHT
+# check, watch_gpu_headroom's watch() only records samples, and shared mode does not arm
+# neighbour-yield -- so a cell can run for hours with nothing enforcing headroom."
+#
+# Two mechanisms are both called "yield" and I collapsed them. yield_gpu_to_neighbour.py
+# (launch-card-cell.sh:294) is armed UNCONDITIONALLY and re-checks the 4000 MiB floor every 20
+# seconds for the life of the cell. Only the host-side PID neighbour yield is skipped in shared
+# mode. So the floor IS enforced throughout, and launch-card-cell.sh:320 says so at launch.
+#
+# This file is still worth having, for the reason given below: the floor protects the CARD, and
+# fires once free memory is already low. It does not bound OUR OWN footprint, which on a shared
+# card is what may have pushed a co-tenant toward the edge. That is what this bounds.
 #
 # The situation that produced it, and the measurement that settled it. ibac_sni runs procs=16 with
 # MuJoCo/EGL rendering per worker. Its VRAM at that configuration had NEVER been measured: the
@@ -12,10 +23,16 @@
 # real number was 2,199 MiB over 3 processes, which measured-vram-bounds.json's own rule forbids
 # scaling. Both were wrong, in opposite directions.
 #
-# The true figure, measured 2026-09-16 from the card1-20260916-141636 archive:
-# **22,675 MiB (22.14 GiB)** for our own processes. So ibac_sni needs ~22.1 GiB plus the 4000 MiB
-# floor -- about 26.2 GiB free on a 32.5 GiB card. It cannot share a card with a co-tenant larger
-# than ~6 GiB, which is why four attempts failed and why the fourth one's floor breach was correct.
+# I then produced a THIRD wrong number and must record it here, because this file was written on
+# the strength of it. I reported 22,675 MiB "measured". It was the sum of every compute process on
+# a SHARED card: 21,300 MiB of it belonged to a colleague (two processes at 10,650). The instrument
+# summed all compute processes while claiming in its own docstring to filter to our process tree.
+#
+# So all three figures were wrong: ~15 GiB (never measured), 2,199 MiB (3-process cell, and it
+# UNDER-counts because EGL render contexts are not compute apps -- that cell's card delta is
+# 6,804 MiB), and 22,675 MiB (a colleague's memory). The honest state is that ibac_sni at procs=16
+# is UNMEASURED, with a lower bound of ~6.6 GiB from the card delta at the moment the floor stood
+# it down 42.4 s in, while its process count was still climbing 2 -> 20.
 #
 # The floor already protects the CARD (yield_gpu_to_neighbour.py polls it for the life of the cell;
 # see STOP-MECHANISMS addendum 1, including the retraction of my claim that it did not). What the
@@ -29,6 +46,14 @@
 # It is LOUD. Every sample goes to the log, the trip is announced with the number that caused it,
 # and the marker string is greppable, because a stop mechanism nobody can see fire is the defect
 # this file exists to answer, not a feature.
+# [Claude 2026-09-16, evening] WHAT THIS CAP CANNOT SEE. It sums used_memory over the
+# nvidia-smi compute apps belonging to our container. EGL render contexts are not compute apps, so
+# they are invisible to it. Measured on ibac_sni at procs=16 on an exclusive card: this watcher read
+# ours=2199 MiB while the card held 7,421 MiB for that one cell -- 5,222 MiB it could not count. So
+# a cap of N bounds only the compute part; the true footprint can exceed N by the EGL share and the
+# cap will not trip. On an exclusive card that is harmless. On a shared card, size the cap against
+# the family's TOTAL footprint (measured-vram-bounds.json measurement_notes, where one exists), or
+# the neighbour is protected by the card-level floor alone.
 set -uo pipefail
 CELL="${1:?usage: self-vram-cap.sh <container> <card> <cap_mib> [log]}"
 CARD="${2:?}"; CAP="${3:?}"; LOG="${4:-$HOME/rlvigen-runs/self-vram-cap-$CELL.log}"
