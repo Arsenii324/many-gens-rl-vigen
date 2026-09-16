@@ -1,0 +1,21 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: intermediate-weights
+# note: the 11 frame-stamped intermediate checkpoints the curve sweep reads
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/checkpoints
+# name-glob: agent-*.pt  listing-sha256: 2db4c808d6dc8d9973547648d83dfd0c87623aa0f5a067c4ed06c6756bd8737c
+# extraction: cd "$HOME"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/checkpoints && find . -maxdepth 1 -type f -name 'agent-*.pt' | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 11  shown-lines: 11
+# captured-at: 2026-09-16T11:15:20+00:00
+#---------------------------------------------------------------------------------------------------
+5035969 1788918396 f7a20ead90392d2db834c6f8f1eb1c28f9e69bb3ef0afeef4cbebf6f9ceff0bc  ./agent-robosuite:Door-idaac-s101_100352.pt
+5035969 1788919961 a362e234a8a88330f6393b4c1769849106bfa39b5564fc2e1e7f339e0cca104f  ./agent-robosuite:Door-idaac-s101_151552.pt
+5035969 1788921350 955a0eb6843481f51c820bcb43d01e6fa8be6602e0c36677ab390362716aecee  ./agent-robosuite:Door-idaac-s101_200704.pt
+5035969 1788922797 dbe8be75264c8b44263816b2024faf0aa8f0285be65e0daed3e8ab51fb0d483e  ./agent-robosuite:Door-idaac-s101_251904.pt
+5035969 1788924197 f241de0b334eeb5760ec81a5805ac5873a4dada4859b05c5e5dde0ceb3a4bdd0  ./agent-robosuite:Door-idaac-s101_301056.pt
+5035969 1788925598 da608dd3b279600fb06a06e16800ffa7ee317a13884943a791d00925c4e77a76  ./agent-robosuite:Door-idaac-s101_350208.pt
+5035969 1788927069 e45304bf63f872e47507568bfdcfeeebe47940865c4e9c9b9394c2b66273b37e  ./agent-robosuite:Door-idaac-s101_401408.pt
+5035969 1788928495 da357ab0741936c237ac24e0b1c1ba93fef3fefff6e71b9886caee8f29e7f882  ./agent-robosuite:Door-idaac-s101_450560.pt
+5035969 1788929978 c3feb738c822326b17ed986519c44964597811fdab949758096847016deccfc8  ./agent-robosuite:Door-idaac-s101_501760.pt
+5035969 1788916983 0f12e2193d1ea40f0837ee234eb71141bcb026ff75ac84604676dd6935ed86f3  ./agent-robosuite:Door-idaac-s101_51200.pt
+5035969 1788931415 a2c0e6febf83240518a4b1e6a41688ab5264d06b2049842d9b06d184b3b6a169  ./agent-robosuite:Door-idaac-s101_550912.pt

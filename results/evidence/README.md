@@ -18,6 +18,7 @@ answer without re-running anything:
 | [ppg-nminibatch-declared-32-executed-1](ppg-nminibatch-declared-32-executed-1/CLAIM.md) | ppg declared `--nminibatch 32`. What executed, and is the executed run faithful? | resolved (policy phase) |
 | [evaluator-run-to-run-noise-ppg](evaluator-run-to-run-noise-ppg/CLAIM.md) | Re-evaluating the same ppg checkpoint gave a different mean. Changed estimand, or evaluator noise? | resolved (noise, 0.095 SE; placements identical, actions differ) |
 | [ppg-600k-rows-bind-to-host-weights](ppg-600k-rows-bind-to-host-weights/CLAIM.md) | Do the 616 committed ppg 600k rows name the weights the run saved, at the right stamps? Do the curve end and the endpoint read the same model? | resolved (all bound; same tensors, different files) |
+| [idaac-600k-endpoint-binds-to-host-weights](idaac-600k-endpoint-binds-to-host-weights/CLAIM.md) | Which of four host idaac snapshots do the 88 committed endpoint rows evaluate? Did that run finish? Are all regimes and modes covered? | resolved (card0-20260909-035152; 598,016; 11 per regime and mode) |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 
 ## Finding something
@@ -78,3 +79,5 @@ are for.
 - **Truncation.** A capped excerpt says `TRUNCATED`, and `matched-lines` is always the full count.
 - **Removing an excerpt** means deleting `raw/<name>.txt`, its `manifest.json` entry and its
   facts, and its line in `capture.sh`. The test fails while any of the three disagree.
+- **No loops in `capture.sh`.** Every excerpt name must appear literally as `C $S <name> `, so the
+  test can prove each excerpt is re-takeable. Write repeated captures out in full.

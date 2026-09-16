@@ -1,0 +1,17 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: endpoint-rule
+# note: idaac descriptor (the family block starts at line 283): the endpoint floors requested frames to whole rollouts
+# source-kind: repo-file
+# source: datasphere/native/families.json
+# source-bytes: 73851  source-sha256: d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64  source-mtime: 
+# extraction: cat datasphere/native/families.json | grep -n '' | sed -n '412,418p' | head -n 200
+# matched-lines: 7  shown-lines: 7
+# captured-at: 2026-09-16T11:15:20+00:00
+#---------------------------------------------------------------------------------------------------
+412:    ],
+413:    "endpoint": {
+414:      "rule": "floor_to_quantum",
+415:      "quantum_flags": [
+416:        "--num_steps",
+417:        "--num_processes"
+418:      ]

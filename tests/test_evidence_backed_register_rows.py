@@ -63,3 +63,23 @@ def test_ppg_600k_rows_bind_to_host_weights():
                 assert file == "snapshot.pt", f"{name}: endpoint row reads {file}"
             else:
                 assert stamps[file] == row["frame"], f"{name}: frame {row['frame']} reads {file} (IC {stamps[file]})"
+
+
+def test_idaac_600k_endpoint_binds_to_host_weights():
+    """`idaac-600k-endpoint-binds-to-host-weights`: one snapshot, the 600k run's, full coverage."""
+    import collections
+    import json
+
+    raw = ROOT / "results" / "evidence" / "idaac-600k-endpoint-binds-to-host-weights" / "raw"
+    production = set(_listing(raw / "snapshot-card0-20260909-035152.txt"))
+    others = set()
+    for run in ("card0-20260909-005543", "card0-20260909-013936", "card0-20260910-120437"):
+        others |= set(_listing(raw / f"snapshot-{run}.txt"))
+    rows = [json.loads(line) for line in
+            (ROOT / "results" / "records" / "reeval-v214-idaac-endpoint__records.jsonl").read_text().splitlines()
+            if line.strip()]
+    assert {r["checkpoint_sha256"] for r in rows} <= production - others, (
+        "an idaac endpoint row names a snapshot other than card0-20260909-035152's")
+    assert {r["frame"] for r in rows} == {598016}
+    cover = collections.Counter((r["conventions"]["eval_policy_mode"], r["regime"]) for r in rows)
+    assert set(cover.values()) == {11} and len(cover) == 8, cover

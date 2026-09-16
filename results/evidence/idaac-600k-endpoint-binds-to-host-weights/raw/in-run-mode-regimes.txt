@@ -1,0 +1,51 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: in-run-mode-regimes
+# note: the training cell own mode-policy endpoint file: one regime field per row
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/offline_eval_endpoint_mode.jsonl
+# source-bytes: 2054965  source-sha256: 11b376f453d44636f4637d62b787c469d2efbdb7bb4a57cdceaf6c66672f14f9  source-mtime: 2026-09-09T15:34:21+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/offline_eval_endpoint_mode.jsonl | grep -n -o -E '"regime": "[a-z-]+"'
+# matched-lines: 41  shown-lines: 41
+# captured-at: 2026-09-16T11:15:25+00:00
+#---------------------------------------------------------------------------------------------------
+1:"regime": "train"
+2:"regime": "train"
+3:"regime": "train"
+4:"regime": "train"
+5:"regime": "train"
+6:"regime": "train"
+7:"regime": "train"
+8:"regime": "train"
+9:"regime": "train"
+10:"regime": "train"
+11:"regime": "train"
+12:"regime": "eval-easy"
+13:"regime": "eval-easy"
+14:"regime": "eval-easy"
+15:"regime": "eval-easy"
+16:"regime": "eval-easy"
+17:"regime": "eval-easy"
+18:"regime": "eval-easy"
+19:"regime": "eval-easy"
+20:"regime": "eval-easy"
+21:"regime": "eval-easy"
+22:"regime": "eval-easy"
+23:"regime": "eval-medium"
+24:"regime": "eval-medium"
+25:"regime": "eval-medium"
+26:"regime": "eval-medium"
+27:"regime": "eval-medium"
+28:"regime": "eval-medium"
+29:"regime": "eval-medium"
+30:"regime": "eval-medium"
+31:"regime": "eval-medium"
+32:"regime": "eval-medium"
+33:"regime": "eval-medium"
+34:"regime": "eval-hard"
+35:"regime": "eval-hard"
+36:"regime": "eval-hard"
+37:"regime": "eval-hard"
+38:"regime": "eval-hard"
+39:"regime": "eval-hard"
+40:"regime": "eval-hard"
+41:"regime": "eval-hard"

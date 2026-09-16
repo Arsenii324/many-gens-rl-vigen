@@ -1,0 +1,13 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: run-end
+# note: the trainer reached its floored endpoint and exited 0
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/training.log
+# source-bytes: 127000  source-sha256: 94abe9abb3c30de5c98ea77a3a8110d2eb2cdb594c75fa22e9ff654877bb3126  source-mtime: 2026-09-09T15:34:21+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/training.log | grep -n -E 'NATIVE_FINAL_EVALUATION_COMPLETED|Command being timed|Exit status' | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:15:12+00:00
+#---------------------------------------------------------------------------------------------------
+811:NATIVE_FINAL_EVALUATION_COMPLETED frame=598016
+884:	Command being timed: "timeout --foreground 43200s env bash runnable/_launch/idaac.sh idaac Door 1 --num_env_steps 600000 --seed 101 --log_dir /tmp/native-work/runs/idaac-s101 --save_dir /tmp/native-work/runs/idaac-s101/models --log_interval 12 --num_steps 2048 --num_mini_batch 32 --save_interval_frames 50000 --ppo_epoch 10 --lr 3e-4 --gamma 0.99 --entropy_coef 0 --value_freq 32 --adv_loss_coef 0.1 --order_loss_coef 0.1 --frame_stack 3 --use_linear_lr_decay"
+906:	Exit status: 0

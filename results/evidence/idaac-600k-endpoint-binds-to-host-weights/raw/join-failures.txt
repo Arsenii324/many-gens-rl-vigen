@@ -1,0 +1,11 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: join-failures
+# note: absence: every endpoint row names a snapshot that is on the host
+# source-kind: local-command
+# source: sed '1,/^#---/d' results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt
+# repo-head: 2b1562ef9f176772404cb8d5f539e008f3c630bd
+# inputs: results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt=245918ccdadd1710
+# extraction: ( sed '1,/^#---/d' results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt ) | grep -n -E NOT-ON-HOST | head -n 200
+# matched-lines: 0  shown-lines: 0
+# captured-at: 2026-09-16T11:15:20+00:00
+#---------------------------------------------------------------------------------------------------

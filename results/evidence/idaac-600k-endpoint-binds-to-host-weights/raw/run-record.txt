@@ -1,0 +1,13 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: run-record
+# note: the 600k production cell
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/effective_config.json
+# source-bytes: 2578  source-sha256: c3921c5d06903b0b751b14eabd0c97145171af5ed5a79571da4ec2c3a3ad6562  source-mtime: 2026-09-09T00:58:22+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/effective_config.json | grep -n -E '"frames_requested"|"host_profile"|"cell"' | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:15:08+00:00
+#---------------------------------------------------------------------------------------------------
+42:  "cell": "idaac-s101",
+48:  "frames_requested": "600000",
+49:  "host_profile": "v100",

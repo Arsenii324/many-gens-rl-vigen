@@ -1,0 +1,11 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: snapshot-card0-20260910-120437
+# note: the retained terminal idaac snapshot of card0-20260910-120437
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260910-120437/native-out/cells/idaac-s1
+# name-glob: snapshot.pt  listing-sha256: e21d52c3a6be9c1967d14fb84a345152c279c411faf87e74990a200cf3e8e683
+# extraction: cd "$HOME"/rlvigen-runs/card0-20260910-120437/native-out/cells/idaac-s1 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:15:03+00:00
+#---------------------------------------------------------------------------------------------------
+5035969 1789031769 20f0be83b18706b34b38f7b6a21623c17bf7c6f8e1e1448f115e24ff98d54970  ./snapshot.pt

@@ -1,0 +1,31 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: coverage
+# note: the gap the tracker still lists, and the committed rows that close it
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import collections, json, re
+#   body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#   print('in-run mode rows by regime', sorted(collections.Counter(re.findall(r'regime.: .([a-z-]+)', body)).items()))
+#   c = collections.Counter()
+#   for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl'):
+#       r = json.loads(l)
+#       c[(r['conventions']['eval_policy_mode'], r['regime'])] += 1
+#   print('committed re-evaluation rows by mode and regime', sorted(c.items()))
+#   "
+# repo-head: 2b1562ef9f176772404cb8d5f539e008f3c630bd
+# inputs: results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt=ba67c9ebf405774f  results/records/reeval-v214-idaac-endpoint__records.jsonl=a564cd2179f8f03d
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import collections, json, re
+#   body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#   print('in-run mode rows by regime', sorted(collections.Counter(re.findall(r'regime.: .([a-z-]+)', body)).items()))
+#   c = collections.Counter()
+#   for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl'):
+#       r = json.loads(l)
+#       c[(r['conventions']['eval_policy_mode'], r['regime'])] += 1
+#   print('committed re-evaluation rows by mode and regime', sorted(c.items()))
+#   " ) | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:15:25+00:00
+#---------------------------------------------------------------------------------------------------
+in-run mode rows by regime [('eval-easy', 11), ('eval-hard', 8), ('eval-medium', 11), ('train', 11)]
+committed re-evaluation rows by mode and regime [(('mode', 'eval-easy'), 11), (('mode', 'eval-hard'), 11), (('mode', 'eval-medium'), 11), (('mode', 'train'), 11), (('sample', 'eval-easy'), 11), (('sample', 'eval-hard'), 11), (('sample', 'eval-medium'), 11), (('sample', 'train'), 11)]

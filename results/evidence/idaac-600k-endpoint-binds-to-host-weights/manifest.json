@@ -1,0 +1,319 @@
+{
+  "slug": "idaac-600k-endpoint-binds-to-host-weights",
+  "excerpts": {
+    "snapshot-card0-20260909-005543": {
+      "file": "raw/snapshot-card0-20260909-005543.txt",
+      "sha256": "ec5bc5cd702335ff3ec80d1782a16b22f5b8c78f7b5cf6c41b1fe17649783d75",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-005543/native-out/cells/idaac-s101",
+        "glob": "snapshot.pt",
+        "listing_sha256": "c786a0270ae7e921c82e6239ae63460aead3c8a37c73997d6a1b145ba55628bc"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-005543/native-out/cells/idaac-s101 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:14:55+00:00",
+      "note": "the retained terminal idaac snapshot of card0-20260909-005543"
+    },
+    "snapshot-card0-20260909-013936": {
+      "file": "raw/snapshot-card0-20260909-013936.txt",
+      "sha256": "d2940f3337f173f104f25df77afc0963754dbe482140df64ee83493532c2c7e5",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-013936/native-out/cells/idaac-s101",
+        "glob": "snapshot.pt",
+        "listing_sha256": "ef42a01b60e7ae6f39d7f38acec5076d45978b7c2aafb1eee0753dae0d018407"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-013936/native-out/cells/idaac-s101 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:14:58+00:00",
+      "note": "the retained terminal idaac snapshot of card0-20260909-013936"
+    },
+    "snapshot-card0-20260909-035152": {
+      "file": "raw/snapshot-card0-20260909-035152.txt",
+      "sha256": "72a76634533e413b5a93862628e74fc7d6077a69838d753093ff5d59b35b06c0",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101",
+        "glob": "snapshot.pt",
+        "listing_sha256": "0ade777311254adad4d7c6ad350cfa4ce780875f45ee674e1fc59a4614c406ae"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:15:01+00:00",
+      "note": "the retained terminal idaac snapshot of card0-20260909-035152"
+    },
+    "snapshot-card0-20260910-120437": {
+      "file": "raw/snapshot-card0-20260910-120437.txt",
+      "sha256": "e8ed04c39de153ce772f3139cd37f357955009e10659382f7dc9f2cb1f995f22",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260910-120437/native-out/cells/idaac-s1",
+        "glob": "snapshot.pt",
+        "listing_sha256": "e21d52c3a6be9c1967d14fb84a345152c279c411faf87e74990a200cf3e8e683"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260910-120437/native-out/cells/idaac-s1 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:15:03+00:00",
+      "note": "the retained terminal idaac snapshot of card0-20260910-120437"
+    },
+    "run-record": {
+      "file": "raw/run-record.txt",
+      "sha256": "d18a562a4186b98fdf4ee2b690a437ff4420a6bb535245dfb45e42e5c5556e3f",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/effective_config.json",
+        "bytes": 2578,
+        "sha256": "c3921c5d06903b0b751b14eabd0c97145171af5ed5a79571da4ec2c3a3ad6562",
+        "mtime": "2026-09-09T00:58:22+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/effective_config.json | grep -n -E '\"frames_requested\"|\"host_profile\"|\"cell\"' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:15:08+00:00",
+      "note": "the 600k production cell"
+    },
+    "run-end": {
+      "file": "raw/run-end.txt",
+      "sha256": "41ec0ea05b64838cfb809bf75fd4ec4f92660a5c674a08076bdefb5eca2871f1",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/training.log",
+        "bytes": 127000,
+        "sha256": "94abe9abb3c30de5c98ea77a3a8110d2eb2cdb594c75fa22e9ff654877bb3126",
+        "mtime": "2026-09-09T15:34:21+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/training.log | grep -n -E 'NATIVE_FINAL_EVALUATION_COMPLETED|Command being timed|Exit status' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:15:12+00:00",
+      "note": "the trainer reached its floored endpoint and exited 0"
+    },
+    "retained-record": {
+      "file": "raw/retained-record.txt",
+      "sha256": "b3bff9477e920e64fdd24463279bad4778b75613937675416d99165d4dddcec1",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/retained.json",
+        "bytes": 969,
+        "sha256": "4dc09d134392522de487914237d7d26e924193294c2bfa1da8e29a9c0e927620",
+        "mtime": "2026-09-09T05:48:51+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/retained.json | grep -n -E '\"checkpoint_(bytes|source)\"' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:15:16+00:00",
+      "note": "the terminal snapshot was copied from the trainer save"
+    },
+    "intermediate-weights": {
+      "file": "raw/intermediate-weights.txt",
+      "sha256": "cb21a0d112aac5d707c6925ee0ff4528f6075a59ae63aec570bcb429d36d108c",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/checkpoints",
+        "glob": "agent-*.pt",
+        "listing_sha256": "2db4c808d6dc8d9973547648d83dfd0c87623aa0f5a067c4ed06c6756bd8737c"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/checkpoints && find . -maxdepth 1 -type f -name 'agent-*.pt' | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 11,
+      "shown_lines": 11,
+      "captured_at": "2026-09-16T11:15:20+00:00",
+      "note": "the 11 frame-stamped intermediate checkpoints the curve sweep reads"
+    },
+    "endpoint-rule": {
+      "file": "raw/endpoint-rule.txt",
+      "sha256": "facbcecdf95f772d26177fe017d180283c3ac9fa25e86f163be1d8cd09fa8c42",
+      "source": {
+        "kind": "repo-file",
+        "path": "datasphere/native/families.json",
+        "bytes": 73851,
+        "sha256": "d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64"
+      },
+      "extraction": "cat datasphere/native/families.json | grep -n '' | sed -n '412,418p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 7,
+      "shown_lines": 7,
+      "captured_at": "2026-09-16T11:15:20+00:00",
+      "note": "idaac descriptor (the family block starts at line 283): the endpoint floors requested frames to whole rollouts"
+    },
+    "join": {
+      "file": "raw/join.txt",
+      "sha256": "245918ccdadd171025f3a17cb2b51c586f42eb0544016137a3a6d26aa5a6e568",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\ndef listing(name):\n    body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    return {line.split()[2]: line.split(maxsplit=3)[3] for line in body.splitlines()}\nsnaps = {}\nfor run in ('card0-20260909-005543', 'card0-20260909-013936', 'card0-20260909-035152', 'card0-20260910-120437'):\n    for sha, name in listing('snapshot-' + run).items():\n        snaps[sha] = run\nrows = [json.loads(l) for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl')]\nby = {}\nfor r in rows:\n    by.setdefault((r['frame'], r['checkpoint_sha256']), []).append(r['conventions']['eval_policy_mode'])\nprint('rows', len(rows))\nfor (frame, sha), modes in sorted(by.items()):\n    print('frame', frame, 'sha', sha[:16], '->', snaps.get(sha, 'NOT-ON-HOST'), 'rows', len(modes),\n          'sample', modes.count('sample'), 'mode', modes.count('mode'))\nprint('floor(600000 / 2048) * 2048 =', 600000 // 2048 * 2048)\n\"",
+        "repo_head": "2b1562ef9f176772404cb8d5f539e008f3c630bd",
+        "inputs": {
+          "results/records/reeval-v214-idaac-endpoint__records.jsonl": "a564cd2179f8f03dac353c92e47ebc87bdd0f7e2a43cc57969f83345c949ead8"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\ndef listing(name):\n    body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    return {line.split()[2]: line.split(maxsplit=3)[3] for line in body.splitlines()}\nsnaps = {}\nfor run in ('card0-20260909-005543', 'card0-20260909-013936', 'card0-20260909-035152', 'card0-20260910-120437'):\n    for sha, name in listing('snapshot-' + run).items():\n        snaps[sha] = run\nrows = [json.loads(l) for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl')]\nby = {}\nfor r in rows:\n    by.setdefault((r['frame'], r['checkpoint_sha256']), []).append(r['conventions']['eval_policy_mode'])\nprint('rows', len(rows))\nfor (frame, sha), modes in sorted(by.items()):\n    print('frame', frame, 'sha', sha[:16], '->', snaps.get(sha, 'NOT-ON-HOST'), 'rows', len(modes),\n          'sample', modes.count('sample'), 'mode', modes.count('mode'))\nprint('floor(600000 / 2048) * 2048 =', 600000 // 2048 * 2048)\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:15:20+00:00",
+      "note": "the committed endpoint rows, joined to the four candidate snapshots"
+    },
+    "join-failures": {
+      "file": "raw/join-failures.txt",
+      "sha256": "7e6d554156781050ef50d20be6b5ac68ab636b052d9821dc4309fbb1ee9a3bea",
+      "source": {
+        "kind": "local-command",
+        "command": "sed '1,/^#---/d' results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt",
+        "repo_head": "2b1562ef9f176772404cb8d5f539e008f3c630bd",
+        "inputs": {
+          "results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt": "245918ccdadd171025f3a17cb2b51c586f42eb0544016137a3a6d26aa5a6e568"
+        }
+      },
+      "extraction": "( sed '1,/^#---/d' results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt ) | grep -n -E NOT-ON-HOST | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T11:15:20+00:00",
+      "note": "absence: every endpoint row names a snapshot that is on the host"
+    },
+    "in-run-mode-regimes": {
+      "file": "raw/in-run-mode-regimes.txt",
+      "sha256": "ba67c9ebf405774f78255fbc26f433646ddfb5dc1828f340f8b891b940679304",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/offline_eval_endpoint_mode.jsonl",
+        "bytes": 2054965,
+        "sha256": "11b376f453d44636f4637d62b787c469d2efbdb7bb4a57cdceaf6c66672f14f9",
+        "mtime": "2026-09-09T15:34:21+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/offline_eval_endpoint_mode.jsonl | grep -n -o -E '\"regime\": \"[a-z-]+\"'",
+      "tar_member": null,
+      "matched_lines": 41,
+      "shown_lines": 41,
+      "captured_at": "2026-09-16T11:15:25+00:00",
+      "note": "the training cell own mode-policy endpoint file: one regime field per row"
+    },
+    "coverage": {
+      "file": "raw/coverage.txt",
+      "sha256": "fb308d9eabda0d51c3f5e60c73fc7ea5b439ef873e53ad29cb1e121ec7c994a3",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport collections, json, re\nbody = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\nprint('in-run mode rows by regime', sorted(collections.Counter(re.findall(r'regime.: .([a-z-]+)', body)).items()))\nc = collections.Counter()\nfor l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl'):\n    r = json.loads(l)\n    c[(r['conventions']['eval_policy_mode'], r['regime'])] += 1\nprint('committed re-evaluation rows by mode and regime', sorted(c.items()))\n\"",
+        "repo_head": "2b1562ef9f176772404cb8d5f539e008f3c630bd",
+        "inputs": {
+          "results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt": "ba67c9ebf405774f78255fbc26f433646ddfb5dc1828f340f8b891b940679304",
+          "results/records/reeval-v214-idaac-endpoint__records.jsonl": "a564cd2179f8f03dac353c92e47ebc87bdd0f7e2a43cc57969f83345c949ead8"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport collections, json, re\nbody = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/in-run-mode-regimes.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\nprint('in-run mode rows by regime', sorted(collections.Counter(re.findall(r'regime.: .([a-z-]+)', body)).items()))\nc = collections.Counter()\nfor l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl'):\n    r = json.loads(l)\n    c[(r['conventions']['eval_policy_mode'], r['regime'])] += 1\nprint('committed re-evaluation rows by mode and regime', sorted(c.items()))\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:15:25+00:00",
+      "note": "the gap the tracker still lists, and the committed rows that close it"
+    }
+  },
+  "facts": [
+    {
+      "key": "frames_requested",
+      "value": "600000",
+      "excerpt": "run-record",
+      "anchor": "\"frames_requested\": \"600000\""
+    },
+    {
+      "key": "final_frame",
+      "value": "598016",
+      "excerpt": "run-end",
+      "anchor": "NATIVE_FINAL_EVALUATION_COMPLETED frame=598016"
+    },
+    {
+      "key": "exit_status",
+      "value": "0",
+      "excerpt": "run-end",
+      "anchor": "Exit status: 0"
+    },
+    {
+      "key": "rollout",
+      "value": "2048",
+      "excerpt": "run-end",
+      "anchor": "--num_steps 2048"
+    },
+    {
+      "key": "terminal_source",
+      "value": "models/agent-robosuite:Door-idaac-s101.pt",
+      "excerpt": "retained-record",
+      "anchor": "models/agent-robosuite:Door-idaac-s101.pt\""
+    },
+    {
+      "key": "intermediate_count",
+      "value": "11",
+      "excerpt": "intermediate-weights",
+      "anchor": "header:# matched-lines: 11 "
+    },
+    {
+      "key": "endpoint_rule",
+      "value": "floor_to_quantum",
+      "excerpt": "endpoint-rule",
+      "anchor": "\"rule\": \"floor_to_quantum\""
+    },
+    {
+      "key": "endpoint_rows",
+      "value": "88",
+      "excerpt": "join",
+      "anchor": "rows 88"
+    },
+    {
+      "key": "endpoint_snapshot_run",
+      "value": "card0-20260909-035152",
+      "excerpt": "join",
+      "anchor": "-> card0-20260909-035152 rows 88 sample 44 mode 44"
+    },
+    {
+      "key": "floored_endpoint",
+      "value": "598016",
+      "excerpt": "join",
+      "anchor": "floor(600000 / 2048) * 2048 = 598016"
+    },
+    {
+      "key": "unmatched_rows",
+      "value": "0",
+      "excerpt": "join-failures",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "in_run_mode_rows",
+      "value": "41",
+      "excerpt": "in-run-mode-regimes",
+      "anchor": "header:# matched-lines: 41 "
+    },
+    {
+      "key": "in_run_eval_hard_mode_rows",
+      "value": "8",
+      "excerpt": "coverage",
+      "anchor": "('eval-hard', 8)"
+    },
+    {
+      "key": "committed_eval_hard_mode_rows",
+      "value": "11",
+      "excerpt": "coverage",
+      "anchor": "(('mode', 'eval-hard'), 11)"
+    }
+  ]
+}

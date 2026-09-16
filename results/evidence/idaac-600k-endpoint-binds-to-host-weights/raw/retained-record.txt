@@ -1,0 +1,12 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: retained-record
+# note: the terminal snapshot was copied from the trainer save
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/retained.json
+# source-bytes: 969  source-sha256: 4dc09d134392522de487914237d7d26e924193294c2bfa1da8e29a9c0e927620  source-mtime: 2026-09-09T05:48:51+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-035152/native-out/cells/idaac-s101/retained.json | grep -n -E '"checkpoint_(bytes|source)"' | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:15:16+00:00
+#---------------------------------------------------------------------------------------------------
+3:  "checkpoint_bytes": 5035969,
+4:  "checkpoint_source": "/tmp/native-work/runs/idaac-s101/models/agent-robosuite:Door-idaac-s101.pt",

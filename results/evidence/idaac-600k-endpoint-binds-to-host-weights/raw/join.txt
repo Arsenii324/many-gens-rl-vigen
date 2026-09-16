@@ -1,0 +1,50 @@
+# evidence-slug: idaac-600k-endpoint-binds-to-host-weights
+# excerpt: join
+# note: the committed endpoint rows, joined to the four candidate snapshots
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   def listing(name):
+#       body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#       return {line.split()[2]: line.split(maxsplit=3)[3] for line in body.splitlines()}
+#   snaps = {}
+#   for run in ('card0-20260909-005543', 'card0-20260909-013936', 'card0-20260909-035152', 'card0-20260910-120437'):
+#       for sha, name in listing('snapshot-' + run).items():
+#           snaps[sha] = run
+#   rows = [json.loads(l) for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl')]
+#   by = {}
+#   for r in rows:
+#       by.setdefault((r['frame'], r['checkpoint_sha256']), []).append(r['conventions']['eval_policy_mode'])
+#   print('rows', len(rows))
+#   for (frame, sha), modes in sorted(by.items()):
+#       print('frame', frame, 'sha', sha[:16], '->', snaps.get(sha, 'NOT-ON-HOST'), 'rows', len(modes),
+#             'sample', modes.count('sample'), 'mode', modes.count('mode'))
+#   print('floor(600000 / 2048) * 2048 =', 600000 // 2048 * 2048)
+#   "
+# repo-head: 2b1562ef9f176772404cb8d5f539e008f3c630bd
+# inputs: results/records/reeval-v214-idaac-endpoint__records.jsonl=a564cd2179f8f03d
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   def listing(name):
+#       body = open('results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#       return {line.split()[2]: line.split(maxsplit=3)[3] for line in body.splitlines()}
+#   snaps = {}
+#   for run in ('card0-20260909-005543', 'card0-20260909-013936', 'card0-20260909-035152', 'card0-20260910-120437'):
+#       for sha, name in listing('snapshot-' + run).items():
+#           snaps[sha] = run
+#   rows = [json.loads(l) for l in open('results/records/reeval-v214-idaac-endpoint__records.jsonl')]
+#   by = {}
+#   for r in rows:
+#       by.setdefault((r['frame'], r['checkpoint_sha256']), []).append(r['conventions']['eval_policy_mode'])
+#   print('rows', len(rows))
+#   for (frame, sha), modes in sorted(by.items()):
+#       print('frame', frame, 'sha', sha[:16], '->', snaps.get(sha, 'NOT-ON-HOST'), 'rows', len(modes),
+#             'sample', modes.count('sample'), 'mode', modes.count('mode'))
+#   print('floor(600000 / 2048) * 2048 =', 600000 // 2048 * 2048)
+#   " ) | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:15:20+00:00
+#---------------------------------------------------------------------------------------------------
+rows 88
+frame 598016 sha c68368c1de6e27de -> card0-20260909-035152 rows 88 sample 44 mode 44
+floor(600000 / 2048) * 2048 = 598016

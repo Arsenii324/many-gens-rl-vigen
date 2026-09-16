@@ -278,6 +278,22 @@ register exists to prevent.
 
 **Supersedes.** The unevidenced sentence '14 checkpoints were sha-verified against their own rows' in notes/endgame/PPG-600K-COMPLETE.md, which stands and now has its evidence (13 intermediate + 1 terminal retained; model000 is IC=0 and unevaluated).
 
+### `idaac-600k-endpoint-binds-to-host-weights` — **resolved**
+
+**Q.** Which host idaac snapshot do the 88 committed idaac endpoint rows evaluate, did that run finish at production length, and do the rows cover every regime in both policy modes?
+
+**Verdict.** All 88 rows name one snapshot, card0-20260909-035152's (the 600k production cell), among four idaac snapshots retained on the host. That run requested 600,000 frames, which the descriptor floors to whole 2048-step rollouts = 598,016; the trainer reported NATIVE_FINAL_EVALUATION_COMPLETED frame=598016 and exited 0. The committed rows have 11 per regime in both sample and mode. The training cell's own mode endpoint had only 8 eval-hard rows (41 total), so the tracker item 'idaac's 3 missing eval-hard mode rows' was closed by the full re-evaluation.
+
+**Why.** The run directory and all four snapshots are host-only; the bundle hashes each snapshot in place and joins the committed rows to them, so the binding does not rest on which SNAP path the re-evaluation happened to be given. The snapshot-to-trainer-save identity is quoted from retained.json, not compared.
+
+**Evidence.** `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt:49`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join.txt:50`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/run-end.txt:11`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/run-end.txt:13`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/coverage.txt:30`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/coverage.txt:31`, `results/evidence/idaac-600k-endpoint-binds-to-host-weights/raw/join-failures.txt:9`
+
+**Falsified by.** A committed idaac endpoint row naming a different checkpoint, a frame other than 598016, or any (mode, regime) with other than 11 rows; tests/test_evidence_backed_register_rows.py checks all three offline.
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** notes/endgame/STAGE-TRACKER.md's 'idaac's 3 missing eval-hard mode rows | NOT STARTED' (and PLAN-2026-09-16-BOOKING.md item 3), which describe the in-run endpoint and are closed by reeval-v214-idaac-endpoint.
+
 ## host-safety
 
 ### `yield-is-memory-not-process` — **resolved**
