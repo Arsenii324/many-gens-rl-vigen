@@ -6,7 +6,7 @@
 # source-bytes: 8422  source-sha256: ff94cfe2f61375b60be4d30d88e88c4287f6e6d7f9dbfeb8862a7445361b45f2  source-mtime: 
 # extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py | grep -n '' | sed -n '163,176p' | head -n 200
 # matched-lines: 14  shown-lines: 14
-# captured-at: 2026-09-16T10:44:12+00:00
+# captured-at: 2026-09-16T10:48:57+00:00
 #---------------------------------------------------------------------------------------------------
 163:def make_minibatches(segs, mbsize):
 164:    """

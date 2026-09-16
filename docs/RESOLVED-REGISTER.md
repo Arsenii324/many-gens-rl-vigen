@@ -120,17 +120,33 @@ register exists to prevent.
 
 **Q.** ppg declares nminibatch=1 while raileanu21a-supp.pdf SS E says 32 minibatches. Which is right?
 
-**Verdict.** 1. At SS E's own `1 process`, 32 is INEXPRESSIBLE, and 1 reproduces PPG's released update density and per-step batch size exactly.
+**Verdict.** 1. At SS E's own `1 process`, 32 is INEXPRESSIBLE, and 1 reproduces PPG's released update density and per-step batch size exactly. [2026-09-16] SCOPE: this settles the POLICY phase against the SINGLE-RANK release. The auxiliary phase is a different path and is not at release density -- see row ppg-aux-minibatch-geometry.
 
 **Why.** minibatch_optimize splits the LEADING axis and Roller.singles_to_multi documents it as '(batch, time)', so ntrain is num_envs. PPG released is 64x256=16384 with 1 epoch x 8 minibatches = 8 steps of 2048 samples = 0.00048828 steps/env-frame; ours at 1x2048 with nminibatch=1 is 1 step of 2048 samples per 2048 frames = the same density AND the same per-step batch size. Declaring 32 would be 32x upstream density on 64-sample steps.
 
-**Evidence.** `runnable/ppg/phasic_policy_gradient/minibatch_optimize.py:52`, `runnable/ppg/phasic_policy_gradient/roller.py:100`, `datasphere/native/families.json:603`
+**Evidence.** `runnable/ppg/phasic_policy_gradient/minibatch_optimize.py:52`, `runnable/ppg/phasic_policy_gradient/roller.py:100`, `datasphere/native/families.json:603`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/clamp-warnings.txt:11`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/clamp-warnings.txt:8`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/checkpoint-saves.txt:23`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/arithmetic.txt:30`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/arithmetic.txt:32`, `results/evidence/ppg-nminibatch-declared-32-executed-1/raw/effective-config.txt:38`
 
 **Falsified by.** If minibatch_optimize is ever changed to split a flattened num_envs*nstep axis, ntrain stops being num_envs, 32 becomes expressible, and this must be re-derived.
 
-**Pinned by.** `tests/test_ppg_minibatch_config_must_be_executable.py`, `tests/test_ppg_c2_contract.py`
+**Pinned by.** `tests/test_ppg_minibatch_config_must_be_executable.py`, `tests/test_ppg_c2_contract.py`, `tests/test_evidence_bundles_hold.py`
 
 **Supersedes.** The 'severe under-optimisation of PPG' reading in notes/ppg-took-256-gradient-steps-not-8192.md, corrected in place.
+
+### `ppg-aux-minibatch-geometry` — **resolved**
+
+**Q.** ppg-nminibatch shows the POLICY phase matches PPG's release. What does the AUXILIARY phase execute at num_envs=1, against PPG Table A.1 and the two release configurations?
+
+**Verdict.** 8 aux minibatches of 8192 samples per aux epoch (48 aux steps per 65,536 frames = 0.000732 per frame). Against the 4-rank release run (README `mpiexec -np 4`): x0.5 aux steps per frame at x2 global batch. Against the single-rank defaults: x0.125 at x8. Table A.1's '16 minibatches per aux epoch per N_pi' is 0.25 here. Sample reuse (E_aux=6) is unchanged. aux_mbsize=2 would match the 4-rank release exactly (4096 samples, 0.001465); no setting at num_envs=1 matches the single-rank release. The admissible ppg 600k result stands as a faithful run of released defaults, with this as a declared fidelity row; the effect on Door returns is NOT measured.
+
+**Why.** make_minibatches (runnable/ppg ppg.py, byte-identical to upstream) splits (env, segment) PAIRS into groups of aux_mbsize, so the unit is a whole 2048-step segment at one env: 1 x 32 / 4 = 8, against upstream's 64 x 32 / 4 = 512 (= 16 per N_pi, matching the paper). aux_mbsize=4 is train.py's default with no CLI flag, and nothing on the launch path or in the run record sets it. Counted by EXECUTING the vendored function (scripts/probe_ppg_aux_minibatches.py), not re-derived. The run logged 54 aux epochs = 9 phases x 6. Missed before because 237f876's density arithmetic is about the policy phase, the primary-source reconciliation lists five of Table A.1's six rows, and the retired rlgen port that had flagged aux_mbsize=4 is not what production runs (the CORRECTIONS #59 class).
+
+**Evidence.** `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/probe.txt:17`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/paper-table-a1.txt:21`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/arithmetic.txt:36`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/run-aux-epochs.txt:8`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/aux-mbsize-not-passed.txt:9`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/vendored-make-minibatches-identical.txt:12`, `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/raw/vendored-train-defaults.txt:11`, `runnable/ppg/phasic_policy_gradient/ppg.py:173`, `runnable/ppg/phasic_policy_gradient/train.py:44`
+
+**Falsified by.** Any of: make_minibatches changes its split unit; --aux_mbsize, --n_pi or --n_aux_epochs becomes reachable from ppg_cell.sh/ppg.sh/families.json; ppg's num_envs or nstep changes. Each changes the production row, and tests/test_ppg_aux_geometry_is_declared.py fails on each. A measured Door-return difference between aux_mbsize 4 and 2 would move this from a declared row to a result-affecting one.
+
+**Pinned by.** `tests/test_ppg_aux_geometry_is_declared.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** The unscoped reading of ppg-nminibatch as 'the executed run matches PPG's release' (notes/endgame/PPG-600K-COMPLETE.md, bounded in place in 84bd97a), and the 'EXACT SOURCE MATCH' classification of PPG's phasic settings in notes/PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md, which omits Table A.1's aux-minibatch row. OWNER decision left open: whether a future ppg run exposes --aux_mbsize and passes 2 (matches the 4-rank release on the aux phase while the policy phase stays matched to the single-rank one).
 
 ### `ppg-clip-inert` — **resolved**
 

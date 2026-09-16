@@ -6,7 +6,7 @@
 # source-bytes: 17613  source-sha256: 5687b6171bffabbcb4d3d12e201742e6fa1b886945b1a34a754b596297a85ab2  source-mtime: 
 # extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py | grep -n '' | sed -n '83,94p' | head -n 200
 # matched-lines: 12  shown-lines: 12
-# captured-at: 2026-09-16T10:45:59+00:00
+# captured-at: 2026-09-16T10:48:55+00:00
 #---------------------------------------------------------------------------------------------------
 83:def batch_len(batch):
 84:    """

@@ -244,7 +244,8 @@ def main() -> int:
         f"# excerpt: {args.name}",
         f"# note: {args.note}" if args.note else None,
         f"# source-kind: {meta['kind']}",
-        f"# source: {meta.get('host', '')}{':' if meta.get('host') else ''}{meta.get('path', meta.get('command', ''))}",
+        (f"# source: {meta.get('host', '')}{':' if meta.get('host') else ''}"
+         f"{meta.get('path', meta.get('command', ''))}").replace("\n", "\n#   "),
         f"# source-bytes: {meta['bytes']}  source-sha256: {meta['sha256']}  source-mtime: {meta.get('mtime', '')}"
         if "sha256" in meta else f"# repo-head: {meta['repo_head']}",
         ("# inputs: " + "  ".join(f"{k}={v[:16]}" for k, v in meta["inputs"].items()))

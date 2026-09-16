@@ -6,6 +6,6 @@
 # source-bytes: 62561  source-sha256: 25b5c1f1d020020230b7575f3446dc9c67226a48379986e4bafc8cb19e20225a  source-mtime: 
 # extraction: cat notes/PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md | grep -n -E 'EXACT SOURCE MATCH\*\* for the phasic' | head -n 200
 # matched-lines: 1  shown-lines: 1
-# captured-at: 2026-09-16T10:44:25+00:00
+# captured-at: 2026-09-16T10:49:09+00:00
 #---------------------------------------------------------------------------------------------------
 209:| Phasic method | PPG paper pp. 3–4: disjoint policy/value networks, policy phase, value phase, infrequent auxiliary phase, behavioral-cloning term; `ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py`, `train.py`. | Active PPG preserves `n_pi=32`, policy/value epoch1, auxiliary epochs6, βclone1: `runnable/ppg/phasic_policy_gradient/train.py:27-44,79-115`. | **EXACT SOURCE MATCH** for the phasic update mechanism and these principal settings. |

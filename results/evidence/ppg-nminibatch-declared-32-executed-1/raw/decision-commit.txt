@@ -3,10 +3,10 @@
 # note: the commit that recorded the finding and made the clamp fatal
 # source-kind: local-command
 # source: git log -1 --format="commit %H%nDate: %ci%n%n%B" 237f876
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
-# extraction: git log -1 --format="commit %H%nDate: %ci%n%n%B" 237f876 | head -n 200
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# extraction: ( git log -1 --format="commit %H%nDate: %ci%n%n%B" 237f876 ) | head -n 200
 # matched-lines: 40  shown-lines: 40
-# captured-at: 2026-09-16T10:41:12+00:00
+# captured-at: 2026-09-16T10:48:56+00:00
 #---------------------------------------------------------------------------------------------------
 commit 237f876bb51b53eb944627ccb09bed4d461ad617
 Date: 2026-09-10 08:44:36 +0300

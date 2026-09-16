@@ -3,10 +3,11 @@
 # note: IDAAC supplement SS E: the continuous-control PPG search names five constants; the aux minibatch count is not among them, and unnamed values follow Procgen
 # source-kind: local-command
 # source: pdftotext -layout ext/idaac/raileanu21a-supp.pdf -
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# inputs: ext/idaac/raileanu21a-supp.pdf=85fc2b4244038e20
 # extraction: ( pdftotext -layout ext/idaac/raileanu21a-supp.pdf - ) | grep -n '' | sed -n '502,513p' | head -n 200
 # matched-lines: 12  shown-lines: 12
-# captured-at: 2026-09-16T10:44:12+00:00
+# captured-at: 2026-09-16T10:48:57+00:00
 #---------------------------------------------------------------------------------------------------
 502:In line with standard practice for this benchmark, we use 8 action repeats for Cartpole Swingup and 4 for Cartpole Balance
 503:and Ball In Cup. We also use 3 stacked frames as observations. To find the best hyperparameters, we ran a grid search over

@@ -3,9 +3,9 @@
 # note: the production descriptor at the time of the run (commit 672202d, 2026-09-09) declared 32
 # source-kind: local-command
 # source: git show 672202d:datasphere/native/families.json
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
 # extraction: ( git show 672202d:datasphere/native/families.json ) | grep -n -E '"nminibatch"' | head -n 200
 # matched-lines: 1  shown-lines: 1
-# captured-at: 2026-09-16T10:45:59+00:00
+# captured-at: 2026-09-16T10:48:55+00:00
 #---------------------------------------------------------------------------------------------------
 603:      "nminibatch": "32",

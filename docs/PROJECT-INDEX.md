@@ -94,6 +94,9 @@ Read anything in there as a lead to check, never as authority. See [`dated/READM
   falsifier and a pinning test. Generated from `resolved-register.json`; do not hand-edit.
 - [`RECORDING-A-RESOLVED-FINDING.md`](RECORDING-A-RESOLVED-FINDING.md) — how to add a row to that
   register, and what `resolved` is allowed to mean.
+- [`../results/evidence/README.md`](../results/evidence/README.md) — the evidence bundles those rows
+  cite: verbatim excerpts with source hashes, capture recipes and anchored facts, and how to
+  add one (`scripts/capture_host_evidence.py`) or re-check its sources (`scripts/recheck_evidence.py`).
 
 
 Kept, not indexed above, because they are not part of the live path. Listed so that "absent from

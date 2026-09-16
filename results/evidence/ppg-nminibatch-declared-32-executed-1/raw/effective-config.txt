@@ -6,7 +6,7 @@
 # source-bytes: 2406  source-sha256: 71d1c02cc24a66ae70dba4cf84db7b703f1ba589797238f6b6437031a86d15e1  source-mtime: 2026-09-09T09:03:00+00:00
 # extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json
 # matched-lines: 85  shown-lines: 85
-# captured-at: 2026-09-16T10:45:58+00:00
+# captured-at: 2026-09-16T10:48:55+00:00
 #---------------------------------------------------------------------------------------------------
 {
   "argv": [

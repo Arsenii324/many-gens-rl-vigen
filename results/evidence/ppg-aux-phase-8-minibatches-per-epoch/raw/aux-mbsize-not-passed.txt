@@ -3,8 +3,9 @@
 # note: absence: neither launcher nor the descriptor mentions aux_mbsize, n_pi or n_aux_epochs
 # source-kind: local-command
 # source: cat runnable/_launch/ppg_cell.sh runnable/_launch/ppg.sh datasphere/native/families.json
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# inputs: runnable/_launch/ppg_cell.sh=9a9ff23e657f6492  runnable/_launch/ppg.sh=1fab2304ff9bd488  datasphere/native/families.json=d5eddb023ba0a544
 # extraction: ( cat runnable/_launch/ppg_cell.sh runnable/_launch/ppg.sh datasphere/native/families.json ) | grep -n -E 'aux_mbsize|n_pi|n_aux_epochs' | head -n 200
 # matched-lines: 0  shown-lines: 0
-# captured-at: 2026-09-16T10:44:13+00:00
+# captured-at: 2026-09-16T10:48:57+00:00
 #---------------------------------------------------------------------------------------------------

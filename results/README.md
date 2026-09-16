@@ -27,6 +27,11 @@ that reason. These files are that gap closed.
 - **`logs/`** — the training curve each baseline writes in its own format, straight from the
   returned archive: `train.csv`/`eval.csv` for the RL-ViGen five, `progress*.csv` for `idaac` and
   `ppg`, `log.csv` for `ibac_sni`. These are the inputs the shared plotter reads.
+- **[`evidence/`](evidence/README.md)** — verbatim excerpts behind settled findings, taken from
+  host logs, result archives, papers and git history, each with its source's hash, the exact
+  extraction command and the facts it supports. Host run directories are reclaimed; these are
+  the copies that stay. `tests/test_evidence_bundles_hold.py` fails if one is edited or a claim
+  cites a number that was never captured.
 - **`validation/`** — the v185 functional endpoint attestations for all seven evaluator families,
   retained as JSONL and bound by SHA256 in `datasphere/native/validated_evaluator_families.json`.
   These prove current evaluator-path execution and record completeness; they are not production

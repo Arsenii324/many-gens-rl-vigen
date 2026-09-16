@@ -6,7 +6,7 @@
 # source-bytes: 738318  source-sha256: b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb  source-mtime: 2026-09-09T20:24:54+00:00
 # extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Aux epoch [0-9]' | head -n 12
 # matched-lines: 54  shown-lines: 12  (TRUNCATED -- the excerpt is capped; matched-lines is the full count)
-# captured-at: 2026-09-16T10:44:22+00:00
+# captured-at: 2026-09-16T10:49:06+00:00
 #---------------------------------------------------------------------------------------------------
 1456:Aux epoch 0
 1465:Aux epoch 1

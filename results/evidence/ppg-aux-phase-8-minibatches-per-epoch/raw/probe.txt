@@ -3,10 +3,11 @@
 # note: vendored make_minibatches executed on dummy segments shaped like seg_buf
 # source-kind: local-command
 # source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_ppg_aux_minibatches.py
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# inputs: scripts/probe_ppg_aux_minibatches.py=dcdcb4dea55cdd9d
 # extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_ppg_aux_minibatches.py ) | head -n 200
 # matched-lines: 9  shown-lines: 9
-# captured-at: 2026-09-16T10:44:25+00:00
+# captured-at: 2026-09-16T10:49:09+00:00
 #---------------------------------------------------------------------------------------------------
 n_pi=32 n_aux_epochs=6  (source: runnable/ppg/phasic_policy_gradient/ppg.py::make_minibatches)
 label | num_envs | nstep | aux_mbsize | minibatches/aux_epoch | per_N_pi | mb vtarg shape | samples/mb | aux_steps/aux_phase | frames/aux_phase | aux_steps/frame

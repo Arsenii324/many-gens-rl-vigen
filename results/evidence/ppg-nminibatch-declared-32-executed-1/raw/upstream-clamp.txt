@@ -6,7 +6,7 @@
 # source-bytes: 2935  source-sha256: 239322b6a2a059c6d437f7dbdc0f25180b9383a5f9ae7c99d0c99f10b492049a  source-mtime: 
 # extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py | grep -n '' | sed -n '42,60p' | head -n 200
 # matched-lines: 19  shown-lines: 19
-# captured-at: 2026-09-16T10:45:59+00:00
+# captured-at: 2026-09-16T10:48:55+00:00
 #---------------------------------------------------------------------------------------------------
 42:def minibatch_optimize(
 43:    train_fn: "function (dict) -> dict called on each minibatch that returns training stats",

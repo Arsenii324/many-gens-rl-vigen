@@ -3,17 +3,6 @@
 # note: the arithmetic the verdict rests on
 # source-kind: local-command
 # source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
-f = lambda x: format(x, '.8f')
-print('policy phases executed      293 * 2048 =', 293 * 2048)
-print('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))
-print('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)
-print('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))
-print('executed batch/step         (1*2048) / 1 =', 2048)
-print('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))
-print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)
-"
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
-# extraction: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
 #   f = lambda x: format(x, '.8f')
 #   print('policy phases executed      293 * 2048 =', 293 * 2048)
 #   print('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))
@@ -22,9 +11,20 @@ print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; 
 #   print('executed batch/step         (1*2048) / 1 =', 2048)
 #   print('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))
 #   print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)
-#   " | head -n 200
+#   "
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   f = lambda x: format(x, '.8f')
+#   print('policy phases executed      293 * 2048 =', 293 * 2048)
+#   print('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))
+#   print('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)
+#   print('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))
+#   print('executed batch/step         (1*2048) / 1 =', 2048)
+#   print('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))
+#   print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)
+#   " ) | head -n 200
 # matched-lines: 7  shown-lines: 7
-# captured-at: 2026-09-16T10:41:13+00:00
+# captured-at: 2026-09-16T10:48:56+00:00
 #---------------------------------------------------------------------------------------------------
 policy phases executed      293 * 2048 = 600064
 upstream 1-rank density     (1 epoch * 8 mb) / (64*256) = 0.00048828

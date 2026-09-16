@@ -3,7 +3,7 @@
   "excerpts": {
     "clamp-warnings": {
       "file": "raw/clamp-warnings.txt",
-      "sha256": "72954a337f372c45e39709eaa1747682a7007b8b60be3240291be547e2c94410",
+      "sha256": "0c0fafce7280c39167187d7c4768de93947ef7a3f11cd8723d03e933e14da1d0",
       "source": {
         "kind": "host-file",
         "host": "varaksin_as@100.98.2.11",
@@ -16,12 +16,12 @@
       "tar_member": null,
       "matched_lines": 293,
       "shown_lines": 3,
-      "captured_at": "2026-09-16T10:45:45+00:00",
+      "captured_at": "2026-09-16T10:48:42+00:00",
       "note": "the optimiser clamped nminibatch at every one of the 293 policy phases"
     },
     "declared-config": {
       "file": "raw/declared-config.txt",
-      "sha256": "ec60a952240996f05dca3b1df3f03792d0763e75e8ca539c139753161c3c455a",
+      "sha256": "33d2b6d283717132ec7470bf2894dd8c5ad5fef700a636ad33c3461c5aa02f32",
       "source": {
         "kind": "host-file",
         "host": "varaksin_as@100.98.2.11",
@@ -34,12 +34,12 @@
       "tar_member": null,
       "matched_lines": 2,
       "shown_lines": 2,
-      "captured_at": "2026-09-16T10:45:49+00:00",
+      "captured_at": "2026-09-16T10:48:46+00:00",
       "note": "what the cell declared: nminibatch 32, nstep 2048, 600k interacts; no num_envs flag"
     },
     "checkpoint-saves": {
       "file": "raw/checkpoint-saves.txt",
-      "sha256": "da7af63419674e127bfc4a607366148cff07f3a3f1ee656217dacec75a1e0dbd",
+      "sha256": "d0432a0564565cc3a1d995a3b2e10bd1b29da93aa711ff56cdeea3c5e671db81",
       "source": {
         "kind": "host-file",
         "host": "varaksin_as@100.98.2.11",
@@ -52,12 +52,12 @@
       "tar_member": null,
       "matched_lines": 13,
       "shown_lines": 13,
-      "captured_at": "2026-09-16T10:45:54+00:00",
+      "captured_at": "2026-09-16T10:48:50+00:00",
       "note": "the run reached its end: 13 IC-stamped checkpoints, the last at 600,064"
     },
     "upstream-recipe": {
       "file": "raw/upstream-recipe.txt",
-      "sha256": "31d50810fefbed2d58245b2099ad959c4dc26663de840ef0526f28bb0584dac3",
+      "sha256": "ec10a25810d19e56c2cf78dbeac93d291ee81192f450bd84487688787ee05241",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/phasic_policy_gradient/train.py",
@@ -68,12 +68,12 @@
       "tar_member": null,
       "matched_lines": 19,
       "shown_lines": 19,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "pristine upstream PPG defaults: 64 envs, nminibatch 8, one pi and vf epoch, 6 aux epochs"
     },
     "upstream-nstep": {
       "file": "raw/upstream-nstep.txt",
-      "sha256": "e2274336c58bbba94bfceab6555dfc9e48af5187b2182558b497cbba9346babd",
+      "sha256": "8ed9b50aa84fcb40f8984140035c8f0763087852c95f5cdf30e38d9ac49da461",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/phasic_policy_gradient/ppo.py",
@@ -84,12 +84,12 @@
       "tar_member": null,
       "matched_lines": 4,
       "shown_lines": 4,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "pristine upstream default rollout length"
     },
     "upstream-readme-ranks": {
       "file": "raw/upstream-readme-ranks.txt",
-      "sha256": "5092503dfa27c2795a380311efa52fd5af62edc8f982f8de21019fbc70f1a956",
+      "sha256": "31f959d4212a6d2c0444ea3aa0e8e720be4da976cadb58936dc03dcbc74695ef",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/README.md",
@@ -100,12 +100,12 @@
       "tar_member": null,
       "matched_lines": 7,
       "shown_lines": 1,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "the released PPG results were produced with 4 MPI ranks"
     },
     "upstream-clamp": {
       "file": "raw/upstream-clamp.txt",
-      "sha256": "55fe7e9d92950a535e4fd26a6c40ac972e1bd614b73000a80c902f6c427a09b3",
+      "sha256": "414279ee010b9385f0ee36347f6ea12db9483180445f46bf829ca50b0f363df2",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py",
@@ -116,12 +116,12 @@
       "tar_member": null,
       "matched_lines": 19,
       "shown_lines": 19,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "pristine upstream: ntrain is the leading axis; nminibatch above it is warned about and clamped"
     },
     "upstream-batch-len": {
       "file": "raw/upstream-batch-len.txt",
-      "sha256": "97063232126ade8f993de6b1d9c7a7378f722b531a64d2d1fb195fc0fdfeea25",
+      "sha256": "048418f0a700d6b7025bd03061337315ad1fe5f2c51b34d04e3a8243745e2007",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py",
@@ -132,12 +132,12 @@
       "tar_member": null,
       "matched_lines": 12,
       "shown_lines": 12,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "pristine upstream: batch_len is shape[0] of the first leaf"
     },
     "upstream-axis-doc": {
       "file": "raw/upstream-axis-doc.txt",
-      "sha256": "8ff9bc61f0671d33de58e9d729dade48f68acf411d0fe700dc9a3b0ea0abffed",
+      "sha256": "4b2c502c783592d3a496f8dc34f6ef157b140dd15350a99a784bd30a0c920cab",
       "source": {
         "kind": "repo-file",
         "path": "ext/phasic-policy-gradient/phasic_policy_gradient/roller.py",
@@ -148,12 +148,12 @@
       "tar_member": null,
       "matched_lines": 5,
       "shown_lines": 5,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "pristine upstream: rollouts carry (batch, time) leading axes, so shape[0] is the env count"
     },
     "vendored-clamp-now-fatal": {
       "file": "raw/vendored-clamp-now-fatal.txt",
-      "sha256": "4fa40ca336764f3d6d72783d812119a28db78a3f026fd1563fb9161c04d32c8d",
+      "sha256": "a50f9792a76946640714663016f1681bce023804e5418242f884a012224017ee",
       "source": {
         "kind": "repo-file",
         "path": "runnable/ppg/phasic_policy_gradient/minibatch_optimize.py",
@@ -164,28 +164,28 @@
       "tar_member": null,
       "matched_lines": 29,
       "shown_lines": 29,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "the vendored copy now raises instead of silently clamping"
     },
     "descriptor-then": {
       "file": "raw/descriptor-then.txt",
-      "sha256": "57445cde2177b808c44baa168dcfe55853a686250d19555084f532fb7bcf559c",
+      "sha256": "d42616bfa914f5f2ccfc8d33c7529793b8339e0d48163bd61cfe765b1ffa3006",
       "source": {
         "kind": "local-command",
         "command": "git show 672202d:datasphere/native/families.json",
-        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6",
+        "repo_head": "84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8",
         "inputs": {}
       },
       "extraction": "( git show 672202d:datasphere/native/families.json ) | grep -n -E '\"nminibatch\"' | head -n 200",
       "tar_member": null,
       "matched_lines": 1,
       "shown_lines": 1,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "the production descriptor at the time of the run (commit 672202d, 2026-09-09) declared 32"
     },
     "descriptor-now": {
       "file": "raw/descriptor-now.txt",
-      "sha256": "2dc4f1d43f92522fadf3f32b6dd861217e1e01dc04b4daffc6628216bf615104",
+      "sha256": "0fcf00e8d83b5a71ae907d3b8a8382b309c415578e9097a5e55a654b51aeb835",
       "source": {
         "kind": "repo-file",
         "path": "datasphere/native/families.json",
@@ -196,42 +196,44 @@
       "tar_member": null,
       "matched_lines": 1,
       "shown_lines": 1,
-      "captured_at": "2026-09-16T10:41:12+00:00",
+      "captured_at": "2026-09-16T10:48:56+00:00",
       "note": "the descriptor now declares what executes"
     },
     "decision-commit": {
       "file": "raw/decision-commit.txt",
-      "sha256": "1ce23a422051b0fa2156117240b8250a03f6201bcacce0b32b29f3670b9e087b",
+      "sha256": "c67507e203dd13da46b099d5e77b5b2999e4b81508a4c6d5a4a0aa19b40bd0de",
       "source": {
         "kind": "local-command",
         "command": "git log -1 --format=\"commit %H%nDate: %ci%n%n%B\" 237f876",
-        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+        "repo_head": "84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8",
+        "inputs": {}
       },
-      "extraction": "git log -1 --format=\"commit %H%nDate: %ci%n%n%B\" 237f876 | head -n 200",
+      "extraction": "( git log -1 --format=\"commit %H%nDate: %ci%n%n%B\" 237f876 ) | head -n 200",
       "tar_member": null,
       "matched_lines": 40,
       "shown_lines": 40,
-      "captured_at": "2026-09-16T10:41:12+00:00",
+      "captured_at": "2026-09-16T10:48:56+00:00",
       "note": "the commit that recorded the finding and made the clamp fatal"
     },
     "arithmetic": {
       "file": "raw/arithmetic.txt",
-      "sha256": "4beae382adfccd40efac33ff8b12bac0322f66a7c78b7cc4a389cbb60889c9d9",
+      "sha256": "e5cb13cdf1950116be05b61bf784f7c5678776ac9d531fb5f4bdae79d3126f82",
       "source": {
         "kind": "local-command",
         "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.8f')\nprint('policy phases executed      293 * 2048 =', 293 * 2048)\nprint('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))\nprint('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)\nprint('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))\nprint('executed batch/step         (1*2048) / 1 =', 2048)\nprint('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))\nprint('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)\n\"",
-        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+        "repo_head": "84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8",
+        "inputs": {}
       },
-      "extraction": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.8f')\nprint('policy phases executed      293 * 2048 =', 293 * 2048)\nprint('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))\nprint('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)\nprint('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))\nprint('executed batch/step         (1*2048) / 1 =', 2048)\nprint('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))\nprint('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)\n\" | head -n 200",
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.8f')\nprint('policy phases executed      293 * 2048 =', 293 * 2048)\nprint('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))\nprint('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)\nprint('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))\nprint('executed batch/step         (1*2048) / 1 =', 2048)\nprint('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))\nprint('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)\n\" ) | head -n 200",
       "tar_member": null,
       "matched_lines": 7,
       "shown_lines": 7,
-      "captured_at": "2026-09-16T10:41:13+00:00",
+      "captured_at": "2026-09-16T10:48:56+00:00",
       "note": "the arithmetic the verdict rests on"
     },
     "effective-config": {
       "file": "raw/effective-config.txt",
-      "sha256": "91218571c29cbe82ca017e36f34f8fca8b1090cc7c1ba3b5c0c15e210cd16fc4",
+      "sha256": "a77eb133ab71858d00881103707e84be7e06b703cffb5c4f2efbf9dc519ef0df",
       "source": {
         "kind": "host-file",
         "host": "varaksin_as@100.98.2.11",
@@ -244,12 +246,12 @@
       "tar_member": null,
       "matched_lines": 85,
       "shown_lines": 85,
-      "captured_at": "2026-09-16T10:45:58+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "the cell record written at launch: argv, host profile, runner environment"
     },
     "cell-positional": {
       "file": "raw/cell-positional.txt",
-      "sha256": "29944b67b3d1eddbe1590155314035b0e5b268f022696a927ed4bf5dada3cca0",
+      "sha256": "4895ccae7f4469c0abff627163d777e503abcb1b8895e7595840d2ac2dad6bf8",
       "source": {
         "kind": "repo-file",
         "path": "runnable/_launch/ppg_cell.sh",
@@ -260,12 +262,12 @@
       "tar_member": null,
       "matched_lines": 2,
       "shown_lines": 2,
-      "captured_at": "2026-09-16T10:45:58+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "ppg_cell.sh: positional 2 is the environment count, handed to ppg.sh unchanged (file unchanged since 2026-09-07, before the run)"
     },
     "launcher-num-envs": {
       "file": "raw/launcher-num-envs.txt",
-      "sha256": "664c524af595a08972c65cf5122c14e8d360a0d1ef3cbd054f686adb0c6ffd8e",
+      "sha256": "2a409114e0e4310cd9495dcd0b58c4cba084737fa21a7d8aa32bd7d43a16dde1",
       "source": {
         "kind": "repo-file",
         "path": "runnable/_launch/ppg.sh",
@@ -276,59 +278,11 @@
       "tar_member": null,
       "matched_lines": 2,
       "shown_lines": 2,
-      "captured_at": "2026-09-16T10:45:59+00:00",
+      "captured_at": "2026-09-16T10:48:55+00:00",
       "note": "ppg.sh: the environment count becomes --num_envs"
     }
   },
   "facts": [
-    {
-      "key": "descriptor_now_nminibatch",
-      "value": "1",
-      "excerpt": "descriptor-now",
-      "anchor": "\"nminibatch\": \"1\""
-    },
-    {
-      "key": "decision_commit",
-      "value": "237f876bb51b",
-      "excerpt": "decision-commit",
-      "anchor": "commit 237f876bb51b"
-    },
-    {
-      "key": "executed_frames",
-      "value": "600064",
-      "excerpt": "arithmetic",
-      "anchor": "293 * 2048 = 600064"
-    },
-    {
-      "key": "upstream_1rank_density",
-      "value": "0.00048828",
-      "excerpt": "arithmetic",
-      "anchor": "(64*256) = 0.00048828"
-    },
-    {
-      "key": "executed_density",
-      "value": "0.00048828",
-      "excerpt": "arithmetic",
-      "anchor": "(1*2048) = 0.00048828"
-    },
-    {
-      "key": "declared_32_density",
-      "value": "0.01562500",
-      "excerpt": "arithmetic",
-      "anchor": "(1*2048) = 0.01562500"
-    },
-    {
-      "key": "upstream_4rank_density",
-      "value": "0.00012207",
-      "excerpt": "arithmetic",
-      "anchor": "(4*64*256) = 0.00012207"
-    },
-    {
-      "key": "upstream_4rank_global_batch",
-      "value": "8192",
-      "excerpt": "arithmetic",
-      "anchor": "global batch/step 8192"
-    },
     {
       "key": "clamp_warning_count",
       "value": "293",
@@ -478,6 +432,54 @@
       "value": "32",
       "excerpt": "descriptor-then",
       "anchor": "\"nminibatch\": \"32\""
+    },
+    {
+      "key": "descriptor_now_nminibatch",
+      "value": "1",
+      "excerpt": "descriptor-now",
+      "anchor": "\"nminibatch\": \"1\""
+    },
+    {
+      "key": "decision_commit",
+      "value": "237f876bb51b",
+      "excerpt": "decision-commit",
+      "anchor": "commit 237f876bb51b"
+    },
+    {
+      "key": "executed_frames",
+      "value": "600064",
+      "excerpt": "arithmetic",
+      "anchor": "293 * 2048 = 600064"
+    },
+    {
+      "key": "upstream_1rank_density",
+      "value": "0.00048828",
+      "excerpt": "arithmetic",
+      "anchor": "(64*256) = 0.00048828"
+    },
+    {
+      "key": "executed_density",
+      "value": "0.00048828",
+      "excerpt": "arithmetic",
+      "anchor": "(1*2048) = 0.00048828"
+    },
+    {
+      "key": "declared_32_density",
+      "value": "0.01562500",
+      "excerpt": "arithmetic",
+      "anchor": "(1*2048) = 0.01562500"
+    },
+    {
+      "key": "upstream_4rank_density",
+      "value": "0.00012207",
+      "excerpt": "arithmetic",
+      "anchor": "(4*64*256) = 0.00012207"
+    },
+    {
+      "key": "upstream_4rank_global_batch",
+      "value": "8192",
+      "excerpt": "arithmetic",
+      "anchor": "global batch/step 8192"
     }
   ]
 }

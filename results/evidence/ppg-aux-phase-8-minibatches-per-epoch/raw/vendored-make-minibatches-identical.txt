@@ -3,9 +3,10 @@
 # note: the vendored make_minibatches is byte-identical to upstream
 # source-kind: local-command
 # source: bash -c 'diff <(sed -n "/^def make_minibatches/,/^def aux_train/p" ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py) <(sed -n "/^def make_minibatches/,/^def aux_train/p" runnable/ppg/phasic_policy_gradient/ppg.py) && echo IDENTICAL-make_minibatches'
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# inputs: ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py=ff94cfe2f61375b6  runnable/ppg/phasic_policy_gradient/ppg.py=92d4bf7bdc373486
 # extraction: ( bash -c 'diff <(sed -n "/^def make_minibatches/,/^def aux_train/p" ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py) <(sed -n "/^def make_minibatches/,/^def aux_train/p" runnable/ppg/phasic_policy_gradient/ppg.py) && echo IDENTICAL-make_minibatches' ) | head -n 200
 # matched-lines: 1  shown-lines: 1
-# captured-at: 2026-09-16T10:44:13+00:00
+# captured-at: 2026-09-16T10:48:57+00:00
 #---------------------------------------------------------------------------------------------------
 IDENTICAL-make_minibatches

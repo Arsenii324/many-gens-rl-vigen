@@ -6,7 +6,7 @@
 # source-bytes: 2318  source-sha256: 1fab2304ff9bd488fa1f7c1783dcec87feae12b8bab328aaebc925048dcab250  source-mtime: 
 # extraction: cat runnable/_launch/ppg.sh | grep -n -E NENV | head -n 200
 # matched-lines: 2  shown-lines: 2
-# captured-at: 2026-09-16T10:45:59+00:00
+# captured-at: 2026-09-16T10:48:55+00:00
 #---------------------------------------------------------------------------------------------------
 20:TASK="${1:-Door}"; NENV="${2:-2}"; shift 2 2>/dev/null || true
 43:  --env_name "robosuite:$TASK" --num_envs "$NENV" "$@"

@@ -6,6 +6,6 @@
 # source-bytes: 73851  source-sha256: d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64  source-mtime: 
 # extraction: cat datasphere/native/families.json | grep -n -E '"nminibatch"' | head -n 200
 # matched-lines: 1  shown-lines: 1
-# captured-at: 2026-09-16T10:41:12+00:00
+# captured-at: 2026-09-16T10:48:56+00:00
 #---------------------------------------------------------------------------------------------------
 603:      "nminibatch": "1",

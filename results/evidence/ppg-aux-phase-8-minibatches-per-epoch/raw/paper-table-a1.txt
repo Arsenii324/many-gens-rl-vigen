@@ -3,10 +3,11 @@
 # note: PPG paper, Appendix A: 16 minibatches per aux epoch per N_pi; 4 workers x 64 envs; rollout 256
 # source-kind: local-command
 # source: pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf -
-# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# repo-head: 84bd97a85d41d4bc171c8ec8f7eb5fcc8273bcf8
+# inputs: ext/baseline_resources/10_ppg/paper_2009.04416.pdf=a5d5e56983c74f30
 # extraction: ( pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf - ) | grep -n '' | sed -n '471,495p' | head -n 200
 # matched-lines: 25  shown-lines: 25
-# captured-at: 2026-09-16T10:44:11+00:00
+# captured-at: 2026-09-16T10:48:56+00:00
 #---------------------------------------------------------------------------------------------------
 471:A     Hyperparameters
 472:We use the Adam optimizer (Kingma and Ba, 2014) in all experiments.
