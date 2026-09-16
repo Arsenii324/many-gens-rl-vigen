@@ -94,7 +94,7 @@ Six of seven families have a measured VRAM peak (`datasphere/native/measured-vra
 **`ibac_sni` at `procs=16` does not**, and three different figures for it were quoted as fact in a
 single day — an estimate from a code comment, a 3-process measurement that under-counts because EGL
 contexts are not compute apps, and a figure that was 94% a colleague's memory read through an
-instrument whose docstring claimed a filter it did not have. Only a lower bound survives: **~6.6 GiB**.
+instrument whose docstring claimed a filter it did not have. That lower bound held, and it is now measured: **7,421 MiB** total at procs=16 — 2,199 compute plus 5,222 EGL — which needs 11,421 with the floor and so cannot share card 1 with its 21.3 GiB co-tenant.
 
 **The rule that failure produced, and it is the most transferable thing in this file: before a number
 decides anything, find where it was produced. A number in a comment is not a measurement.**

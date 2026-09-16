@@ -32,8 +32,8 @@ usage. A `ctrl` cell here has already asked for a transient 8.27 GiB inside XLA 
 mid-run. An extrapolation is not a bound and a past observation is not a bound.
 [`notes/production-host/10-resource-upper-bound-rule.md`](notes/production-host/10-resource-upper-bound-rule.md).
 **VRAM, as of 2026-09-16: six of seven families ARE measured** (this sentence previously said the
-opposite and blocked on it). Two constraints still bite: **`ibac_sni` at `procs=16` is unmeasured**,
-with only a ~6.6 GiB lower bound, and **`ctrl` at 32,435 MiB cannot satisfy peak-plus-floor on a
+opposite and blocked on it). **`ibac_sni` at `procs=16` is measured 2026-09-16 at 7,421 MiB** — 2,199 compute plus 5,222 non-compute (EGL), on an exclusive card at steady state, which is why it cannot
+survive a 21.3 GiB co-tenant: it needs 11,421 MiB with the floor. And **`ctrl` at 32,435 MiB cannot satisfy peak-plus-floor on a
 32,494 MiB card at all**. The rule is unchanged — what changed is whether we satisfy it. Its
 precondition, learned the hard way: **before a number decides anything, find where it was
 produced; a number in a code comment is not a measurement.**

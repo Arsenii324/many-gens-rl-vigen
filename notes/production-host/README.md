@@ -57,7 +57,8 @@ Two things still bite:
 
 - **`ibac_sni` is the one family with no measurement**, and three different figures for it were
   quoted as fact in a single day, one of which was a colleague's memory read through a defective
-  instrument. Only a lower bound survives, ~6.6 GiB.
+  instrument. A ~6.6 GiB lower bound survived that, and it was right: ibac_sni is now
+  **measured 2026-09-16 at 7,421 MiB** — 2,199 compute plus 5,222 non-compute (EGL), on an exclusive card at steady state. See `33` section 3b.
 - **`ctrl` at 32,435 MiB exceeds a 32,494 MiB card once the 4,000 MiB floor is added**, so it cannot
   satisfy floor-plus-peak at all. It needs an empty card and an explicit decision about the floor.
 

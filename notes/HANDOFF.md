@@ -57,7 +57,7 @@ are unaffected".
 - **Whether `rlvigen_kalugin_df`'s cycling is a schedule or a job loop.** It releases ~21.3 GiB and
   reclaims it within tens of minutes, repeatedly. If it is a loop with a period, a launch could be
   timed against it. I have only watched it, never characterised it, and I would not ask its owner.
-- **Whether ibac_sni at `procs=16` is actually large or merely unlucky.** Its only surviving figure
+- **[RESOLVED 20:49] Whether ibac_sni at `procs=16` is actually large or merely unlucky.** Large, and precisely: 7,421 MiB total (2,199 compute + 5,222 EGL), needing 11,421 with the floor against 7,194 of durable capacity beside card 1's co-tenant. Not unlucky. Its only surviving figure
   is a ~6.6 GiB *lower* bound taken 42 s in while its process count was still climbing 2 → 20. It
   may be much larger. I would not schedule it beside anything until one clean run measures it.
 

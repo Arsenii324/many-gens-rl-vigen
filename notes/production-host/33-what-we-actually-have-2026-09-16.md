@@ -59,7 +59,7 @@ inverted. From `datasphere/native/measured-vram-bounds.json`:
 | `ctrl` | 32,435 MiB | | `dmc_gb` | 2,529 MiB |
 | `ppg` | 7,146 MiB | | `alda` | 2,397 MiB |
 | `rlvigen` | 4,549 MiB | | one eval cell | 841 MiB |
-| `idaac` | 2,638 MiB | | **`ibac_sni`** | **still unmeasured** |
+| `idaac` | 2,638 MiB | | **`ibac_sni`** | **7,421 MiB** total — see 3b |
 
 `ctrl` at 32,435 MiB exceeds a 32,494 MiB card once the 4,000 MiB floor is added, so ctrl cannot
 satisfy floor-plus-peak at all: it needs an empty card **and** an explicit floor decision. That is
@@ -88,6 +88,31 @@ a cell down 42.4 s in, with its process count still climbing 2 → 20.
 **The operating rule this produces:** before a number decides anything, find where it was produced.
 A number in a comment is not a measurement, and this directory's `10-resource-upper-bound-rule.md`
 is unenforceable without that habit.
+
+## 3b. Measured at last: 7,421 MiB, and why the number was always going to be 2,199 plus something
+
+At 20:35 the waiter launched ibac_sni s101 into a card 1 that had emptied and held free for ten
+polls, and for the first time the cell trained past its ramp. With no co-tenant on the card,
+`card total − card free` is ibac's true footprint. Three consecutive 20-second samples, with
+training advancing F 8,192 → 12,288:
+
+```
+ours=2199 MiB   card_used=7421 MiB   non-compute=5222 MiB
+```
+
+**So the 2,199 MiB in every failed attempt was never a ramp point.** It is the stable compute-app
+part. The other 5,222 MiB is EGL render contexts, which `nvidia-smi` does not list as compute apps
+and no per-process sum can see. Section 3 above correctly refused to call 2,199 a peak; the reason
+was different from the one it gave.
+
+**It explains every failure exactly.** ibac needs 7,421 + 4,000 floor = **11,421 MiB**. Card 1 with
+its ~21.3 GiB co-tenant resident offers 32,494 − 21,300 − 4,000 = **7,194**. It was short by 4.2 GiB
+every time the co-tenant returned — arithmetic, not luck.
+
+**And it changes how to read every other figure in section 2.** Those are compute-app figures and
+under-state total footprint by their own EGL share, which grows with the number of rendering
+workers. `measured-vram-bounds.json` now says so first; `self-vram-cap.sh`, which also sums compute
+apps only, read 2,199 while the cell held 7,421.
 
 ## 4. ibac_sni has never completed a 600k cell — five attempts, and what stopped each
 
@@ -187,7 +212,7 @@ Our cap watcher recorded ibac's ramp at 308 → 616 → 1,375 → 2,199 MiB, and
 with the process count still climbing. The earlier attempt also stopped near 2,199. That figure is
 **where the floor catches ibac, not what ibac needs** — reporting it as a peak would repeat exactly
 the error section 3 documents. Its footprint stays unmeasured, and it stays unmeasured for the same
-reason it stays unrun.
+reason it stays unrun. **[Superseded by 3b: measured at 7,421 MiB.]**
 
 ## 6. Two published claims of mine, retracted in place
 
