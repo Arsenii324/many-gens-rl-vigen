@@ -31,8 +31,12 @@ the combined peak during loading, a phase switch, batch accumulation or autotuni
 usage. A `ctrl` cell here has already asked for a transient 8.27 GiB inside XLA autotuning
 mid-run. An extrapolation is not a bound and a past observation is not a bound.
 [`notes/production-host/10-resource-upper-bound-rule.md`](notes/production-host/10-resource-upper-bound-rule.md).
-**We do not satisfy this for VRAM today** — six of seven families have no VRAM measurement at all —
-so no production cell may start on a shared GPU until that is closed.
+**VRAM, as of 2026-09-16: six of seven families ARE measured** (this sentence previously said the
+opposite and blocked on it). Two constraints still bite: **`ibac_sni` at `procs=16` is unmeasured**,
+with only a ~6.6 GiB lower bound, and **`ctrl` at 32,435 MiB cannot satisfy peak-plus-floor on a
+32,494 MiB card at all**. The rule is unchanged — what changed is whether we satisfy it. Its
+precondition, learned the hard way: **before a number decides anything, find where it was
+produced; a number in a code comment is not a measurement.**
 
 **The GPU is assigned per machine, per card, per day, and the day is counted in UTC+3.** On record:
 **8 September — `cds2`, `V100-1`.** Not another card, not another machine, not an idle one. A

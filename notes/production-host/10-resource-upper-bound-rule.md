@@ -56,6 +56,20 @@ process idling at 4 GiB may be about to take 20. Read what is running, and if yo
 | ibac_sni | 1.97 | **none** |
 | ctrl | 13.57 (16 envs; 54.28 at 64 is extrapolated) | **none** |
 
+> **SUPERSEDED 2026-09-16 — read this stamp before the paragraph below it.** The table and claim
+> that follow were true when written and are now inverted: **six of seven families ARE measured**
+> (`datasphere/native/measured-vram-bounds.json`), and the section further down this same file
+> already began closing the gap on 2026-09-08. Current figures and the two constraints that still
+> bite are in [`33-what-we-actually-have-2026-09-16.md`](33-what-we-actually-have-2026-09-16.md) §2.
+> The stamp exists because a reader opening this file directly would otherwise take the blocking
+> claim as current — the exact failure `docs/EVAL-PROTOCOL.md` warns about in its own words.
+>
+> **The rule itself is unchanged and is not what was superseded.** What changed is only whether we
+> satisfy it. And it gained a precondition nobody had written down: *before a number decides
+> anything, find where it was produced.* Three different figures for `ibac_sni`'s VRAM were quoted
+> as fact in one day — one of them an estimate living in a code comment, one of them 94% a
+> colleague's memory read through an instrument whose docstring claimed a filter it did not have.
+
 **Six of seven families have no VRAM measurement at all**, and the seventh has one only in a prose
 note. So under this rule, **no production cell may be started on a shared GPU yet** — we cannot
 state what it will occupy.

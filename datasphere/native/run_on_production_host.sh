@@ -145,9 +145,16 @@ else
   # [Claude 2026-09-08, external audit finding A1] A VRAM CAP IS NOW REQUIRED WHENEVER A GPU IS
 # REQUESTED, because the project's own policy said so and nothing enforced it.
 #
-# `CLAUDE.md` and `notes/production-host/10-resource-upper-bound-rule.md` both state: "We do not
+# `CLAUDE.md` and `notes/production-host/10-resource-upper-bound-rule.md` both stated: "We do not
 # satisfy this for VRAM today -- six of seven families have no VRAM measurement at all -- so no
-# production cell may start on a shared GPU until that is closed." `vram_cap.py` closed the
+# production cell may start on a shared GPU until that is closed."
+#
+# [Claude 2026-09-16] Both sources are now corrected: six of seven families ARE measured, and only
+# ibac_sni is not (lower bound ~6.6 GiB). This comment keeps the original wording because it is
+# quoting the reasoning that produced the code below, not asserting a current fact -- but a reader
+# checking the quote against its sources would otherwise find them disagreeing with it. The code is
+# unaffected either way: the argument for enforcing the cap by default never depended on how many
+# families were measured. `vram_cap.py` closed the
 # MECHANISM half on this date. This closes the other half: the mechanism was opt-in, and an audit
 # confirmed **no cfg-*.yaml in the repository sets NATIVE_VRAM_CAP_MIB**, so in practice every cell
 # would have run uncapped.

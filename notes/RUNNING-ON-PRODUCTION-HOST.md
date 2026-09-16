@@ -791,7 +791,7 @@ From `datasphere/native/measured-vram-bounds.json` via `scripts/measure_vram_bou
 
 | family | peak | | family | peak |
 |---|---|---|---|---|
-| `ctrl` | 32,435 MiB — needs a card to itself | | `dmc_gb` | 2,529 MiB |
+| `ctrl` | 32,435 MiB — **exceeds a 32,494 MiB card once the 4,000 floor is added**, so it needs an empty card *and* an explicit decision about the floor | | `dmc_gb` | 2,529 MiB |
 | `ppg` | 7,146 MiB | | `alda` | 2,397 MiB |
 | `rlvigen` | 4,549 MiB | | one eval cell | 841 MiB, 1 core, 2.1 GiB RAM |
 | `idaac` | 2,638 MiB | | `ibac_sni` | **UNMEASURED** |
@@ -849,9 +849,15 @@ traps, each of which has produced a false reading here:
 - **Never grep a run directory for a marker.** `native-work/` contains `run_probe.sh`, which
   contains the literal string `NATIVE_CELL_FAILED`. Grepping the run dir reports a failure for
   every healthy run. Grep the **log file**.
-- **Progress strings differ by family.** `ibac_sni` and `ppg` log `F {:06}`; `idaac` logs a
-  key/value table with `train/total_num_steps`. A monitor matching only `F [0-9]+` reads zero
-  forever against an idaac cell. Match both, and alarm on `NATIVE_CELL_FAILED`,
+- **Progress strings differ by family, and so does how OFTEN they appear.** `ibac_sni` and `ppg`
+  log `F {:06}`; `idaac` logs a key/value table with `train/total_num_steps`. A monitor matching
+  only `F [0-9]+` reads zero forever against an idaac cell.
+- **A stall detector must be longer than the logging interval it watches.** idaac writes a block
+  every ~24,600 steps, which is about **11 minutes** of wall clock. A 9-minute stall threshold
+  fired on a cell sitting at 99.5% CPU with its GPU processes resident. Use the **log file's
+  mtime** for liveness — it is fine-grained and family-independent — and treat the step counter as
+  progress, not as a heartbeat. Before acting on any stall alarm, check
+  `docker stats --no-stream <container>`: a busy container is not stalled whatever the log says. Match both, and alarm on `NATIVE_CELL_FAILED`,
   `NATIVE_CELL_YIELDED`, `Traceback`, `Killed` and `OOM` as well — a filter that matches only
   success signals stays silent through a crash.
 
