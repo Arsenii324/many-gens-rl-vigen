@@ -63,8 +63,17 @@ RISE = 0.02
 #: `mean_log_std` is emitted by several loops in several shapes; accept them all rather than
 #: coupling this to one family's formatter.
 PATTERNS = [
-    re.compile(r"mean_log_std[\"'\s:=]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
-    re.compile(r"\bpi_logstd[\"'\s:=]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
+    # [Claude 2026-09-16] `|` added to every separator class, and it is not cosmetic. idaac writes
+    # a pipe-delimited table -- `| train/mean_log_std          | 0.000676 |` -- and the classes
+    # here were ["'\s:=] only, so the pattern could not match it. Pointed at a live 3,105-line
+    # idaac log this script printed NOTHING and exited 0, which is indistinguishable from "healthy,
+    # nothing to report". A watcher that exists to catch a run producing finite, non-crashing,
+    # worthless numbers was itself producing a finite, non-crashing, worthless silence.
+    #
+    # Found by running it against a real cell rather than by reading it. Verified after the fix:
+    # the same log yields 7 readings.
+    re.compile(r"mean_log_std[\"'\s:=|]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
+    re.compile(r"\bpi_logstd[\"'\s:=|]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
 ]
 
 
