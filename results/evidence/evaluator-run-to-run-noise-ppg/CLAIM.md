@@ -10,6 +10,8 @@ measured quantity change, or is the difference noise? The narrative is
 - **One new fact, established only here.** The placements are identical across all three runs, and
   most episode returns still differ. So the run-to-run noise is in the action stream, not in where
   the door is.
+  **[Refined 2026-09-16:]** it is in the trajectory, not specifically in action sampling. Deterministic
+  `mode` rows diverge too; see the full-grid replicate.
 
 ## Chain
 
@@ -45,11 +47,18 @@ measured quantity change, or is the difference noise? The narrative is
 
 ## What this does not show
 
+- **[Refined 2026-09-16 by [`../evaluator-noise-full-grid-replicate-ppg`](../evaluator-noise-full-grid-replicate-ppg/CLAIM.md)]**
+  Between two IDENTICAL full-grid invocations, `mode` rows, which draw no samples, diverge about as
+  often as `sample` rows. So the torch stream is not the main source of run-to-run variation.
+  It can still explain breadth dependence between a narrow and a full sweep, which is what this
+  bundle compared.
 - **Which mechanism dominates.** Torch RNG consumption, which depends on sweep breadth, and CUDA
   nondeterminism both fit. Four of twenty episodes reproduced exactly, which weakly suggests the
   divergence starts partway through some episodes, but that is not tested.
 - **The nine mode baselines.** They take an argmax or mean action. They were not tested here, and
   the claim is only about sampling-policy rows (`idaac`, `ppg`, `ibac_sni`). Only ppg was measured.
+  **[Corrected 2026-09-16:]** do not assume the mode baselines reproduce. ppg's own `mode` rows do not
+  (282/800 episodes identical across two identical runs).
 - **More than one scene.** Only train/scene 0 was re-run. Other scenes are assumed to behave
   alike, not measured.
 - **Exact reproducibility of any sampling row.** It is not available. Only agreement within

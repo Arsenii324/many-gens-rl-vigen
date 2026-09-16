@@ -103,11 +103,15 @@ def _source_meta(args) -> dict:
         return {"kind": "host-dir-hashes", "host": HOST, "path": args.host_hashes, "glob": args.name_glob}
     if args.host_path:
         p = _q(_host_path(args.host_path))
-        out = _ssh(f"test -e {p} || {{ echo MISSING; exit 0; }}; "
+        out = _ssh(f"test -e {p} || {{ echo MISSING; exit 0; }}; test -r {p} || {{ echo UNREADABLE; exit 0; }}; "
                    f"stat -c '%s %Y' {p}; sha256sum {p} | cut -d' ' -f1")
         if out.strip() == "MISSING":
             raise SystemExit(f"source does not exist on the host: {args.host_path}. "
                              "Evidence cannot be captured from a file that is gone -- say so in CLAIM.md instead.")
+        if out.strip() == "UNREADABLE":
+            raise SystemExit(f"source exists but is not readable by this user: {args.host_path} "
+                             "(files written by root inside containers can be mode 600). Take it from "
+                             "a readable copy, e.g. the cell's result archive, and say which in the note.")
         size_mtime, sha = out.strip().splitlines()
         size, mtime = size_mtime.split()
         return {"kind": "host-file", "host": HOST, "path": args.host_path,

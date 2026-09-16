@@ -1,0 +1,26 @@
+# evidence-slug: evaluator-noise-full-grid-replicate-ppg
+# excerpt: paired
+# note: every (regime, scene set, policy mode) row paired across the two grids
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/evidence_pair_eval_grids.py results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt
+# repo-head: 930210b0655c4db7c666b2730cdb31415ca2be58
+# inputs: scripts/evidence_pair_eval_grids.py=7651843fa4ed20d8  results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt=7ab0156a2387a79d  results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt=823f0432fd8f49d5
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/evidence_pair_eval_grids.py results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt ) | head -n 200
+# matched-lines: 15  shown-lines: 15
+# captured-at: 2026-09-16T11:31:07+00:00
+#---------------------------------------------------------------------------------------------------
+rows grid1 88 grid2 88 paired 88 unpaired []
+mode=mode pairs 44 (per-scene 40)  identical placement seeds 40/40  identical rows 2/40  identical episodes 282/800
+mode=mode |mean diff| in SE: mean 0.212  median 0.116  max 1.127  rows above 1 SE 2/44
+  mode=mode regime=eval-easy identical episodes 150/200
+  mode=mode regime=eval-hard identical episodes 0/200
+  mode=mode regime=eval-medium identical episodes 0/200
+  mode=mode regime=train identical episodes 132/200
+  mode=mode identical by episode index 0..19: [14, 14, 11, 15, 14, 12, 12, 17, 16, 16, 14, 12, 15, 19, 16, 13, 14, 12, 11, 15]
+mode=sample pairs 44 (per-scene 40)  identical placement seeds 40/40  identical rows 4/40  identical episodes 264/800
+mode=sample |mean diff| in SE: mean 0.328  median 0.219  max 1.665  rows above 1 SE 2/44
+  mode=sample regime=eval-easy identical episodes 141/200
+  mode=sample regime=eval-hard identical episodes 0/200
+  mode=sample regime=eval-medium identical episodes 0/200
+  mode=sample regime=train identical episodes 123/200
+  mode=sample identical by episode index 0..19: [17, 15, 14, 13, 12, 13, 13, 11, 11, 11, 13, 14, 12, 12, 12, 12, 14, 14, 17, 14]

@@ -1,0 +1,18 @@
+# evidence-slug: evaluator-noise-full-grid-replicate-ppg
+# excerpt: mode-act-fn
+# note: the ppg mode rule takes the Normal mean; it draws no sample
+# source-kind: repo-file
+# source: scripts/eval_grid.py
+# source-bytes: 91674  source-sha256: 10da2c0ae5709325b2f5486e4f096b1cd66d064b2806167906166c5c00782855  source-mtime: 
+# extraction: cat scripts/eval_grid.py | grep -n -E 'def ppg_mode_act_fn|pd\.mean|return .*mean|act_fn' | head -n 12
+# matched-lines: 8  shown-lines: 8
+# captured-at: 2026-09-16T11:31:07+00:00
+#---------------------------------------------------------------------------------------------------
+595:def ppg_mode_act_fn(agent):
+601:    `torch.distributions.Normal` (`distr_builder.py:28`), whose mode is its mean; `pd.mean` rather
+634:    def act_fn(ob, first, state_in, _model=agent):
+641:            deterministic = pd.mean
+644:    return act_fn
+693:        # rationale, and the no_grad that a production cell died without, are in ppg_mode_act_fn.
+694:        act_fn = ppg_mode_act_fn(agent) if policy_mode == "mode" else agent.act
+696:        roller = Roller(venv=venv, act_fn=act_fn, initial_state=agent.initial_state(1),

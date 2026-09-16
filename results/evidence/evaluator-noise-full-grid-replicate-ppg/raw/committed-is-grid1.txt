@@ -1,0 +1,12 @@
+# evidence-slug: evaluator-noise-full-grid-replicate-ppg
+# excerpt: committed-is-grid1
+# note: the committed file; its hash equals the grid 1 source hash in grid1-rows.txt
+# source-kind: local-command
+# source: shasum -a 256 results/records/reeval-v214-ppg-endpoint__records.jsonl
+# repo-head: 930210b0655c4db7c666b2730cdb31415ca2be58
+# inputs: results/records/reeval-v214-ppg-endpoint__records.jsonl=dbfff3625bb7a00f
+# extraction: ( shasum -a 256 results/records/reeval-v214-ppg-endpoint__records.jsonl ) | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:30:56+00:00
+#---------------------------------------------------------------------------------------------------
+dbfff3625bb7a00f6b1c69ac2eb3cbae6ea9659ed7863dabee09b805f5147e57  results/records/reeval-v214-ppg-endpoint__records.jsonl

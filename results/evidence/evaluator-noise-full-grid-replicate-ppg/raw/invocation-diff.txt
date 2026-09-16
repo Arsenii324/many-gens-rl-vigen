@@ -1,0 +1,11 @@
+# evidence-slug: evaluator-noise-full-grid-replicate-ppg
+# excerpt: invocation-diff
+# note: absence: the invocation keys are identical in both grids
+# source-kind: local-command
+# source: bash -c 'diff <(sed "1,/^#---/d" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt | cut -d: -f2-) <(sed "1,/^#---/d" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt | cut -d: -f2-); true'
+# repo-head: 930210b0655c4db7c666b2730cdb31415ca2be58
+# inputs: results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt=54e09ff6316b1f20  results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt=04155606c1d22138
+# extraction: ( bash -c 'diff <(sed "1,/^#---/d" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt | cut -d: -f2-) <(sed "1,/^#---/d" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt | cut -d: -f2-); true' ) | head -n 200
+# matched-lines: 0  shown-lines: 0
+# captured-at: 2026-09-16T11:31:07+00:00
+#---------------------------------------------------------------------------------------------------

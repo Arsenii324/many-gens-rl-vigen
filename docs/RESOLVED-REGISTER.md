@@ -252,7 +252,7 @@ register exists to prevent.
 
 **Verdict.** No change of estimand; the evaluator is nondeterministic run to run. Two byte-identical invocations gave 25.795 and 26.053; with the original 26.100 the spread is 0.305 = 0.095 SE at n=20 (SE 3.197), and old vs mean(new) is 0.055 SE. Placement seeds are identical in all three rows while 16 of 20 episode returns differ, so the noise is in the action stream, not the placements. A sampling-policy row (idaac, ppg, ibac_sni) reproduces within noise, never bit-for-bit, despite recording torch.use_deterministic_algorithms as enabled. Partial re-evaluation is acceptable on that basis.
 
-**Why.** seed_episode_placement re-seeds random and numpy per episode (the placement half), but torch is seeded once per family setup and ppg samples its actions from torch, so the action stream is not per-episode deterministic. Measured on ppg train/scene 0 only; the nine mode baselines take argmax/mean and were not tested. Recomputed from the captured per-episode returns, not the recorded means. Narrative: notes/endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md.
+**Why.** seed_episode_placement re-seeds random and numpy per episode (the placement half), but torch is seeded once per family setup and ppg samples its actions from torch, so the action stream is not per-episode deterministic. Measured on ppg train/scene 0 only; the nine mode baselines take argmax/mean and were not tested. Recomputed from the captured per-episode returns, not the recorded means. Narrative: notes/endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md. [2026-09-16 REFINED by evaluator-noise-is-not-the-sampling-stream: between identical full-grid invocations, mode rows (no sampling) diverge as often as sample rows, so the torch stream is not the main source of run-to-run variation.]
 
 **Evidence.** `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:60`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:64`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/derived.txt:61`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/run1-row.txt:16`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/run2-row.txt:16`, `results/evidence/evaluator-run-to-run-noise-ppg/raw/seeding-code.txt:38`, `scripts/eval_grid.py:236`
 
@@ -293,6 +293,22 @@ register exists to prevent.
 **Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
 
 **Supersedes.** notes/endgame/STAGE-TRACKER.md's 'idaac's 3 missing eval-hard mode rows | NOT STARTED' (and PLAN-2026-09-16-BOOKING.md item 3), which describe the in-run endpoint and are closed by reeval-v214-idaac-endpoint.
+
+### `evaluator-noise-is-not-the-sampling-stream` — **resolved**
+
+**Q.** Two complete ppg endpoint grids exist from one identical invocation (the second a retry after a lost completion marker). How far apart are they, and is the unseeded torch sampling stream what makes them differ?
+
+**Verdict.** Not the sampling stream. All 88 rows pair; placements are identical in all 40 per-scene rows of each mode, yet mode rows (Normal mean, no sampling) reproduce only 282/800 episodes against 264/800 for sample rows. train and eval-easy reproduce most episodes (mode 132/200 and 150/200); eval-medium and eval-hard reproduce none (0/200 in both modes). |mean difference| averages 0.212 SE (mode) and 0.328 SE (sample); 2 of 44 rows per mode exceed 1 SE. No drift with episode index. Row-level run-to-run comparisons are meaningful only on train and eval-easy.
+
+**Why.** Refines evaluator-sampling-rows-reproduce-within-noise, whose narrow three-run test could not separate mechanisms. A mode row consumes no torch randomness, so equal divergence in both modes places the source elsewhere (CUDA kernels, EGL rendering or MuJoCo -- not tested). The committed endpoint is grid 1 (hash-identical); grid 2 is kept only as extracted fields.
+
+**Evidence.** `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/paired.txt:13`, `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/paired.txt:14`, `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/paired.txt:16`, `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/paired.txt:18`, `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/paired.txt:21`, `results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/mode-act-fn.txt:12`
+
+**Falsified by.** A third full grid in which mode rows reproduce exactly while sample rows do not, or a change that makes train mode rows bit-identical across runs.
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** The mechanism reading in evaluator-sampling-rows-reproduce-within-noise ('ppg samples from torch ... consistent with the observation') as an explanation of run-to-run variation between identical invocations; it remains a description of the code and of breadth dependence.
 
 ## host-safety
 

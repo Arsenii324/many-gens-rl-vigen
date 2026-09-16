@@ -1,0 +1,16 @@
+# evidence-slug: evaluator-noise-full-grid-replicate-ppg
+# excerpt: grid2-invocation
+# note: grid 2 invocation keys, from the archive the retry wrote (it replaced grid 1 at this path)
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/reeval-v214/ppg-endpoint-result.tgz
+# source-bytes: 1649399  source-sha256: d0defa094f5d0b023287d68de071459f2310089a527d9f20595f81eb49bcf5b6  source-mtime: 2026-09-16T06:03:49+00:00
+# tar-member: ./run_manifest.json
+# extraction: tar -xzOf "$HOME"/rlvigen-runs/reeval-v214/ppg-endpoint-result.tgz ./run_manifest.json | grep -n -E '"(payload_sha256|requirements_native_sha256|container_image|frames|host_profile)"' | head -n 200
+# matched-lines: 5  shown-lines: 5
+# captured-at: 2026-09-16T11:31:07+00:00
+#---------------------------------------------------------------------------------------------------
+31:  "container_image": "nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b2cd9dd6c0312dc04dff9cb2fdce2b268018abc3d7c2dbcacf1155000",
+64:  "frames": "600064",
+66:  "host_profile": "v100",
+67:  "payload_sha256": "404a766c848ec6b1e44e2ad1213fca4114d0fd5b4fc2ea4a81935f7a43005c1f",
+109:  "requirements_native_sha256": "43983f2374fa7b6c8598f6586111fa5478a950b1c5caf978a1aa9bcfae04ee8b",

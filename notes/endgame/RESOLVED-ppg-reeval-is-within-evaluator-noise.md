@@ -40,6 +40,20 @@ It also weakens the claim that a partial re-run is exactly valid. That claim res
 `placement_condition_seed(eval_seed, scene_id, episode_index)` being content-addressed, which it
 is -- but see below.
 
+> **Correction, 2026-09-16, from a full-grid replicate:**
+> [`results/evidence/evaluator-noise-full-grid-replicate-ppg`](../../results/evidence/evaluator-noise-full-grid-replicate-ppg/CLAIM.md).
+>
+> - **The comparison.** Two complete endpoint grids of this checkpoint came from one identical
+>   invocation.
+> - **`mode` rows diverge as often as `sample` rows**: 282/800 against 264/800 episodes identical,
+>   with every placement seed identical. A `mode` row takes the Normal's mean and draws no sample.
+> - **So the unseeded torch stream below is not what makes identical invocations differ.** It
+>   still describes the code, and it can still make a narrow sweep differ from a full one.
+> - **"The nine mode baselines ... are unaffected" does not follow.** ppg's own mode rows are
+>   affected.
+> - **eval-medium and eval-hard episodes never reproduce** (0/200). Only train and eval-easy
+>   support row-level run-to-run comparison.
+
 ## The mechanism, as far as the code shows
 
 `seed_episode_placement()` re-seeds **`random` and `np.random` only**:

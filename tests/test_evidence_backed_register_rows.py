@@ -112,3 +112,18 @@ def test_ppg_banked_seed_is_off_schedule():
         seeds = {json.loads(line)["seed"] for line in
                  (ROOT / "results" / "records" / name).read_text().splitlines() if line.strip()}
         assert seeds == {1}, f"{name} now carries seeds {seeds}; re-derive the off-schedule row"
+
+
+def test_evaluator_noise_is_not_the_sampling_stream():
+    """`evaluator-noise-is-not-the-sampling-stream`: the ppg mode rule must still draw no sample.
+
+    The row's inference -- equal divergence in both modes places the source outside the sampling
+    stream -- holds only while `mode` takes the distribution's mean.
+    """
+    text = (ROOT / "scripts" / "eval_grid.py").read_text()
+    node = next(n for n in ast.parse(text).body
+                if isinstance(n, ast.FunctionDef) and n.name == "ppg_mode_act_fn")
+    code = [ast.get_source_segment(text, stmt) for stmt in node.body
+            if not (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))]  # skip the docstring
+    body = "\n".join(code)
+    assert "pd.mean" in body and ".sample(" not in body, "ppg's mode rule changed; re-derive the row"

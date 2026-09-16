@@ -1,0 +1,254 @@
+{
+  "slug": "evaluator-noise-full-grid-replicate-ppg",
+  "excerpts": {
+    "grid1-rows": {
+      "file": "raw/grid1-rows.txt",
+      "sha256": "7ab0156a2387a79daada0d9dea2c1bebc62e99d19261c73ab70bf8828483b912",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260915-160000/native-out/records_delivery.jsonl",
+        "bytes": 4702942,
+        "sha256": "dbfff3625bb7a00f6b1c69ac2eb3cbae6ea9659ed7863dabee09b805f5147e57",
+        "mtime": "2026-09-15T20:42:57+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260915-160000/native-out/records_delivery.jsonl | grep -n -o -E '\"(regime|scene_set|eval_policy_mode|episodes|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|returns|placement_condition_seeds)\": *(\\[[^]]*\\]|\"[^\"]*\"|[-0-9.e]+)'",
+      "tar_member": null,
+      "matched_lines": 1040,
+      "shown_lines": 1040,
+      "captured_at": "2026-09-16T11:30:50+00:00",
+      "note": "endpoint grid 1: 2026-09-15 16:00-19:47 MSK, the rows that were committed"
+    },
+    "grid2-rows": {
+      "file": "raw/grid2-rows.txt",
+      "sha256": "823f0432fd8f49d55a4bbcc26e3c794af910491527902b8ccc177d541adce1fe",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-035335/native-out/records_delivery.jsonl",
+        "bytes": 4702972,
+        "sha256": "8de9d841767909f049ecfa75d8bbb1782453d5c394e8d2063eb0a819c597e9d2",
+        "mtime": "2026-09-16T06:03:39+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-035335/native-out/records_delivery.jsonl | grep -n -o -E '\"(regime|scene_set|eval_policy_mode|episodes|episode_return_mean|episode_return_sd|checkpoint_sha256|evaluator_revision|returns|placement_condition_seeds)\": *(\\[[^]]*\\]|\"[^\"]*\"|[-0-9.e]+)'",
+      "tar_member": null,
+      "matched_lines": 1040,
+      "shown_lines": 1040,
+      "captured_at": "2026-09-16T11:30:55+00:00",
+      "note": "endpoint grid 2: 2026-09-16 03:53-09:04 MSK, a retry of the same invocation, never committed"
+    },
+    "committed-is-grid1": {
+      "file": "raw/committed-is-grid1.txt",
+      "sha256": "e01250bbefad2203421d3e77cadd4736c87d15df965f35eb6669d0cd1bc9bd20",
+      "source": {
+        "kind": "local-command",
+        "command": "shasum -a 256 results/records/reeval-v214-ppg-endpoint__records.jsonl",
+        "repo_head": "930210b0655c4db7c666b2730cdb31415ca2be58",
+        "inputs": {
+          "results/records/reeval-v214-ppg-endpoint__records.jsonl": "dbfff3625bb7a00f6b1c69ac2eb3cbae6ea9659ed7863dabee09b805f5147e57"
+        }
+      },
+      "extraction": "( shasum -a 256 results/records/reeval-v214-ppg-endpoint__records.jsonl ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:30:56+00:00",
+      "note": "the committed file; its hash equals the grid 1 source hash in grid1-rows.txt"
+    },
+    "grid1-invocation": {
+      "file": "raw/grid1-invocation.txt",
+      "sha256": "54e09ff6316b1f206049982c7c4b469a5f2adfc604e1690f93d574dd59c3c86c",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260915-160000/mirror/ppg-endpoint-result.tgz",
+        "bytes": 1649480,
+        "sha256": "e3899b8242d422bc6c3b811f271fef7edbbabb1c1a4add0684decbb4a39c0ff9",
+        "mtime": "2026-09-15T20:43:08+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/card1-20260915-160000/mirror/ppg-endpoint-result.tgz ./run_manifest.json | grep -n -E '\"(payload_sha256|requirements_native_sha256|container_image|frames|host_profile)\"' | head -n 200",
+      "tar_member": "./run_manifest.json",
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T11:31:01+00:00",
+      "note": "grid 1 invocation keys, from the archive mirrored with that run"
+    },
+    "grid2-invocation": {
+      "file": "raw/grid2-invocation.txt",
+      "sha256": "04155606c1d22138d1a31c3ab7e1636dd2d83fd27f602a5b9c46db2226ccd437",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/reeval-v214/ppg-endpoint-result.tgz",
+        "bytes": 1649399,
+        "sha256": "d0defa094f5d0b023287d68de071459f2310089a527d9f20595f81eb49bcf5b6",
+        "mtime": "2026-09-16T06:03:49+00:00"
+      },
+      "extraction": "tar -xzOf \"$HOME\"/rlvigen-runs/reeval-v214/ppg-endpoint-result.tgz ./run_manifest.json | grep -n -E '\"(payload_sha256|requirements_native_sha256|container_image|frames|host_profile)\"' | head -n 200",
+      "tar_member": "./run_manifest.json",
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T11:31:07+00:00",
+      "note": "grid 2 invocation keys, from the archive the retry wrote (it replaced grid 1 at this path)"
+    },
+    "invocation-diff": {
+      "file": "raw/invocation-diff.txt",
+      "sha256": "2fda3b189fbeefe4ab9b99b722c65721f39f4fcae3275282074de94f719597bf",
+      "source": {
+        "kind": "local-command",
+        "command": "bash -c 'diff <(sed \"1,/^#---/d\" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt | cut -d: -f2-) <(sed \"1,/^#---/d\" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt | cut -d: -f2-); true'",
+        "repo_head": "930210b0655c4db7c666b2730cdb31415ca2be58",
+        "inputs": {
+          "results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt": "54e09ff6316b1f206049982c7c4b469a5f2adfc604e1690f93d574dd59c3c86c",
+          "results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt": "04155606c1d22138d1a31c3ab7e1636dd2d83fd27f602a5b9c46db2226ccd437"
+        }
+      },
+      "extraction": "( bash -c 'diff <(sed \"1,/^#---/d\" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-invocation.txt | cut -d: -f2-) <(sed \"1,/^#---/d\" results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-invocation.txt | cut -d: -f2-); true' ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T11:31:07+00:00",
+      "note": "absence: the invocation keys are identical in both grids"
+    },
+    "paired": {
+      "file": "raw/paired.txt",
+      "sha256": "e13354b796d93059dac0b06eb2cd02af0c4e4b84be754e3d8c1d9b0a53e0f00e",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/evidence_pair_eval_grids.py results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt",
+        "repo_head": "930210b0655c4db7c666b2730cdb31415ca2be58",
+        "inputs": {
+          "scripts/evidence_pair_eval_grids.py": "7651843fa4ed20d864978d16918e9c59dd5cfb6b82d3b301e91611b4837fd6f9",
+          "results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt": "7ab0156a2387a79daada0d9dea2c1bebc62e99d19261c73ab70bf8828483b912",
+          "results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt": "823f0432fd8f49d55a4bbcc26e3c794af910491527902b8ccc177d541adce1fe"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/evidence_pair_eval_grids.py results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid1-rows.txt results/evidence/evaluator-noise-full-grid-replicate-ppg/raw/grid2-rows.txt ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 15,
+      "shown_lines": 15,
+      "captured_at": "2026-09-16T11:31:07+00:00",
+      "note": "every (regime, scene set, policy mode) row paired across the two grids"
+    },
+    "mode-act-fn": {
+      "file": "raw/mode-act-fn.txt",
+      "sha256": "62257bbdc8a6640c1d461b5591b66d7bffe0adf042597b812ceaae50c852d70d",
+      "source": {
+        "kind": "repo-file",
+        "path": "scripts/eval_grid.py",
+        "bytes": 91674,
+        "sha256": "10da2c0ae5709325b2f5486e4f096b1cd66d064b2806167906166c5c00782855"
+      },
+      "extraction": "cat scripts/eval_grid.py | grep -n -E 'def ppg_mode_act_fn|pd\\.mean|return .*mean|act_fn' | head -n 12",
+      "tar_member": null,
+      "matched_lines": 8,
+      "shown_lines": 8,
+      "captured_at": "2026-09-16T11:31:07+00:00",
+      "note": "the ppg mode rule takes the Normal mean; it draws no sample"
+    }
+  },
+  "facts": [
+    {
+      "key": "grid1_revision",
+      "value": "248751f7caca",
+      "excerpt": "grid1-rows",
+      "anchor": "\"evaluator_revision\": \"248751f7caca"
+    },
+    {
+      "key": "grid2_revision",
+      "value": "248751f7caca",
+      "excerpt": "grid2-rows",
+      "anchor": "\"evaluator_revision\": \"248751f7caca"
+    },
+    {
+      "key": "committed_sha",
+      "value": "dbfff3625bb7a00f",
+      "excerpt": "committed-is-grid1",
+      "anchor": "dbfff3625bb7a00f"
+    },
+    {
+      "key": "invocation_key_differences",
+      "value": "0",
+      "excerpt": "invocation-diff",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "rows_paired",
+      "value": "88",
+      "excerpt": "paired",
+      "anchor": "rows grid1 88 grid2 88 paired 88 unpaired []"
+    },
+    {
+      "key": "mode_placements_identical",
+      "value": "40/40",
+      "excerpt": "paired",
+      "anchor": "mode=mode pairs 44 (per-scene 40)  identical placement seeds 40/40"
+    },
+    {
+      "key": "mode_rows_identical",
+      "value": "2/40",
+      "excerpt": "paired",
+      "anchor": "identical rows 2/40"
+    },
+    {
+      "key": "mode_episodes_identical",
+      "value": "282/800",
+      "excerpt": "paired",
+      "anchor": "identical episodes 282/800"
+    },
+    {
+      "key": "sample_episodes_identical",
+      "value": "264/800",
+      "excerpt": "paired",
+      "anchor": "identical episodes 264/800"
+    },
+    {
+      "key": "mode_z_mean",
+      "value": "0.212",
+      "excerpt": "paired",
+      "anchor": "mode=mode |mean diff| in SE: mean 0.212"
+    },
+    {
+      "key": "sample_z_mean",
+      "value": "0.328",
+      "excerpt": "paired",
+      "anchor": "mode=sample |mean diff| in SE: mean 0.328"
+    },
+    {
+      "key": "mode_eval_hard_identical",
+      "value": "0/200",
+      "excerpt": "paired",
+      "anchor": "mode=mode regime=eval-hard identical episodes 0/200"
+    },
+    {
+      "key": "mode_eval_medium_identical",
+      "value": "0/200",
+      "excerpt": "paired",
+      "anchor": "mode=mode regime=eval-medium identical episodes 0/200"
+    },
+    {
+      "key": "mode_train_identical",
+      "value": "132/200",
+      "excerpt": "paired",
+      "anchor": "mode=mode regime=train identical episodes 132/200"
+    },
+    {
+      "key": "mode_easy_identical",
+      "value": "150/200",
+      "excerpt": "paired",
+      "anchor": "mode=mode regime=eval-easy identical episodes 150/200"
+    },
+    {
+      "key": "sample_train_identical",
+      "value": "123/200",
+      "excerpt": "paired",
+      "anchor": "mode=sample regime=train identical episodes 123/200"
+    },
+    {
+      "key": "mode_is_mean",
+      "value": "true",
+      "excerpt": "mode-act-fn",
+      "anchor": "whose mode is its mean"
+    }
+  ]
+}
