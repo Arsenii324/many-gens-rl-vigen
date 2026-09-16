@@ -184,7 +184,21 @@ cd <the repo, or wherever the payload and this script are>
 bash datasphere/native/preflight_production_host.sh --cells drqv2:1 --frames 600000
 ```
 
-**One command, nine checks, exit 0 only if all pass.** (Check 9, added 2026-09-08, refuses when `DOCKER_GPUS` is unset and verifies the named card has headroom.) It was a hand-run checklist until
+**One command, TEN checks, exit 0 only if all pass.** (Check 9, added 2026-09-08, refuses when
+`DOCKER_GPUS` is unset; check 10 is the named card's headroom/utilisation verdict, delegated to
+`watch_gpu_headroom.py --preflight`. This line said "nine" until 2026-09-16, when running it
+produced ten.)
+
+**Verified by running it, 2026-09-16**, which had not been done from this side before. It passes
+nine and correctly FAILS the tenth on a card with ~2.6 GiB free, printing the command to get the
+numbers and distinguishing the two halves of that verdict: *"the utilisation half is a COURTESY
+limit -- override with --max-util 100 only if the owner has said that slowing a co-tenant is
+acceptable. The memory half is not."* It also prints both cards' occupancy, which makes it the
+cheapest honest way to see what the machine is doing before you decide anything.
+
+> A trap worth naming because it caught me while running this: `bash preflight... | tail -30` and
+> then reading `$?` gives you **tail's** status, not the preflight's — the script reported
+> "1 FAILED" while my wrapper printed `exit=0`. Capture first, filter second. It was a hand-run checklist until
 2026-09-07, which is the wrong shape for something whose failure modes are a cell dying six hours
 in — or worse, succeeding while measuring something else. It checks: the Docker daemon is reachable
 *as this user* (being in the group is not the same as the daemon running); `source-lock.json` pins
