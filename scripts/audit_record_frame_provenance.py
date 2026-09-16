@@ -187,6 +187,9 @@ def median_int(values: list[int]) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("target", help="a run directory, or a records .jsonl")
+    ap.add_argument("--checkpoints", action="append", default=[], metavar="DIR",
+                    help="extra directory of source checkpoints to resolve hashes against; "
+                         "repeatable. Needed for RE-EVALUATION rows (see below)")
     ap.add_argument("--strict", action="store_true",
                     help="exit 1 on any MISMATCH. TIED and UNVERIFIABLE never fail on their own")
     args = ap.parse_args()
@@ -202,8 +205,41 @@ def main() -> int:
         print("no records found. Nothing was checked, which is NOT the same as nothing being wrong.")
         return 2
 
+    # [Claude 2026-09-16] --checkpoints, because RE-EVALUATION rows were structurally unverifiable
+    # and nothing said so. A re-evaluation cell is handed a STAGED copy of a checkpoint that some
+    # earlier run's trainer wrote; the checkpoint never lives beside the records, so pointing this
+    # audit at `results/records/<tag>__records.jsonl` gave it no files to hash and every row landed
+    # in UNVERIFIABLE. Measured on reeval-v214-ppg-endpoint: 88 rows, 88 unverifiable, exit 0.
+    #
+    # That is not a false alarm -- the rows really were unchecked -- but it is a hole that looks
+    # identical to a clean pass unless you read the counts, and the re-evaluation path is now how
+    # this project produces admissible results. Pointing --checkpoints at the ORIGINAL run's
+    # checkpoint directory restores exactly the link the audit was designed to test: the row's
+    # checkpoint_sha256 against a file whose TRAINER-GIVEN name carries the frame.
+    #
+    # Verified on reeval-v214-idaac-curve against card0-20260909-035152's checkpoints: 11 frames,
+    # 44 rows each, every one CORROBORATED, zero mismatches.
     by_hash = _checkpoints(root)
+    for extra in args.checkpoints:
+        extra_root = pathlib.Path(extra)
+        if not extra_root.is_dir():
+            print(f"--checkpoints {extra} is not a directory. Refusing to continue: an extra source "
+                  "that does not exist would silently leave rows unverifiable.")
+            return 2
+        for sha, paths in _checkpoints(extra_root).items():
+            by_hash.setdefault(sha, []).extend(paths)
+    # The same extra roots feed the SAVE-LINE index, and ppg is why. It names checkpoints by save
+    # INDEX -- `model012.jd` -- so the filename can never corroborate a frame; the index-to-frame
+    # mapping exists only in the original run's training log. Extending only the hash index left
+    # ppg's 528 curve rows and 88 endpoint rows unverifiable while idaac's 484 went to corroborated,
+    # which is the same hole one step further in. Point --checkpoints at the original RUN DIRECTORY
+    # (not just its checkpoints/ subdirectory) and both halves resolve.
     saves, ordered = _save_lines(root)
+    for extra in args.checkpoints:
+        extra_saves, extra_ordered = _save_lines(pathlib.Path(extra))
+        for name, frame in extra_saves.items():
+            saves.setdefault(name, frame)
+        ordered.extend(extra_ordered)
     corroborated = tied = mismatched = unverifiable = aliased = 0
     problems: list[str] = []
 

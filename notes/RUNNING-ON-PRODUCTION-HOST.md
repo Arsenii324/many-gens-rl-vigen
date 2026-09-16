@@ -1008,6 +1008,41 @@ Four things must hold. Each is checked by a tool that **refuses**, so none of th
 | 3 | no reported row pools seeds from two closures | `audit_row_closure.py --strict`, and the `no row pools two closures` gate |
 | 4 | the row carries the `checkpoint_sha256` it was measured from | `audit_record_frame_provenance.py`, run by `collect-host-run.sh` |
 
+**Re-evaluation rows need `--checkpoints`, or they are all UNVERIFIABLE and it looks like a pass.**
+A re-evaluation cell is handed a *staged copy* of a checkpoint some earlier run's trainer wrote, so
+the checkpoint never lives beside the records. Pointed at a records file alone the audit has nothing
+to hash: `reeval-v214-ppg-endpoint` reported **88 rows, 88 unverifiable, exit 0**. That is not a
+false alarm — the rows really were unchecked — but it reads identically to a clean pass unless you
+read the counts, and re-evaluation is now how this project produces admissible results.
+
+```bash
+python scripts/audit_record_frame_provenance.py results/records/<tag>__records.jsonl     --checkpoints <the ORIGINAL run directory, not just its checkpoints/ subdir> --strict
+```
+
+Measured 2026-09-16 on the two banked baselines:
+
+| bundle | without `--checkpoints` | with it |
+|---|---|---|
+| `reeval-v214-idaac-curve` | 484 unverifiable | **484 corroborated**, 0 mismatched |
+| `reeval-v214-ppg-curve` | 528 unverifiable | **528 tied**, 0 mismatched |
+| `reeval-v214-ppg-endpoint` | 88 unverifiable | 88 unverifiable — see below |
+
+The two verdicts differ for a real reason. idaac's trainer names each file `..._151552.pt`, so the
+filename and the record agree through no shared code path — the strongest verdict available. ppg
+names by save INDEX (`model012.jd`), so the frame can only be tied through the original training
+log, which is why `--checkpoints` must point at the run directory rather than its `checkpoints/`
+subdirectory.
+
+**ppg's ENDPOINT rows stay unverifiable by this instrument, and that is honest rather than fixable
+here.** The endpoint measures the terminal `snapshot.pt`, which carries no frame in its name and
+has no save line. The repo does hold that policy at
+`results/superseded-runs/checkpoints/ppg-s1-600064-a328e63e.pt` and its sha matches the rows — but
+that is a name *we* chose, and teaching the audit to parse it would make the check agree with our
+own convention instead of with the trainer's. Those rows are instead covered independently: a peer
+session compared all 71 tensor storages between the endpoint's `snapshot.pt` and the curve's
+`model012.jd` at 600,064 and found them byte-identical, with `model011` as a negative control that
+came out DIFFERENT.
+
 **"Superseded" means re-hashed, not refuted.** A row whose closure has moved is not wrong; it
 describes a tree that no longer exists. Because every intermediate checkpoint is retained, the fix
 is to re-run the grid, which costs **no training** — that is exactly how ppg's and idaac's 600k runs
