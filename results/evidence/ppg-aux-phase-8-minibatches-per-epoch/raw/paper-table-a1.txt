@@ -1,0 +1,35 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: paper-table-a1
+# note: PPG paper, Appendix A: 16 minibatches per aux epoch per N_pi; 4 workers x 64 envs; rollout 256
+# source-kind: local-command
+# source: pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf -
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: ( pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf - ) | grep -n '' | sed -n '471,495p' | head -n 200
+# matched-lines: 25  shown-lines: 25
+# captured-at: 2026-09-16T10:44:11+00:00
+#---------------------------------------------------------------------------------------------------
+471:A     Hyperparameters
+472:We use the Adam optimizer (Kingma and Ba, 2014) in all experiments.
+473:
+474:A.1    PPG-Specific Hyperparameters
+475:                                 Nπ                      32
+476:                                 Eπ                       1
+477:                                EV                        1
+478:                                Eaux                      6
+479:                               βclone                     1
+480:                 # minibatches per aux epoch per Nπ      16
+481:
+482:A.2    Other Hyperparameters
+483:                               γ                      .999
+484:                               λ                       .95
+485:                    # timesteps per rollout           256
+486:                   # minibatches per epoch              8
+487:                 Entropy bonus coefficient (βS )       .01
+488:                      PPO clip range ()                .2
+489:                    Reward Normalization?             Yes
+490:                         Learning rate             5 × 10−4
+491:                          # workers                      4
+492:                  # environments per worker             64
+493:                        Total timesteps              100M
+494:                            LSTM?                      No
+495:                         Frame Stack?                  No

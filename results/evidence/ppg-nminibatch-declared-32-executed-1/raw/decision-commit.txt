@@ -1,0 +1,50 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: decision-commit
+# note: the commit that recorded the finding and made the clamp fatal
+# source-kind: local-command
+# source: git log -1 --format="commit %H%nDate: %ci%n%n%B" 237f876
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: git log -1 --format="commit %H%nDate: %ci%n%n%B" 237f876 | head -n 200
+# matched-lines: 40  shown-lines: 40
+# captured-at: 2026-09-16T10:41:12+00:00
+#---------------------------------------------------------------------------------------------------
+commit 237f876bb51b53eb944627ccb09bed4d461ad617
+Date: 2026-09-10 08:44:36 +0300
+
+ppg nminibatch: declare 1, and make an inexpressible config fatal
+
+card0-20260909-115331 ran 600,000 frames declaring --nminibatch 32 and executing 1, logging
+"Warning: nminibatch > ntrain!! (32 > 1)" 293 times. minibatch_optimize splits the LEADING axis and
+Roller.singles_to_multi documents that axis as "(batch, time)", so ntrain is num_envs and any
+nminibatch above 1 is inexpressible at num_envs=1. Verified from the producer rather than from the
+earlier note.
+
+The resolution inverts the earlier conclusion. Against PPG's own released 1-rank recipe -- 64x256 =
+16384 with 1 epoch x 8 minibatches, 8 gradient steps of 2048 samples, 0.00048828 steps per env frame
+-- our executed 1 step of 2048 samples per 2048 frames is 0.00048828 per env frame. Density AND
+per-step batch size are identical. The clamp did not damage fidelity to PPG; the declared 32 would
+have, at 32x upstream density on 64-sample steps. So the defect was the declaration, and the run
+itself is a faithful PPG needing no re-run.
+
+raileanu21a-supp.pdf SS E's "2048 steps, 1 process" and its "32 minibatches" are jointly
+inexpressible in PPG's released code, because that grid was searched in a codebase which flattens
+process x steps before splitting while PPG's splits the environment axis alone. source_target for
+this family is PPG's released code, so where both cannot hold, the code's own budget is what we
+match. Raising num_envs to 32 would have made 32 expressible via a 32x64 rollout that appears in
+neither source -- trading a false declaration for an unsourced one.
+
+clipfrac 0.000 and approxkl 1e-13 are consequently correct rather than vacuous: with one minibatch
+per rollout every update is exactly on-policy, so the ratio is 1 by construction. PPG's own 8
+minibatches drift off-policy within a rollout, which is what makes its clipfrac non-zero.
+
+The clamp now raises. A configuration that cannot execute must not be recordable as though it had,
+and a future num_envs change that invalidates the declared value fails at the first optimisation
+call rather than 293 warnings deep. A test pins families.json's declaration against the guard, so
+the two cannot drift.
+
+Swept every vendored trainer for the same warn-and-substitute shape: this was the only declared
+hyperparameter silently adjusted at runtime.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SQHiYpxAuVatfkFDd6Z6gX
+

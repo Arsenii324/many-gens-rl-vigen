@@ -1,0 +1,483 @@
+{
+  "slug": "ppg-nminibatch-declared-32-executed-1",
+  "excerpts": {
+    "clamp-warnings": {
+      "file": "raw/clamp-warnings.txt",
+      "sha256": "72954a337f372c45e39709eaa1747682a7007b8b60be3240291be547e2c94410",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log",
+        "bytes": 738318,
+        "sha256": "b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb",
+        "mtime": "2026-09-09T20:24:54+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'nminibatch > ntrain' | head -n 3",
+      "tar_member": null,
+      "matched_lines": 293,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T10:45:45+00:00",
+      "note": "the optimiser clamped nminibatch at every one of the 293 policy phases"
+    },
+    "declared-config": {
+      "file": "raw/declared-config.txt",
+      "sha256": "ec60a952240996f05dca3b1df3f03792d0763e75e8ca539c139753161c3c455a",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log",
+        "bytes": 738318,
+        "sha256": "b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb",
+        "mtime": "2026-09-09T20:24:54+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'NATIVE_PPG_EFFECTIVE_CONFIG|Command being timed' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T10:45:49+00:00",
+      "note": "what the cell declared: nminibatch 32, nstep 2048, 600k interacts; no num_envs flag"
+    },
+    "checkpoint-saves": {
+      "file": "raw/checkpoint-saves.txt",
+      "sha256": "da7af63419674e127bfc4a607366148cff07f3a3f1ee656217dacec75a1e0dbd",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log",
+        "bytes": 738318,
+        "sha256": "b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb",
+        "mtime": "2026-09-09T20:24:54+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Saving to .*IC=' | head -n 20",
+      "tar_member": null,
+      "matched_lines": 13,
+      "shown_lines": 13,
+      "captured_at": "2026-09-16T10:45:54+00:00",
+      "note": "the run reached its end: 13 IC-stamped checkpoints, the last at 600,064"
+    },
+    "upstream-recipe": {
+      "file": "raw/upstream-recipe.txt",
+      "sha256": "31d50810fefbed2d58245b2099ad959c4dc26663de840ef0526f28bb0584dac3",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/train.py",
+        "bytes": 3250,
+        "sha256": "79039cc1872788dff51838e02d6349220da8afb9c68f2dd7c38ae13def9bd7cc"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/train.py | grep -n '' | sed -n '12,30p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 19,
+      "shown_lines": 19,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "pristine upstream PPG defaults: 64 envs, nminibatch 8, one pi and vf epoch, 6 aux epochs"
+    },
+    "upstream-nstep": {
+      "file": "raw/upstream-nstep.txt",
+      "sha256": "e2274336c58bbba94bfceab6555dfc9e48af5187b2182558b497cbba9346babd",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/ppo.py",
+        "bytes": 9301,
+        "sha256": "640185fd4604e686ef00baf8f5c0ea31e3e2553c1e3c3b1b11aef09a2a2d941c"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/ppo.py | grep -n '' | sed -n '118,121p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "pristine upstream default rollout length"
+    },
+    "upstream-readme-ranks": {
+      "file": "raw/upstream-readme-ranks.txt",
+      "sha256": "5092503dfa27c2795a380311efa52fd5af62edc8f982f8de21019fbc70f1a956",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/README.md",
+        "bytes": 2552,
+        "sha256": "2811087d2a8ef65f77f6e27157e776f43a47ca4cca108718c9956c1c566d1226"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/README.md | grep -n -E mpiexec | head -n 1",
+      "tar_member": null,
+      "matched_lines": 7,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "the released PPG results were produced with 4 MPI ranks"
+    },
+    "upstream-clamp": {
+      "file": "raw/upstream-clamp.txt",
+      "sha256": "55fe7e9d92950a535e4fd26a6c40ac972e1bd614b73000a80c902f6c427a09b3",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py",
+        "bytes": 2935,
+        "sha256": "239322b6a2a059c6d437f7dbdc0f25180b9383a5f9ae7c99d0c99f10b492049a"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py | grep -n '' | sed -n '42,60p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 19,
+      "shown_lines": 19,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "pristine upstream: ntrain is the leading axis; nminibatch above it is warned about and clamped"
+    },
+    "upstream-batch-len": {
+      "file": "raw/upstream-batch-len.txt",
+      "sha256": "97063232126ade8f993de6b1d9c7a7378f722b531a64d2d1fb195fc0fdfeea25",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py",
+        "bytes": 17613,
+        "sha256": "5687b6171bffabbcb4d3d12e201742e6fa1b886945b1a34a754b596297a85ab2"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py | grep -n '' | sed -n '83,94p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 12,
+      "shown_lines": 12,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "pristine upstream: batch_len is shape[0] of the first leaf"
+    },
+    "upstream-axis-doc": {
+      "file": "raw/upstream-axis-doc.txt",
+      "sha256": "8ff9bc61f0671d33de58e9d729dade48f68acf411d0fe700dc9a3b0ea0abffed",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/roller.py",
+        "bytes": 5919,
+        "sha256": "1a87c55a7b112e9ae8bc4ea4338b9d79d7fee9530659df751a58f2b53cf38d48"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/roller.py | grep -n '' | sed -n '100,104p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "pristine upstream: rollouts carry (batch, time) leading axes, so shape[0] is the env count"
+    },
+    "vendored-clamp-now-fatal": {
+      "file": "raw/vendored-clamp-now-fatal.txt",
+      "sha256": "4fa40ca336764f3d6d72783d812119a28db78a3f026fd1563fb9161c04d32c8d",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/ppg/phasic_policy_gradient/minibatch_optimize.py",
+        "bytes": 4454,
+        "sha256": "6c89dd88ca2c7774988a82374e1b1379b76047f69afedf71427ea22400d3839d"
+      },
+      "extraction": "cat runnable/ppg/phasic_policy_gradient/minibatch_optimize.py | grep -n '' | sed -n '42,70p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 29,
+      "shown_lines": 29,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "the vendored copy now raises instead of silently clamping"
+    },
+    "descriptor-then": {
+      "file": "raw/descriptor-then.txt",
+      "sha256": "57445cde2177b808c44baa168dcfe55853a686250d19555084f532fb7bcf559c",
+      "source": {
+        "kind": "local-command",
+        "command": "git show 672202d:datasphere/native/families.json",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6",
+        "inputs": {}
+      },
+      "extraction": "( git show 672202d:datasphere/native/families.json ) | grep -n -E '\"nminibatch\"' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "the production descriptor at the time of the run (commit 672202d, 2026-09-09) declared 32"
+    },
+    "descriptor-now": {
+      "file": "raw/descriptor-now.txt",
+      "sha256": "2dc4f1d43f92522fadf3f32b6dd861217e1e01dc04b4daffc6628216bf615104",
+      "source": {
+        "kind": "repo-file",
+        "path": "datasphere/native/families.json",
+        "bytes": 73851,
+        "sha256": "d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64"
+      },
+      "extraction": "cat datasphere/native/families.json | grep -n -E '\"nminibatch\"' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:41:12+00:00",
+      "note": "the descriptor now declares what executes"
+    },
+    "decision-commit": {
+      "file": "raw/decision-commit.txt",
+      "sha256": "1ce23a422051b0fa2156117240b8250a03f6201bcacce0b32b29f3670b9e087b",
+      "source": {
+        "kind": "local-command",
+        "command": "git log -1 --format=\"commit %H%nDate: %ci%n%n%B\" 237f876",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "git log -1 --format=\"commit %H%nDate: %ci%n%n%B\" 237f876 | head -n 200",
+      "tar_member": null,
+      "matched_lines": 40,
+      "shown_lines": 40,
+      "captured_at": "2026-09-16T10:41:12+00:00",
+      "note": "the commit that recorded the finding and made the clamp fatal"
+    },
+    "arithmetic": {
+      "file": "raw/arithmetic.txt",
+      "sha256": "4beae382adfccd40efac33ff8b12bac0322f66a7c78b7cc4a389cbb60889c9d9",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.8f')\nprint('policy phases executed      293 * 2048 =', 293 * 2048)\nprint('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))\nprint('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)\nprint('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))\nprint('executed batch/step         (1*2048) / 1 =', 2048)\nprint('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))\nprint('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)\n\"",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.8f')\nprint('policy phases executed      293 * 2048 =', 293 * 2048)\nprint('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))\nprint('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)\nprint('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))\nprint('executed batch/step         (1*2048) / 1 =', 2048)\nprint('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))\nprint('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)\n\" | head -n 200",
+      "tar_member": null,
+      "matched_lines": 7,
+      "shown_lines": 7,
+      "captured_at": "2026-09-16T10:41:13+00:00",
+      "note": "the arithmetic the verdict rests on"
+    },
+    "effective-config": {
+      "file": "raw/effective-config.txt",
+      "sha256": "91218571c29cbe82ca017e36f34f8fca8b1090cc7c1ba3b5c0c15e210cd16fc4",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json",
+        "bytes": 2406,
+        "sha256": "71d1c02cc24a66ae70dba4cf84db7b703f1ba589797238f6b6437031a86d15e1",
+        "mtime": "2026-09-09T09:03:00+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json",
+      "tar_member": null,
+      "matched_lines": 85,
+      "shown_lines": 85,
+      "captured_at": "2026-09-16T10:45:58+00:00",
+      "note": "the cell record written at launch: argv, host profile, runner environment"
+    },
+    "cell-positional": {
+      "file": "raw/cell-positional.txt",
+      "sha256": "29944b67b3d1eddbe1590155314035b0e5b268f022696a927ed4bf5dada3cca0",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/_launch/ppg_cell.sh",
+        "bytes": 3971,
+        "sha256": "9a9ff23e657f64927da38608272a817d718887200f47216e043fa47222ad5b85"
+      },
+      "extraction": "cat runnable/_launch/ppg_cell.sh | grep -n -E NENV | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T10:45:58+00:00",
+      "note": "ppg_cell.sh: positional 2 is the environment count, handed to ppg.sh unchanged (file unchanged since 2026-09-07, before the run)"
+    },
+    "launcher-num-envs": {
+      "file": "raw/launcher-num-envs.txt",
+      "sha256": "664c524af595a08972c65cf5122c14e8d360a0d1ef3cbd054f686adb0c6ffd8e",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/_launch/ppg.sh",
+        "bytes": 2318,
+        "sha256": "1fab2304ff9bd488fa1f7c1783dcec87feae12b8bab328aaebc925048dcab250"
+      },
+      "extraction": "cat runnable/_launch/ppg.sh | grep -n -E NENV | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T10:45:59+00:00",
+      "note": "ppg.sh: the environment count becomes --num_envs"
+    }
+  },
+  "facts": [
+    {
+      "key": "descriptor_now_nminibatch",
+      "value": "1",
+      "excerpt": "descriptor-now",
+      "anchor": "\"nminibatch\": \"1\""
+    },
+    {
+      "key": "decision_commit",
+      "value": "237f876bb51b",
+      "excerpt": "decision-commit",
+      "anchor": "commit 237f876bb51b"
+    },
+    {
+      "key": "executed_frames",
+      "value": "600064",
+      "excerpt": "arithmetic",
+      "anchor": "293 * 2048 = 600064"
+    },
+    {
+      "key": "upstream_1rank_density",
+      "value": "0.00048828",
+      "excerpt": "arithmetic",
+      "anchor": "(64*256) = 0.00048828"
+    },
+    {
+      "key": "executed_density",
+      "value": "0.00048828",
+      "excerpt": "arithmetic",
+      "anchor": "(1*2048) = 0.00048828"
+    },
+    {
+      "key": "declared_32_density",
+      "value": "0.01562500",
+      "excerpt": "arithmetic",
+      "anchor": "(1*2048) = 0.01562500"
+    },
+    {
+      "key": "upstream_4rank_density",
+      "value": "0.00012207",
+      "excerpt": "arithmetic",
+      "anchor": "(4*64*256) = 0.00012207"
+    },
+    {
+      "key": "upstream_4rank_global_batch",
+      "value": "8192",
+      "excerpt": "arithmetic",
+      "anchor": "global batch/step 8192"
+    },
+    {
+      "key": "clamp_warning_count",
+      "value": "293",
+      "excerpt": "clamp-warnings",
+      "anchor": "header:# matched-lines: 293 "
+    },
+    {
+      "key": "declared_nminibatch",
+      "value": "32",
+      "excerpt": "clamp-warnings",
+      "anchor": "Warning: nminibatch > ntrain!! (32 > 1)"
+    },
+    {
+      "key": "executed_nminibatch",
+      "value": "1",
+      "excerpt": "clamp-warnings",
+      "anchor": "Warning: nminibatch > ntrain!! (32 > 1)"
+    },
+    {
+      "key": "effective_config_nminibatch",
+      "value": "32",
+      "excerpt": "declared-config",
+      "anchor": "nminibatch=32 entcoef=0"
+    },
+    {
+      "key": "command_nstep",
+      "value": "2048",
+      "excerpt": "declared-config",
+      "anchor": "--nstep 2048"
+    },
+    {
+      "key": "command_interacts_total",
+      "value": "600000",
+      "excerpt": "declared-config",
+      "anchor": "--interacts_total 600000"
+    },
+    {
+      "key": "command_num_envs_positional",
+      "value": "1",
+      "excerpt": "declared-config",
+      "anchor": "ppg_cell.sh Door 1 600064 10"
+    },
+    {
+      "key": "checkpoint_count",
+      "value": "13",
+      "excerpt": "checkpoint-saves",
+      "anchor": "header:# matched-lines: 13 "
+    },
+    {
+      "key": "final_ic",
+      "value": "600064",
+      "excerpt": "checkpoint-saves",
+      "anchor": "model012.jd IC=600064"
+    },
+    {
+      "key": "argv_num_envs_positional",
+      "value": "1",
+      "excerpt": "effective-config",
+      "anchor": "\"Door\",\n    \"1\",\n    \"600064\","
+    },
+    {
+      "key": "argv_nminibatch",
+      "value": "32",
+      "excerpt": "effective-config",
+      "anchor": "\"--nminibatch\",\n    \"32\","
+    },
+    {
+      "key": "host_profile",
+      "value": "v100",
+      "excerpt": "effective-config",
+      "anchor": "\"host_profile\": \"v100\""
+    },
+    {
+      "key": "positional_2_is_num_envs",
+      "value": "true",
+      "excerpt": "cell-positional",
+      "anchor": "NENV=\"${2:?num envs}\""
+    },
+    {
+      "key": "launcher_passes_num_envs",
+      "value": "true",
+      "excerpt": "launcher-num-envs",
+      "anchor": "--num_envs \"$NENV\""
+    },
+    {
+      "key": "upstream_num_envs",
+      "value": "64",
+      "excerpt": "upstream-recipe",
+      "anchor": "16:    num_envs=64,"
+    },
+    {
+      "key": "upstream_n_epoch_pi",
+      "value": "1",
+      "excerpt": "upstream-recipe",
+      "anchor": "17:    n_epoch_pi=1,"
+    },
+    {
+      "key": "upstream_nminibatch",
+      "value": "8",
+      "excerpt": "upstream-recipe",
+      "anchor": "22:    nminibatch=8,"
+    },
+    {
+      "key": "upstream_n_aux_epochs",
+      "value": "6",
+      "excerpt": "upstream-recipe",
+      "anchor": "26:    n_aux_epochs=6,"
+    },
+    {
+      "key": "upstream_nstep",
+      "value": "256",
+      "excerpt": "upstream-nstep",
+      "anchor": "number of serial timesteps\" = 256"
+    },
+    {
+      "key": "upstream_release_ranks",
+      "value": "4",
+      "excerpt": "upstream-readme-ranks",
+      "anchor": "mpiexec -np 4 python -m phasic_policy_gradient.train"
+    },
+    {
+      "key": "ntrain_is_batch_len",
+      "value": "true",
+      "excerpt": "upstream-clamp",
+      "anchor": "52:    ntrain = tu.batch_len(tensordict)"
+    },
+    {
+      "key": "clamp_rule",
+      "value": "nminibatch = ntrain when nminibatch > ntrain",
+      "excerpt": "upstream-clamp",
+      "anchor": "55:        nminibatch = ntrain"
+    },
+    {
+      "key": "batch_len_is_shape0",
+      "value": "true",
+      "excerpt": "upstream-batch-len",
+      "anchor": "b = flatlist[0].shape[0]"
+    },
+    {
+      "key": "leading_axes",
+      "value": "(batch, time)",
+      "excerpt": "upstream-axis-doc",
+      "anchor": "leading axes (batch, time)"
+    },
+    {
+      "key": "descriptor_then_nminibatch",
+      "value": "32",
+      "excerpt": "descriptor-then",
+      "anchor": "\"nminibatch\": \"32\""
+    }
+  ]
+}

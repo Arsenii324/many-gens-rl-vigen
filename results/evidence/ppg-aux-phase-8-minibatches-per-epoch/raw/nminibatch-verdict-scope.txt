@@ -1,0 +1,11 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: nminibatch-verdict-scope
+# note: the nminibatch verdict compares the POLICY phase only
+# source-kind: repo-file
+# source: datasphere/native/families.json
+# source-bytes: 73851  source-sha256: d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64  source-mtime: 
+# extraction: cat datasphere/native/families.json | grep -n -E 'Which value is right is settled by arithmetic' | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T10:44:25+00:00
+#---------------------------------------------------------------------------------------------------
+622:      "Which value is right is settled by arithmetic, not by taste. PPG's released 1-rank recipe is 64x256 = 16384 with 1 epoch x 8 minibatches: 8 gradient steps of 2048 samples each, 0.00048828 steps per env frame. At num_envs=1, nstep=2048, nminibatch=1 we take 1 gradient step of 2048 samples per 2048 frames: 0.00048828 per env frame. Density AND per-step batch size are IDENTICAL to the released configuration. Declaring 32 would have been 32x upstream density at 64 samples per step -- a far larger deviation than the one it appeared to fix.",

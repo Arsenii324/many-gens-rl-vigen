@@ -1,0 +1,39 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: vendored-clamp-now-fatal
+# note: the vendored copy now raises instead of silently clamping
+# source-kind: repo-file
+# source: runnable/ppg/phasic_policy_gradient/minibatch_optimize.py
+# source-bytes: 4454  source-sha256: 6c89dd88ca2c7774988a82374e1b1379b76047f69afedf71427ea22400d3839d  source-mtime: 
+# extraction: cat runnable/ppg/phasic_policy_gradient/minibatch_optimize.py | grep -n '' | sed -n '42,70p' | head -n 200
+# matched-lines: 29  shown-lines: 29
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+42:def minibatch_optimize(
+43:    train_fn: "function (dict) -> dict called on each minibatch that returns training stats",
+44:    tensordict: "Dict[str->th.Tensor]",
+45:    *,
+46:    nepoch: "(int) number of epochs over dataset",
+47:    nminibatch: "(int) number of minibatch per epoch",
+48:    comm: "(MPI.Comm) MPI communicator",
+49:    verbose: "(bool) print detailed stats" = False,
+50:    epoch_fn: "function () -> dict to be called each epoch" = None,
+51:):
+52:    ntrain = tu.batch_len(tensordict)
+53:    if nminibatch > ntrain:
+54:        # [Claude 2026-09-10] UPSTREAM WARNED AND CONTINUED; THIS PROJECT REFUSES.
+55:        #
+56:        # `batch_len` is the LEADING axis, and `Roller.singles_to_multi` documents that axis as
+57:        # "(batch, time)" -- so `ntrain` is `num_envs`, never `num_envs * nstep`. At `num_envs=1`
+58:        # any `nminibatch > 1` is INEXPRESSIBLE and upstream silently substituted `ntrain`.
+59:        #
+60:        # On card0-20260909-115331 that printed 293 times and nobody read it, so a cell declared
+61:        # `--nminibatch 32` and executed 1 for 600k frames. The executed run turned out to be a
+62:        # faithful PPG -- 1 step of 2048 samples per 2048 frames is exactly the released
+63:        # 8 steps of 2048 per 16384 -- but that was luck, and the DECLARATION was false either way.
+64:        # A record whose config says 32 and whose trainer did 1 cannot support any claim about
+65:        # either number.
+66:        #
+67:        # Raising is the whole point: `families.json` must declare a value this geometry can
+68:        # execute, and a future change to `num_envs` that invalidates it fails at the first
+69:        # optimisation call rather than 293 warnings deep.
+70:        raise ValueError(

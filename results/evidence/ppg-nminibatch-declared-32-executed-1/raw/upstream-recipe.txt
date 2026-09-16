@@ -1,0 +1,29 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: upstream-recipe
+# note: pristine upstream PPG defaults: 64 envs, nminibatch 8, one pi and vf epoch, 6 aux epochs
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/train.py
+# source-bytes: 3250  source-sha256: 79039cc1872788dff51838e02d6349220da8afb9c68f2dd7c38ae13def9bd7cc  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/train.py | grep -n '' | sed -n '12,30p' | head -n 200
+# matched-lines: 19  shown-lines: 19
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+12:    # 'shared' = shared policy and value networks
+13:    # 'dual' = separate policy and value networks
+14:    # 'detach' = shared policy and value networks, but with the value function gradient detached during the policy phase to avoid interference
+15:    interacts_total=100_000_000,
+16:    num_envs=64,
+17:    n_epoch_pi=1,
+18:    n_epoch_vf=1,
+19:    gamma=.999,
+20:    aux_lr=5e-4,
+21:    lr=5e-4,
+22:    nminibatch=8,
+23:    aux_mbsize=4,
+24:    clip_param=.2,
+25:    kl_penalty=0.0,
+26:    n_aux_epochs=6,
+27:    n_pi=32,
+28:    beta_clone=1.0,
+29:    vf_true_weight=1.0,
+30:    log_dir='/tmp/ppg',

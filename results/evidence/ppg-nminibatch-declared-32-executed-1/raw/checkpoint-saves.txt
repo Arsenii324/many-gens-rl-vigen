@@ -1,0 +1,23 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: checkpoint-saves
+# note: the run reached its end: 13 IC-stamped checkpoints, the last at 600,064
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log
+# source-bytes: 738318  source-sha256: b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb  source-mtime: 2026-09-09T20:24:54+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Saving to .*IC=' | head -n 20
+# matched-lines: 13  shown-lines: 13
+# captured-at: 2026-09-16T10:45:54+00:00
+#---------------------------------------------------------------------------------------------------
+170:Saving to  /tmp/native-work/runs/ppg-s1/model000.jd IC=0
+1175:Saving to  /tmp/native-work/runs/ppg-s1/model001.jd IC=51200
+2190:Saving to  /tmp/native-work/runs/ppg-s1/model002.jd IC=100352
+3245:Saving to  /tmp/native-work/runs/ppg-s1/model003.jd IC=151552
+4260:Saving to  /tmp/native-work/runs/ppg-s1/model004.jd IC=200704
+5261:Saving to  /tmp/native-work/runs/ppg-s1/model005.jd IC=251904
+6276:Saving to  /tmp/native-work/runs/ppg-s1/model006.jd IC=301056
+7291:Saving to  /tmp/native-work/runs/ppg-s1/model007.jd IC=350208
+8346:Saving to  /tmp/native-work/runs/ppg-s1/model008.jd IC=401408
+9307:Saving to  /tmp/native-work/runs/ppg-s1/model009.jd IC=450560
+10362:Saving to  /tmp/native-work/runs/ppg-s1/model010.jd IC=501760
+11377:Saving to  /tmp/native-work/runs/ppg-s1/model011.jd IC=550912
+12392:Saving to  /tmp/native-work/runs/ppg-s1/model012.jd IC=600064

@@ -1,0 +1,12 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: cell-positional
+# note: ppg_cell.sh: positional 2 is the environment count, handed to ppg.sh unchanged (file unchanged since 2026-09-07, before the run)
+# source-kind: repo-file
+# source: runnable/_launch/ppg_cell.sh
+# source-bytes: 3971  source-sha256: 9a9ff23e657f64927da38608272a817d718887200f47216e043fa47222ad5b85  source-mtime: 
+# extraction: cat runnable/_launch/ppg_cell.sh | grep -n -E NENV | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T10:45:58+00:00
+#---------------------------------------------------------------------------------------------------
+19:TASK="${1:?task}"; NENV="${2:?num envs}"; ENDPOINT="${3:?executed interaction count}"
+50:bash "$HERE/ppg.sh" "$TASK" "$NENV" "$@"

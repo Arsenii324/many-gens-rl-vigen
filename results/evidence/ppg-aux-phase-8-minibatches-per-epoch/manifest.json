@@ -1,0 +1,564 @@
+{
+  "slug": "ppg-aux-phase-8-minibatches-per-epoch",
+  "excerpts": {
+    "paper-identity": {
+      "file": "raw/paper-identity.txt",
+      "sha256": "b562153e0ab9ec4026b959c67577851cb9ab399ec7bf6d82fdbb3ee41d35c900",
+      "source": {
+        "kind": "local-command",
+        "command": "shasum -a 256 ext/baseline_resources/10_ppg/paper_2009.04416.pdf ext/idaac/raileanu21a-supp.pdf; pdftotext -v 2>&1 | head -1",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( shasum -a 256 ext/baseline_resources/10_ppg/paper_2009.04416.pdf ext/idaac/raileanu21a-supp.pdf; pdftotext -v 2>&1 | head -1 ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T10:44:11+00:00",
+      "note": "which PDF files the two text excerpts below were extracted from, and with what"
+    },
+    "paper-table-a1": {
+      "file": "raw/paper-table-a1.txt",
+      "sha256": "5427d386f0f182c1dd2a6459c2ebf0431db798030d798f5bc17e550f252aadf2",
+      "source": {
+        "kind": "local-command",
+        "command": "pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf -",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( pdftotext -layout ext/baseline_resources/10_ppg/paper_2009.04416.pdf - ) | grep -n '' | sed -n '471,495p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 25,
+      "shown_lines": 25,
+      "captured_at": "2026-09-16T10:44:11+00:00",
+      "note": "PPG paper, Appendix A: 16 minibatches per aux epoch per N_pi; 4 workers x 64 envs; rollout 256"
+    },
+    "supp-ppg-recipe": {
+      "file": "raw/supp-ppg-recipe.txt",
+      "sha256": "fb4375b23c748b52b4a61217855b3f3bee3c490aabb7132419a1eb8ddf88fce6",
+      "source": {
+        "kind": "local-command",
+        "command": "pdftotext -layout ext/idaac/raileanu21a-supp.pdf -",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( pdftotext -layout ext/idaac/raileanu21a-supp.pdf - ) | grep -n '' | sed -n '502,513p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 12,
+      "shown_lines": 12,
+      "captured_at": "2026-09-16T10:44:12+00:00",
+      "note": "IDAAC supplement SS E: the continuous-control PPG search names five constants; the aux minibatch count is not among them, and unnamed values follow Procgen"
+    },
+    "upstream-readme-ranks": {
+      "file": "raw/upstream-readme-ranks.txt",
+      "sha256": "e5808b7d6d04c51796ae7efc1c85948eca5852f54fe306d556d69080e5a1f71e",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/README.md",
+        "bytes": 2552,
+        "sha256": "2811087d2a8ef65f77f6e27157e776f43a47ca4cca108718c9956c1c566d1226"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/README.md | grep -n -E mpiexec | head -n 1",
+      "tar_member": null,
+      "matched_lines": 7,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:44:12+00:00",
+      "note": "the released PPG results were produced with 4 MPI ranks"
+    },
+    "upstream-aux-defaults": {
+      "file": "raw/upstream-aux-defaults.txt",
+      "sha256": "5ee9b5b9ddfb2e6c2e318d4e08b1ef6b16602650ff0406cf5ae9b641b57a8d5a",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/train.py",
+        "bytes": 3250,
+        "sha256": "79039cc1872788dff51838e02d6349220da8afb9c68f2dd7c38ae13def9bd7cc"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/train.py | grep -n -E 'num_envs=|aux_mbsize|n_aux_epochs|n_pi=' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 12,
+      "shown_lines": 12,
+      "captured_at": "2026-09-16T10:44:12+00:00",
+      "note": "pristine upstream train.py: aux_mbsize is 4 (a count of env-segment pairs, not of samples)"
+    },
+    "upstream-make-minibatches": {
+      "file": "raw/upstream-make-minibatches.txt",
+      "sha256": "97dcb72e84e80545693af79651dd8218741a635fc4884f159058cae56d2766cb",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py",
+        "bytes": 8422,
+        "sha256": "ff94cfe2f61375b60be4d30d88e88c4287f6e6d7f9dbfeb8862a7445361b45f2"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py | grep -n '' | sed -n '163,176p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 14,
+      "shown_lines": 14,
+      "captured_at": "2026-09-16T10:44:12+00:00",
+      "note": "pristine upstream: aux minibatches are groups of mbsize (env, segment) pairs"
+    },
+    "upstream-sync-grads": {
+      "file": "raw/upstream-sync-grads.txt",
+      "sha256": "755af45d230aed807a09fc264d1604871da60b8842d2bc8eb7f09cb17e2f2502",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py",
+        "bytes": 17613,
+        "sha256": "5687b6171bffabbcb4d3d12e201742e6fa1b886945b1a34a754b596297a85ab2"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py | grep -n -E 'def all_mean_|x /= dist_get_world_size|def sync_grads|all_mean_\\(flatgrad' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "pristine upstream: sync_grads all-reduces then divides by world size, so 4 ranks take one averaged step over 4x the samples"
+    },
+    "vendored-make-minibatches-identical": {
+      "file": "raw/vendored-make-minibatches-identical.txt",
+      "sha256": "40c21350122fb88151d56efbff5d9f8a7a24dbb8d3b5628a8d37aabb19a6ae77",
+      "source": {
+        "kind": "local-command",
+        "command": "bash -c 'diff <(sed -n \"/^def make_minibatches/,/^def aux_train/p\" ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py) <(sed -n \"/^def make_minibatches/,/^def aux_train/p\" runnable/ppg/phasic_policy_gradient/ppg.py) && echo IDENTICAL-make_minibatches'",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( bash -c 'diff <(sed -n \"/^def make_minibatches/,/^def aux_train/p\" ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py) <(sed -n \"/^def make_minibatches/,/^def aux_train/p\" runnable/ppg/phasic_policy_gradient/ppg.py) && echo IDENTICAL-make_minibatches' ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "the vendored make_minibatches is byte-identical to upstream"
+    },
+    "vendored-aux-call-sites": {
+      "file": "raw/vendored-aux-call-sites.txt",
+      "sha256": "27858762be1f0420e71b334b3f02e1ae799f9ba4bb86e2c01dfefd50493e9114",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/ppg/phasic_policy_gradient/ppg.py",
+        "bytes": 10223,
+        "sha256": "92d4bf7bdc37348638976c156046d4fd66ba44b7777886045ba410afd23f5785"
+      },
+      "extraction": "cat runnable/ppg/phasic_policy_gradient/ppg.py | grep -n -E 'make_minibatches\\(|aux_mbsize|Aux epoch|n_aux_epochs|n_pi=' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 11,
+      "shown_lines": 11,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "the vendored learn() passes aux_mbsize straight to make_minibatches, once per aux epoch"
+    },
+    "vendored-train-defaults": {
+      "file": "raw/vendored-train-defaults.txt",
+      "sha256": "bfd56384bdcf3c321338fca8696b40b2b3ba9cefc0423dd32e3cd5875cc56234",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/ppg/phasic_policy_gradient/train.py",
+        "bytes": 11087,
+        "sha256": "f667ce824877c7b433736c9c73b630942126f3f7548d9cff9bc43ebc3c277ef3"
+      },
+      "extraction": "cat runnable/ppg/phasic_policy_gradient/train.py | grep -n -E 'aux_mbsize|n_aux_epochs|n_pi' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 10,
+      "shown_lines": 10,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "the vendored train.py keeps aux_mbsize=4 and exposes n_pi and n_aux_epochs, but not aux_mbsize, on the CLI"
+    },
+    "aux-mbsize-not-a-cli-flag": {
+      "file": "raw/aux-mbsize-not-a-cli-flag.txt",
+      "sha256": "bc3d7240a702168bcb8f655713b0b6d6596c8bde17fa39212af235ef426f9751",
+      "source": {
+        "kind": "repo-file",
+        "path": "runnable/ppg/phasic_policy_gradient/train.py",
+        "bytes": 11087,
+        "sha256": "f667ce824877c7b433736c9c73b630942126f3f7548d9cff9bc43ebc3c277ef3"
+      },
+      "extraction": "cat runnable/ppg/phasic_policy_gradient/train.py | grep -n -E 'add_argument\\('\"'\"'--aux_mbsize'\"'\"'' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "absence: no --aux_mbsize flag exists, so no launcher could have changed it"
+    },
+    "aux-mbsize-not-passed": {
+      "file": "raw/aux-mbsize-not-passed.txt",
+      "sha256": "ccd77d98af289060f77b83881ddded6e75346d231e889b908c08f1ca4329ee75",
+      "source": {
+        "kind": "local-command",
+        "command": "cat runnable/_launch/ppg_cell.sh runnable/_launch/ppg.sh datasphere/native/families.json",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( cat runnable/_launch/ppg_cell.sh runnable/_launch/ppg.sh datasphere/native/families.json ) | grep -n -E 'aux_mbsize|n_pi|n_aux_epochs' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "absence: neither launcher nor the descriptor mentions aux_mbsize, n_pi or n_aux_epochs"
+    },
+    "run-argv-no-aux-override": {
+      "file": "raw/run-argv-no-aux-override.txt",
+      "sha256": "36d63633fd373d303ebffbcb88b306150a9a1c10413fb1d10f0581534c0680d1",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json",
+        "bytes": 2406,
+        "sha256": "71d1c02cc24a66ae70dba4cf84db7b703f1ba589797238f6b6437031a86d15e1",
+        "mtime": "2026-09-09T09:03:00+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json | grep -n -E 'aux_mbsize|n_pi|n_aux' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T10:44:17+00:00",
+      "note": "absence: the production run record passed none of the three"
+    },
+    "run-aux-epochs": {
+      "file": "raw/run-aux-epochs.txt",
+      "sha256": "e60db858960dab3ad5e2fb172f3456ae9c469e1a1cd5d8ccfb0eb33ca496beb0",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log",
+        "bytes": 738318,
+        "sha256": "b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb",
+        "mtime": "2026-09-09T20:24:54+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Aux epoch [0-9]' | head -n 12",
+      "tar_member": null,
+      "matched_lines": 54,
+      "shown_lines": 12,
+      "captured_at": "2026-09-16T10:44:22+00:00",
+      "note": "the production run logged 54 aux epochs: 9 aux phases x 6, one per 32 of its 293 policy phases"
+    },
+    "probe": {
+      "file": "raw/probe.txt",
+      "sha256": "7e3391cfa6fc3aa2016254cf80e260c58668e35dcf0e6454364ff3d81e303c0f",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_ppg_aux_minibatches.py",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_ppg_aux_minibatches.py ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 9,
+      "shown_lines": 9,
+      "captured_at": "2026-09-16T10:44:25+00:00",
+      "note": "vendored make_minibatches executed on dummy segments shaped like seg_buf"
+    },
+    "arithmetic": {
+      "file": "raw/arithmetic.txt",
+      "sha256": "a93dd91ade10e18c40c6ba8b99a7d4658a5bb46c996d1a310e654e3f555f4dbd",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.6f')\nprint('aux phases in the run            293 // 32 =', 293 // 32, '; aux epochs', 293 // 32 * 6)\nprint('4-rank release aux global batch  4 ranks * 4 pairs * 256 =', 4 * 4 * 256)\nprint('4-rank release aux steps/frame   6 * 512 / (4*64*256*32) =', f(6 * 512 / (4 * 64 * 256 * 32)))\nprint('1-rank release aux steps/frame   6 * 512 / (64*256*32) =', f(6 * 512 / (64 * 256 * 32)))\nprint('production aux steps/frame       6 * 8 / (1*2048*32) =', f(6 * 8 / (1 * 2048 * 32)))\nprint('production vs 4-rank             density x', (6 * 8 / 65536) / (6 * 512 / 2097152), '; batch x', 8192 / 4096)\nprint('production vs 1-rank             density x', (6 * 8 / 65536) / (6 * 512 / 524288), '; batch x', 8192 / 1024)\nprint('aux steps in the run             9 * 6 * 8 =', 9 * 6 * 8, '; at aux_mbsize 2:', 9 * 6 * 16, '; at 1-rank density:', 9 * 6 * 64)\n\"",
+        "repo_head": "bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6"
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nf = lambda x: format(x, '.6f')\nprint('aux phases in the run            293 // 32 =', 293 // 32, '; aux epochs', 293 // 32 * 6)\nprint('4-rank release aux global batch  4 ranks * 4 pairs * 256 =', 4 * 4 * 256)\nprint('4-rank release aux steps/frame   6 * 512 / (4*64*256*32) =', f(6 * 512 / (4 * 64 * 256 * 32)))\nprint('1-rank release aux steps/frame   6 * 512 / (64*256*32) =', f(6 * 512 / (64 * 256 * 32)))\nprint('production aux steps/frame       6 * 8 / (1*2048*32) =', f(6 * 8 / (1 * 2048 * 32)))\nprint('production vs 4-rank             density x', (6 * 8 / 65536) / (6 * 512 / 2097152), '; batch x', 8192 / 4096)\nprint('production vs 1-rank             density x', (6 * 8 / 65536) / (6 * 512 / 524288), '; batch x', 8192 / 1024)\nprint('aux steps in the run             9 * 6 * 8 =', 9 * 6 * 8, '; at aux_mbsize 2:', 9 * 6 * 16, '; at 1-rank density:', 9 * 6 * 64)\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 8,
+      "shown_lines": 8,
+      "captured_at": "2026-09-16T10:44:25+00:00",
+      "note": "the comparison the verdict rests on"
+    },
+    "retired-port-prior-art": {
+      "file": "raw/retired-port-prior-art.txt",
+      "sha256": "1fcc221a7d41bf43c594e32bb7433b6b99416296f7790f63c87ba9ca0a247853",
+      "source": {
+        "kind": "repo-file",
+        "path": "rlgen/algos/ppg/config.py",
+        "bytes": 8576,
+        "sha256": "55fe7ef0512a1143de1e44384725b2a3a43761921c39e9a51bc1766e1dc5bbbd"
+      },
+      "extraction": "cat rlgen/algos/ppg/config.py | grep -n -E 'aux_num_mini_batch|aux_mbsize=4|minibatch SIZE|directly portable' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T10:44:25+00:00",
+      "note": "the retired rlgen port had flagged aux_mbsize=4 as a Procgen-scale size and replaced it; the production runnable port did not inherit that"
+    },
+    "reconciliation-row": {
+      "file": "raw/reconciliation-row.txt",
+      "sha256": "6eddf9832f2b1102542b9fc7ba3389fb5915255c5e4ab9a95547d45d6e80a977",
+      "source": {
+        "kind": "repo-file",
+        "path": "notes/PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md",
+        "bytes": 62561,
+        "sha256": "25b5c1f1d020020230b7575f3446dc9c67226a48379986e4bafc8cb19e20225a"
+      },
+      "extraction": "cat notes/PRIMARY-SOURCE-FIDELITY-RECONCILIATION.md | grep -n -E 'EXACT SOURCE MATCH\\*\\* for the phasic' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:44:25+00:00",
+      "note": "the primary-source reconciliation lists five of the six Table A.1 rows as an exact match; the aux minibatch row is absent"
+    },
+    "nminibatch-verdict-scope": {
+      "file": "raw/nminibatch-verdict-scope.txt",
+      "sha256": "24b658c2bf0597348ba43c9f05b4eb6751d94f8ba7e2a3ced25f1df45776d53b",
+      "source": {
+        "kind": "repo-file",
+        "path": "datasphere/native/families.json",
+        "bytes": 73851,
+        "sha256": "d5eddb023ba0a5448eadac6509368763b19d4043c2e2fee84e339a38c8d6ee64"
+      },
+      "extraction": "cat datasphere/native/families.json | grep -n -E 'Which value is right is settled by arithmetic' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:44:25+00:00",
+      "note": "the nminibatch verdict compares the POLICY phase only"
+    },
+    "upstream-aux-sync": {
+      "file": "raw/upstream-aux-sync.txt",
+      "sha256": "ad9f2d2e2a7e0c879c9b4b608833a7284944ab216ef2fb7160ea55f1bd157919",
+      "source": {
+        "kind": "repo-file",
+        "path": "ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py",
+        "bytes": 8422,
+        "sha256": "ff94cfe2f61375b60be4d30d88e88c4287f6e6d7f9dbfeb8862a7445361b45f2"
+      },
+      "extraction": "cat ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py | grep -n -E sync_grads | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T10:44:13+00:00",
+      "note": "pristine upstream: every aux step syncs gradients across ranks"
+    }
+  },
+  "facts": [
+    {
+      "key": "paper_n_pi",
+      "value": "32",
+      "excerpt": "paper-table-a1",
+      "anchor": "Nπ                      32"
+    },
+    {
+      "key": "paper_e_aux",
+      "value": "6",
+      "excerpt": "paper-table-a1",
+      "anchor": "Eaux                      6"
+    },
+    {
+      "key": "paper_aux_minibatches_per_epoch_per_n_pi",
+      "value": "16",
+      "excerpt": "paper-table-a1",
+      "anchor": "# minibatches per aux epoch per Nπ      16"
+    },
+    {
+      "key": "paper_rollout",
+      "value": "256",
+      "excerpt": "paper-table-a1",
+      "anchor": "# timesteps per rollout           256"
+    },
+    {
+      "key": "paper_workers",
+      "value": "4",
+      "excerpt": "paper-table-a1",
+      "anchor": "# workers                      4"
+    },
+    {
+      "key": "paper_envs_per_worker",
+      "value": "64",
+      "excerpt": "paper-table-a1",
+      "anchor": "# environments per worker             64"
+    },
+    {
+      "key": "supp_ppg_constants",
+      "value": "N_pi 32, E_pi 1, E_V 1, E_aux 6, beta_clone 1",
+      "excerpt": "supp-ppg-recipe",
+      "anchor": "found Nπ = 32, Eπ = 1, EV = 1, Eaux = 6, and βclone = 1"
+    },
+    {
+      "key": "supp_unnamed_follow_procgen",
+      "value": "true",
+      "excerpt": "supp-ppg-recipe",
+      "anchor": "not mentioned here were set to the same values as the ones used for Procgen"
+    },
+    {
+      "key": "supp_rollout",
+      "value": "2048 steps, 1 process",
+      "excerpt": "supp-ppg-recipe",
+      "anchor": "2048 steps, 1 process"
+    },
+    {
+      "key": "upstream_release_ranks",
+      "value": "4",
+      "excerpt": "upstream-readme-ranks",
+      "anchor": "mpiexec -np 4 python -m phasic_policy_gradient.train"
+    },
+    {
+      "key": "upstream_aux_mbsize",
+      "value": "4",
+      "excerpt": "upstream-aux-defaults",
+      "anchor": "23:    aux_mbsize=4,"
+    },
+    {
+      "key": "upstream_num_envs",
+      "value": "64",
+      "excerpt": "upstream-aux-defaults",
+      "anchor": "16:    num_envs=64,"
+    },
+    {
+      "key": "aux_split_unit",
+      "value": "(env, segment) pairs",
+      "excerpt": "upstream-make-minibatches",
+      "anchor": "itertools.product(range(nenv), range(nseg))"
+    },
+    {
+      "key": "aux_split_size",
+      "value": "mbsize",
+      "excerpt": "upstream-make-minibatches",
+      "anchor": ".split(mbsize)"
+    },
+    {
+      "key": "sync_is_mean",
+      "value": "true",
+      "excerpt": "upstream-sync-grads",
+      "anchor": "x /= dist_get_world_size(group=group)"
+    },
+    {
+      "key": "sync_grads_uses_mean",
+      "value": "true",
+      "excerpt": "upstream-sync-grads",
+      "anchor": "all_mean_(flatgrad, group=group)"
+    },
+    {
+      "key": "aux_step_syncs",
+      "value": "true",
+      "excerpt": "upstream-aux-sync",
+      "anchor": "tu.sync_grads(model.parameters())"
+    },
+    {
+      "key": "vendored_make_minibatches_identical",
+      "value": "true",
+      "excerpt": "vendored-make-minibatches-identical",
+      "anchor": "IDENTICAL-make_minibatches"
+    },
+    {
+      "key": "aux_train_uses_make_minibatches",
+      "value": "true",
+      "excerpt": "vendored-aux-call-sites",
+      "anchor": "for mb in make_minibatches(segs, mbsize):"
+    },
+    {
+      "key": "learn_passes_aux_mbsize",
+      "value": "true",
+      "excerpt": "vendored-aux-call-sites",
+      "anchor": "mbsize=aux_mbsize,"
+    },
+    {
+      "key": "vendored_aux_mbsize",
+      "value": "4",
+      "excerpt": "vendored-train-defaults",
+      "anchor": "44:    aux_mbsize=4,"
+    },
+    {
+      "key": "aux_mbsize_cli_flag_count",
+      "value": "0",
+      "excerpt": "aux-mbsize-not-a-cli-flag",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "launch_path_mentions",
+      "value": "0",
+      "excerpt": "aux-mbsize-not-passed",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "run_argv_mentions",
+      "value": "0",
+      "excerpt": "run-argv-no-aux-override",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "aux_epoch_lines",
+      "value": "54",
+      "excerpt": "run-aux-epochs",
+      "anchor": "header:# matched-lines: 54 "
+    },
+    {
+      "key": "aux_epoch_indices",
+      "value": "0..5",
+      "excerpt": "run-aux-epochs",
+      "anchor": "Aux epoch 5"
+    },
+    {
+      "key": "upstream_1rank_row",
+      "value": "512 mb/epoch, 1024 samples, 0.005859 aux steps/frame",
+      "excerpt": "probe",
+      "anchor": "upstream 1-rank default | 64 | 256 | 4 | 512 | 16 | [(4, 256)] | 1024 | 3072 | 524288 | 0.005859"
+    },
+    {
+      "key": "production_row",
+      "value": "8 mb/epoch, 8192 samples, 0.000732 aux steps/frame",
+      "excerpt": "probe",
+      "anchor": "production (families.json) | 1 | 2048 | 4 | 8 | 0.25 | [(4, 2048)] | 8192 | 48 | 65536 | 0.000732"
+    },
+    {
+      "key": "aux_mbsize_2_row",
+      "value": "16 mb/epoch, 4096 samples, 0.001465 aux steps/frame",
+      "excerpt": "probe",
+      "anchor": "expressible | 1 | 2048 | 2 | 16 | 0.5 | [(2, 2048)] | 4096 | 96 | 65536 | 0.001465"
+    },
+    {
+      "key": "aux_mbsize_1_row",
+      "value": "32 mb/epoch, 2048 samples, 0.002930 aux steps/frame",
+      "excerpt": "probe",
+      "anchor": "expressible | 1 | 2048 | 1 | 32 | 1 | [(1, 2048)] | 2048 | 192 | 65536 | 0.002930"
+    },
+    {
+      "key": "run_aux_phases",
+      "value": "9",
+      "excerpt": "arithmetic",
+      "anchor": "293 // 32 = 9 ; aux epochs 54"
+    },
+    {
+      "key": "release_4rank_aux_global_batch",
+      "value": "4096",
+      "excerpt": "arithmetic",
+      "anchor": "4 pairs * 256 = 4096"
+    },
+    {
+      "key": "release_4rank_aux_density",
+      "value": "0.001465",
+      "excerpt": "arithmetic",
+      "anchor": "(4*64*256*32) = 0.001465"
+    },
+    {
+      "key": "release_1rank_aux_density",
+      "value": "0.005859",
+      "excerpt": "arithmetic",
+      "anchor": "(64*256*32) = 0.005859"
+    },
+    {
+      "key": "production_vs_4rank",
+      "value": "density x0.5, batch x2",
+      "excerpt": "arithmetic",
+      "anchor": "density x 0.5 ; batch x 2.0"
+    },
+    {
+      "key": "production_vs_1rank",
+      "value": "density x0.125, batch x8",
+      "excerpt": "arithmetic",
+      "anchor": "density x 0.125 ; batch x 8.0"
+    },
+    {
+      "key": "run_aux_steps",
+      "value": "432",
+      "excerpt": "arithmetic",
+      "anchor": "9 * 6 * 8 = 432"
+    },
+    {
+      "key": "retired_port_flagged",
+      "value": "true",
+      "excerpt": "retired-port-prior-art",
+      "anchor": "is a raw"
+    },
+    {
+      "key": "reconciliation_lists",
+      "value": "n_pi, E_pi, E_V, E_aux, beta_clone",
+      "excerpt": "reconciliation-row",
+      "anchor": "auxiliary epochs6, βclone1"
+    },
+    {
+      "key": "verdict_scope",
+      "value": "policy-phase",
+      "excerpt": "nminibatch-verdict-scope",
+      "anchor": "1 epoch x 8 minibatches: 8 gradient steps of 2048 samples each"
+    }
+  ]
+}

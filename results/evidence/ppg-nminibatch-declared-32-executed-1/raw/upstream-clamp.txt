@@ -1,0 +1,29 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: upstream-clamp
+# note: pristine upstream: ntrain is the leading axis; nminibatch above it is warned about and clamped
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py
+# source-bytes: 2935  source-sha256: 239322b6a2a059c6d437f7dbdc0f25180b9383a5f9ae7c99d0c99f10b492049a  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/minibatch_optimize.py | grep -n '' | sed -n '42,60p' | head -n 200
+# matched-lines: 19  shown-lines: 19
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+42:def minibatch_optimize(
+43:    train_fn: "function (dict) -> dict called on each minibatch that returns training stats",
+44:    tensordict: "Dict[str->th.Tensor]",
+45:    *,
+46:    nepoch: "(int) number of epochs over dataset",
+47:    nminibatch: "(int) number of minibatch per epoch",
+48:    comm: "(MPI.Comm) MPI communicator",
+49:    verbose: "(bool) print detailed stats" = False,
+50:    epoch_fn: "function () -> dict to be called each epoch" = None,
+51:):
+52:    ntrain = tu.batch_len(tensordict)
+53:    if nminibatch > ntrain:
+54:        logger.log(f"Warning: nminibatch > ntrain!! ({nminibatch} > {ntrain})")
+55:        nminibatch = ntrain
+56:    ldp = LossDictPrinter()
+57:    epoch_dicts = []
+58:    for _ in range(nepoch):
+59:        mb_dicts = [
+60:            train_fn(**mb) for mb in minibatch_gen(tensordict, nminibatch=nminibatch)

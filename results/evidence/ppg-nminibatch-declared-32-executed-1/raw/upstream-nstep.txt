@@ -1,0 +1,14 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: upstream-nstep
+# note: pristine upstream default rollout length
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/ppo.py
+# source-bytes: 9301  source-sha256: 640185fd4604e686ef00baf8f5c0ea31e3e2553c1e3c3b1b11aef09a2a2d941c  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/ppo.py | grep -n '' | sed -n '118,121p' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+118:    model: "(ppo.PpoModel)",
+119:    interacts_total: "(float) total timesteps of interaction" = float("inf"),
+120:    nstep: "(int) number of serial timesteps" = 256,
+121:    γ: "(float) discount" = 0.99,

@@ -1,0 +1,20 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: vendored-train-defaults
+# note: the vendored train.py keeps aux_mbsize=4 and exposes n_pi and n_aux_epochs, but not aux_mbsize, on the CLI
+# source-kind: repo-file
+# source: runnable/ppg/phasic_policy_gradient/train.py
+# source-bytes: 11087  source-sha256: f667ce824877c7b433736c9c73b630942126f3f7548d9cff9bc43ebc3c277ef3  source-mtime: 
+# extraction: cat runnable/ppg/phasic_policy_gradient/train.py | grep -n -E 'aux_mbsize|n_aux_epochs|n_pi' | head -n 200
+# matched-lines: 10  shown-lines: 10
+# captured-at: 2026-09-16T10:44:13+00:00
+#---------------------------------------------------------------------------------------------------
+44:    aux_mbsize=4,
+47:    n_aux_epochs=6,
+48:    n_pi=32,
+112:        aux_mbsize=aux_mbsize,
+113:        n_aux_epochs=n_aux_epochs,
+114:        n_pi=n_pi,
+172:    parser.add_argument('--n_aux_epochs', type=int, default=6)
+173:    parser.add_argument('--n_pi', type=int, default=32)
+213:        n_aux_epochs=args.n_aux_epochs,
+214:        n_pi=args.n_pi,

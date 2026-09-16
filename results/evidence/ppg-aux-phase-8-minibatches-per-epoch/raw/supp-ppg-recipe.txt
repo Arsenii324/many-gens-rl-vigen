@@ -1,0 +1,22 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: supp-ppg-recipe
+# note: IDAAC supplement SS E: the continuous-control PPG search names five constants; the aux minibatch count is not among them, and unnamed values follow Procgen
+# source-kind: local-command
+# source: pdftotext -layout ext/idaac/raileanu21a-supp.pdf -
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: ( pdftotext -layout ext/idaac/raileanu21a-supp.pdf - ) | grep -n '' | sed -n '502,513p' | head -n 200
+# matched-lines: 12  shown-lines: 12
+# captured-at: 2026-09-16T10:44:12+00:00
+#---------------------------------------------------------------------------------------------------
+502:In line with standard practice for this benchmark, we use 8 action repeats for Cartpole Swingup and 4 for Cartpole Balance
+503:and Ball In Cup. We also use 3 stacked frames as observations. To find the best hyperparameters, we ran a grid search over
+504:the learning rate in [0.0001, 0.0003, 0.0007, 0.001], the number of minibatches in [32, 8, 16, 64], the entropy coefficient in
+505:[0.0, 0.01, 0.001, 0.0001], and the number of PPO epochs per update in [3, 5, 10, 20]. We found 10 ppo epochs, 0.0 entropy
+506:coefficient, 0.0003 learning rate, and 32 minibatches to work best across these environments. We use γ = 0.99, λ = 0.95
+507:for the generalized advantage estimates, 2048 steps, 1 process, value loss coefficient 0.5, and linear rate decay over 1 million
+508:environment steps. Following this grid search, we used the best values found for all the methods. Any other hyperaparameters
+509:not mentioned here were set to the same values as the ones used for Procgen as described above. For UCB-DrAC, we used
+510:the best hyperparameters found by the corresponding authors. For PPG, we ran the same hyperparameter search as the one
+511:performed in the original paper for Procgen and found Nπ = 32, Eπ = 1, EV = 1, Eaux = 6, and βclone = 1 to be the
+512:best. Similarly, for DAAC and IDAAC, we ran the same hyperparameter search as for Procgen and found that EV = 9,
+513:Nπ = 32, αa = 0.1, and αi = 0.1 worked best across all environments.

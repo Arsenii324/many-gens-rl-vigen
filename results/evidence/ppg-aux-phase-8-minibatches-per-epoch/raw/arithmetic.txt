@@ -1,0 +1,38 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: arithmetic
+# note: the comparison the verdict rests on
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+f = lambda x: format(x, '.6f')
+print('aux phases in the run            293 // 32 =', 293 // 32, '; aux epochs', 293 // 32 * 6)
+print('4-rank release aux global batch  4 ranks * 4 pairs * 256 =', 4 * 4 * 256)
+print('4-rank release aux steps/frame   6 * 512 / (4*64*256*32) =', f(6 * 512 / (4 * 64 * 256 * 32)))
+print('1-rank release aux steps/frame   6 * 512 / (64*256*32) =', f(6 * 512 / (64 * 256 * 32)))
+print('production aux steps/frame       6 * 8 / (1*2048*32) =', f(6 * 8 / (1 * 2048 * 32)))
+print('production vs 4-rank             density x', (6 * 8 / 65536) / (6 * 512 / 2097152), '; batch x', 8192 / 4096)
+print('production vs 1-rank             density x', (6 * 8 / 65536) / (6 * 512 / 524288), '; batch x', 8192 / 1024)
+print('aux steps in the run             9 * 6 * 8 =', 9 * 6 * 8, '; at aux_mbsize 2:', 9 * 6 * 16, '; at 1-rank density:', 9 * 6 * 64)
+"
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   f = lambda x: format(x, '.6f')
+#   print('aux phases in the run            293 // 32 =', 293 // 32, '; aux epochs', 293 // 32 * 6)
+#   print('4-rank release aux global batch  4 ranks * 4 pairs * 256 =', 4 * 4 * 256)
+#   print('4-rank release aux steps/frame   6 * 512 / (4*64*256*32) =', f(6 * 512 / (4 * 64 * 256 * 32)))
+#   print('1-rank release aux steps/frame   6 * 512 / (64*256*32) =', f(6 * 512 / (64 * 256 * 32)))
+#   print('production aux steps/frame       6 * 8 / (1*2048*32) =', f(6 * 8 / (1 * 2048 * 32)))
+#   print('production vs 4-rank             density x', (6 * 8 / 65536) / (6 * 512 / 2097152), '; batch x', 8192 / 4096)
+#   print('production vs 1-rank             density x', (6 * 8 / 65536) / (6 * 512 / 524288), '; batch x', 8192 / 1024)
+#   print('aux steps in the run             9 * 6 * 8 =', 9 * 6 * 8, '; at aux_mbsize 2:', 9 * 6 * 16, '; at 1-rank density:', 9 * 6 * 64)
+#   " ) | head -n 200
+# matched-lines: 8  shown-lines: 8
+# captured-at: 2026-09-16T10:44:25+00:00
+#---------------------------------------------------------------------------------------------------
+aux phases in the run            293 // 32 = 9 ; aux epochs 54
+4-rank release aux global batch  4 ranks * 4 pairs * 256 = 4096
+4-rank release aux steps/frame   6 * 512 / (4*64*256*32) = 0.001465
+1-rank release aux steps/frame   6 * 512 / (64*256*32) = 0.005859
+production aux steps/frame       6 * 8 / (1*2048*32) = 0.000732
+production vs 4-rank             density x 0.5 ; batch x 2.0
+production vs 1-rank             density x 0.125 ; batch x 8.0
+aux steps in the run             9 * 6 * 8 = 432 ; at aux_mbsize 2: 864 ; at 1-rank density: 3456

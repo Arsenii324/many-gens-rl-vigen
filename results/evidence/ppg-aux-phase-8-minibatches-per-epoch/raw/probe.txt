@@ -1,0 +1,19 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: probe
+# note: vendored make_minibatches executed on dummy segments shaped like seg_buf
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_ppg_aux_minibatches.py
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_ppg_aux_minibatches.py ) | head -n 200
+# matched-lines: 9  shown-lines: 9
+# captured-at: 2026-09-16T10:44:25+00:00
+#---------------------------------------------------------------------------------------------------
+n_pi=32 n_aux_epochs=6  (source: runnable/ppg/phasic_policy_gradient/ppg.py::make_minibatches)
+label | num_envs | nstep | aux_mbsize | minibatches/aux_epoch | per_N_pi | mb vtarg shape | samples/mb | aux_steps/aux_phase | frames/aux_phase | aux_steps/frame
+upstream 1-rank default | 64 | 256 | 4 | 512 | 16 | [(4, 256)] | 1024 | 3072 | 524288 | 0.005859
+expressible | 1 | 2048 | 1 | 32 | 1 | [(1, 2048)] | 2048 | 192 | 65536 | 0.002930
+expressible | 1 | 2048 | 2 | 16 | 0.5 | [(2, 2048)] | 4096 | 96 | 65536 | 0.001465
+production (families.json) | 1 | 2048 | 4 | 8 | 0.25 | [(4, 2048)] | 8192 | 48 | 65536 | 0.000732
+expressible | 1 | 2048 | 8 | 4 | 0.125 | [(8, 2048)] | 16384 | 24 | 65536 | 0.000366
+expressible | 1 | 2048 | 16 | 2 | 0.0625 | [(16, 2048)] | 32768 | 12 | 65536 | 0.000183
+expressible | 1 | 2048 | 32 | 1 | 0.03125 | [(32, 2048)] | 65536 | 6 | 65536 | 0.000092

@@ -1,0 +1,22 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: run-aux-epochs
+# note: the production run logged 54 aux epochs: 9 aux phases x 6, one per 32 of its 293 policy phases
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log
+# source-bytes: 738318  source-sha256: b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb  source-mtime: 2026-09-09T20:24:54+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Aux epoch [0-9]' | head -n 12
+# matched-lines: 54  shown-lines: 12  (TRUNCATED -- the excerpt is capped; matched-lines is the full count)
+# captured-at: 2026-09-16T10:44:22+00:00
+#---------------------------------------------------------------------------------------------------
+1456:Aux epoch 0
+1465:Aux epoch 1
+1474:Aux epoch 2
+1483:Aux epoch 3
+1492:Aux epoch 4
+1501:Aux epoch 5
+2791:Aux epoch 0
+2800:Aux epoch 1
+2809:Aux epoch 2
+2818:Aux epoch 3
+2827:Aux epoch 4
+2836:Aux epoch 5

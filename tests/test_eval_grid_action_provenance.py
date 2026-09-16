@@ -143,9 +143,20 @@ def test_grid_emits_pre_env_action_diagnostic_on_scene_rows(monkeypatch):
         rows.append(row)
         return row
 
+    # [Claude 2026-09-16] EVALUATOR_SCOPE is a module global (eval_grid.py:107) that every
+    # production caller sets before _run_grid; the episode id reads its eval_policy_mode so a
+    # sampled row cannot be confused with a mode row. Left None it raises AttributeError deep in
+    # the grid. Set it here rather than defaulting in the code: a silent default would mislabel a
+    # mode row as native, which is exactly the collision the id exists to prevent.
+    grid.EVALUATOR_SCOPE = {"eval_policy_mode": "native"}
     rc = grid._run_grid(
         args, None, record, ["train"], [0],
-        {"cell": "drqv2-s1", "baseline": "drqv2", "family": "rlvigen", "seed": 1},
+        # [Claude 2026-09-16] eval_scope added: episode ids now name the scope, so a row from the
+        # curve pass cannot collide with one from the endpoint pass at the same frame. _run_grid
+        # reads context["eval_scope"] when building the id, and every production caller sets it
+        # (eval_grid.py:1456, :1526, :1540). This fixture predated that and died with KeyError.
+        {"cell": "drqv2-s1", "baseline": "drqv2", "family": "rlvigen", "seed": 1,
+         "eval_scope": "endpoint"},
         100,
     )
 

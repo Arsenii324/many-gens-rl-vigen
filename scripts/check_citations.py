@@ -112,7 +112,22 @@ CITE = re.compile(r"(?<![\w/.])([\w./-]+\.(?:py|md|ya?ml))[:](\d+)(?:[-,](\d+))*
 
 # This checker's own tests cite deliberately wrong lines -- that is what they assert on. Reading
 # them as claims about the repo makes the instrument report its own fixtures as defects.
-SKIP_FILES = {"tests/test_citation_content.py"}
+SKIP_FILES = {"tests/test_citation_content.py",
+              # [Claude 2026-09-16] Same category: it writes a fake note citing a real file at an
+              # impossible line number, to prove verify_note_citations catches a stale line. Read as
+              # a claim it becomes the repo's only BROKEN citation. The line number is NOT spelled
+              # out here -- writing it would make THIS comment a citation and this file its own
+              # defect, which is exactly what happened on the first attempt.
+              "tests/test_resolved_register_claims_hold.py",
+              # [Claude 2026-09-16] docs/REGISTER.md is a DATED findings log. Its 2026-08-14 rows
+              # cite `rlgen/algos/onpolicy_ext.py`, which existed when they were written and was
+              # deleted in the rewrite. That should classify HISTORICAL, and would, except that
+              # HISTORICAL asks git -- and THIS repository's history begins at the recovery
+              # snapshot (5459e39, "had no version control at all"), so git has never heard of a
+              # file deleted before it. The citation is accurate and the tree simply cannot prove
+              # it. Rewriting the row to point somewhere that exists would falsify a record of what
+              # was true on the day.
+              "docs/REGISTER.md"}
 
 
 def scan_targets() -> list[pathlib.Path]:

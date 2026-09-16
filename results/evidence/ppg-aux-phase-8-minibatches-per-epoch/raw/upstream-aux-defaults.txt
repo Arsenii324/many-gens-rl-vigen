@@ -1,0 +1,22 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: upstream-aux-defaults
+# note: pristine upstream train.py: aux_mbsize is 4 (a count of env-segment pairs, not of samples)
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/train.py
+# source-bytes: 3250  source-sha256: 79039cc1872788dff51838e02d6349220da8afb9c68f2dd7c38ae13def9bd7cc  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/train.py | grep -n -E 'num_envs=|aux_mbsize|n_aux_epochs|n_pi=' | head -n 200
+# matched-lines: 12  shown-lines: 12
+# captured-at: 2026-09-16T10:44:12+00:00
+#---------------------------------------------------------------------------------------------------
+16:    num_envs=64,
+23:    aux_mbsize=4,
+26:    n_aux_epochs=6,
+27:    n_pi=32,
+41:    venv = get_venv(num_envs=num_envs, env_name=env_name, distribution_mode=distribution_mode)
+72:        aux_mbsize=aux_mbsize,
+73:        n_aux_epochs=n_aux_epochs,
+74:        n_pi=n_pi,
+85:    parser.add_argument('--n_aux_epochs', type=int, default=6)
+97:        num_envs=args.num_envs,
+100:        n_aux_epochs=args.n_aux_epochs,
+101:        n_pi=args.n_pi,

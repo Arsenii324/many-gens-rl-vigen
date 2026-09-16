@@ -1,0 +1,11 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: upstream-aux-sync
+# note: pristine upstream: every aux step syncs gradients across ranks
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py
+# source-bytes: 8422  source-sha256: ff94cfe2f61375b60be4d30d88e88c4287f6e6d7f9dbfeb8862a7445361b45f2  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py | grep -n -E sync_grads | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T10:44:13+00:00
+#---------------------------------------------------------------------------------------------------
+200:        tu.sync_grads(model.parameters())

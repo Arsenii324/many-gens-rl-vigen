@@ -1,0 +1,13 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: paper-identity
+# note: which PDF files the two text excerpts below were extracted from, and with what
+# source-kind: local-command
+# source: shasum -a 256 ext/baseline_resources/10_ppg/paper_2009.04416.pdf ext/idaac/raileanu21a-supp.pdf; pdftotext -v 2>&1 | head -1
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: ( shasum -a 256 ext/baseline_resources/10_ppg/paper_2009.04416.pdf ext/idaac/raileanu21a-supp.pdf; pdftotext -v 2>&1 | head -1 ) | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T10:44:11+00:00
+#---------------------------------------------------------------------------------------------------
+a5d5e56983c74f3007eda154103b4a008e9359aacb745fea5f8ba7f7bde4bd09  ext/baseline_resources/10_ppg/paper_2009.04416.pdf
+85fc2b4244038e20671a4c96a0daa5dd656e5af45476932d632c0ef4dc236119  ext/idaac/raileanu21a-supp.pdf
+pdftotext version 22.12.0

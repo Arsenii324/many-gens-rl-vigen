@@ -1,0 +1,13 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: retired-port-prior-art
+# note: the retired rlgen port had flagged aux_mbsize=4 as a Procgen-scale size and replaced it; the production runnable port did not inherit that
+# source-kind: repo-file
+# source: rlgen/algos/ppg/config.py
+# source-bytes: 8576  source-sha256: 55fe7ef0512a1143de1e44384725b2a3a43761921c39e9a51bc1766e1dc5bbbd  source-mtime: 
+# extraction: cat rlgen/algos/ppg/config.py | grep -n -E 'aux_num_mini_batch|aux_mbsize=4|minibatch SIZE|directly portable' | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T10:44:25+00:00
+#---------------------------------------------------------------------------------------------------
+80:    aux_num_mini_batch: int = 32        # [OURS] [P]'s own aux_mbsize=4 (train.py:23) is a raw
+81:                                         # minibatch SIZE at Procgen scale, not a count, and not
+82:                                         # directly portable to this project's rollout size --

@@ -1,0 +1,22 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: upstream-batch-len
+# note: pristine upstream: batch_len is shape[0] of the first leaf
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py
+# source-bytes: 17613  source-sha256: 5687b6171bffabbcb4d3d12e201742e6fa1b886945b1a34a754b596297a85ab2  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py | grep -n '' | sed -n '83,94p' | head -n 200
+# matched-lines: 12  shown-lines: 12
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+83:def batch_len(batch):
+84:    """
+85:    Given nested dict of arrays with same batchsize, return this batchsize
+86:    """
+87:    flatlist, _ = tree_util.tree_flatten(batch)
+88:    if len(flatlist) < 1:
+89:        return 0
+90:    b = flatlist[0].shape[0]
+91:    assert all(
+92:        arr.shape[0] == b for arr in flatlist if th.is_tensor(arr)
+93:    ), "Not all arrays have same batchsize!"
+94:    return b

@@ -1,0 +1,12 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: declared-config
+# note: what the cell declared: nminibatch 32, nstep 2048, 600k interacts; no num_envs flag
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log
+# source-bytes: 738318  source-sha256: b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb  source-mtime: 2026-09-09T20:24:54+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'NATIVE_PPG_EFFECTIVE_CONFIG|Command being timed' | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T10:45:49+00:00
+#---------------------------------------------------------------------------------------------------
+12433:NATIVE_PPG_EFFECTIVE_CONFIG frame_stack=3 gamma=.99 lr=3e-4 aux_lr=5e-4 nminibatch=32 entcoef=0
+12504:	Command being timed: "timeout --foreground 43200s env bash runnable/_launch/ppg_cell.sh Door 1 600064 10 --interacts_total 600000 --nstep 2048 --seed 1 --log_dir /tmp/native-work/runs/ppg-s1 --save_mode all --ic_per_save 50000 --frame_stack 3 --gamma .99 --lr 3e-4 --aux_lr 5e-4 --nminibatch 32 --entcoef 0 --lr_decay_env_steps 1000000"

@@ -1,0 +1,21 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: vendored-aux-call-sites
+# note: the vendored learn() passes aux_mbsize straight to make_minibatches, once per aux epoch
+# source-kind: repo-file
+# source: runnable/ppg/phasic_policy_gradient/ppg.py
+# source-bytes: 10223  source-sha256: 92d4bf7bdc37348638976c156046d4fd66ba44b7777886045ba410afd23f5785  source-mtime: 
+# extraction: cat runnable/ppg/phasic_policy_gradient/ppg.py | grep -n -E 'make_minibatches\(|aux_mbsize|Aux epoch|n_aux_epochs|n_pi=' | head -n 200
+# matched-lines: 11  shown-lines: 11
+# captured-at: 2026-09-16T10:44:13+00:00
+#---------------------------------------------------------------------------------------------------
+173:def make_minibatches(segs, mbsize):
+194:    for mb in make_minibatches(segs, mbsize):
+239:    aux_mbsize,
+240:    n_aux_epochs=6,
+241:    n_pi=32,
+265:        store_segs = n_pi != 0 and n_aux_epochs != 0
+292:        if n_aux_epochs > 0:
+294:            compute_presleep_outputs(model=model, segs=segs, mbsize=aux_mbsize)
+296:            for i in range(n_aux_epochs):
+297:                logger.log(f"Aux epoch {i}")
+302:                    mbsize=aux_mbsize,

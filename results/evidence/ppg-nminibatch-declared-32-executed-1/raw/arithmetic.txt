@@ -1,0 +1,35 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: arithmetic
+# note: the arithmetic the verdict rests on
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+f = lambda x: format(x, '.8f')
+print('policy phases executed      293 * 2048 =', 293 * 2048)
+print('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))
+print('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)
+print('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))
+print('executed batch/step         (1*2048) / 1 =', 2048)
+print('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))
+print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)
+"
+# repo-head: bc5bc91f41ba2cb6fa9100b4f1c97e72a013aee6
+# extraction: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   f = lambda x: format(x, '.8f')
+#   print('policy phases executed      293 * 2048 =', 293 * 2048)
+#   print('upstream 1-rank density     (1 epoch * 8 mb) / (64*256) =', f(8 / (64 * 256)))
+#   print('upstream 1-rank batch/step  (64*256) / 8 =', (64 * 256) // 8)
+#   print('executed density            (1 epoch * 1 mb) / (1*2048) =', f(1 / (1 * 2048)))
+#   print('executed batch/step         (1*2048) / 1 =', 2048)
+#   print('declared-32 density         (1 epoch * 32 mb) / (1*2048) =', f(32 / 2048))
+#   print('upstream 4-rank density     8 / (4*64*256) =', f(8 / (4 * 64 * 256)), '; global batch/step', 4 * 64 * 256 // 8)
+#   " | head -n 200
+# matched-lines: 7  shown-lines: 7
+# captured-at: 2026-09-16T10:41:13+00:00
+#---------------------------------------------------------------------------------------------------
+policy phases executed      293 * 2048 = 600064
+upstream 1-rank density     (1 epoch * 8 mb) / (64*256) = 0.00048828
+upstream 1-rank batch/step  (64*256) / 8 = 2048
+executed density            (1 epoch * 1 mb) / (1*2048) = 0.00048828
+executed batch/step         (1*2048) / 1 = 2048
+declared-32 density         (1 epoch * 32 mb) / (1*2048) = 0.01562500
+upstream 4-rank density     8 / (4*64*256) = 0.00012207 ; global batch/step 8192

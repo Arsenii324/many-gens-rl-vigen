@@ -1,0 +1,24 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: upstream-make-minibatches
+# note: pristine upstream: aux minibatches are groups of mbsize (env, segment) pairs
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py
+# source-bytes: 8422  source-sha256: ff94cfe2f61375b60be4d30d88e88c4287f6e6d7f9dbfeb8862a7445361b45f2  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/ppg.py | grep -n '' | sed -n '163,176p' | head -n 200
+# matched-lines: 14  shown-lines: 14
+# captured-at: 2026-09-16T10:44:12+00:00
+#---------------------------------------------------------------------------------------------------
+163:def make_minibatches(segs, mbsize):
+164:    """
+165:    Yield one epoch of minibatch over the dataset described by segs
+166:    Each minibatch mixes data between different segs
+167:    """
+168:    nenv = tu.batch_len(segs[0])
+169:    nseg = len(segs)
+170:    envs_segs = th.tensor(list(itertools.product(range(nenv), range(nseg))))
+171:    for perminds in th.randperm(len(envs_segs)).split(mbsize):
+172:        esinds = envs_segs[perminds]
+173:        yield tu.tree_stack(
+174:            [tu.tree_slice(segs[segind], envind) for (envind, segind) in esinds]
+175:        )
+176:

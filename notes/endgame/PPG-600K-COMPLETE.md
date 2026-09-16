@@ -88,6 +88,19 @@ same silent substitution cannot recur.
 
 **These weights are faithful PPG at `num_envs=1, nstep=2048, nminibatch=1`.** The result stands.
 
+**Scope of that verdict, added 2026-09-16.** `237f876`'s "density identical" argument covers the
+POLICY phase. It does not cover the AUXILIARY phase, and a parallel evidence pass found those
+differ: at `num_envs=1, nstep=2048, aux_mbsize=4` (upstream hard-codes it, no CLI flag) production
+took **8 aux minibatches per aux epoch of 8192 samples**, where Table A.1 specifies 16 per N_pi,
+i.e. 512 per aux epoch. Against the 4-rank release that is 0.5x the aux gradient steps per env
+frame at 2x the batch; against the 1-rank release, 0.125x steps at 8x batch. The run logged 54 aux
+epochs, ~432 aux steps.
+
+This does NOT invalidate the result -- it is a faithful run of released DEFAULTS -- but it is a
+fidelity row the reconciliation had missed, and the claim above should be read as policy-phase
+only. `aux_mbsize=2` would match the 4-rank release exactly; no setting at `num_envs=1` matches the
+1-rank release. Evidence bundles under `results/evidence/ppg-aux-phase-8-minibatches-per-epoch/`.
+
 Worth keeping as method rather than trivia: the discrepancy was found by a stale DOCUMENT, chased
 into the training log, and resolved by a commit message that had already done the work from the
 producer's source. Reading the repo before concluding turned a would-be retraction into a

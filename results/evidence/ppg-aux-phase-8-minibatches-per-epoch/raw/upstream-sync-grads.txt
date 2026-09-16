@@ -1,0 +1,14 @@
+# evidence-slug: ppg-aux-phase-8-minibatches-per-epoch
+# excerpt: upstream-sync-grads
+# note: pristine upstream: sync_grads all-reduces then divides by world size, so 4 ranks take one averaged step over 4x the samples
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py
+# source-bytes: 17613  source-sha256: 5687b6171bffabbcb4d3d12e201742e6fa1b886945b1a34a754b596297a85ab2  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/torch_util.py | grep -n -E 'def all_mean_|x /= dist_get_world_size|def sync_grads|all_mean_\(flatgrad' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T10:44:13+00:00
+#---------------------------------------------------------------------------------------------------
+366:def all_mean_(x, group=dist.group.WORLD):
+368:    x /= dist_get_world_size(group=group)
+442:def sync_grads(
+457:    all_mean_(flatgrad, group=group)

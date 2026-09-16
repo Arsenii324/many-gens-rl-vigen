@@ -1,0 +1,15 @@
+# evidence-slug: ppg-nminibatch-declared-32-executed-1
+# excerpt: upstream-axis-doc
+# note: pristine upstream: rollouts carry (batch, time) leading axes, so shape[0] is the env count
+# source-kind: repo-file
+# source: ext/phasic-policy-gradient/phasic_policy_gradient/roller.py
+# source-bytes: 5919  source-sha256: 1a87c55a7b112e9ae8bc4ea4338b9d79d7fee9530659df751a58f2b53cf38d48  source-mtime: 
+# extraction: cat ext/phasic-policy-gradient/phasic_policy_gradient/roller.py | grep -n '' | sed -n '100,104p' | head -n 200
+# matched-lines: 5  shown-lines: 5
+# captured-at: 2026-09-16T10:45:59+00:00
+#---------------------------------------------------------------------------------------------------
+100:    def singles_to_multi(single_steps) -> dict:
+101:        """
+102:        Stack single-step dicts into arrays with leading axes (batch, time)
+103:        """
+104:        out = defaultdict(list)
