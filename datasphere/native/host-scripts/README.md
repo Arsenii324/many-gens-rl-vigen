@@ -11,6 +11,34 @@ directory would have taken the entire operational toolchain with it.
 Operational instructions are in [`notes/OPERATOR-GUIDE.md`](../../../notes/OPERATOR-GUIDE.md).
 This file only says which script is which.
 
+## Deploying a change back to the host
+
+The host copy is a deployment, so a change here is not in effect until it is copied over. Two rules
+govern when that copy may happen, and both were learned the hard way.
+
+**Never overwrite a script whose cell is running.** bash reads a script incrementally, so replacing
+the file under a running shell makes it resume at a byte offset that no longer means what it did.
+The symptom is a syntax error reported at a line that is fine, on a file that passes `bash -n`. Wait
+for the cell, then deploy.
+
+**Check drift before you trust either copy:**
+
+```bash
+ssh varaksin_as@100.98.2.11 'cat ~/rlvigen-work/train-production-cell-v5.sh' \
+  | diff - datasphere/native/host-scripts/train-production-cell-v5.sh
+```
+
+Empty output means they agree. If they differ, find out which way before copying: these files lived
+only on the host until 2026-09-16, so the host copy has been the newer one before.
+
+### Pending deployment
+
+- `train-production-cell-v5.sh` — the repo copy's header was corrected on 2026-09-16 to retract
+  "between launch and finish, nothing on the host enforces headroom" (the memory floor *is* armed
+  for the life of every cell; only the host-side PID neighbour yield is skipped in shared mode).
+  **Comment-only: 0 executable lines changed**, so the running cell is unaffected and the deploy can
+  wait. Copy it over once `ibac_sni-s101-prod` finishes.
+
 ## Live — these are the ones to use
 
 | script | what it does |

@@ -17,11 +17,28 @@
 # ours by booking, co-tenants are present, we do not surrender to them, and we do not pretend the
 # card is exclusive either. The 4000 MiB free-memory floor is NOT waived by any of it.
 #
-# KNOWN GAP, recorded rather than papered over: the floor is a PREFLIGHT check. watch_gpu_headroom's
-# watch() only records samples -- it never writes the sentinel and never re-checks the floor -- and
-# shared mode does not arm neighbour-yield. So between launch and finish, nothing on the host
-# enforces headroom. The mitigation is external reporting, not an automatic kill, because the
-# booking is ours and yielding it to a co-tenant is the wrong default.
+# [Claude 2026-09-16] RETRACTED, and the retraction is the useful part. This header used to read:
+# "the floor is a PREFLIGHT check ... between launch and finish, nothing on the host enforces
+# headroom." That is wrong, and it is wrong in a way worth naming, because TWO different mechanisms
+# are called "yield" here and I collapsed them into one:
+#
+#   STEP 2, yield_gpu_to_neighbour.py (launch-card-cell.sh:294) -- armed UNCONDITIONALLY, in a
+#     container, for the life of the cell. It re-checks --floor-mib 4000 every 20 seconds and
+#     writes /work/yield.sentinel when free memory drops below it. This one enforces the floor.
+#   STEP 2b, the host-side PID neighbour yield (launch-card-cell.sh:318) -- NOT armed when
+#     NATIVE_ALLOW_SHARED_CARD=1, deliberately, because it stops on a co-tenant's PRESENCE and
+#     presence is what shared mode agrees to.
+#
+# Only 2b is skipped in shared mode. The floor stays armed in both modes, which is what
+# launch-card-cell.sh:320 says in so many words: "The memory floor and disk watch remain armed."
+#
+# What misled me was reading watch_gpu_headroom.watch(), which really does only RECORD samples, and
+# concluding from that recorder that nothing enforced. The enforcer is a different file. It was
+# demonstrated an hour after I wrote the retracted claim, by a cell standing itself down with
+# "yielded at ...: free memory 3063 MiB is below the 4000 MiB floor".
+#
+# The operational consequence is the opposite of what the old text implied: a co-tenant arriving
+# mid-run does NOT go unnoticed, and a cell CAN stop itself hours in. Size the run accordingly.
 #
 # Sizing, from our own archives rather than an estimate: scripts/measure_vram_bounds.py over the
 # returned card0-* cells puts ibac_sni at 2,199 MiB across 3 compute processes. Production runs 8,
