@@ -1,0 +1,29 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: script-report
+# note: scripts/measure_vram_bounds.py as of bb191cd, over exactly the captured file
+# source-kind: local-command
+# source: mkdir -p /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101 && sed '1,/^#---/d' results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101/resources.json && git show bb191cd:scripts/measure_vram_bounds.py > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/measure_vram_bounds_bb191cd.py && cd /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5 && "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" measure_vram_bounds_bb191cd.py data
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# inputs: results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt=2f0f74bc10e16fdc
+# extraction: ( mkdir -p /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101 && sed '1,/^#---/d' results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101/resources.json && git show bb191cd:scripts/measure_vram_bounds.py > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/measure_vram_bounds_bb191cd.py && cd /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5 && "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" measure_vram_bounds_bb191cd.py data ) | head -n 200
+# matched-lines: 18  shown-lines: 18
+# captured-at: 2026-09-16T11:42:34+00:00
+#---------------------------------------------------------------------------------------------------
+cell                   family      frames      ours      card      of  attribution
+  ibac_sni-s101        ibac_sni      None   22675 Mi   29432 Mi 32768 Mi  per-process
+                       load: gpu-util mean  43.4% (max 99%)  membw  19.4%  cpu 6.37 cores
+
+per-family observed peak (ours), from 1 cell(s):
+  rlvigen        --      no attributable measurement
+  dmc_gb         --      no attributable measurement
+  idaac          --      no attributable measurement
+  alda           --      no attributable measurement
+  ppg            --      no attributable measurement
+  ibac_sni   22.14 GiB   at None frames, profile=None, card 32 GiB
+  ctrl           --      no attributable measurement
+
+  6 family(ies) still without an attributable VRAM measurement: rlvigen, dmc_gb, idaac, alda, ppg, ctrl
+  These are OBSERVED PEAKS OF PAST RUNS, not upper bounds on a different configuration.
+  gpu-util is a DUTY CYCLE -- the fraction of time a kernel was resident, not occupancy.
+  One kernel on one SM of eighty reads 100%. Do not add these across processes.
+  None was measured at the 600k production budget on a V100. Do not scale them.

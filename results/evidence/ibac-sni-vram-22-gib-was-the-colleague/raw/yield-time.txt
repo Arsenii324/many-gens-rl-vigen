@@ -1,0 +1,17 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: yield-time
+# note: the yield epoch in Moscow time: between two 60 s occupancy samples
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import datetime as d
+#   print('s101 yield', d.datetime.fromtimestamp(1789558045, d.timezone(d.timedelta(hours=3))).isoformat())
+#   "
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import datetime as d
+#   print('s101 yield', d.datetime.fromtimestamp(1789558045, d.timezone(d.timedelta(hours=3))).isoformat())
+#   " ) | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:42:44+00:00
+#---------------------------------------------------------------------------------------------------
+s101 yield 2026-09-16T14:27:25+03:00

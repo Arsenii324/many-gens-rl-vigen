@@ -418,6 +418,22 @@ register exists to prevent.
 
 **Supersedes.** bb05db6's 'The cause was our own process-count yield' and STOP-MECHANISMS.md row 2's 'it killed ibac_sni-s1' (struck through in place). d0899fb's account of attempt 3 stands and is now evidenced.
 
+### `vram-ours-peak-sums-the-whole-card` — **resolved**
+
+**Q.** Is ibac_sni at procs=16 really 22,675 MiB (22.14 GiB) of VRAM, as measure_vram_bounds.py reported for card1-20260916-141636?
+
+**Verdict.** No. measure_vram_bounds.py (bb191cd) sums every gpu_compute_processes entry in a sample, with no filter to the cell's tree (whose pids are container-namespace and could not be matched anyway). 22,675 = two 10,650 MiB processes (21,300) + our three small ones (1,375). The card minus our two starting processes was 22,836 MiB at the first sample, exactly the colleague-only reading of the on-host logger (rlvigen_kalugin_df, 2 processes). The cell itself reached ~6,596 MiB (card delta) when the memory floor stood it down 42 s in with its process count still rising 2 -> 20: a lower bound, not a footprint. Any ours_peak measured on a shared card is inflated the same way; EGL render memory is invisible to per-process sums.
+
+**Why.** A packing and parking decision (ibac parked until 26.7 GB free) and a bounds-file entry rest on this number. Captured before the fix so the defective revision's output is reproducible from the committed resources.json.
+
+**Evidence.** `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/decompose.txt:66`, `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/decompose.txt:67`, `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/decompose.txt:68`, `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/decompose.txt:65`, `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/script-report.txt:22`, `results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/occupancy.txt:13`
+
+**Falsified by.** The two 10,650 MiB pids turning out to be in the cell's own tree, or the rest of card 1 not being ~22.8 GB during 14:26-14:28.
+
+**Pinned by.** `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** The 22,675 MiB ibac_sni entry in datasphere/native/measured-vram-bounds.json and the parking threshold derived from it; also the unmeasured '~15 GiB' in ibac-waiter.log.
+
 ## reproducibility
 
 ### `random-floor-survives-closure-change` — **resolved**

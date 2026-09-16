@@ -1,0 +1,68 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: decompose
+# note: the samples decomposed: which pids, how long, how the card grew
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   body = open('results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#   r = json.loads(body)
+#   s = r['samples']
+#   ms = [x['monotonic_seconds'] for x in s]
+#   print('samples', len(s), 'span_s', round(ms[-1] - ms[0], 1), 'cadence_s', round((ms[-1] - ms[0]) / (len(s) - 1), 2))
+#   print('card uuid', sorted({g['gpu_uuid'] for x in s for g in x['gpu_devices']}))
+#   tree = {p['pid'] for x in s for p in x['processes']}
+#   print('tree pids (container namespace) min', min(tree), 'max', max(tree), 'count', len(tree))
+#   last = s[-1]
+#   for p in sorted(last['gpu_compute_processes'], key=lambda p: -p['used_memory_mib']):
+#       print('compute pid', p['pid'], 'MiB', p['used_memory_mib'], 'in tree', p['pid'] in tree)
+#   first = s[0]
+#   print('card used first', first['gpu_devices'][0]['used_memory_mib'], 'last', last['gpu_devices'][0]['used_memory_mib'])
+#   print('process_count first', first['process_count'], 'last', last['process_count'])
+#   big = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] > 5000)
+#   small = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)
+#   print('compute sum', big + small, '= two 10650 pids', big, '+ three small pids', small)
+#   f_small = sum(p['used_memory_mib'] for p in first['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)
+#   print('first sample: card', first['gpu_devices'][0]['used_memory_mib'], '- our small pids', f_small, '=', first['gpu_devices'][0]['used_memory_mib'] - f_small, 'MiB held by everything else')
+#   print('last sample: card', last['gpu_devices'][0]['used_memory_mib'], '- that =', last['gpu_devices'][0]['used_memory_mib'] - (first['gpu_devices'][0]['used_memory_mib'] - f_small), 'MiB ours if the rest stayed constant')
+#   "
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# inputs: results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt=2f0f74bc10e16fdc
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   body = open('results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#   r = json.loads(body)
+#   s = r['samples']
+#   ms = [x['monotonic_seconds'] for x in s]
+#   print('samples', len(s), 'span_s', round(ms[-1] - ms[0], 1), 'cadence_s', round((ms[-1] - ms[0]) / (len(s) - 1), 2))
+#   print('card uuid', sorted({g['gpu_uuid'] for x in s for g in x['gpu_devices']}))
+#   tree = {p['pid'] for x in s for p in x['processes']}
+#   print('tree pids (container namespace) min', min(tree), 'max', max(tree), 'count', len(tree))
+#   last = s[-1]
+#   for p in sorted(last['gpu_compute_processes'], key=lambda p: -p['used_memory_mib']):
+#       print('compute pid', p['pid'], 'MiB', p['used_memory_mib'], 'in tree', p['pid'] in tree)
+#   first = s[0]
+#   print('card used first', first['gpu_devices'][0]['used_memory_mib'], 'last', last['gpu_devices'][0]['used_memory_mib'])
+#   print('process_count first', first['process_count'], 'last', last['process_count'])
+#   big = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] > 5000)
+#   small = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)
+#   print('compute sum', big + small, '= two 10650 pids', big, '+ three small pids', small)
+#   f_small = sum(p['used_memory_mib'] for p in first['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)
+#   print('first sample: card', first['gpu_devices'][0]['used_memory_mib'], '- our small pids', f_small, '=', first['gpu_devices'][0]['used_memory_mib'] - f_small, 'MiB held by everything else')
+#   print('last sample: card', last['gpu_devices'][0]['used_memory_mib'], '- that =', last['gpu_devices'][0]['used_memory_mib'] - (first['gpu_devices'][0]['used_memory_mib'] - f_small), 'MiB ours if the rest stayed constant')
+#   " ) | head -n 200
+# matched-lines: 13  shown-lines: 13
+# captured-at: 2026-09-16T11:42:34+00:00
+#---------------------------------------------------------------------------------------------------
+samples 38 span_s 42.4 cadence_s 1.15
+card uuid ['GPU-6325104e-9447-4ce3-1272-7b436a1b61af']
+tree pids (container namespace) min 3067 max 3324 count 21
+compute pid 531901 MiB 10650 in tree False
+compute pid 536927 MiB 10650 in tree False
+compute pid 586690 MiB 759 in tree False
+compute pid 586481 MiB 308 in tree False
+compute pid 586469 MiB 308 in tree False
+card used first 23452 last 29432
+process_count first 2 last 20
+compute sum 22675 = two 10650 pids 21300 + three small pids 1375
+first sample: card 23452 - our small pids 616 = 22836 MiB held by everything else
+last sample: card 29432 - that = 6596 MiB ours if the rest stayed constant

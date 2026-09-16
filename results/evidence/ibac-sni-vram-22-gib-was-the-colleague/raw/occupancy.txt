@@ -1,0 +1,16 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: occupancy
+# note: card 1 by the on-host 60 s logger, around the cell: the colleague alone at 22,836 MiB with 2 processes
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/gpu-occupancy.log
+# source-bytes: 430579  source-sha256: 807e0633cab74763eede5edcbcb91ec53b433dfa6210808524996a58c62ff7a1  source-mtime: 2026-09-16T11:42:00+00:00
+# extraction: cat "$HOME"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T14:(2[4-9]).*card=1' | head -n 200
+# matched-lines: 6  shown-lines: 6
+# captured-at: 2026-09-16T11:42:43+00:00
+#---------------------------------------------------------------------------------------------------
+4735:2026-09-16T14:24:49+03:00 card=1 mem=22692 util=94 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df
+4737:2026-09-16T14:25:50+03:00 card=1 mem=22836 util=93 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df
+4739:2026-09-16T14:26:50+03:00 card=1 mem=22836 util=39 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df
+4741:2026-09-16T14:27:51+03:00 card=1 mem=22837 util=36 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df
+4743:2026-09-16T14:28:51+03:00 card=1 mem=22837 util=41 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df
+4745:2026-09-16T14:29:52+03:00 card=1 mem=22837 util=46 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df

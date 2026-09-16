@@ -1,0 +1,14 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: stop
+# note: the cell was stood down by the memory floor
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-141636/native-out/job.log
+# source-bytes: 220895  source-sha256: ccd22eed863132eb6098587a8d704bf756c72391b1775af45a0d24e45b8777f9  source-mtime: 2026-09-16T11:27:50+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card1-20260916-141636/native-out/job.log | grep -n -E '^yielded at|^free_mib=|NATIVE_CELL_(YIELDED|FAILED)' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T11:42:34+00:00
+#---------------------------------------------------------------------------------------------------
+2612:=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===
+2613:yielded at 1789558045: free memory 3063 MiB is below the 4000 MiB floor
+2614:free_mib=3063 procs=5 util=16
+2616:=== NATIVE_CELL_FAILED ibac_sni-s101 ===

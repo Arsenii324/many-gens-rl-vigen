@@ -1,0 +1,12 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: card-map
+# note: host card index to UUID (read-only query)
+# source-kind: local-command
+# source: ssh -o BatchMode=yes varaksin_as@100.98.2.11 nvidia-smi -L
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# extraction: ( ssh -o BatchMode=yes varaksin_as@100.98.2.11 nvidia-smi -L ) | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:42:39+00:00
+#---------------------------------------------------------------------------------------------------
+GPU 0: Tesla V100-SXM2-32GB (UUID: GPU-8b832400-dafc-234e-fe65-5e9644f14d83)
+GPU 1: Tesla V100-SXM2-32GB (UUID: GPU-6325104e-9447-4ce3-1272-7b436a1b61af)

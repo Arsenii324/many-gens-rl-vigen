@@ -1,0 +1,275 @@
+{
+  "slug": "ibac-sni-vram-22-gib-was-the-colleague",
+  "excerpts": {
+    "resources": {
+      "file": "raw/resources.txt",
+      "sha256": "2f0f74bc10e16fdc0b83ecc37dc87a535837261d4b744238289fb3319636596d",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-141636/native-out/cells/ibac_sni-s101/resources.json",
+        "bytes": 101749,
+        "sha256": "088aa6131e6222941dc630b93e5b3f3ac1c4f78182e1f9161d19305c419460c0",
+        "mtime": "2026-09-16T11:27:39+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-141636/native-out/cells/ibac_sni-s101/resources.json",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:42:30+00:00",
+      "note": "nvidia-smi samples from the ibac_sni-s101 cell (procs=16) on card 1, written by measure_resources.py"
+    },
+    "stop": {
+      "file": "raw/stop.txt",
+      "sha256": "f4fc80eb9c022602d623a3bb44e90b0bf2fd448a2def573c64eeaf346734b5c6",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-141636/native-out/job.log",
+        "bytes": 220895,
+        "sha256": "ccd22eed863132eb6098587a8d704bf756c72391b1775af45a0d24e45b8777f9",
+        "mtime": "2026-09-16T11:27:50+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-141636/native-out/job.log | grep -n -E '^yielded at|^free_mib=|NATIVE_CELL_(YIELDED|FAILED)' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T11:42:34+00:00",
+      "note": "the cell was stood down by the memory floor"
+    },
+    "script-report": {
+      "file": "raw/script-report.txt",
+      "sha256": "0ae403d8f5d197d60f8d5a165bedac7bf636d113be22897e87b09d13b3314112",
+      "source": {
+        "kind": "local-command",
+        "command": "mkdir -p /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101 && sed '1,/^#---/d' results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101/resources.json && git show bb191cd:scripts/measure_vram_bounds.py > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/measure_vram_bounds_bb191cd.py && cd /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5 && \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" measure_vram_bounds_bb191cd.py data",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {
+          "results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt": "2f0f74bc10e16fdc0b83ecc37dc87a535837261d4b744238289fb3319636596d"
+        }
+      },
+      "extraction": "( mkdir -p /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101 && sed '1,/^#---/d' results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/data/ibac_sni-s101/resources.json && git show bb191cd:scripts/measure_vram_bounds.py > /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5/measure_vram_bounds_bb191cd.py && cd /Users/a2mogus/.claude/jobs/8f653a27/tmp/vram5 && \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" measure_vram_bounds_bb191cd.py data ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 18,
+      "shown_lines": 18,
+      "captured_at": "2026-09-16T11:42:34+00:00",
+      "note": "scripts/measure_vram_bounds.py as of bb191cd, over exactly the captured file"
+    },
+    "script-sum": {
+      "file": "raw/script-sum.txt",
+      "sha256": "3226e1b0bee8fb2543f2095a613617a0659c4401382820c9955eadf9c2a38731",
+      "source": {
+        "kind": "local-command",
+        "command": "git show bb191cd:scripts/measure_vram_bounds.py",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {}
+      },
+      "extraction": "( git show bb191cd:scripts/measure_vram_bounds.py ) | grep -n -E 'ours_peak = |procs = |for sample in samples' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 4,
+      "shown_lines": 4,
+      "captured_at": "2026-09-16T11:42:34+00:00",
+      "note": "the script sums EVERY compute process in a sample; nothing filters to our process tree"
+    },
+    "script-claim": {
+      "file": "raw/script-claim.txt",
+      "sha256": "9e737bc52e1fc24ac530005923fb1264ef9296c33e6697c338e62eb2e5d906c6",
+      "source": {
+        "kind": "local-command",
+        "command": "git show bb191cd:scripts/measure_vram_bounds.py",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {}
+      },
+      "extraction": "( git show bb191cd:scripts/measure_vram_bounds.py ) | grep -n -E 'belonging to this cell'\"'\"'s process tree|silently inflate' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:42:34+00:00",
+      "note": "what the script says it does"
+    },
+    "decompose": {
+      "file": "raw/decompose.txt",
+      "sha256": "ed90635196f58f45c01cd438b13086b6abd78b680ba437a1431d3da0ade6692d",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\nbody = open('results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\nr = json.loads(body)\ns = r['samples']\nms = [x['monotonic_seconds'] for x in s]\nprint('samples', len(s), 'span_s', round(ms[-1] - ms[0], 1), 'cadence_s', round((ms[-1] - ms[0]) / (len(s) - 1), 2))\nprint('card uuid', sorted({g['gpu_uuid'] for x in s for g in x['gpu_devices']}))\ntree = {p['pid'] for x in s for p in x['processes']}\nprint('tree pids (container namespace) min', min(tree), 'max', max(tree), 'count', len(tree))\nlast = s[-1]\nfor p in sorted(last['gpu_compute_processes'], key=lambda p: -p['used_memory_mib']):\n    print('compute pid', p['pid'], 'MiB', p['used_memory_mib'], 'in tree', p['pid'] in tree)\nfirst = s[0]\nprint('card used first', first['gpu_devices'][0]['used_memory_mib'], 'last', last['gpu_devices'][0]['used_memory_mib'])\nprint('process_count first', first['process_count'], 'last', last['process_count'])\nbig = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] > 5000)\nsmall = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)\nprint('compute sum', big + small, '= two 10650 pids', big, '+ three small pids', small)\nf_small = sum(p['used_memory_mib'] for p in first['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)\nprint('first sample: card', first['gpu_devices'][0]['used_memory_mib'], '- our small pids', f_small, '=', first['gpu_devices'][0]['used_memory_mib'] - f_small, 'MiB held by everything else')\nprint('last sample: card', last['gpu_devices'][0]['used_memory_mib'], '- that =', last['gpu_devices'][0]['used_memory_mib'] - (first['gpu_devices'][0]['used_memory_mib'] - f_small), 'MiB ours if the rest stayed constant')\n\"",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {
+          "results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt": "2f0f74bc10e16fdc0b83ecc37dc87a535837261d4b744238289fb3319636596d"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\nbody = open('results/evidence/ibac-sni-vram-22-gib-was-the-colleague/raw/resources.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\nr = json.loads(body)\ns = r['samples']\nms = [x['monotonic_seconds'] for x in s]\nprint('samples', len(s), 'span_s', round(ms[-1] - ms[0], 1), 'cadence_s', round((ms[-1] - ms[0]) / (len(s) - 1), 2))\nprint('card uuid', sorted({g['gpu_uuid'] for x in s for g in x['gpu_devices']}))\ntree = {p['pid'] for x in s for p in x['processes']}\nprint('tree pids (container namespace) min', min(tree), 'max', max(tree), 'count', len(tree))\nlast = s[-1]\nfor p in sorted(last['gpu_compute_processes'], key=lambda p: -p['used_memory_mib']):\n    print('compute pid', p['pid'], 'MiB', p['used_memory_mib'], 'in tree', p['pid'] in tree)\nfirst = s[0]\nprint('card used first', first['gpu_devices'][0]['used_memory_mib'], 'last', last['gpu_devices'][0]['used_memory_mib'])\nprint('process_count first', first['process_count'], 'last', last['process_count'])\nbig = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] > 5000)\nsmall = sum(p['used_memory_mib'] for p in last['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)\nprint('compute sum', big + small, '= two 10650 pids', big, '+ three small pids', small)\nf_small = sum(p['used_memory_mib'] for p in first['gpu_compute_processes'] if p['used_memory_mib'] <= 5000)\nprint('first sample: card', first['gpu_devices'][0]['used_memory_mib'], '- our small pids', f_small, '=', first['gpu_devices'][0]['used_memory_mib'] - f_small, 'MiB held by everything else')\nprint('last sample: card', last['gpu_devices'][0]['used_memory_mib'], '- that =', last['gpu_devices'][0]['used_memory_mib'] - (first['gpu_devices'][0]['used_memory_mib'] - f_small), 'MiB ours if the rest stayed constant')\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 13,
+      "shown_lines": 13,
+      "captured_at": "2026-09-16T11:42:34+00:00",
+      "note": "the samples decomposed: which pids, how long, how the card grew"
+    },
+    "card-map": {
+      "file": "raw/card-map.txt",
+      "sha256": "c85963b9a4353c8ca6d1553a62321d28a7bbce697efc35570e8c09ceb2d2a78c",
+      "source": {
+        "kind": "local-command",
+        "command": "ssh -o BatchMode=yes varaksin_as@100.98.2.11 nvidia-smi -L",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {}
+      },
+      "extraction": "( ssh -o BatchMode=yes varaksin_as@100.98.2.11 nvidia-smi -L ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-16T11:42:39+00:00",
+      "note": "host card index to UUID (read-only query)"
+    },
+    "occupancy": {
+      "file": "raw/occupancy.txt",
+      "sha256": "1683a877d5cb6a6f903f3e6a10d1f040d1954b71dfea827fa21af885e576bf45",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/gpu-occupancy.log",
+        "bytes": 430579,
+        "sha256": "807e0633cab74763eede5edcbcb91ec53b433dfa6210808524996a58c62ff7a1",
+        "mtime": "2026-09-16T11:42:00+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/gpu-occupancy.log | grep -n -E '^2026-09-16T14:(2[4-9]).*card=1' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:42:43+00:00",
+      "note": "card 1 by the on-host 60 s logger, around the cell: the colleague alone at 22,836 MiB with 2 processes"
+    },
+    "yield-time": {
+      "file": "raw/yield-time.txt",
+      "sha256": "61e98df2c4eb9a0e76b00d419296aadc9b64fcebd194f96ffea314fed1ba2903",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport datetime as d\nprint('s101 yield', d.datetime.fromtimestamp(1789558045, d.timezone(d.timedelta(hours=3))).isoformat())\n\"",
+        "repo_head": "bb191cd81e8a397d4fbbbf8bd56834dd3264388f",
+        "inputs": {}
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport datetime as d\nprint('s101 yield', d.datetime.fromtimestamp(1789558045, d.timezone(d.timedelta(hours=3))).isoformat())\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:42:44+00:00",
+      "note": "the yield epoch in Moscow time: between two 60 s occupancy samples"
+    },
+    "unmeasured-waiter-figure": {
+      "file": "raw/unmeasured-waiter-figure.txt",
+      "sha256": "2e355df313cdb950076ee02ef59e013943fdbbd47e5e9851db98d6e0a41ba10c",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/ibac-waiter.log",
+        "bytes": 387,
+        "sha256": "e72472bbe728fa7b5e5951e922615ffe0a0a59ae8d3ac070aa77a34a39fa83f6",
+        "mtime": "2026-09-16T11:16:20+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/ibac-waiter.log | grep -n -E 'measured ~15 GiB' | head -n 1",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:42:48+00:00",
+      "note": "an earlier figure, \"measured ~15 GiB\", that no measurement backs either"
+    }
+  },
+  "facts": [
+    {
+      "key": "s101_reason",
+      "value": "memory-floor",
+      "excerpt": "stop",
+      "anchor": "free memory 3063 MiB is below the 4000 MiB floor"
+    },
+    {
+      "key": "reported_ours_mib",
+      "value": "22675",
+      "excerpt": "script-report",
+      "anchor": "ibac_sni-s101        ibac_sni      None   22675 Mi   29432 Mi"
+    },
+    {
+      "key": "reported_ours_gib",
+      "value": "22.14",
+      "excerpt": "script-report",
+      "anchor": "ibac_sni   22.14 GiB"
+    },
+    {
+      "key": "sums_all_processes",
+      "value": "true",
+      "excerpt": "script-sum",
+      "anchor": "sum(int(p.get(\"used_memory_mib\") or 0) for p in procs)"
+    },
+    {
+      "key": "sampler_span_s",
+      "value": "42.4",
+      "excerpt": "decompose",
+      "anchor": "samples 38 span_s 42.4"
+    },
+    {
+      "key": "card",
+      "value": "GPU-6325104e",
+      "excerpt": "decompose",
+      "anchor": "card uuid ['GPU-6325104e-9447-4ce3-1272-7b436a1b61af']"
+    },
+    {
+      "key": "colleague_sized_pids",
+      "value": "21300",
+      "excerpt": "decompose",
+      "anchor": "= two 10650 pids 21300 + three small pids 1375"
+    },
+    {
+      "key": "no_compute_pid_in_tree",
+      "value": "true",
+      "excerpt": "decompose",
+      "anchor": "compute pid 586690 MiB 759 in tree False"
+    },
+    {
+      "key": "card_growth",
+      "value": "23452 -> 29432",
+      "excerpt": "decompose",
+      "anchor": "card used first 23452 last 29432"
+    },
+    {
+      "key": "still_starting",
+      "value": "process_count 2 -> 20",
+      "excerpt": "decompose",
+      "anchor": "process_count first 2 last 20"
+    },
+    {
+      "key": "rest_of_card_at_start_mib",
+      "value": "22836",
+      "excerpt": "decompose",
+      "anchor": "= 22836 MiB held by everything else"
+    },
+    {
+      "key": "ours_at_kill_if_rest_constant_mib",
+      "value": "6596",
+      "excerpt": "decompose",
+      "anchor": "= 6596 MiB ours if the rest stayed constant"
+    },
+    {
+      "key": "card1_uuid",
+      "value": "GPU-6325104e",
+      "excerpt": "card-map",
+      "anchor": "GPU 1: Tesla V100-SXM2-32GB (UUID: GPU-6325104e-9447-4ce3-1272-7b436a1b61af)"
+    },
+    {
+      "key": "colleague_alone_mib",
+      "value": "22836",
+      "excerpt": "occupancy",
+      "anchor": "card=1 mem=22836 util=39 procs=2 holders=rlvigen_kalugin_df,rlvigen_kalugin_df"
+    },
+    {
+      "key": "s101_yield_time",
+      "value": "2026-09-16T14:27:25+03:00",
+      "excerpt": "yield-time",
+      "anchor": "s101 yield 2026-09-16T14:27:25+03:00"
+    },
+    {
+      "key": "waiter_claimed_gib",
+      "value": "15",
+      "excerpt": "unmeasured-waiter-figure",
+      "anchor": "ibac_sni procs=16 measured ~15 GiB"
+    }
+  ]
+}

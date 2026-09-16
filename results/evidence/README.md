@@ -22,6 +22,7 @@ answer without re-running anything:
 | [ibac-sni-16sep-three-stops](ibac-sni-16sep-three-stops/CLAIM.md) | What stopped each of ibac_sni's three production attempts on 16 Sep? | resolved (floor, worker death, floor; corrects STOP-MECHANISMS row 2) |
 | [ppg-banked-seed-is-off-schedule](ppg-banked-seed-is-off-schedule/CLAIM.md) | Which seed is the admissible ppg result, against the production schedule? | resolved (seed 1; schedule names 101-103, already at launch) |
 | [evaluator-noise-full-grid-replicate-ppg](evaluator-noise-full-grid-replicate-ppg/CLAIM.md) | Two complete ppg endpoint grids from one invocation: how much do they differ, and does it need sampling? | resolved (mode rows vary too; 0.21/0.33 SE; medium and hard never reproduce) |
+| [ibac-sni-vram-22-gib-was-the-colleague](ibac-sni-vram-22-gib-was-the-colleague/CLAIM.md) | Is ibac_sni at procs=16 really 22.1 GiB of VRAM? | resolved: no, 21.3 GiB of that is the colleague's; ours was about 6.6 GB when stopped at 42 s (lower bound) |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 
 ## Finding something

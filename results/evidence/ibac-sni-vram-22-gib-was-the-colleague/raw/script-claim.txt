@@ -1,0 +1,12 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: script-claim
+# note: what the script says it does
+# source-kind: local-command
+# source: git show bb191cd:scripts/measure_vram_bounds.py
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# extraction: ( git show bb191cd:scripts/measure_vram_bounds.py ) | grep -n -E 'belonging to this cell'"'"'s process tree|silently inflate' | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-16T11:42:34+00:00
+#---------------------------------------------------------------------------------------------------
+25:  `gpu_compute_processes` belonging to this cell's process tree. This is what OUR run occupies, and
+31:Reporting only the card total would silently inflate our bound with someone else's usage; reporting

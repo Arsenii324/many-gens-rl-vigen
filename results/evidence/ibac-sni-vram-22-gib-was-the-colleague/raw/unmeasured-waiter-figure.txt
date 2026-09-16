@@ -1,0 +1,11 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: unmeasured-waiter-figure
+# note: an earlier figure, "measured ~15 GiB", that no measurement backs either
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/ibac-waiter.log
+# source-bytes: 387  source-sha256: e72472bbe728fa7b5e5951e922615ffe0a0a59ae8d3ac070aa77a34a39fa83f6  source-mtime: 2026-09-16T11:16:20+00:00
+# extraction: cat "$HOME"/rlvigen-runs/ibac-waiter.log | grep -n -E 'measured ~15 GiB' | head -n 1
+# matched-lines: 2  shown-lines: 1  (TRUNCATED -- the excerpt is capped; matched-lines is the full count)
+# captured-at: 2026-09-16T11:42:48+00:00
+#---------------------------------------------------------------------------------------------------
+1:2026-09-16T12:15:54+03:00 waiting for >= 18000 MiB free on either card (ibac_sni procs=16 measured ~15 GiB)

@@ -1,0 +1,14 @@
+# evidence-slug: ibac-sni-vram-22-gib-was-the-colleague
+# excerpt: script-sum
+# note: the script sums EVERY compute process in a sample; nothing filters to our process tree
+# source-kind: local-command
+# source: git show bb191cd:scripts/measure_vram_bounds.py
+# repo-head: bb191cd81e8a397d4fbbbf8bd56834dd3264388f
+# extraction: ( git show bb191cd:scripts/measure_vram_bounds.py ) | grep -n -E 'ours_peak = |procs = |for sample in samples' | head -n 200
+# matched-lines: 4  shown-lines: 4
+# captured-at: 2026-09-16T11:42:34+00:00
+#---------------------------------------------------------------------------------------------------
+129:    ours_peak = 0
+132:    for sample in samples:
+137:        procs = sample.get("gpu_compute_processes") or []
+139:            ours_peak = max(ours_peak, sum(int(p.get("used_memory_mib") or 0) for p in procs))
