@@ -46,7 +46,7 @@ so the clone's own default is what runs -- a distinction section 4 does not draw
 | baseline | rollout (base &rarr; v100) | entropy coef | epochs | minibatches | max grad norm |
 |---|---|---|---|---|---|
 | `idaac` | 1x2048=2048 | 0 <sub>descriptor</sub> | 10 <sub>descriptor</sub> | 32 <sub>descriptor</sub> | 0.5 <sub>default</sub> |
-| `ppg` | 1x2048=2048 | 0 <sub>descriptor</sub> | E_pi 1, E_V 1, E_aux 6 <sub>train_fn defaults, not CLI-reachable</sub> | 32 <sub>descriptor</sub> | **none** <sub>no clipping mechanism exists</sub> |
+| `ppg` | 1x2048=2048 | 0 <sub>descriptor</sub> | E_pi 1, E_V 1, E_aux 6 <sub>train_fn defaults, not CLI-reachable</sub> | 1 <sub>descriptor</sub> | **none** <sub>no clipping mechanism exists</sub> |
 | `ibac_sni` | 1x128=128 &rarr; **16x128=2048** | 0.0 <sub>launcher</sub> | 4 <sub>default</sub> | 256 <sub>default</sub> | 0.5 <sub>default</sub> |
 | `ctrl` | 16x256=4096 &rarr; **64x256=16384** | 0.01 <sub>default</sub> | 3 <sub>default</sub> | 8 <sub>descriptor</sub> | 0.5 <sub>declared, inert</sub> |
 

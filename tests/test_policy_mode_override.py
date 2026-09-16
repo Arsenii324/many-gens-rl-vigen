@@ -46,7 +46,15 @@ def test_every_sampling_family_honours_it():
     text = GRID.read_text()
     assert 'agent.act(obs, deterministic=(policy_mode == "mode"))' in text, "idaac"
     assert 'policy_mode == "mode", 1,' in text, "ibac_sni's argmax positional"
-    assert "act_fn = agent.act" in text and "pd.mean" in text, "ppg's Roller wrapper"
+    # [Claude 2026-09-16] Was `"act_fn = agent.act" in text`. ppg's mode path moved into
+    # ppg_mode_act_fn() -- which is where the no_grad a production cell died without now lives -- so
+    # the line reads `act_fn = ppg_mode_act_fn(agent) if policy_mode == "mode" else agent.act` and
+    # the old literal no longer appears. The override is demonstrably intact: on identical weights
+    # (a328e63e) the endpoint grid reads train 22.69 sampled against 42.86 at the mode.
+    assert "def ppg_mode_act_fn" in text, "ppg's mode wrapper is gone"
+    assert "pd.mean" in text, "ppg takes the Normal's mean as its mode"
+    assert 'ppg_mode_act_fn(agent) if policy_mode == "mode"' in text, (
+        "the wrapper exists but nothing selects it on policy_mode")
 
     assert 'sample=(policy_mode != "mode")' not in text, (
         "ctrl must not branch on policy_mode: its native rule IS the mode, so branching would "

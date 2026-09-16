@@ -54,3 +54,41 @@ policy trained on one robot appearance it is the hardest.
 small (22.69 vs 17.96 at the endpoint). eval-medium and eval-hard are NOT paired across passes --
 60% and 6% of their slots vary -- so a gap involving them carries perturbation variance on top of
 episode variance. That is `audit_eval_validity.py`'s standing caveat, measured again on these rows.
+
+
+---
+
+## Provenance cross-check: the `--nminibatch 32` in the training log
+
+The suite's fidelity-table check went stale today because ppg's descriptor reads `nminibatch: 1`
+while `docs/FAITHFULNESS.md` still said 32. Chasing that turned up an apparent problem with THIS
+run: `card0-20260909-115331`'s training log declares **`--nminibatch 32`**, and the descriptor now
+declares 1. A headline result trained under a configuration the project has since changed would be
+a serious caveat.
+
+**It is not one, and the repo had already established why.** Commit `237f876` (2026-09-10 08:44)
+investigated this exact run:
+
+> card0-20260909-115331 ran 600,000 frames declaring `--nminibatch 32` and **executing 1**, logging
+> `Warning: nminibatch > ntrain!! (32 > 1)` 293 times. `minibatch_optimize` splits the LEADING axis
+> and `Roller.singles_to_multi` documents that axis as "(batch, time)", so `ntrain` is `num_envs`
+> and any nminibatch above 1 is inexpressible at `num_envs=1`.
+
+And on fidelity:
+
+> Against PPG's own released 1-rank recipe -- 64x256 = 16384 with 1 epoch x 8 minibatches, 8
+> gradient steps of 2048 samples, 0.00048828 steps per env frame -- our executed 1 step of 2048
+> samples per 2048 frames is 0.00048828 per env frame. Density AND per-step batch size are
+> identical. The clamp did not damage fidelity to PPG; the declared 32 would have... **the run
+> itself is a faithful PPG needing no re-run.**
+
+So the 32 is a DECLARATION that the trainer clamped, not an executed setting. The descriptor was
+corrected to 1 to describe what actually runs, and the clamp now raises instead of warning, so the
+same silent substitution cannot recur.
+
+**These weights are faithful PPG at `num_envs=1, nstep=2048, nminibatch=1`.** The result stands.
+
+Worth keeping as method rather than trivia: the discrepancy was found by a stale DOCUMENT, chased
+into the training log, and resolved by a commit message that had already done the work from the
+producer's source. Reading the repo before concluding turned a would-be retraction into a
+confirmation.
