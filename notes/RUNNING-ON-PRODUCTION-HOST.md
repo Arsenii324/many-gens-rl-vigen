@@ -759,8 +759,8 @@ every parameter has a default:
 | `VRAM_MIB` | `4096` | `NATIVE_VRAM_CAP_MIB`; **does not bind** — every family launcher overwrites `PYTHONPATH` |
 
 **The `CARD`/`YIELD_PROCS` interaction is not obvious and has cost a cell.** `launch-card-cell.sh`
-refuses any non-zero card unless `NATIVE_YIELD_ON_PROCESSES=1` — "a card that is not ours is not
-ours to take". But v5 also sets `NATIVE_ALLOW_SHARED_CARD=1`, and on a non-zero card that
+refuses any non-zero card unless `NATIVE_YIELD_ON_PROCESSES=1`, and says why in the refusal:
+*"Any other card must process-yield, because it is not ours to take."* But v5 also sets `NATIVE_ALLOW_SHARED_CARD=1`, and on a non-zero card that
 combination sets `YIELD_PROCS=()`: the gate is satisfied and the process yield is then deliberately
 **not applied**. The launcher's own comment records why — the count trigger once killed a
 production training cell ten minutes in, because it saw two colleagues on a card we had chosen to
@@ -886,6 +886,18 @@ python scripts/campaign_status.py
 python scripts/export_fleet.py --csv fleet.csv     # flat table + documented schema
 python scripts/production_gates.py | tail -3
 ```
+
+> **There are TWO attempt systems, and until 2026-09-16 only one of them was gated.**
+> `results/submissions.jsonl` records DataSphere jobs and `audit_attempt_ledger.py --strict` refuses
+> when an earlier attempt's outcome cannot be read — that is what enforces "a rerun never silently
+> replaces a failed seed". Host cells are not DataSphere jobs: they are recorded in
+> `results/host-runs.jsonl` by `record_host_run.py`, and **nothing refused anything about them.** So
+> the guarantee held for the jobs we had stopped running and not for the ones we had started. It
+> became concrete when five ibac_sni cells failed on the host in one day; a sixth could have been
+> launched with nothing on disk saying what became of its predecessors. `audit_attempt_ledger.py`
+> now checks both, with the same rule: for a (baseline, seed) attempted more than once, every
+> attempt but the newest must carry a terminal status. **So record the launch (§3.0a) and update its
+> status when it ends** — that is not bookkeeping etiquette, it is what the gate reads.
 
 `populate_evaluator_ledger.py` **refuses a record whose evaluator revision is not the live one**,
 and that refusal is the most valuable thing it does. Never pipe it through `tail` and read `$?` —

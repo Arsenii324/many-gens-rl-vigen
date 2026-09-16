@@ -137,6 +137,61 @@ def _outcome(job_id: str, live: dict[str, str], recorded: dict[str, dict]) -> tu
                           f"kind {sorted(str(k) for k in kinds)}")
 
 
+#: Host runs are a SECOND attempt system and nothing gated them until 2026-09-16.
+#:
+#: This audit's promise -- "a rerun never silently replaces a failed seed" -- was built against
+#: `results/submissions.jsonl`, which records DataSphere jobs. Production no longer runs there: it
+#: runs on the V100 host, whose attempts are recorded in `results/host-runs.jsonl` by
+#: `scripts/record_host_run.py`. So the guarantee held for the jobs we had stopped running and not
+#: for the ones we had started.
+#:
+#: It became concrete on 2026-09-16, when FIVE ibac_sni cells failed on the host in one day. A sixth
+#: attempt at the same (baseline, seed) could have been launched with nothing refusing, and nothing
+#: on disk saying what became of its predecessors -- exactly the shape this file exists to catch.
+#:
+#: The check is the same one, in the same spirit: for a (baseline, seed) attempted more than once,
+#: every attempt but the newest must carry a terminal status. "running", empty, or absent on an
+#: EARLIER attempt is the refusal. The newest attempt is never flagged, because the currently
+#: running cell legitimately has no outcome yet.
+HOST_LEDGER = ROOT / "results" / "host-runs.jsonl"
+_TERMINAL_HINTS = ("fail", "complete", "done", "collected", "stopped", "yield", "cancel",
+                   "superseded", "abandoned")
+
+
+def _host_attempts() -> dict[tuple[str, object], list[tuple[str, str]]]:
+    """{(baseline, seed): [(run_id, status), ...]} ordered oldest first."""
+    out: dict[tuple[str, object], list[tuple[str, str]]] = collections.defaultdict(list)
+    if not HOST_LEDGER.is_file():
+        return out
+    for line in HOST_LEDGER.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        key = (row.get("baseline"), row.get("seed"))
+        out[key].append((str(row.get("run_id") or "?"), str(row.get("status") or "")))
+    for key in out:
+        out[key].sort(key=lambda pair: pair[0])
+    return out
+
+
+def _host_problems() -> list[str]:
+    problems: list[str] = []
+    for (baseline, seed), rows in sorted(_host_attempts().items(), key=lambda kv: str(kv[0])):
+        if len(rows) < 2:
+            continue
+        for run_id, status in rows[:-1]:          # never the newest
+            low = status.lower()
+            if not low or not any(h in low for h in _TERMINAL_HINTS):
+                problems.append(
+                    f"{baseline}:{seed} attempt {run_id} has status {status!r}, which is not a "
+                    "terminal outcome, and a later attempt exists. Record what became of it with "
+                    "`scripts/record_host_run.py <dir> --update-status ...`")
+    return problems
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--strict", action="store_true",
@@ -206,9 +261,24 @@ def main() -> int:
             print(f"    {job}  {entry['state']}  {entry['reason']}")
         print()
 
+    host = _host_attempts()
+    host_problems = _host_problems()
+    print()
+    print(f"  HOST attempts (results/host-runs.jsonl): {sum(len(v) for v in host.values())} run(s) "
+          f"across {len(host)} (baseline, seed) pair(s).")
+    if host_problems:
+        for prob in host_problems:
+            print(f"    REFUSING: {prob}")
+    else:
+        print("    every re-attempted (baseline, seed) has a terminal status on all but its newest "
+              "run.")
+    print()
+
     counts = collections.Counter(state for rows in by_config.values() for _job, state in rows)
     print()
     print("  " + "  ".join(f"{state}={n}" for state, n in sorted(counts.items())))
+    if host_problems and args.strict:
+        return 1
     print("\n  ELIGIBLE means: records complete, evaluator revision equal to the live tree, and")
     print("  execution_kind training_production. Nothing else may enter a reported row.")
     return 0
