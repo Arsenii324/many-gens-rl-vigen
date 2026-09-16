@@ -5,12 +5,12 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**85 job(s), 3673 record row(s), 12 baseline(s).**
+**86 job(s), 4157 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
 | `ibac_sni` | 1397 |
-| `idaac` | 745 |
+| `idaac` | 1229 |
 | `ppg` | 715 |
 | `drqv2` | 323 |
 | `rad` | 147 |
@@ -1190,6 +1190,18 @@ Every run whose records this repository holds, with the circumstances each recor
   | `sample` | eval-medium | 11.55 | ± 0.63 | 0.000 | 200 | 10 | not paired ⚠ |
   | `sample` | train | 33.69 | ± 1.86 | 0.000 | 200 | 10 | **paired** |
 
+### `reeval-v214-idaac-curve` — idaac
+
+- **cells** `idaac-s101` · **seeds** `101` · **rows** 484
+- **frames** 51,200 → 550,912 (11 distinct)
+- **phases** {'offline-eval': 484}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `1b092f978fdc` **CURRENT**
+- **records** [`results/records/reeval-v214-idaac-curve__records.jsonl`](results/records/reeval-v214-idaac-curve__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+- **curve** (train regime, 11 stamp(s)): first 25.26 @51,200 · **peak 45.15 @350,208** · last 24.34 @550,912 · **SE ≈ 3.6 per point**  — ends below its peak by 5.7 SE
+  <br/>*A move smaller than about 7.3 between stamps is inside 2 SE and is not a trend.*
+
 ### `reeval-v214-idaac-endpoint` — idaac
 
 - **cells** `idaac-s101` · **seeds** `101` · **rows** 88
@@ -1261,7 +1273,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 166h ago** ⚠ **likely stale**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 167h ago** ⚠ **likely stale**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 ### `card0-20260916-005601` — ibac_sni — **not yet collected**
@@ -1269,7 +1281,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T00:56 MSK · **run dir** `~/rlvigen-runs/card0-20260916-005601` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — status recorded under an hour ago
+- **status** failed — **status recorded 1h ago**
 - ⚠ stood down by the memory floor: free memory 3705 MiB below the 4000 MiB floor. No checkpoints.
 
 ### `card0-20260916-010515` — ibac_sni — **not yet collected**
@@ -1277,7 +1289,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T01:05 MSK · **run dir** `~/rlvigen-runs/card0-20260916-010515` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — status recorded under an hour ago
+- **status** failed — **status recorded 1h ago**
 - ⚠ NATIVE_CELL_FAILED, no checkpoints. Same window as 005601.
 
 ### `card1-20260916-115450` — ibac_sni — **not yet collected**
@@ -1285,7 +1297,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T11:54 MSK · **run dir** `~/rlvigen-runs/card1-20260916-115450` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — status recorded under an hour ago
+- **status** failed — **status recorded 1h ago**
 - ⚠ reached F 100352 then stood down by the memory floor: free memory 125 MiB below 4000. Furthest any ibac_sni cell has trained.
 
 ### `card1-20260916-141636` — ibac_sni — **not yet collected**
@@ -1293,7 +1305,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T14:16 MSK · **run dir** `~/rlvigen-runs/card1-20260916-141636` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — status recorded under an hour ago
+- **status** failed — **status recorded 1h ago**
 - ⚠ started training, then the floor fired: free memory 3063 MiB below 4000, co-tenant holding ~21.3 GiB. Its resources.json gave the card-delta lower bound of ~6.6 GiB for ibac_sni at procs=16.
 
 ### `card1-20260916-143204` — idaac — **not yet collected**
@@ -1301,7 +1313,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T14:32 MSK · **run dir** `~/rlvigen-runs/card1-20260916-143204` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** running — status recorded under an hour ago
+- **status** running — **status recorded 1h ago**
 - ⚠ second seed for idaac, giving {101,102}. Launched 14:32 MSK on card 1 under self-vram-cap.sh at 5000 MiB.
 
 **6 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
