@@ -5,18 +5,18 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**80 job(s), 2932 record row(s), 12 baseline(s).**
+**85 job(s), 3673 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
 | `ibac_sni` | 1397 |
-| `idaac` | 657 |
+| `idaac` | 745 |
+| `ppg` | 715 |
 | `drqv2` | 323 |
 | `rad` | 147 |
-| `ppg` | 99 |
-| `soda` | 85 |
+| `soda` | 112 |
+| `ctrl` | 66 |
 | `alda` | 58 |
-| `ctrl` | 56 |
 | `svea` | 53 |
 | `curl` | 19 |
 | `drq` | 19 |
@@ -99,6 +99,21 @@ Every run whose records this repository holds, with the circumstances each recor
   | `mode` | eval-easy | 1.32 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
   | `mode` | train | 1.34 | ± 0.04 | 0.000 | 5 | 1 | **paired** |
 
+### `attest-v212-dmc_gb` — soda
+
+- **cells** `soda-s1` · **seeds** `1` · **rows** 27
+- **frames** 500 → 10,000 (20 distinct)
+- **phases** {'eval': 2, 'train': 21, 'offline-eval': 4}
+- **policy mode(s)** `mode`
+- **evaluator revision(s)** `5851179a61ff` **CURRENT**
+- **records** [`results/records/attest-v212-dmc_gb__records.jsonl`](results/records/attest-v212-dmc_gb__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 27.85 | ± 9.27 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 27.86 | ± 9.30 | 0.000 | 5 | 1 | **paired** |
+
 ### `attest-v212-ibac_sni` — ibac_sni
 
 - **cells** `ibac_sni-s1` · **seeds** `1` · **rows** 10
@@ -158,6 +173,21 @@ Every run whose records this repository holds, with the circumstances each recor
   |---|---|---:|---:|---:|---:|---:|---|
   | `mode` | eval-easy | 1.01 | ± 0.09 | 0.000 | 5 | 1 | **paired** |
   | `mode` | train | 2.68 | ± 1.09 | 0.000 | 5 | 1 | **paired** |
+
+### `attest-v213-ctrl` — ctrl
+
+- **cells** `ctrl-s1` · **seeds** `1` · **rows** 10
+- **frames** 4,112 → 10,000 (3 distinct)
+- **phases** {'eval': 4, 'native-metrics': 2, 'offline-eval': 4}
+- **policy mode(s)** `mode`
+- **evaluator revision(s)** `0be006e48012` **CURRENT**
+- **records** [`results/records/attest-v213-ctrl__records.jsonl`](results/records/attest-v213-ctrl__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 30.43 | ± 1.27 | 0.000 | 5 | 1 | **paired** |
+  | `mode` | train | 26.26 | ± 1.42 | 0.000 | 5 | 1 | **paired** |
 
 ### `bt1037211b64e17auo88` — idaac
 
@@ -1160,6 +1190,60 @@ Every run whose records this repository holds, with the circumstances each recor
   | `sample` | eval-medium | 11.55 | ± 0.63 | 0.000 | 200 | 10 | not paired ⚠ |
   | `sample` | train | 33.69 | ± 1.86 | 0.000 | 200 | 10 | **paired** |
 
+### `reeval-v214-idaac-endpoint` — idaac
+
+- **cells** `idaac-s101` · **seeds** `101` · **rows** 88
+- **frames** 598,016 → 598,016 (1 distinct)
+- **phases** {'offline-eval': 88}
+- **policy mode(s)** `mode`, `sample`
+- **evaluator revision(s)** `1b092f978fdc` **CURRENT**
+- **records** [`results/records/reeval-v214-idaac-endpoint__records.jsonl`](results/records/reeval-v214-idaac-endpoint__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 31.08 | ± 2.21 | 0.000 | 200 | 10 | **paired** |
+  | `mode` | eval-hard | 15.13 | ± 1.22 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `mode` | eval-medium | 13.56 | ± 0.80 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `mode` | train | 32.91 | ± 1.70 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-easy | 32.62 | ± 2.19 | 0.005 | 200 | 10 | **paired** |
+  | `sample` | eval-hard | 17.18 | ± 1.15 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | eval-medium | 12.00 | ± 0.73 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | train | 39.24 | ± 2.30 | 0.000 | 200 | 10 | **paired** |
+
+### `reeval-v214-ppg-curve` — ppg
+
+- **cells** `ppg-s1` · **seeds** `1` · **rows** 528
+- **frames** 51,200 → 600,064 (12 distinct)
+- **phases** {'offline-eval': 528}
+- **policy mode(s)** `sample`
+- **evaluator revision(s)** `248751f7caca` **CURRENT**
+- **records** [`results/records/reeval-v214-ppg-curve__records.jsonl`](results/records/reeval-v214-ppg-curve__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+- **curve** (train regime, 12 stamp(s)): first 4.68 @51,200 · **peak 31.02 @550,912** · last 20.53 @600,064 · **SE ≈ 2.3 per point**  — ends below its peak by 4.6 SE
+  <br/>*A move smaller than about 4.5 between stamps is inside 2 SE and is not a trend.*
+
+### `reeval-v214-ppg-endpoint` — ppg
+
+- **cells** `ppg-s1` · **seeds** `1` · **rows** 88
+- **frames** 600,064 → 600,064 (1 distinct)
+- **phases** {'offline-eval': 88}
+- **policy mode(s)** `mode`, `sample`
+- **evaluator revision(s)** `248751f7caca` **CURRENT**
+- **records** [`results/records/reeval-v214-ppg-endpoint__records.jsonl`](results/records/reeval-v214-ppg-endpoint__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 38.89 | ± 1.20 | 0.000 | 200 | 10 | **paired** |
+  | `mode` | eval-hard | 40.58 | ± 1.57 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `mode` | eval-medium | 33.94 | ± 1.91 | 0.005 | 200 | 10 | not paired ⚠ |
+  | `mode` | train | 42.86 | ± 1.53 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-easy | 17.96 | ± 0.88 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-hard | 16.70 | ± 0.81 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | eval-medium | 11.67 | ± 0.63 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | train | 22.69 | ± 1.03 | 0.000 | 200 | 10 | **paired** |
+
 ## Runs on the production host not yet collected
 
 Recorded when launched, from each cell's own `effective_config.json`, so a run's existence does not depend on anyone's memory. Source: [`host-runs.jsonl`](host-runs.jsonl). **These have no records in this repository yet** — that is the point of listing them.
@@ -1169,7 +1253,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 19h ago**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 162h ago** ⚠ **likely stale**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
@@ -1177,7 +1261,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 20h ago**
+- **status** training complete at IC=600064 (293 iterations); curve in progress — **status recorded 164h ago** ⚠ **likely stale**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 **1 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.

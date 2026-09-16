@@ -123,7 +123,18 @@ def test_a_marker_that_never_appeared_does_not_stand_the_watch_down(tmp_path, mo
 
 def test_the_runner_actually_retracts_the_marker():
     runner = (ROOT / "datasphere" / "native" / "run_probe.sh").read_text()
-    assert 'rm -f "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"' in runner, (
+    # [Claude 2026-09-16] Was a literal-string check for the inlined `rm -f`. The removal was
+    # refactored into `retract_cell_from_card()`, which builds the path into a local and removes it
+    # there, so the literal vanished while the BEHAVIOUR stayed. A test that pins the spelling of an
+    # implementation fails on a refactor and passes on a deletion that keeps the spelling -- exactly
+    # backwards. Assert the function exists, removes the marker, and is called.
+    assert "retract_cell_from_card()" in runner, "the retraction function is gone"
+    body = runner.split("retract_cell_from_card()", 1)[1][:600]
+    assert "cell-active" in body and "rm -f" in body, (
+        "retract_cell_from_card must remove the cell-active marker")
+    assert runner.count("retract_cell_from_card") >= 3, (
+        "declared but never called -- --stop-when-inactive would never fire")
+    assert True, (
         "run_probe.sh must remove the marker when the cell exits, or --stop-when-inactive never "
         "fires and the vacated-card false alarm comes back")
     assert "NATIVE_CELL_ACTIVE_MARKER_CLEARED" in runner

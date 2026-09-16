@@ -90,6 +90,12 @@ Read anything in there as a lead to check, never as authority. See [`dated/READM
 
 ## Historical and single-purpose documents
 
+- [`RESOLVED-REGISTER.md`](RESOLVED-REGISTER.md) — the settled questions, one row each, with a
+  falsifier and a pinning test. Generated from `resolved-register.json`; do not hand-edit.
+- [`RECORDING-A-RESOLVED-FINDING.md`](RECORDING-A-RESOLVED-FINDING.md) — how to add a row to that
+  register, and what `resolved` is allowed to mean.
+
+
 Kept, not indexed above, because they are not part of the live path. Listed so that "absent from
 the index" never has to mean "forgotten" — the orphan check in `tests/test_docs_not_stale.py`
 reads this section.

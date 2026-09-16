@@ -93,7 +93,16 @@ def test_the_card_index_is_derived_once():
     assert code.count('--device "$CARD"') == 3, code.count('--device "$CARD"')
     # preflight's --gpus and the cell's DOCKER_GPUS; the watchers use --gpus all deliberately,
     # because nvidia-smi in a container restricted to our card cannot see a neighbour on another.
-    assert code.count("device=${CARD}") == 2, "the --gpus flags must come from CARD too"
+    # [Claude 2026-09-16] Was `== 2`. The PREFLIGHT deliberately stopped using `--gpus device=$CARD`
+    # and now uses `--gpus all`, exactly like the two watches beside it, because a container exposed
+    # to one GPU renumbers it to index 0 -- so `--device 1` found nothing and every CARD=1 launch
+    # aborted with "could not read the card". The invariant was never "count the string twice"; it
+    # is that whatever CLAIMS a card claims the one CARD names, and whatever OBSERVES cards can see
+    # all of them. So: the cell claims via CARD, and every observer pairs `--gpus all` with
+    # `--device "$CARD"`.
+    assert code.count("device=${CARD}") == 1, "the CELL's --gpus must still come from CARD"
+    observers = code.count('--gpus all')
+    assert observers == 3, f"preflight and both watches must observe all cards, found {observers}"
 
 
 def test_it_refuses_without_a_cell_timeout(tmp_path):

@@ -88,7 +88,11 @@ def test_the_env_var_is_only_set_where_the_mount_is_established():
 def test_the_mount_is_actually_passed_to_docker():
     """PIP_CACHE_ARGS existing is not the same as docker receiving it."""
     text = HOST.read_text()
-    mounts = text[text.index("DOCKER_MOUNT_ARGS=(-v"):]
+    # [Claude 2026-09-16] Anchored on "DOCKER_MOUNT_ARGS=(-v" until --shm-size was prepended to
+    # that array, after which the test died with ValueError: substring not found -- a failure that
+    # says nothing about the mount it exists to check. Anchor on the assignment itself, which is
+    # what the test is actually about, so reordering the flags cannot masquerade as a regression.
+    mounts = text[text.index("DOCKER_MOUNT_ARGS=("):]
     mounts = mounts[:mounts.index(")\n")]
     assert 'PIP_CACHE_ARGS[@]' in mounts, mounts
 
