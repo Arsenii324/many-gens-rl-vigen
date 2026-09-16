@@ -46,6 +46,31 @@ terminal `snapshot.pt` is not byte-identical to `model_600064.pt` because the te
 with the model back on CUDA, but all 37 parameter tensors are bitwise equal, so the endpoint really
 does measure the 600,064-frame policy. The auditor indexes by file hash and cannot see that.
 
+**The exact collection sequence for ibac, worked out in advance so the morning is mechanical.**
+ibac differs from idaac in one way that matters here: idaac's checkpoints live under `native-work/`,
+which the documented rsync EXCLUDES, so auditing its frame labels needed a second fetch. ibac's
+retained checkpoints are under `native-out/cells/ibac_sni-s101/checkpoints/` (twelve files, ~4.6 MB
+each), so the standard fetch already carries them and the provenance bind needs no extra transfer.
+
+```bash
+rsync -a --exclude 'native-work' \
+  varaksin_as@100.98.2.11:'~/rlvigen-runs/card1-20260916-203537' ./fetched/
+python scripts/record_host_run.py card1-20260916-203537 --update-status --status completed \
+  --note "<what actually happened>"
+bash datasphere/native/collect-host-run.sh ibac_sni ./fetched/card1-20260916-203537
+python scripts/populate_evaluator_ledger.py ibac_sni card1-20260916-203537
+python scripts/audit_record_frame_provenance.py \
+  --checkpoints ./fetched/card1-20260916-203537/native-out/cells/ibac_sni-s101/checkpoints
+python scripts/campaign_status.py
+python scripts/production_gates.py | tail -3
+```
+
+`--update-status` now works without the run directory (it was changed on 2026-09-16 for exactly
+this), so the status can be moved from `running` to a terminal value from the laptop.
+
+Expect the curve rows to grade CORROBORATED and the endpoint rows UNVERIFIABLE. Do not treat the
+second as a defect to chase — see the bundle named above.
+
 **A suspicion I did not chase.** A weight-level hash in `audit_record_frame_provenance.py` would tie
 those two files automatically and would subsume the byte-alias route. I left it out because it needs
 torch and each family's model class importable at audit time, which the auditor does not currently
