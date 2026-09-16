@@ -156,6 +156,39 @@ because 6,422 is above the 4,000 floor. Had the ppg cell been added an hour earl
 gone below zero and the floor would have stood **both** cells down — losing 1.5 h of training to gain
 a cell that would also have died. The arithmetic was not conservative; it was correct.
 
+## 5b. The scheduling model this host actually has: eval survives co-tenancy, training does not
+
+Six ibac_sni attempts and one idaac attempt died the same way, and the pattern is now clear enough
+to schedule against rather than to keep re-discovering.
+
+**The two cards have different co-tenants and they behave differently.**
+
+| card | co-tenants | behaviour | what we should put there |
+|---|---|---|---|
+| 0 | `sg_sam2` ~3.8 GiB, `rl4vla_cudagl` ~14.7-22.5 GiB | **long-lived and stable** | our work |
+| 1 | `rlvigen_kalugin_df`, two processes ~21.3 GiB total | **cycles off and back within tens of minutes** | nothing we mind losing |
+
+**And the size of our cell decides whether it survives.** An eval cell is 841 MiB and coexists with
+a 21.7 GiB co-tenant; a training cell is 2.6 GiB or more and does not survive the spikes, because
+the floor stands it down the moment free memory drops under 4,000 MiB. That is the floor working —
+our cell dies, the colleague's does not — but it means:
+
+> **On this host, under this co-tenant, EVALUATION work is viable and TRAINING work is not.**
+
+The evidence, all from today:
+
+- idaac s102: killed at 41% when free fell 6,422 → 224 MiB in **20 seconds**.
+- ibac_sni s101: killed 8 minutes after launch, mid-ramp, when free fell 8,575 → 2,595 MiB.
+- Meanwhile **eleven eval cells completed** on card 0 across the same afternoon, and the entire
+  idaac curve was produced while co-tenants held 26 GiB of that card.
+
+**A consequence for the ibac_sni measurement, and it is why the number keeps coming out the same.**
+Our cap watcher recorded ibac's ramp at 308 → 616 → 1,375 → 2,199 MiB, and the floor fired at 2,199
+with the process count still climbing. The earlier attempt also stopped near 2,199. That figure is
+**where the floor catches ibac, not what ibac needs** — reporting it as a peak would repeat exactly
+the error section 3 documents. Its footprint stays unmeasured, and it stays unmeasured for the same
+reason it stays unrun.
+
 ## 6. Two published claims of mine, retracted in place
 
 Both were wrong in the direction that flatters the writer, which is why they are recorded here

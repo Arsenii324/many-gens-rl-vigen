@@ -1281,7 +1281,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T00:56 MSK · **run dir** `~/rlvigen-runs/card0-20260916-005601` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 3h ago**
+- **status** failed — **status recorded 4h ago**
 - ⚠ stood down by the memory floor: free memory 3705 MiB below the 4000 MiB floor. No checkpoints.
 
 ### `card0-20260916-010515` — ibac_sni — **not yet collected**
@@ -1289,7 +1289,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T01:05 MSK · **run dir** `~/rlvigen-runs/card0-20260916-010515` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 3h ago**
+- **status** failed — **status recorded 4h ago**
 - ⚠ NATIVE_CELL_FAILED, no checkpoints. Same window as 005601.
 
 ### `card1-20260916-115450` — ibac_sni — **not yet collected**
@@ -1297,7 +1297,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T11:54 MSK · **run dir** `~/rlvigen-runs/card1-20260916-115450` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 3h ago**
+- **status** failed — **status recorded 4h ago**
 - ⚠ reached F 100352 then stood down by the memory floor: free memory 125 MiB below 4000. Furthest any ibac_sni cell has trained.
 
 ### `card1-20260916-141636` — ibac_sni — **not yet collected**
@@ -1305,7 +1305,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T14:16 MSK · **run dir** `~/rlvigen-runs/card1-20260916-141636` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 3h ago**
+- **status** failed — **status recorded 4h ago**
 - ⚠ started training, then the floor fired: free memory 3063 MiB below 4000, co-tenant holding ~21.3 GiB. Its resources.json gave the card-delta lower bound of ~6.6 GiB for ibac_sni at procs=16.
 
 ### `card1-20260916-143204` — idaac — **not yet collected**
@@ -1315,7 +1315,15 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
 - **status** yielded at 41% (251,904 frames): co-tenant took ~6.2 GiB in 20s, free fell 6422 -> 224 MiB, below the 4000 floor. Our own peak was 2,640 MiB against a 5,000 cap and never moved. 5 checkpoints retained (51200-251904), each separately evaluable. — status recorded under an hour ago
 
-**6 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
+### `card1-20260916-182538` — ibac_sni — **not yet collected**
+
+- **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
+- **launched** 2026-09-16T18:25 MSK · **run dir** `~/rlvigen-runs/card1-20260916-182538` on `100.98.2.11`
+- **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
+- **status** failed — status recorded under an hour ago
+- ⚠ attempt 6. Co-tenant reclaimed the card 8 min after launch, mid-ramp: our cap log shows card_free 8883->2595 MiB while ours grew 616->1375. Floor fired at free 2575 < 4000 with ours at 2199 MiB and still climbing. 2199 is a RAMP POINT, not a peak -- ibac_sni's procs=16 footprint remains unmeasured for the same reason it remains unrun.
+
+**7 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
 ## Caveats — what this register cannot see
 
