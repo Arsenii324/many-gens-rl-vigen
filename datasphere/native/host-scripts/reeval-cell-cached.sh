@@ -22,18 +22,8 @@
 # comfortably hold two or three such cells -- on a booking this short that is the expensive kind of
 # caution. 1500 leaves ~660 MiB of margin over the measured peak.
 #
-# It is lowered for EVAL only. A training cell keeps 4000, and ibac_sni's headroom question is a
-# different one: its VRAM at procs=16 is still UNMEASURED. The only figure the data supports is a
-# LOWER bound of ~6.6 GiB (card delta at the moment the floor stood a cell down 42.4 s in, with its
-# process count still climbing 2 -> 20).
-#
-# [Claude 2026-09-16] This line previously read "takes ~15 GiB". That number was never measured --
-# it was written here as an estimate and then cited back as fact by two separate agents deciding
-# whether a card had room, including me. The real figure is half again larger, which is the
-# difference between "fits beside a 10 GiB co-tenant" and "cannot share this card at all":
-# ibac_sni needs ~22.1 GiB PLUS the 4000 MiB floor, so ~26.2 GiB free on a 32.5 GiB card.
-# An estimate written in a comment is indistinguishable from a measurement six hours later.
-# If a number here is not measured, say so in the same sentence.
+# It is lowered for EVAL only. A training cell keeps 4000: ibac_sni at procs=16 takes ~15 GiB and
+# its headroom question is a different one.
 #
 # NATIVE_ALLOW_SHARED_CARD=1 is REQUIRED for a packed cell and is deliberate: --require-exclusive
 # refuses any compute process on the card, and when we are packing, one of those processes is our

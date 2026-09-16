@@ -73,8 +73,43 @@ env is constructed in every one". The placement RNG is numpy's -- "the half that
 
 But ppg at `policy_mode=sample` draws its ACTIONS from torch (`PpoModel.act` -> `pd.sample()`), and
 that stream is not re-seeded per episode. So for the three SAMPLING baselines -- `idaac`, `ppg`,
-`ibac_sni` -- a row's value can depend on how much torch RNG was consumed before that cell, i.e. on
-the breadth and order of the sweep. The nine mode baselines take an argmax/mean and are unaffected.
+`ibac_sni` -- a row's value can depend on how much torch RNG was consumed before that cell.
+
+**RETRACTED 2026-09-16, the sentence that used to end this paragraph.** It read: *"The nine mode
+baselines take an argmax/mean and are unaffected."* That does not follow and the measurement
+refutes it. Pairing all 88 endpoint rows across two completed runs of the SAME invocation
+(peer session, bb191cd): MODE rows -- `pd.mean`, no sampling anywhere -- reproduce **282 of 800**
+episodes, against **264 of 800** for sample. Near-identical. Whatever makes two identical runs
+differ, action sampling is not it, and the nine mode baselines are **not** exempt.
+
+The regime gradient is the informative part, and it points away from the policy entirely:
+
+| regime | episodes reproduced (both modes) |
+|---|---|
+| train, eval-easy | 132-150 / 200 |
+| eval-medium, eval-hard | **0 / 200** |
+
+Placements are identical 40/40, so the divergence is downstream of placement. The code says why
+that is possible. `eval_across_scenes.py:222-230`: `UniformRandomSampler` calls bare
+`np.random.uniform` and draws from the GLOBAL numpy RNG, which `seed_episode_placement` re-seeds
+every episode -- hence placements reproduce exactly. But the `seed` threaded through `robo_make`
+reaches VGBWrapper's **`random_state`, "which drives texture/colour/lighting only -- a different
+RNG object"**. That object is seeded once at construction and is **never re-seeded per episode**.
+And the regimes that reproduce zero episodes are exactly the ones that randomise appearance:
+`eval-medium` alone sets `except_robot=False`.
+
+**What this does NOT license me to claim.** A once-seeded generator consumed identically would
+still produce identical sequences, so `random_state` alone does not explain divergence between two
+runs of the same invocation -- something must first perturb how many draws are taken. A plausible
+candidate is GPU floating-point nondeterminism (cuDNN algorithm selection) producing a tiny action
+difference that changes an episode's length and hence RNG consumption, with appearance
+randomisation amplifying it; that is a hypothesis, not a measurement, and the honest state is that
+**the mechanism is open**. What is settled is the negative: mode rows are affected too, at
+essentially the same rate as sample rows.
+
+The conclusion of this note is unchanged -- mean |diff| is 0.21 SE (mode) and 0.33 SE (sample), so
+the reeval sits within evaluator noise. What changes is who is exposed: all twelve baselines, not
+three.
 
 ## What is NOT yet established
 

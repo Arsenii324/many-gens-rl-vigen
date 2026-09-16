@@ -6,35 +6,6 @@
 # load 7.4 and the card has ~16 GB free, so running these one at a time uses about a sixteenth of
 # the node while the booking expires. They pack.
 #
-# [Claude 2026-09-16] NATIVE_PIP_CACHE_HOST, because bootstrap DOMINATES a short cell. Measured on
-# idaac-s101-curve-100352: 257 pip lines against 25 evaluation lines, ~15-20 minutes of downloading
-# before ~26 minutes of work. Across eleven stamps that is roughly three hours spent re-fetching
-# the same wheels, and the nvidia ones are hundreds of MB each.
-#
-# The cache is mounted at /root/.cache/pip and must live under $HOME -- run_on_production_host.sh
-# refuses anything else, which is the right refusal on a shared machine. It changes nothing about
-# WHAT is installed: the requirements are still resolved and hashed per cell, so the executed
-# environment is identical; only the download is skipped.
-#
-# [Claude 2026-09-16] NATIVE_NEED_MIB=1500, not the 4000 default, because 4000 is a TRAINING
-# cell's requirement and this is an evaluation cell. Measured: an eval cell at num_envs=1 uses
-# 841 MiB of VRAM, one core and 2.1 GiB of RAM. Demanding 4000 MiB made us refuse gaps that would
-# comfortably hold two or three such cells -- on a booking this short that is the expensive kind of
-# caution. 1500 leaves ~660 MiB of margin over the measured peak.
-#
-# It is lowered for EVAL only. A training cell keeps 4000, and ibac_sni's headroom question is a
-# different one: its VRAM at procs=16 is still UNMEASURED. The only figure the data supports is a
-# LOWER bound of ~6.6 GiB (card delta at the moment the floor stood a cell down 42.4 s in, with its
-# process count still climbing 2 -> 20).
-#
-# [Claude 2026-09-16] This line previously read "takes ~15 GiB". That number was never measured --
-# it was written here as an estimate and then cited back as fact by two separate agents deciding
-# whether a card had room, including me. The real figure is half again larger, which is the
-# difference between "fits beside a 10 GiB co-tenant" and "cannot share this card at all":
-# ibac_sni needs ~22.1 GiB PLUS the 4000 MiB floor, so ~26.2 GiB free on a 32.5 GiB card.
-# An estimate written in a comment is indistinguishable from a measurement six hours later.
-# If a number here is not measured, say so in the same sentence.
-#
 # NATIVE_ALLOW_SHARED_CARD=1 is REQUIRED for a packed cell and is deliberate: --require-exclusive
 # refuses any compute process on the card, and when we are packing, one of those processes is our
 # own previous cell. The owner has confirmed the node is the group's for this booking. The disk and
@@ -60,8 +31,6 @@ env CARD="${CARD:-1}" NATIVE_YIELD_ON_PROCESSES=1 NATIVE_EXPECT_OURS="${EXPECT_O
   CELL_TIMEOUT_SECONDS="${TIMEOUT_S:-3600}" NATIVE_HOST_PROFILE=v100 NATIVE_VRAM_CAP_MIB=8192 \
   NATIVE_PRODUCTION=1 NATIVE_EVAL_ALLOWANCE_SECONDS="${ALLOWANCE_S:-36000}" \
   NATIVE_ACCEPT_SAME_DEVICE=1 CUDA_ROOT=/usr/local/cuda \
-  NATIVE_PIP_CACHE_HOST="${PIP_CACHE:-$HOME/.cache/rlvigen-pip}" \
-  NATIVE_NEED_MIB="${NEED_MIB:-1500}" \
   EXTRA_MOUNT_1="$SNAP:/work/snap.pt:OFFLINE_EVAL_SNAPSHOT" \
   OFFLINE_EVAL_FAMILY="$FAMILY" OFFLINE_EVAL_BASELINE="$BASELINE" OFFLINE_EVAL_SEED="$SEED" \
   OFFLINE_EVAL_FRAME="$FRAME" OFFLINE_EVAL_REGIMES="$REGIMES" OFFLINE_EVAL_SCENES="$SCENES" \

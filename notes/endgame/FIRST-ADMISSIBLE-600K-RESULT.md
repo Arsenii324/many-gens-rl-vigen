@@ -36,9 +36,23 @@ over the file **while bash was executing it**. Bash reads a script incrementally
 replacing the file shifted the offsets and execution resumed mid-token, in the middle of
 `launch-card-cell.sh`.
 
-It cost nothing here only by luck of timing: the corruption hit the wrapper's epilogue after the
-cell had finished and the archive had been written, which is why 88 complete rows exist. Had it
-landed thirty minutes earlier it would have destroyed a seven-hour run.
+No DATA was lost, by luck of timing: the corruption hit the wrapper's epilogue after the cell had
+finished and the archive had been written, which is why 88 complete rows exist. Had it landed
+thirty minutes earlier it would have destroyed a seven-hour run.
+
+**Corrected 2026-09-16 — it did not "cost nothing", which is what this paragraph said before.**
+Losing the completion marker is not free: `launch-when-free` could not tell a finished grid from an
+unfinished one, so it re-ran the whole endpoint grid, 03:53-09:04. That is about **five hours of
+card 1 spent reproducing a result that already existed**, during a booking measured in hours. The
+committed file is hash-identical to run 1 and the retry's rows were never committed (peer session,
+bb191cd, which kept their fields in the evidence bundle).
+
+The distinction matters because "cost nothing" is how a rule stops being followed. The same
+rewrite-while-running defect hit three further cells the same night -- `launch-card-cell.sh` was
+rewritten at 01:05:11 under `ppg-curve-450560`, `ppg-curve-501760` and `idaac-s101-endpoint`, again
+in their epilogues after mirroring -- and it killed the idaac curve sweep outright on 16 Sep at
+14:10 (STOP-MECHANISMS addendum 3). Five occurrences, one rule, and the first write-up of it
+recorded the cost as zero.
 
 **Rule: never write to a script that is running.** Deploy to a new name, or stop the process first.
 The same applies to `rsync` over a live tree, which is how the file came to be replaced at all.

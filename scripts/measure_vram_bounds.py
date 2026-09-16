@@ -21,15 +21,38 @@ them back. This does.
 
 For each cell it reports both:
 
-- **`ours_peak_mib`** — the maximum over samples of the summed `used_memory_mib` of the
-  `gpu_compute_processes` belonging to this cell's process tree. This is what OUR run occupies, and
-  it is the number that belongs in a bound.
-- **`card_peak_mib`** — the maximum `used_memory_mib` on the card, whoever caused it. On an
-  exclusive card these coincide; where they do not, something else was resident and `ours` is the
-  honest attribution.
+- **`all_procs_peak_mib`** — the maximum over samples of the summed `used_memory_mib` of EVERY
+  `gpu_compute_processes` entry on the card. On an EXCLUSIVE card this is ours. On a shared card it
+  is ours plus every co-tenant's, and it is not a bound on anything we control.
+- **`card_peak_mib`** — the maximum `used_memory_mib` on the card, whoever caused it.
+- **`card_delta_mib`** — `card_peak_mib` minus the card's used memory at the FIRST sample. Where
+  co-tenants were static across the window this is the closest thing to our own footprint that the
+  data supports. Where they were not, it is noise.
+- **`shared_card`** / **`steady_state`** — whether a co-tenant was resident, and whether the cell's
+  process count had stopped rising by the last sample. A number from a cell that is `shared_card`
+  or not `steady_state` is NOT a bound.
 
-Reporting only the card total would silently inflate our bound with someone else's usage; reporting
-only ours would hide that the card was shared during the measurement. Both, always.
+### This field was called `ours_peak_mib` and it was a lie
+
+[Claude 2026-09-16] Until today the first field was named `ours_peak_mib` and this docstring said
+it summed the processes "belonging to this cell's process tree". **No such filter existed.** The
+code summed every compute process on the card, so on a shared card "ours" was everyone's.
+
+It produced a concrete wrong answer within an hour of being trusted: ibac_sni at procs=16 was
+recorded at **22,675 MiB**, of which **21,300 MiB was a colleague's two processes** (10,650 each).
+That number was written into `measured-vram-bounds.json`, used to park ibac_sni behind a "needs
+26.7 GB free" rule, and reported to the owner as a measurement. A peer session caught it by reading
+the pids out of `resources.json`.
+
+The filter cannot simply be added: the cell's process tree is in the CONTAINER pid namespace and
+`gpu_compute_processes` carries HOST pids, so they cannot be matched from this file at all. And EGL
+render contexts are not compute apps, so a per-process sum misses them even when it works. The
+honest response is to stop claiming attribution this data cannot support — hence the rename and the
+two flags — rather than to keep a field whose name asserts more than its value knows.
+
+The docstring below this one already warned that "reporting only the card total would silently
+inflate our bound with someone else's usage." The code did that, under a name that said it did
+not, for eight days.
 
 ## What a number here IS and IS NOT
 
@@ -126,19 +149,36 @@ def read_cell(resources: pathlib.Path) -> dict | None:
         return None
 
     card_peak = 0
-    ours_peak = 0
+    all_procs_peak = 0
     card_total = 0
+    card_first = None
     saw_gpu = False
+    proc_counts = []
     for sample in samples:
         for dev in sample.get("gpu_devices") or []:
             saw_gpu = True
-            card_peak = max(card_peak, int(dev.get("used_memory_mib") or 0))
+            used = int(dev.get("used_memory_mib") or 0)
+            if card_first is None:
+                card_first = used
+            card_peak = max(card_peak, used)
             card_total = max(card_total, int(dev.get("total_memory_mib") or 0))
         procs = sample.get("gpu_compute_processes") or []
+        proc_counts.append(len(procs))
         if procs:
-            ours_peak = max(ours_peak, sum(int(p.get("used_memory_mib") or 0) for p in procs))
+            # Every compute process on the card, ours and everyone else's. The name says so now.
+            all_procs_peak = max(all_procs_peak, sum(int(p.get("used_memory_mib") or 0) for p in procs))
     if not saw_gpu:
         return None
+
+    # A co-tenant was present if the card already held memory before our cell could have allocated,
+    # or if more distinct pids appeared than one cell plausibly starts with. Either makes every
+    # per-process sum above uninterpretable as "ours".
+    shared_card = bool(card_first and card_first > 1024)
+    # Still ramping: the process count had not stopped rising by the final sample, so whatever peak
+    # was observed is a point on the way up, not a peak. The ibac_sni cell that motivated this ran
+    # 42.4 s before the floor stood it down, with process_count going 2 -> 20.
+    steady_state = bool(len(proc_counts) >= 3 and proc_counts[-1] <= max(proc_counts[:-1]))
+    card_delta = max(0, card_peak - (card_first or 0))
 
     # [Claude 2026-09-08] The load profile was in every archive and nothing had read it. Mined from
     # the seedvar job: drqv2 runs at GPU utilisation mean 45%, median 51%, with 70.6% of 2610
@@ -176,13 +216,18 @@ def read_cell(resources: pathlib.Path) -> dict | None:
         "baseline": baseline,
         "frames": frames,
         "host_profile": profile,
-        "ours_peak_mib": ours_peak,
+        "all_procs_peak_mib": all_procs_peak,
         "card_peak_mib": card_peak,
+        "card_delta_mib": card_delta,
         "card_total_mib": card_total,
         "samples": len(samples),
-        # `gpu_compute_processes` is empty in some archives; then `ours` cannot be attributed and
-        # the card total is all there is. Say so rather than passing the card total off as ours.
-        "attribution": "per-process" if ours_peak else "card-total-only",
+        "shared_card": shared_card,
+        "steady_state": steady_state,
+        # What this row can and cannot be used for, decided here rather than by the reader.
+        # "bound" only when the card was ours alone AND the cell had stopped ramping.
+        "usable_as": ("bound" if (all_procs_peak and not shared_card and steady_state)
+                      else "lower-bound" if all_procs_peak
+                      else "card-total-only"),
     }
 
 
@@ -204,30 +249,42 @@ def main() -> int:
               "same as nothing to measure.")
         return 1
 
-    print(f"{'cell':22} {'family':9} {'frames':>8} {'ours':>9} {'card':>9} {'of':>7}  attribution")
+    print(f"{'cell':22} {'family':9} {'frames':>8} {'allprocs':>9} {'card':>9} {'delta':>8} "
+          f"{'of':>7}  usable as")
     best: dict[str, dict] = {}
-    for r in sorted(rows, key=lambda x: (-(x["ours_peak_mib"] or 0), x["cell"])):
+    for r in sorted(rows, key=lambda x: (-(x["all_procs_peak_mib"] or 0), x["cell"])):
+        flags = []
+        if r["shared_card"]:
+            flags.append("SHARED")
+        if not r["steady_state"]:
+            flags.append("RAMPING")
         print(f"  {r['cell']:20} {str(r['family']):9} {str(r['frames']):>8} "
-              f"{r['ours_peak_mib']:>7} Mi {r['card_peak_mib']:>7} Mi "
-              f"{r['card_total_mib']:>5} Mi  {r['attribution']}")
+              f"{r['all_procs_peak_mib']:>7} Mi {r['card_peak_mib']:>7} Mi "
+              f"{r['card_delta_mib']:>6} Mi {r['card_total_mib']:>5} Mi  {r['usable_as']}"
+              + (f"  [{' '.join(flags)}]" if flags else ""))
         if r.get("gpu_util_mean_pct") is not None:
             print(f"  {'':20} load: gpu-util mean {r['gpu_util_mean_pct']:5.1f}% "
                   f"(max {r['gpu_util_max_pct']}%)  membw {r['membw_mean_pct']:5.1f}%  "
                   f"cpu {r['cpu_cores_used']} cores")
         fam = r["family"]
-        if fam and (fam not in best or r["ours_peak_mib"] > best[fam]["ours_peak_mib"]):
+        # A SHARED or RAMPING row must never become a family's recorded peak: the first inflates
+        # with a co-tenant's memory, the second is a point on the way up. This is the guard whose
+        # absence let a colleague's 21,300 MiB be recorded as ibac_sni's bound.
+        if fam and r["usable_as"] == "bound" and (
+                fam not in best or r["all_procs_peak_mib"] > best[fam]["all_procs_peak_mib"]):
             best[fam] = r
 
     print()
-    missing = [f for f in FAMILIES if f not in best or not best[f]["ours_peak_mib"]]
-    print(f"per-family observed peak (ours), from {len(rows)} cell(s):")
+    missing = [f for f in FAMILIES if f not in best]
+    excluded = sum(1 for r in rows if r["usable_as"] != "bound")
+    print(f"per-family peak, from {len(rows)} cell(s), {excluded} EXCLUDED as shared or ramping:")
     for fam in FAMILIES:
         r = best.get(fam)
-        if r and r["ours_peak_mib"]:
-            print(f"  {fam:9} {r['ours_peak_mib']/1024:6.2f} GiB   at {r['frames']} frames, "
+        if r:
+            print(f"  {fam:9} {r['all_procs_peak_mib']/1024:6.2f} GiB   at {r['frames']} frames, "
                   f"profile={r['host_profile']}, card {r['card_total_mib']/1024:.0f} GiB")
         else:
-            print(f"  {fam:9}      --      no attributable measurement")
+            print(f"  {fam:9}      --      no measurement on an exclusive, settled card")
 
     print()
     if missing:

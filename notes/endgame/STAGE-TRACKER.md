@@ -94,9 +94,11 @@ Four defects found today, all of which would have damaged a production run:
 
 | element | status |
 |---|---|
-| ppg endpoint grid running on card 1 | **IN PROGRESS** (started 15:59:58 MSK, ~5.7 h) |
-| idaac's 3 missing eval-hard mode rows | NOT STARTED |
-| ppg curve pass | NOT STARTED |
+| ppg endpoint grid | **DONE** — 88 rows in `results/records/reeval-v214-ppg-endpoint__records.jsonl`, ledger-accepted |
+| idaac's 3 missing eval-hard mode rows | **CLOSED 2026-09-16** — not missing. `reeval-v214-idaac-endpoint` carries 22 rows in every regime including eval-hard = 11 scene sets x 2 policy modes. Verified by direct count of the committed records, after a peer session flagged the row as stale (evidence d43952a) |
+| ppg curve pass | **DONE** — 528 rows across 12 stamps (51,200-600,064) in `reeval-v214-ppg-curve__records.jsonl` |
+| ibac_sni s101 600k train + endpoint | **IN PROGRESS** — launched 14:16:33 MSK on card 1 (`train-production-cell-v5.sh`, shared mode, process yield NOT armed). Third on-policy baseline; takes comparison_blocks primary pairs 1 -> 3 |
+| idaac s101 curve pass | **IN PROGRESS** — 3/11 stamps; sweep restarted 14:13:57 after it died on a rewritten-while-running script (STOP-MECHANISMS addendum 3) |
 | monitoring that speaks on failure | **HELD** — `cell-heartbeat.sh`, `gpu-occupancy-log.sh`, both detached and writing their own files |
 
 ---

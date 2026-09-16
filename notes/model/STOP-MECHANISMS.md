@@ -124,25 +124,44 @@ either card, for us or for anyone else.
 Three stops happened within one hour, and none of them announced itself. They are separate
 defects that share a shape: **the thing that was supposed to notice was looking somewhere else.**
 
-### 1. The memory floor is enforced ONCE, at preflight. Nothing re-checks it.
+### 1. RETRACTED — the floor IS enforced during the run. I had this backwards.
 
-`scripts/watch_gpu_headroom.py` has two entry points and only one of them is a guard.
-`preflight()` (line 121) refuses to start when `free_mib < need_mib` — that works, and it is what
-correctly refused ibac_sni on card 1 at 12:14 with `150 MiB free is below the 4000 MiB this run
-needs`. But `watch()` (line 167) is a **recorder**: it samples, appends JSON to a file, sleeps, and
-at the end prints a summary. It never writes the sentinel, never re-reads the floor, never returns
-non-zero on a breach.
+**What I wrote here first was wrong, and it was wrong in the dangerous direction**: I claimed the
+4000 MiB floor is a preflight-only check and that a shared-mode cell therefore runs for hours with
+nothing enforcing headroom. Half of that is true and the conclusion does not follow.
 
-So for a cell in shared mode — where `launch-card-cell.sh:318` also declines to arm neighbour-yield
-— the sequence is: check headroom once, then run for up to 23.7 h with **nothing on the host
-enforcing headroom at all**. Measured on card 0 this afternoon, free memory went 12,354 → 6,190 MiB
-in ten minutes because a co-tenant grew. Had we launched into that window on the strength of the
-preflight, the guard that said yes would have had no opportunity to change its mind.
+True half: `scripts/watch_gpu_headroom.py`'s `watch()` (line 167) really is only a recorder. It
+samples, appends JSON, prints a summary, and never writes the sentinel. Reading that function alone
+is what produced the wrong conclusion.
 
-This is deliberately NOT fixed by arming an automatic kill. The booking is ours; yielding our own
-card to a co-tenant is the wrong default, and the owner has said so directly. The mitigation is
-external reporting — a monitor that tells the operator — plus sizing that leaves real margin.
-Recorded here because "the floor is enforced" is false as stated, and a reader would assume it.
+The part I missed: `watch()` is not the enforcer. **`scripts/yield_gpu_to_neighbour.py`, armed at
+STEP 2 of every launch, polls free memory against the floor for the life of the cell and writes
+`/work/yield.sentinel` when it breaches.** `NATIVE_ALLOW_SHARED_CARD=1` disarms only
+`--yield-on-processes`; the memory floor is never waived, exactly as the launcher's own banner says
+("the 4000 MiB free-memory floor is NOT").
+
+It was demonstrated an hour after I wrote the retracted claim. ibac_sni s101 reached training on
+card 1, co-tenants grew, and the cell stopped itself:
+
+    === NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===
+    yielded at 1789558045: free memory 3063 MiB is below the 4000 MiB floor
+    free_mib=3063 procs=5 util=16
+
+That is the mechanism I said did not exist, firing correctly, and protecting a colleague's job
+rather than ours. A peer session had independently corrected the same point for the 16 Sep
+attempt-1 stop (a318c00, sentinel at 3705 MiB, procs=6) — two stops, one mechanism, and I had
+attributed one of them to a process-count yield.
+
+**The methodological failure is worth more than the fact.** I read one function, found it did not
+enforce, and concluded nothing enforced — without asking which component the launcher actually
+arms for this purpose. The project's own rule covers it: trace where the value is WRITTEN before
+concluding about what reads it. `yield.sentinel` has three writers, and I checked one.
+
+**What is genuinely still open**, stated narrowly so it does not regrow into the retracted claim:
+the floor protects the CARD's free memory, not our own footprint. It fires once free memory is
+already low, which on a shared card can mean our own growth is what pushed a co-tenant toward the
+edge. A self-scoped cap — stop OUR container when OUR usage crosses a number chosen from the
+co-tenant's headroom — is a different guarantee, and `datasphere/native/self-vram-cap.sh` is it.
 
 ### 2. A stale waiter double-launched a production training cell.
 
