@@ -1034,6 +1034,21 @@ traps, each of which has produced a false reading here:
   `NATIVE_CELL_YIELDED`, `Traceback`, `Killed` and `OOM` as well — a filter that matches only
   success signals stays silent through a crash.
 
+- **Do not pass a timeout to a watch you want to keep.** A long-lived poll loop launched as a
+  background shell is not reaped on its own — one ran past ten minutes with no timeout argument and
+  kept going. What killed the first one was a `timeout` of 600000 ms that *I* passed, and the
+  symptom read as an environment limit rather than as my own argument, which sent me looking in the
+  wrong place. Arm an overnight watch with no timeout, and confirm it by checking the process is
+  still there some minutes later rather than by assuming either way.
+- **A watch you edit while it runs is a watch with no defined contents.** Write the change to a new
+  file (`prod-monitor-v4.sh`), restore the running file byte-for-byte, then stop the old watch and
+  start the new one. Editing in place produced a syntax error reported at a stale byte offset, on a
+  file that passes `bash -n`.
+- **Set a disk threshold above the floor the running cell enforces on itself**, not at a round
+  number. The cell prints its own floor in its launch banner (`disk: 118 GiB free, floor 98 GiB`).
+  A monitor warning at 60 GiB fires long after that cell has already stood itself down, so the
+  operator learns about the disk from the run dying. Warn above the floor, not below it.
+
 Also useful, from §7b: `docker logs -f <container>`, `docker stats <container>`,
 `scripts/watch_divergence.py`, and `scripts/watch_policy_health.py --log <training.log>` for
 saturation/collapse (it warns and never kills, deliberately).
