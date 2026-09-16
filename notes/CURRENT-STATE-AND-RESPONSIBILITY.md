@@ -1,181 +1,130 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated**: 2026-09-06, later the same evening, by Claude. The section below this line is the
-current operating rule; everything from "The standing mandate" onward is the prior update (written
-right before a forced compaction) and has not been fully re-verified since — treat its specific
-claims as dated, its general shape (mandate, two-layer model, self-correction discipline) as still
-live.
+**Last updated: 2026-09-16, ~15:30 MSK, by Claude.** This file says what is *true right now*. It is
+**kept current, not appended to** — if you are adding a dated section to the bottom, you are using
+the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
+one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
+stale; this one does, so distrust it and re-run the commands in §1.
 
-## Evaluator-family validation: run ONCE, at the very end — not iteratively (Codex mailbox Q47, 2026-09-06)
+The previous version of this file was from **2026-09-06** and described the pre-production freeze
+sequence — three evaluator-validation waves, a wave awaiting spend authorization, Codex coordination.
+All of that is finished. It is preserved in git history rather than here, because a "current state"
+file carrying ten days of superseded state is how a reader ends up acting on the wrong world.
 
-This session ran the seven-family schema-2 evaluator validation **three times** — the original
-wave, a `ctrl`-only re-run (v153), then a full seven-family re-run (v170) — because each time a
-real bug fix (the profile-coupling schema-2 fix, then the `door.xml` runtime-artifact fix) moved
-the shared `evaluator_identity.py` hash out from under the previous wave. Codex named this
-explicitly as "the obvious bad loop where a CTRL-only closure bookkeeping change spends another
-full wave," and the owner ratified a different sequence:
+---
 
-1. Finish whatever fidelity/diagnostic work can still edit a family's runtime closure (the A35
-   IDAAC and A36 PPG pilots, in flight as of this writing — see DECISION-SHEET). Use any existing
-   evaluator evidence only as diagnostic infrastructure during this phase, never as a final claim.
-2. Decide and implement any resulting source/config changes, THEN freeze evaluator behavior,
-   runtime manifests, configs, payload source-lock and documentation together, as one unit.
-3. Build the final immutable payload/config wave from that frozen tree and run the seven cheap
-   endpoint validators exactly once.
-4. Only once that reads 7/7 current: run the production-length canary/fleet and C95 R_A/R_B.
+## 1. Run these before trusting anything below
 
-**What this means practically**: the v170 wave's results (once in) are functional/diagnostic
-evidence only — did the harness run cleanly, is the checkpoint finite, is pairing physical — not a
-production identity certificate. Do not resubmit an evaluator-validation wave reactively the next
-time a family closure changes; let fixes accumulate and validate once against the final frozen
-tree. This applies to any future session picking this thread up, not just this one.
+```bash
+python scripts/production_gates.py | tail -3    # is the fleet launchable, recomputed from the tree
+python scripts/campaign_status.py | tail -3     # coverage per baseline and seed
+python scripts/export_fleet.py | tail -3        # rows, and how many are on the CURRENT closure
+python scripts/operator_readiness.py | tail -3  # can an operator get from zero to results
+python scripts/open_decisions.py | tail -3      # what awaits a person
+```
 
-## The standing mandate (verbatim, repeated across the whole session)
+As of the last run: gates **36 pass / 0 fail / 10 owner**; fleet **3673 rows, 732 on the current
+closure**; campaign **36 cells: 35 MISSING, 1 DONE**.
 
-"Continue work autonomously; your ultimate goal is to finish the pre-production stage in full —
-not 'solve the problems seen now' but taking full responsibility and working on the long horizon."
-Also explicit and reinforced hard near the end of this session: **don't treat "flagged, not
-fixed" as done.** If something is noted as a caveat, that note is a pointer to unfinished
-investigation, not a resolution — go check it, or say plainly that checking it needs an actual
-compute run (manual work) rather than more reading, and only then park it.
+## 2. Where the campaign actually is
 
-**The two-layer decision model**: every open question already has *some* behavior running today.
-"It's the owner's decision" is never a reason to leave that behavior arbitrary — implement the
-genuine best answer now, and only the *formal* resolved/PASS status waits on ratification.
+**Two baselines are banked at production length and admissible on the current closure**, which is
+new since 2026-09-14 — the fleet held 28 current rows then and holds 732 now.
 
-## A self-correction, now FULLY settled (was "live"/partial as of the last update) — read this before trusting any "flagged" caveat elsewhere in this file or DECISION-SHEET.md
+| baseline | seed | endpoint | curve | note |
+|---|---|---|---|---|
+| `ppg` | 1 | 88 rows | 528 rows, 12 stamps | complete |
+| `idaac` | 101 | 88 rows | in progress | the only cell the campaign counts |
+| `idaac` | 102 | — | — | **training now**, card 1, since 14:32 MSK |
 
-I wrote, then had to retract under the owner's direct questioning: *"ctrl's new schema-2 payload
-freezes Codex's in-progress, uncommitted edits (477 lines), self-consistent but not confirmed
-finished or tested."* That was wrong in framing, caught only because the owner pushed on it
-directly. What I'd actually seen was `git status` showing `runnable/ctrl` as modified relative to
-its own nested repo's single "PRISTINE" commit — which is the PERMANENT, NORMAL state of all six
-baseline clones (their nested git history never advances past the pristine snapshot; every patch
-ever written to them shows as "uncommitted" forever). I treated that normal state as "in-progress,
-uncertain" because I'd separately heard Codex was "actively editing ctrl," and didn't check
-whether the actual diff content supported that.
+**The campaign counts 1 of 36 and that is not a mistake in the counter.**
+`production-schedule-v100.json` names seeds `[101, 102, 103]`; ppg is banked at **seed 1**, so every
+ppg column reads MISSING however good the rows are. The rows are valid — fixed in advance, not
+outcome-selected, which is what `docs/EVAL-PROTOCOL.md` §4b requires. **Implemented default, awaiting
+ratification: keep the run and record ppg's seed set as `{1, 102, 103}`** rather than spend eight
+GPU-hours reproducing a number we have.
 
-**Now fully confirmed wrong, not just probably wrong.** Read all five changed files' diffs in
-full (`vec_env.py`, `algo.py`, `buffer.py`, `models.py`, `train_ppo.py` — 477 inserted / 84 deleted
-lines) the way a fresh reviewer would: every dated marker is ≥2 days old; the content is CTRL's
-continuous-action-space port plus a real fix to an upstream bug (`ctrl_public @ 7a118c8` ships two
-commented-out lines that make its OWN `loss_cluster` raise `NameError` — not a porting defect, the
-released repository cannot run its own algorithm); JAX/Flax API-drift fixes are explicitly
-separated from algorithm changes with version reasoning; `algo.py` adds the `clip_fraction`/
-`approx_kl_k3` diagnostics DECISION-SHEET A30 already names as CTRL's re-open trigger;
-`train_ppo.py` redacts a live hardcoded W&B key upstream shipped and wires the shared
-cross-baseline policy-health diagnostic. `pytest tests/ -q -k "ctrl"` — 99 passed, 0 failed, run
-fresh. `refresh_clone_patches.py --check` — `ctrl current`. Full writeup: `notes/CORRECTIONS.md`
-#96. **Verdict: finished, cross-referenced, deliberately-reasoned, tested work — not in-progress,
-not uncertain.** The original caveat is retracted in full.
+**Nine of twelve baselines have no production record at all.** `ibac_sni` has never completed a 600k
+cell (five attempts, four stopped by the memory floor on a card a colleague was holding). `ctrl` has
+never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a 32,494 MiB card.
 
-**The general lesson, stated because the owner named it explicitly**: a caveat I write and don't
-act on is not neutral — it's either something I should have checked (cheap, just do it) or
-something that genuinely needs a compute run (say so plainly and stop there), never a third
-category of "noted and moved past."
+Full audit with every number read first-hand:
+[`production-host/33-what-we-actually-have-2026-09-16.md`](production-host/33-what-we-actually-have-2026-09-16.md).
 
-## The cost question, unfinished — answer this first if picking this thread back up
+## 3. The standing mandate (unchanged, and still the operating rule)
 
-The owner asked directly: **why does Codex's quoted 4,324.32 RUB / 21h figure for the 7-family
-schema-2 revalidation wave look so expensive, and is it real?** I had the answer half-derived
-before compaction: `scripts/audit_job_budgets.py`'s own per-config estimates for `v146`-`v152`
-sum to **~13,030 seconds (~3.6 hours) of actual expected compute**, not 21 hours — the "21h" figure
-is 7 configs' **uniform 3-hour safety-timeout ceiling**, summed as if run serially. Two real
-overstatements stack: (1) timeout-ceiling instead of measured-per-family estimate, (2) serial
-instead of parallel (this session ran all 7 earlier-generation configs simultaneously without
-issue). If run in parallel like before, real wall-clock is ~44 minutes (the slowest single job,
-`rlvigen`/`dmc_gb` at 2657s), and the real RUB cost should be proportional to ~3.6 total compute-
-hours, not 21 — **likely a small fraction of the quoted figure**, though I did not finish
-converting seconds-per-tier into an actual RUB number before compaction (would need the per-tier
-hourly rate Codex used). This is worth surfacing to Codex/the owner explicitly: **worst-case
-ceiling estimates for spend-authorization purposes are reasonable, but should be labeled as
-ceilings, not presented as the expected cost** — conflating the two makes cheap things look
-expensive and could cause either under- or over-investment in genuinely low-cost validation work.
+"Continue work autonomously; your ultimate goal is to finish the pre-production stage in full — not
+'solve the problems seen now' but taking full responsibility and working on the long horizon."
 
-## Honest answer to "are you super-sure we've reviewed everything?"
+**Don't treat "flagged, not fixed" as done.** A caveat is a pointer to unfinished investigation, not
+a resolution. Go check it, or say plainly that checking it needs a compute run rather than more
+reading, and only then park it.
 
-**No — and this project's own most recent, most careful review says so explicitly.** External
-review 15 (`notes/ai-review-15-external.md`, triaged in `notes/review-15-triage.md`) states in its
-own opening: *"I would therefore consider the RL-ViGen-native/RAD/ALDA source-level portion less
-exhaustively inspected than PPG/IDAAC/IBAC/CTRL."* That's 5 of 12 baselines flagged by the most
-recent reviewer as having received comparatively less scrutiny than the other 7 — not a blind
-spot nobody named, a stated limitation of the review itself. Beyond that: five external AI
-reviews across this project's history (6/7/8, 9/10, 11/12, Gemini, 15) plus this session's own
-internal audit sweep is real, substantial coverage, but "unknown unknowns" are by construction
-things no review has caught yet — no amount of past review makes that count zero going forward.
+**The two-layer decision model.** Every open question already has *some* behaviour running today.
+"It's the owner's decision" is never a reason to leave that behaviour arbitrary — implement the
+genuine best answer now; only the *formal* resolved/PASS status waits on ratification. The ppg seed
+set in §2 is a live example of this being applied.
 
-## Unknown-knowns hunt (silently-accepted defaults, done under time pressure — incomplete, worth continuing)
+## 4. Constraints that no gate encodes — these are the owner's, not conveniences
 
-Requested explicitly per `docs/anthropic-prompting.md`'s framework (Known/Unknown Knowns/Unknowns).
-Candidates found in the time available, **none of these have DECISION-SHEET entries yet** — that
-itself is the finding:
+1. **No global or host-wide changes.** Nothing installs outside a container. On the host: `docker`,
+   `git clone`, `mkdir`, read-only inspection, and the scripts in `~/rlvigen-work`. Not arbitrary
+   Python.
+2. **Never CUDA OOM — ours or anyone else's, including spikes.**
+3. **Never delete a container, image or directory without proof you created it** and that it did not
+   exist before.
+4. **Do not inspect other users' processes or directories.** `ps aux` is itself a hazard here.
+5. **"No room" is answered by waiting for room, never by lowering a floor.**
+6. **A blocked action is a stop, not a puzzle.** It may encode context nobody wrote down.
 
-1. **The asymmetric-scrutiny fact above (5 of 12 baselines less inspected) is not itself recorded
-   as an accepted risk anywhere.** It's stated once, in passing, inside review 15's own text. No
-   one has explicitly said "we accept this asymmetry" or "we should equalize scrutiny before
-   production" — it's just sitting there unaddressed.
-2. **All 12 baselines continuing to production despite 3 of them (PPG/IDAAC/IBAC-SNI) carrying
-   "major fidelity issue"-level open questions (A35-A37) is itself an unstated default.** Nobody
-   has asked "should a baseline this compromised be dropped rather than reported misleadingly,"
-   only "should we run a pilot to characterize it better."
-3. **The sequencing risk of this session's own work**: enormous infrastructure investment
-   (evaluator-identity schema, record-delivery fix, validation ledger) happened *before* the
-   IDAAC/PPG/IBAC fidelity pilots (A35-A37) that could, if run, meaningfully change which baseline
-   variant is even worth validating. If those pilots reveal IDAAC-C/PPG-C should replace the
-   current design point, some of the validation work already spent (and about to be spent on the
-   v146-v152 wave) targets the *wrong* configuration. Nobody has explicitly decided the ordering
-   "infrastructure first, fidelity pilots second" versus the reverse — it just happened that way
-   because infrastructure bugs kept surfacing reactively. Worth a deliberate ordering decision,
-   not more accretion.
-4. **Whether the owner has actually reviewed the growing pile of "our best" DECISION-SHEET answers
-   (now at A37) is itself unknown to me.** I've been diligently producing them; I have no signal
-   whether they're being read/checked, versus quietly becoming the de facto production spec by
-   sheer accumulation. Worth an explicit "have you looked at A1-A37, do any of them look wrong to
-   you" check before treating the pile as reviewed-by-default.
-5. **CTRL's real V100 memory footprint at 64 envs has no trustworthy number at all** — not just
-   "unmeasured": the fallback "~54 GiB" figure people might reach for is *itself* flagged
-   (`notes/claude-answers.md:1975`) as an untrustworthy linear extrapolation from the 16-env
-   measurement, not a real estimate. Two candidate numbers exist (13.4 stale, ~54 untrustworthy
-   extrapolation) and neither is the truth. This is the single most concrete "silently might get
-   used as if known" risk found — if anyone schedules production packing math off either number,
-   it should be flagged as provisional, not authoritative.
+Governing detail: [`production-host/README.md`](production-host/README.md) and the 33 numbered notes
+it indexes. Read the directory, not just its index.
 
-## Where everything actually stands mechanically (re-verify, don't trust this list)
+## 5. What is measured, and the one number that still is not
 
-- `production_gates.py`: was **31 pass / 0 fail / 9 owner** as of the last full run this session.
-  Re-run fresh.
-- `open_decisions.py` now has a real, tested split between `ANALYSIS INCOMPLETE` (the "our best"
-  layer never done) and the rest (done, awaiting ratification/spend). As of last check, nothing
-  remains in the `ANALYSIS INCOMPLETE` bucket — A35/A36/A37 (IDAAC/PPG/IBAC-SNI fidelity specs)
-  were completed and their status tags corrected in the same session (see #4 above on whether
-  anyone's actually reviewed them).
-- Evaluator-identity schema is **2**, profile-invariant (CORRECTIONS #94/#95 area). All 5 families
-  validated earlier this session are schema-1 legacy. A fresh 7-family schema-2 wave
-  (`payload-v146`-`v152`, `cfg-*-revalidate-v146..152.yaml`) is built and locally verified
-  (`verify-payload` + `verify-evaluator-binding`, both clean) but **NOT submitted** — needs owner
-  spend authorization, and the cost question above should be resolved with real numbers first.
-- C95 renderer-parity: T4 side (`cfg-renderer-parity-t4-current-v144.yaml`) was resubmitted after
-  the Q37 record-delivery fix but **this payload (v133/v145-era) now predates schema 2** — it is
-  NOT a valid current-identity measurement either; needs rebuilding against the schema-2 payload
-  before its result means anything. V100 side is not resubmittable regardless — ~51.6 of the
-  needed 100 reservation-minutes remain of the 240-minute cap.
-- Codex is down for ~3 hours as of this writing (per the owner). Its last handoff (mailbox Q45)
-  was fully executed and committed. Do not touch `run_probe.sh`, `normalize_curves.py`,
-  `contract.py`, `refresh_clone_patches.py`, or `runnable/ctrl` without checking the mailbox tail
-  first when it returns.
-- Git tree was clean (all committed) as of the last check before this compaction, modulo whatever
-  the ctrl-test investigation above turns up.
+Six of seven families have a measured VRAM peak (`datasphere/native/measured-vram-bounds.json`).
+**`ibac_sni` at `procs=16` does not**, and three different figures for it were quoted as fact in a
+single day — an estimate from a code comment, a 3-process measurement that under-counts because EGL
+contexts are not compute apps, and a figure that was 94% a colleague's memory read through an
+instrument whose docstring claimed a filter it did not have. Only a lower bound survives: **~6.6 GiB**.
 
-## What to do first on resume
+**The rule that failure produced, and it is the most transferable thing in this file: before a number
+decides anything, find where it was produced. A number in a comment is not a measurement.**
 
-1. Re-run `production_gates.py` and `open_decisions.py` fresh — do not trust the tallies above.
-2. Finish the ctrl self-correction: run ctrl-specific tests, read the remaining 3 diffs
-   (`algo.py`, `buffer.py`, `models.py`, `train_ppo.py`) the same way `vec_env.py` was checked.
-3. Finish the cost-question answer: get the actual per-tier RUB/hour rate and convert the real
-   ~3.6-hour compute estimate into a real number to hand back to the owner, rather than leaving
-   "smaller than quoted" unquantified.
-4. Decide (or ask) about the sequencing risk in unknown-knowns item #3 — should the v146-v152
-   wave wait until after A35-A37's pilots are run, given they could change what's worth validating?
-5. Read this whole file critically before extending it — it was written in the last minute before
-   a forced compaction and may itself contain the exact "flagged, not verified" pattern it warns
-   against.
+## 6. Self-corrections from this session — read before citing anything of mine
+
+Two claims of mine were published and are now retracted **in place**, not edited away:
+
+- **"The memory floor is enforced only at preflight."** False. `watch_gpu_headroom.py`'s `watch()`
+  is only a recorder, but it is not the enforcer — `yield_gpu_to_neighbour.py` polls the floor for
+  the life of the cell. I read one function, found it did not enforce, and concluded nothing did.
+- **"The nine mode baselines are unaffected by evaluator nondeterminism."** False. Mode rows
+  reproduce 282/800 episodes against sample's 264/800, so all twelve baselines are exposed. The
+  mechanism is **open**.
+
+Both live in [`model/STOP-MECHANISMS.md`](model/STOP-MECHANISMS.md) and
+[`endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md`](endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md).
+
+## 7. The host, operationally
+
+Both cards are booked for us and **both carry other groups' containers in practice**.
+`rlvigen_kalugin_df` holds ~21.3 GiB across two processes and cycles off and back on within tens of
+minutes. Therefore:
+
+**Size a launch against the co-tenant's RETURN, not against current free.** Worked example from
+today: card 1 at 28,858 MiB free with our 2,635 MiB cell resident — adding a 7,146 MiB ppg cell
+leaves 21,712, the colleague reclaims 21,298, free drops to 414, under the 4,000 floor, and **both**
+our cells yield. Declining to launch kept the running cell alive. The second cell's real cost is the
+first cell.
+
+## 8. What to do first on resume
+
+1. Re-run the five commands in §1. Do not trust the tallies above.
+2. Read [`production-host/33`](production-host/33-what-we-actually-have-2026-09-16.md) — it is the
+   first-hand audit this summary compresses.
+3. Read [`HANDOFF.md`](HANDOFF.md) for the intent and unproven suspicions that this file
+   deliberately does not carry.
+4. Check what is running before launching anything: `docker ps` on the host, and disarm any waiter
+   script still armed (`ibac-waiter.sh` and friends) — one of them double-launched a 600k cell.
+5. Finish idaac's curve if it is not at 11/11, then collect it: the sweep skips completed stamps, so
+   restarting it is safe and cheap.

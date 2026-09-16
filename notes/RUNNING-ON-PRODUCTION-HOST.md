@@ -898,6 +898,271 @@ python -m pytest tests/ -q               # slow; at real checkpoints, not every 
 `source tree frozen` is a gate and it **fails on uncommitted paths**, deliberately: a commit is what
 makes "the code whose results we report" well defined. Never `git add -A` here.
 
+## 10. Is this a result yet? — admissibility, comparability, and the tools
+
+A finished cell is not a result, and the distinction is mechanical rather than a matter of
+judgement. This section is the operator's half; the scientific reasoning lives in
+[`../docs/EVAL-PROTOCOL.md`](../docs/EVAL-PROTOCOL.md) and
+[`SAME-AXES-VERDICT.md`](SAME-AXES-VERDICT.md) and is not restated here.
+
+### 10.1 When a number becomes a result
+
+Four things must hold. Each is checked by a tool that **refuses**, so none of them is your opinion.
+
+| # | condition | what refuses if it fails |
+|---|---|---|
+| 1 | the row's `evaluator_revision` equals the family's LIVE revision | `populate_evaluator_ledger.py` — this assertion "is the whole value of this script" |
+| 2 | every row within one job agrees on `evaluator_revision` | the same script: *"rows disagree on evaluator_revision within one job"* |
+| 3 | no reported row pools seeds from two closures | `audit_row_closure.py --strict`, and the `no row pools two closures` gate |
+| 4 | the row carries the `checkpoint_sha256` it was measured from | `audit_record_frame_provenance.py`, run by `collect-host-run.sh` |
+
+**"Superseded" means re-hashed, not refuted.** A row whose closure has moved is not wrong; it
+describes a tree that no longer exists. Because every intermediate checkpoint is retained, the fix
+is to re-run the grid, which costs **no training** — that is exactly how ppg's and idaac's 600k runs
+became admissible on 2026-09-16, turning 28 current rows into 732
+([`production-host/33`](production-host/33-what-we-actually-have-2026-09-16.md) §0).
+
+Read the state with `python scripts/export_fleet.py`, whose `closure_current` column exists to make
+this visible; it exports superseded rows **marked** rather than dropped, so the table can never
+disagree with `results/records/` for a reason the reader cannot see.
+
+### 10.2 The grid, the cadence and the seeds — what an operator must not improvise
+
+All three are decided and frozen; the operator's job is to not deviate, because a deviation makes a
+cell that is not a production cell whatever its frame count says. `run_probe.sh` refuses the obvious
+deviations itself (`NATIVE_PRODUCTION_CONFLICT CURVE_EVAL=0 expected=1`).
+
+- **The grid**: 4 regimes x 11 scene sets, curve at 3 episodes per stamp, endpoint at 20 episodes
+  x 2 policy modes. 3,476 episodes per 600k cell. [`EVAL-PROTOCOL.md`](../docs/EVAL-PROTOCOL.md) §2;
+  the "three, not five" decision is A20, 2026-09-05.
+- **The cadence**: `save_every_frames=50000`, and on the v100 profile every family retains all 13
+  stamps. Actual deltas are 49,152 / 51,200 because stamps quantise to the rollout size — the
+  declared round number is not what lands. [`EVAL-PROTOCOL.md`](../docs/EVAL-PROTOCOL.md) §4.
+- **The seeds**: fixed n=3 per reported row, **allocated in advance, never chosen by outcome**.
+  [`EVAL-PROTOCOL.md`](../docs/EVAL-PROTOCOL.md) §4b, and §4c for what n=3 licenses statistically.
+  `production-schedule-v100.json` names `[101, 102, 103]`.
+
+> **A live discrepancy, so nobody rediscovers it as a surprise.** `ppg`'s banked 600k run is at
+> **seed 1**, outside that set, so `campaign_status.py` reports it MISSING on all three columns and
+> the campaign reads **1 DONE of 36** despite two complete baselines existing. The rows are valid;
+> the join is what fails. See [`production-host/33`](production-host/33-what-we-actually-have-2026-09-16.md) §1.
+
+### 10.3 Which comparisons are licensed
+
+`python scripts/comparison_blocks.py` computes this; do not eyeball it. Raw return blocks on four
+axes, and two methods differing on **any** of them may not be ranked against each other:
+
+```
+RETURN_BLOCKING_AXES = ("policy mode", "frame stack", "time limit", "network input")
+```
+
+`policy mode` is the one that bites daily: `idaac`, `ppg` and `ibac_sni` report a **sampled** return,
+the other nine a **mode** return. Different estimands, not one quantity measured twice —
+`export_fleet.py` carries `policy_mode` on every row for exactly this reason.
+
+Retention (an eval/train ratio) blocks on **nothing**, deliberately: those four are per-method
+properties appearing in both regimes, so they cancel in the ratio.
+
+Two further limits that are easy to miss:
+
+- **The regimes are distributions, not a difficulty ladder.** `eval-medium` alone randomises the
+  robot's own appearance. Measured for ppg, eval-medium scores *below* eval-hard, and 60% of its
+  slots vary across passes against 0% for train and eval-easy — so **eval-medium and eval-hard are
+  not paired**, and a paired claim about them is unavailable.
+- **Exact reproduction is not available and any claim of it is false.** Two runs of the *same*
+  invocation reproduce only ~35% of episodes, in mode and sample alike; the mechanism is open. Plan
+  comparisons that tolerate this — it is ~0.2-0.3 SE, well inside the noise, but it is not zero.
+
+### 10.4 Every tool in this repository, and what it is for
+
+158 entry points. An operator asking "is there already something for this?" should look here
+before writing anything. Regenerate with `python scripts/script_inventory.py --write`; check it is
+current with `--check` (the release suite does).
+
+<!-- BEGIN script-inventory (generated by scripts/script_inventory.py) -->
+
+**`scripts/*.py`** — 97 file(s)
+
+| script | what it is for |
+|---|---|
+| `_discover_grid_checkpoints.py` | Which checkpoints do the existing grids name? — helper for `rederive_grids.sh` (C69). |
+| `assemble_reaped_delivery.py` | Rebuild a delivery bundle for a cell that was reaped before it could assemble its own. |
+| `audit_attempt_ledger.py` | Every submitted attempt and what became of it, DERIVED from artifacts. |
+| `audit_checkpoint_semantics.py` | What a checkpoint contains per family, and what it therefore does NOT let you do. |
+| `audit_comparability_seam.py` | Do the twelve clones' reported numbers land on one axis? — the clone-era seam audit. |
+| `audit_dead_knobs.py` | Which configuration parameters does an early-returning branch silently drop? — C71. |
+| `audit_environment_drift.py` | Did two jobs of the same family actually get different packages? |
+| `audit_eval_axis.py` | Per baseline: how many evaluation scenes, and how many visual regimes? — C45 / C43. |
+| `audit_eval_cadence.py` | Per baseline: does training-time evaluation exist, how often, and over what? — C43 / C45 / R3. |
+| `audit_eval_state.py` | What an OFFLINE evaluator needs from each baseline beyond the weights — R3 / R7 / C43. |
+| `audit_eval_validity.py` | Are these numbers reportable? Checks the evaluation's own identity fields, per record file. |
+| `audit_executed_hyperparameters.py` | Does the value the fidelity table CLAIMS actually reach the process? |
+| `audit_implementations.py` | R6: is each of the twelve a GENUINE implementation, or the name of one? |
+| `audit_instruments.py` | Which instruments in this repo are themselves checked, and which are taken on trust? |
+| `audit_job_budgets.py` | Can each job config's timeout actually fit the evaluation it asks for? |
+| `audit_observation_geometry.py` | Declared, executed, observed — the observation geometry of all twelve, in one table. |
+| `audit_pairing_evidence.py` | Do the records PROVE paired physical conditions, or only assert them? |
+| `audit_payload_freshness.py` | Which built payloads no longer match the tree, and in which members? |
+| `audit_record_frame_provenance.py` | Is a record's `frame` corroborated by the checkpoint it was computed from? |
+| `audit_row_closure.py` | Do the seeds pooled into one reported row come from ONE scientific closure? |
+| `audit_seed_control.py` | Does a seed actually control each baseline's run? -- `docs/CONSTRUCTION.md` C20, screen (a). |
+| `audit_shared_evaluator.py` | Has the shared evaluator earned the right to report each baseline's number? |
+| `audit_static_classes.py` | Three defect classes that were findable by reading and were not found. [C77](../docs/CONSTRUCTION.md#c77), [C79](#), [C80](#) |
+| `audit_submission_configs.py` | Would this job config die on the tier it asks for, or name a cell that does not exist? |
+| `audit_training_diagnostics.py` | Did the optimiser behave, or did the run only *look* like it ran? |
+| `authorship.py` | Every first-party file, measured against every reference on disk. No sampling, no vibes. |
+| `build_external_review_artifact.py` | Build a non-destructive, directory-first external review artifact. |
+| `campaign_status.py` | Campaign state across all 36 cells in one view, derived from artifacts. |
+| `capture_host_evidence.py` | Capture a verbatim excerpt as evidence, with enough provenance to re-derive it. |
+| `check_checkpoint_finite.py` | Is this checkpoint a network, or 7.4M NaNs? [C57](../docs/CONSTRUCTION.md#c57). |
+| `check_citations.py` | Check that `file.py:123`-style citations resolve, and point where they claim to. |
+| `check_section_scope.py` | Every `##` heading in a two-era document must say which era it describes. [C82](../docs/CONSTRUCTION.md#c82) |
+| `classify_drift_frames.py` | Classify each training episode's reset frame by which render condition it matches. |
+| `collect_attestation_wave.py` | Collect whichever v212 attestation cells have finished, and populate the ledger for each. |
+| `collect_metrics.py` | Read the twelve baselines' logs and put their metrics on one set of axes. |
+| `comparison_blocks.py` | Which pairwise comparisons are PRIMARY, derived from the axes rather than asserted. |
+| `decisions.py` | Enumerate the decisions this project has reached, and catch the ones it forgot to log. |
+| `deviations.py` | Every line this project changed in an original repo, counted and shown. |
+| `eval_across_scenes.py` | What is the scene axis worth IN RETURN? The follow-up C46 names and could not answer. |
+| `eval_grid.py` | The offline evaluation grid: regimes x scenes, from one checkpoint — R3 / R7 / C43. |
+| `eval_provenance.py` | Small, dependency-light provenance helpers used by the offline evaluators. |
+| `evidence_pair_eval_grids.py` | Pair two captured evaluation grids row by row, and say how far apart repeat measurements are. |
+| `explain_delivery_size.py` | Why is this record bundle so large? Answers per field, not per file. |
+| `export_fleet.py` | One flat table of every record in the fleet, with a documented schema. |
+| `generate_fidelity_table.py` | Emit the per-baseline hyperparameter table FROM SOURCE, so prose cannot drift away from it. |
+| `greenmark.py` | Record which tree the suite was last green on, and whether that is still this tree. |
+| `handicaps.py` | Handicaps, inverted: which ones apply to each baseline? — closes SYSTEM.md's "no home" gap. |
+| `learning_over_random.py` | How far above its own untrained policy did each cell get? |
+| `measure_vram_bounds.py` | Extract a per-family VRAM peak from returned job archives, so the upper-bound rule can be met. |
+| `metrics.py` | The metric definitions this project reports, in one place, with their conditions of validity. |
+| `open_decisions.py` | Everything waiting on the owner, from every source that holds one. One command, one list. |
+| `operator_readiness.py` | Can an operator get from zero to banked results without asking anyone? Checked, not asserted. |
+| `plan_seed_budget.py` | How large a difference can N seeds actually resolve? -- `docs/CONSTRUCTION.md` C18. |
+| `plot_curves.py` | One plotting routine over TensorBoard event files. [TASK.md](../docs/TASK.md) R5, item 3. |
+| `populate_evaluator_ledger.py` | Write one family's entry in the evaluator-validation ledger, from its job's own records. |
+| `preprod_table.py` | Assemble the twelve-baseline pre-production table from returned job archives. |
+| `preserve_intermediate_snapshot.py` | Keep the 50k snapshot that a 100k run is about to overwrite. [C68](../docs/CONSTRUCTION.md#c68) |
+| `prior_art.py` | Before you commit that note: what does the repo already say about the things in it? |
+| `probe_determinism.py` | Do two same-seed runs of a clone agree? -- `docs/CONSTRUCTION.md` C20, screen (b). |
+| `probe_floor.py` | What does a random policy score? The floor, without which a trained 0.000 means nothing. |
+| `probe_geometry.py` | Measure the two structural differences between the twelve, instead of arguing about them. |
+| `probe_heads.py` | Construct each authored continuous head and check its initialisation, instead of reading logs. |
+| `probe_level_seed_decodable.py` | Can `level_seed` be decoded from an observation? The direct test of [C50](../docs/CONSTRUCTION.md#c50). |
+| `probe_ppg_aux_minibatches.py` | Count PPG's auxiliary-phase minibatches by executing the vendored code, not a re-derivation. |
+| `probe_regimes.py` | Do the evaluation regimes actually differ from training? Measured, with a control. |
+| `probe_scenes.py` | Does the SCENE axis carry signal? The measurement C45 needs to be worth acting on. |
+| `probe_seed_effect.py` | What does the env `seed` argument actually control? -- C20 screen (b), env side. |
+| `probe_shim_divergence.py` | How much does the MPS path change the numbers? A golden trace, not an argument. |
+| `probe_success_control.py` | Can the success signal fire AT ALL in our configuration, without being forced? |
+| `probe_torch_checkpoint_equivalence.py` | Do two `torch.save` files hold the same tensors in the same structure, whatever their bytes? |
+| `production_gates.py` | Is the fleet launchable? Recomputed from the tree, not remembered from a document. |
+| `production_run_register.py` | One catalogue of every run whose records this repository holds — regenerated, never hand-kept. |
+| `read_stack_pilot.py` | Apply the frame-stack pilots' PREDECLARED criterion to a returned cell. |
+| `recheck_evidence.py` | Re-hash the sources behind every evidence bundle and say which still match. |
+| `record_host_run.py` | Record that a host cell exists, from its own config, before anyone needs its results. |
+| `record_measured_peak.py` | Extract a family's peak resident set from a finished job and record it in the descriptor. |
+| `refresh_clone_patches.py` | Keep `runnable/_patches/*.patch` reproducing the clones they claim to reproduce. |
+| `regime_retention_report.py` | Regime retention from paired `eval_across_scenes.py --json` dumps. |
+| `register.py` | Maintain `docs/CONSTRUCTION.md` safely: recount statuses, check structure, locate an entry. |
+| `requirements.py` | R1-R7 from the brief, checked against the repo as it is now. |
+| `results_table.py` | The presentation-ready results table, built only from what the cells actually support. |
+| `rlvigen_reference.py` | RL-ViGen's own published robosuite numbers, read from the file already in the tree. |
+| `script_inventory.py` | What every script in this repo is for, generated from the scripts themselves. |
+| `state.py` | Recompute the mechanical facts a handoff must not state falsely. |
+| `test_inventory.py` | What is the test suite actually verifying? Classified by what each file imports. |
+| `verify_cells.py` | Do the tabulated numbers come from the runs they claim? Provenance invariants, per cell. |
+| `verify_note_citations.py` | Do the notes still cite what they claim? Checks every `path:line` a note asserts. |
+| `verify_resolved_register.py` | Is every `resolved` row in the register actually resolved? Checks, does not trust. |
+| `verify_vram_cap.py` | Does `datasphere/native/vram_cap.py` actually bind, and what sits OUTSIDE it? |
+| `watch_card_exclusivity.py` | Confirm out loud that a card is ours alone — and scream the moment it is not. |
+| `watch_disk_headroom.py` | Stop OUR cell if free disk falls toward a floor. Loud, positive, and on a mandatory timer. |
+| `watch_divergence.py` | Catch a NaN-diverged run from its LIVE log, in minutes. [C57](../docs/CONSTRUCTION.md#c57), C79. |
+| `watch_gpu_headroom.py` | Card headroom: one pre-launch verdict, or a bounded sampling run. Never a daemon. |
+| `watch_policy_health.py` | Watch a running cell's policy for saturation or collapse, and say so while it can still matter. |
+| `watch_training_frames.py` | Copy each training episode's reset frame out of the replay buffer before it is deleted. |
+| `where_is_this_decided.py` | Given a topic, show every place that discusses it, newest authority first. |
+| `yield_gpu_to_neighbour.py` | Stop OUR cell when someone else needs the card. We yield; they never fail. |
+
+**`datasphere/native/*.py`** — 9 file(s)
+
+| script | what it is for |
+|---|---|
+| `configure_places365_val.py` | Configure a pinned Places365 overlay loader (RL-ViGen or dmc_gb flavor) for one split. |
+| `contract.py` | Build and verify the fail-closed native DataSphere payload. |
+| `evaluator_identity.py` | Dependency-free evaluator identity primitives shared by build and remote preflight. |
+| `family.py` | Resolve one family descriptor into a command line and a retained artifact set. |
+| `measure_resources.py` | Sample the native calibration process tree without adding a monitoring dependency. |
+| `normalize_curves.py` | One common record per measurement, derived from each family's own logs. |
+| `plan_production.py` | Derive the production schedule from measured throughput and the replay memory law. |
+| `summarize_result.py` | Turn one returned result archive into the per-cell numbers a scheduling decision needs. |
+| `vram_cap.py` | Bound this process's GPU reservation, so a co-tenant's growth cannot be starved by ours. |
+
+**`datasphere/native/*.sh`** — 24 file(s)
+
+| script | what it is for |
+|---|---|
+| `battery-chain.sh` | The production battery: 12 baselines x 3 seeds x 600k frames, CARD 0 ONLY, one cell at a time. |
+| `booking-watchdog.sh` | Say something when the shared node changes in a way that should change what we do. |
+| `build-env.sh` | Build ONE reusable environment for a stack, once, into our own directory, from inside the pinned |
+| `cell-heartbeat.sh` | Watch one running cell and SAY something the moment anything looks wrong. Never stops anything. |
+| `chain-when-card-free.sh` | Run queued cells back to back, waiting only for OUR OWN previous cell to finish. |
+| `collect-host-run.sh` | Install a HOST run's records and populate the evaluator ledger, refusing rather than skipping. |
+| `collect-wave.sh` | Pull a finished wave's records, install them, populate the evaluator ledger, report the gate. |
+| `curve-sweep.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
+| `fire-wave-v205.sh` | [Claude 2026-09-08] Fire the single re-attestation wave after the closure batch. |
+| `gpu-occupancy-log.sh` | Append one line per card per minute to a log THAT OUTLIVES THE SSH SESSION. |
+| `host-run.sh` | Run a script inside a container on the production host, with no quoting hazards. |
+| `job.sh` | One place for the three things every DataSphere interaction here repeats. |
+| `launch-card-cell.sh` | Launch one cell on one GPU card, with the exclusivity and yield watches sized to actually cover it. |
+| `launch-ibac-when-roomy.sh` | Launch the ibac_sni 600k production cell when a card genuinely has room for it -- not before. |
+| `launch-when-free.sh` | Retry a cell launch until a card is genuinely free, then stop retrying. |
+| `neighbour-yield.sh` | Yield card 0 to a REAL neighbour -- including a small one the 4000 MiB floor cannot see -- |
+| `preflight_production_host.sh` | Check every assumption notes/RUNNING-ON-PRODUCTION-HOST.md makes about the production host, |
+| `reeval-cell.sh` | Re-evaluate ANY banked checkpoint on the current evaluator closure. No training. |
+| `reeval-ppg.sh` | Re-evaluate ppg's banked 600k checkpoints on the CURRENT evaluator closure. |
+| `require_container.sh` | Refuse to run outside a container. Source this at the top of any script whose body installs |
+| `run_on_production_host.sh` | Run one native probe/production cell directly on the production V100 host (cds2), via |
+| `run_probe.sh` | (no summary) |
+| `self-vram-cap.sh` | Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's. |
+| `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+
+**`datasphere/native/host-scripts/*.sh`** — 28 file(s)
+
+| script | what it is for |
+|---|---|
+| `attest-chain.sh` | Run the remaining attestation cells on CARD 0, one at a time, each through launch-card-cell.sh |
+| `attest-retry.sh` | Retry the three families the first chain could not attest. |
+| `attest-retry2.sh` | svea and soda, third attempt. Attempt 2 got the Places365 archive through (the launcher fix works) |
+| `attest-v212.sh` | ATTESTATION WAVE v212 -- all seven evaluator families against the frozen tree. |
+| `attest-v213-ctrl.sh` | ctrl only, against the tree that pins nvidia-cudnn-cu12==9.5.1.17. |
+| `ctrl-retry.sh` | Retry ctrl's attestation under the DATASPHERE profile. |
+| `curve-sweep-v2.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
+| `curve-sweep-v3.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
+| `curve-sweep.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
+| `extract-places-once.sh` | (no summary) |
+| `fetch-places.sh` | (no summary) |
+| `host-run.sh` | Run a script inside a container on the production host, with no quoting hazards. |
+| `ibac-waiter.sh` | Launch ibac_sni on WHICHEVER card gets genuine room. Never contend for a card a colleague holds. |
+| `jax-cudnn-diag.sh` | WHY the conv fails, and whether it can be made to work without changing the declared jax spec. |
+| `jax-cudnn-pin.sh` | Is ctrl's conv failure the CARD (sm_70) or the DEPENDENCY RESOLUTION DATE? |
+| `jax-volta-probe-v2.sh` | Does THIS jax build run a convolution on THIS card? |
+| `jax-volta-probe.sh` | (no summary) |
+| `neighbour-yield.sh` | Yield card 0 to a REAL neighbour -- including a small one the 4000 MiB floor cannot see -- |
+| `reeval-cell-cached.sh` | Re-evaluate ANY banked checkpoint on the current evaluator closure. No training. |
+| `reeval-cell.sh` | Re-evaluate ANY banked checkpoint on the current evaluator closure. No training. |
+| `run-volta-probe-when-free.sh` | Wait for card 0 to be free of OUR cells, then run the JAX/Volta probe once. |
+| `self-vram-cap.sh` | Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's. |
+| `train-production-cell-v2.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+| `train-production-cell-v3.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+| `train-production-cell-v4.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+| `train-production-cell-v5.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+| `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
+| `verify-places-folder.sh` | (no summary) |
+
+*158 entry points. Generated; do not edit by hand.*
+
+<!-- END script-inventory -->
+
 ## What this does NOT establish
 
 **[Claude 2026-09-16] Rewritten. Every bullet that used to be here was true when written and is

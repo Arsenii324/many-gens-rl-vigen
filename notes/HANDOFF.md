@@ -2,105 +2,87 @@
 
 Every other document here records **what is true**. This one records **what I was thinking**:
 priorities, suspicions I have not proven, why the next step is the next step, branches deliberately
-left open, and constraints I am carrying that no gate encodes. Those are the things that vanish
-when a conversation is compacted, and a file like this makes their survival *closer* to true, not
-true. Read it as a colleague's notes, not as a specification.
+left open, and constraints I am carrying that no gate encodes. Those vanish when a conversation is
+compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
+colleague's notes, not as a specification.
 
-Last updated 2026-09-07, night, by Claude. Codex is stopped for the remainder of the project.
-
-> **This file was substantially rewritten on the night of 2026-09-07.** The version before it
-> described the v194 wave as the thing to finish. v194 is now a diagnostic: correcting `ctrl`'s
-> native policy mode moved every family's evaluator revision. What follows replaces that plan.
+Last updated 2026-09-16, ~15:30 MSK, by Claude. The previous version (2026-09-07) planned the v196
+attestation wave; that wave landed, the host ran, and two 600k baselines are banked. What follows
+replaces that plan entirely.
 
 ## What I would do next, and why that order
 
-1. **One job, then six.** The v196 configs are built and their payloads verified, but the wave is
-   deliberately not submitted as seven. Submit `cfg-dmc_gb-attest-v196.yaml` (soda) FIRST: that one
-   cell exercises the Places365 train path end to end, P21's revision stability and the
-   `RLVIGEN_IMAGE_SIZE` repair — the three pieces of machinery that have never run. Submit the
-   other six only if it lands. A shared-core mistake submitted seven times is paid for seven times,
-   and shared-core mistakes are what this session kept finding.
-2. **Do not touch the hashed members** — `eval_grid.py`, `eval_across_scenes.py`,
-   `eval_provenance.py`, `metrics.py`, `evaluator_identity.py`, `normalize_curves.py`,
-   `rlvigen-source.json`, `families.json`, or anything under `runnable/` and `RL-ViGen-upstream/` —
-   from the moment the wave starts until it is attested. Comment bytes count.
-3. **Then the host sequence**, in the runbook's §0 order. Nothing there is a decision; all of them
-   are measurements. Places365 must pass `verify_datasets.py --split train` on the host ONCE before
-   the first svea/sgqn/soda cell (runbook §2b).
-
-## The queued change, and what it is expected to buy
-
-**After the v196 wave attests, raise `ctrl` and `ibac_sni` to `frame_stack=3`** (A40 REVISED-2).
-Not during: `frame_stack` lives in `families.json`, a `CONFIG_MEMBER`, so it moves every family's
-evaluator revision.
-
-Expected outcome, computed rather than hoped: the on-policy group's primary pairs go from **1**
-(`idaac`-`ppg` alone) to **3** (`+ idaac`-`ibac_sni`, `ppg`-`ibac_sni`). Verify with
-`python3 scripts/comparison_blocks.py` after the change; if it does not print 3, something else
-moved and the change should be re-derived rather than accepted.
-
-Code cost is one literal — `runnable/ibac_sni/torch_rl/model.py:62`, `nn.Conv2d(3, 32, ...)` -> 9.
-`ctrl` needs no channel change (Flax infers). Each needs a pilot, because observation shape changes
-learning. `ctrl`'s 64-env memory is still an unmeasured extrapolation and a 3x stack makes
-measuring it first MORE important.
+1. **Finish idaac's curve and collect it.** 7 of 11 stamps at last check, 4 cells in flight. This is
+   the cheapest remaining increment: it costs no training, and it gives idaac the complete
+   endpoint+curve pair that ppg already has. The sweep skips finished stamps, so restarting it is
+   free — do that rather than reasoning about whether it died.
+2. **Let idaac s102 finish.** It is the second seed, giving `{101, 102}` against the schedule's
+   `[101, 102, 103]`, and it is the only cell that moves `campaign_status` off 1-of-36.
+3. **ibac_sni, but only into a card that has been free for a while.** It needs roughly 11 GiB that
+   *stays*. Four of its five failures were the memory floor firing on a card a colleague was
+   holding — not an ibac_sni defect, a scheduling fact. Launching into a fresh vacancy is what
+   failed; I did it once today and the co-tenant returned within minutes.
+4. **Then a third seed, not a new baseline.** Three seeds of two baselines is a reportable result
+   under the n=3 policy; one seed of six baselines is not. I would resist the pull toward breadth.
 
 ## Suspicions I have NOT proven
 
-- **The `--policy-mode mode` pass has still never executed anywhere.** Its scope canonicalises and
-  it is unit-tested, but no job has produced a `mode` record. The owner has ruled no secondary pass
-  is scheduled, so this is now a dormant capability rather than a planned step — but it means the
-  path would first execute during any future cross-block analysis. Note `ctrl` no longer needs it:
-  its native rule IS the mode.
-- **`ppg` is the weakest link in the "each family's own evaluator" claim.** OpenAI ships no
-  evaluation runner at all, so its native sampling rests on `PpoModel.act()`, a rollout convention.
-  Every other family's rule was verified against a released evaluator. If a reviewer attacks the
-  estimand story, this is where it gives.
-- **The full suite had never completed in this tree before tonight**, and the first complete run
-  found 14 failures, about half of them pre-existing checks that could not fail for the right
-  reason. I fixed those. I do not believe I have found the last one of that species — the pattern
-  (a check anchored only against our own files) is not exhausted by the instances found.
+- **The evaluator-nondeterminism mechanism.** `VGBWrapper`'s `random_state` drives
+  texture/colour/lighting, is seeded once at construction and never re-seeded per episode, and the
+  regimes that reproduce **0/200** episodes are exactly the ones that randomise appearance. That is
+  suggestive and it is not sufficient: a once-seeded generator consumed identically still yields
+  identical sequences, so something must first perturb the *draw count*. My candidate is GPU
+  floating-point nondeterminism (cuDNN algorithm selection) changing an action slightly, hence an
+  episode's length, hence RNG consumption. **Cheap discriminating experiment, not yet run:** one
+  eval-medium scene twice in one process with `torch.use_deterministic_algorithms(True)` and
+  `CUBLAS_WORKSPACE_CONFIG` set. Reproduces 200/200 → it is GPU nondeterminism; still diverges → it
+  is the RNG object, and `random_state` needs per-episode seeding.
+- **Whether `rlvigen_kalugin_df`'s cycling is a schedule or a job loop.** It releases ~21.3 GiB and
+  reclaims it within tens of minutes, repeatedly. If it is a loop with a period, a launch could be
+  timed against it. I have only watched it, never characterised it, and I would not ask its owner.
+- **Whether ibac_sni at `procs=16` is actually large or merely unlucky.** Its only surviving figure
+  is a ~6.6 GiB *lower* bound taken 42 s in while its process count was still climbing 2 → 20. It
+  may be much larger. I would not schedule it beside anything until one clean run measures it.
 
 ## Constraints I am carrying that no gate encodes
 
-- **A bare `ERROR` status is not a diagnosis.** The rlvigen `NameError` survived an entire wave
-  because a status was read and a log was not. Always pull the log; the real error is often twenty
-  lines above the visible one (dmc_gb's `EGLError` was teardown noise over the real `RuntimeError`).
-- **Tests that read source as text pass while the code raises.** Three defects today were covered by
-  such tests. `tests/test_eval_grid_names_resolve.py` now guards one class of that; the general
-  lesson is not guarded and cannot be.
-- **Do not pool across tiers.** gt4i.1 is 1.14x gt4.1. I made this error once with the per-episode
-  evaluation rates and caught it only on a direct question.
-- **Price a decision before taking it.** A36 was decided by +8.3 GPU-h against ~893; A22 nearly went
-  the wrong way on a 105 GB figure that our own `fetch_overlay_dataset.sh` header contradicted
-  with "~24 GB". **Check the tree for the number before quoting one.**
+- **The second cell's real cost is the first cell.** On a shared card, sizing a launch against
+  *current* free memory rather than against the co-tenant's return is how you lose the run you
+  already have. This is written into `CURRENT-STATE` §7 with the arithmetic, because I nearly got
+  it wrong and only caught it by computing the return case.
+- **A number in a comment is not a measurement.** Three wrong VRAM figures in one day, one of which
+  sized a production launch. I now treat any number whose provenance I cannot name as unknown.
+- **Never write to a script that may be executing.** Five occurrences in this project. `bash` reads
+  by byte offset, so the error is a syntax error at an innocent line while `bash -n` passes — the
+  mtime is the diagnostic, not the contents.
+- **`pgrep -f <script>` matches your own ssh shell.** `pkill -f` killed my session once and
+  `pgrep -fc` self-counted into three duplicate sweeps. Resolve PIDs from `/proc/<pid>/cmdline`
+  `argv[1]`; kill by PID.
+- **Never grep a run directory for a marker.** `native-work/` contains `run_probe.sh`, which
+  contains the marker strings. I reported a healthy cell as FAILED this way.
 
 ## Branches deliberately left open
 
-- **`preserve_snapshots` thinning is a no-op at current fleet settings.** I implemented it generally
-  because the descriptor field was silently inert for six families; it does nothing today. If a
-  future profile sets `preserve > save_every`, that path activates and has never run for real.
-- **No `--memory` / `--cpus` caps on the production host.** Deliberate: a cap guessed before the
-  step-2 measurement turns an honest overcommit into an OOM kill. Add them after, not before.
-- **No wall-clock ceiling in `run_on_production_host.sh`.** Recommendation 22 asks for one; I did
-  not add it because the right value is a decision about how long a stuck cell may burn, and I had
-  no measurement to derive it from.
-- **The `mode`-pass ledger question.** Wave configs attest the NATIVE scope only. If the forced
-  scope should also be attested, that is a second entry shape in the ledger — a decision, not a
-  flag.
+- **ppg's seed set.** Implemented as `{1, 102, 103}`; the alternative is re-running at 101 for eight
+  GPU-hours to buy a number we have. Owner's call, and the tracker reads 1-of-36 until it is made.
+- **`ctrl`'s floor.** At 32,435 MiB it cannot satisfy peak-plus-floor on a 32,494 MiB card at all.
+  Running it requires an empty card *and* an explicit decision to lower or waive the 4,000 MiB floor
+  — which is the one thing the operating rules say never to do. I have not proposed a resolution
+  because I think it needs the owner.
+- **Whether the guide should absorb `production-host/`'s 33 notes or keep pointing at them.** I kept
+  them separate: the guide is procedure, the directory is the reasoning and the incident record.
+  Merging would produce one unreadable file; the cost is that a reader must follow links.
 
 ## What I am least sure about
 
-**Whether the fleet's numbers will be comparable in the way the frame claims.** The mechanics are
-sound and the axes are declared, and the estimand question is now much better anchored than it was
-— each family's rule is verified against its own released evaluator, `ctrl` was corrected, and the
-owner has ruled the residual 9/3 split acceptable with the reporting consequence fixed in advance
-(rank within a block, never across; `notes/SAME-AXES-VERDICT.md`).
-
-What still worries me is narrower and more specific than before: **`ppg`**, whose native rule has
-no evaluator behind it, and the fact that **three of the twelve baselines have still never produced
-a single attested record** — svea, sgqn and soda could not, by construction, until P21 tonight. The
-first soda job is the real test of that repair, and it has not run yet.
-
-If one thing in this project turns out to be wrong at publication time, my guess is no longer the
-policy-mode axis. It is something in the Places365 path for those three baselines, because that
-path has had three separate defects in one day and has never once run end to end.
+- **That my enumeration of operator needs is the right enumeration.** `scripts/operator_readiness.py`
+  checks 56 needs route somewhere real, and it passes — but the list is mine. It fits on one screen
+  deliberately, so that a person can disagree with the *set* rather than audit the checking.
+- **That the 732 admissible rows are as clean as they look.** They pass every mechanical gate. But
+  the evaluator reproduces only ~35% of episodes between identical invocations and nobody knows why,
+  and "within noise" is a statement about magnitude, not about understanding.
+- **Whether I have been too willing to build instruments.** Three of my own checks were defective
+  today in the same way as the defect they were meant to catch: one read text I had inserted myself,
+  one cut sections at a shell comment, one summed a colleague's memory under a field named "ours".
+  The pattern is that a new instrument is trusted before it has ever failed. I now try to break each
+  one deliberately before relying on it; I do not think I do this consistently enough.

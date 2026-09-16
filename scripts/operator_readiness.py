@@ -53,71 +53,118 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 #: A need is routed when its doc section exists with substance, and its tool (if any) exists.
 #: (phase, need, doc_path, heading_substring, tool_path_or_None)
 NEEDS: tuple[tuple[str, str, str, str, str | None], ...] = (
-    ("A orient", "host access and what the box is",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Running a cell on the production host", None),
+    ("A orient", "read-the-directory-first rule and the index",
+     "notes/production-host/README.md", "", None),
+    ("A orient", "the absolute prohibitions",
+     "notes/production-host/02-absolute-prohibitions.md", "", None),
+    ("A orient", "docker discipline and what may be deleted",
+     "notes/production-host/03-docker-discipline.md", "", None),
+    ("A orient", "resource safety: assume none of it is free",
+     "notes/production-host/04-resource-safety.md", "", None),
+    ("A orient", "privacy: what not to look at",
+     "notes/production-host/05-privacy-and-non-alarm.md", "", None),
+    ("A orient", "the mandatory pre-action procedure",
+     "notes/production-host/06-before-any-action.md", "", None),
+    ("A orient", "dangerous defaults in our OWN code",
+     "notes/production-host/07-this-repo-s-own-hazards.md", "", None),
+    ("A orient", "the upper-bound rule",
+     "notes/production-host/10-resource-upper-bound-rule.md", "", None),
+    ("A orient", "how the operator path works, layer by layer",
+     "notes/production-host/13-how-the-operator-path-works.md", "", "notes/model/HARNESS-MODEL.md"),
+    ("A orient", "current state of the campaign",
+     "notes/production-host/33-what-we-actually-have-2026-09-16.md", "", "scripts/campaign_status.py"),
+    ("A orient", "which laptop interpreter",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Which Python runs the laptop-side scripts", None),
     ("A orient", "the arrival sequence, in order",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "When the production host becomes available", None),
-    ("A orient", "which laptop interpreter to use",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Which Python runs the laptop-side scripts", None),
-    ("A orient", "who else is on the cards, and how they behave",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "You are sharing the cards", None),
-
-    ("B setup", "what a cell costs, measured",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "What a cell actually costs", None),
+    ("B setup", "what is transient and what accumulates on a persistent host",
+     "notes/production-host/14-assets-and-environment-on-a-persistent-host.md", "", None),
     ("B setup", "Places365 acquisition and placement",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "Places365", None),
-    ("B setup", "build and transfer the payload",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Build and transfer the payload", None),
-    ("B setup", "dry-run the wrapper before the first real cell",
+    ("B setup", "prebuilt env vs pip cache",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "The environment: build it once", None),
+    ("B setup", "what a cell actually costs",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "What a cell actually costs", None),
+    ("B setup", "build, verify and transfer the payload",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Build and transfer the payload", "datasphere/native/contract.py"),
+    ("B setup", "dry-run before the first real cell",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "Dry-run the wrapper FIRST", None),
-
-    ("C session", "readiness gate before acting",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Preconditions, checked on the host every time",
-     "scripts/production_gates.py"),
-    ("C session", "disarm stale waiters before a manual launch",
+    ("C preflight", "readiness gate before acting",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Preconditions, checked on the host every time", "scripts/production_gates.py"),
+    ("C preflight", "who else is on the cards, and the return arithmetic",
+     "notes/production-host/33-what-we-actually-have-2026-09-16.md", "", None),
+    ("C preflight", "which baselines can share a card",
+     "notes/production-host/21-which-baselines-to-run-on-a-shared-card.md", "", None),
+    ("C preflight", "disk, not VRAM, is what caps parallelism",
+     "notes/production-host/27-disk-not-vram-is-what-caps-parallelism.md", "", None),
+    ("C preflight", "disarm stale waiters",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers", None),
-
-    ("E run", "start a production training cell",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers",
-     "datasphere/native/host-scripts/train-production-cell-v5.sh"),
-    ("E run", "evaluate every retained checkpoint",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers",
-     "datasphere/native/host-scripts/curve-sweep-v3.sh"),
-    ("E run", "evaluate a single checkpoint",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers",
-     "datasphere/native/host-scripts/reeval-cell-cached.sh"),
-    ("E run", "pack more than one cell",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Packing two cells", None),
-    ("E run", "the per-cell wall-clock ceiling",
+    ("D launch", "start a production training cell",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers", "datasphere/native/host-scripts/train-production-cell-v5.sh"),
+    ("D launch", "choose CARD, yield flags and the cap",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers", None),
+    ("D launch", "the per-cell wall-clock ceiling",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "per-cell wall-clock ceiling", None),
-
-    ("F watch", "every stop mechanism and whether it is silent",
-     "notes/model/STOP-MECHANISMS.md", "", None),
-    ("F watch", "bound our own GPU footprint, not just the card's",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Stop mechanisms",
-     "datasphere/native/self-vram-cap.sh"),
-    ("F watch", "the measured resource table",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Measured GPU memory", "datasphere/native/measured-vram-bounds.json"),
-    ("F watch", "watching a live cell",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Watching a live cell", None),
-    ("F watch", "monitoring that reports to a person, and its traps",
+    ("D launch", "pack more than one cell",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Packing two cells", None),
+    ("D launch", "record the launch immediately",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Record the launch", "scripts/record_host_run.py"),
+    ("E during", "every stop mechanism and whether it is silent",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Stop mechanisms", "notes/model/STOP-MECHANISMS.md"),
+    ("E during", "what a yield actually costs",
+     "notes/production-host/24-what-a-yield-actually-costs.md", "", None),
+    ("E during", "the VRAM cap does not bind a trainer",
+     "notes/production-host/26-the-vram-cap-never-reached-a-trainer.md", "", None),
+    ("E during", "bound our own GPU footprint",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Stop mechanisms", "datasphere/native/self-vram-cap.sh"),
+    ("E during", "monitoring that reports to a person, and its traps",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "Monitoring that reports to a person", None),
-
+    ("E during", "watching a live cell",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Watching a live cell", None),
+    ("E during", "the abort ladder: what fails when",
+     "notes/production-host/15-what-fails-when.md", "", None),
+    ("E during", "the measured resource table",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Measured GPU memory", "datasphere/native/measured-vram-bounds.json"),
+    ("E during", "what one cell actually uses on the card",
+     "notes/production-host/22-what-a-cell-actually-uses.md", "", None),
+    ("E during", "did we crowd anyone out",
+     "notes/production-host/30-did-we-crowd-anyone-out.md", "", None),
+    ("F eval", "evaluate every retained checkpoint",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers", "datasphere/native/host-scripts/curve-sweep-v3.sh"),
+    ("F eval", "evaluate a single checkpoint",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "convenience wrappers", "datasphere/native/host-scripts/reeval-cell-cached.sh"),
+    ("F eval", "evaluation is 60% of a cell",
+     "notes/production-host/28-eval-is-sixty-percent-of-a-cell.md", "", None),
+    ("F eval", "the grid, cadence and seeds",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "The grid, the cadence and the seeds", "docs/EVAL-PROTOCOL.md"),
     ("G after", "retrieve and process results",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "Retrieve and process", None),
     ("G after", "collect a whole wave in one step",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "After a run", "datasphere/native/collect-wave.sh"),
     ("G after", "turn records into ledger entries",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "After a run", "scripts/populate_evaluator_ledger.py"),
-    ("G after", "see campaign coverage per baseline and seed",
+    ("G after", "campaign coverage per baseline and seed",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "After a run", "scripts/campaign_status.py"),
     ("G after", "one flat table of every record",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "After a run", "scripts/export_fleet.py"),
-
-    ("H fail", "what survives an interruption; what is resumable",
+    ("G after", "update the run register",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "After a run", "scripts/production_run_register.py"),
+    ("G after", "what artifacts a cell leaves, and which is the product",
+     "notes/production-host/32-what-we-actually-have-2026-09-14.md", "", None),
+    ("H judge", "when a row is admissible",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "When a number becomes a result", "scripts/audit_row_closure.py"),
+    ("H judge", "which comparisons are licensed",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "comparisons are licensed", "scripts/comparison_blocks.py"),
+    ("H judge", "evaluator noise: what reproduces and what does not",
+     "notes/production-host/33-what-we-actually-have-2026-09-16.md", "", None),
+    ("I fail", "what survives an interruption; what is resumable",
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "What survives an interruption", None),
-    ("H fail", "the mistakes already made, and the practice each produced",
-     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Monitoring that reports to a person", None),
+    ("I fail", "record an attempt that wrote nothing",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Recording an attempt that failed", None),
+    ("J hygiene", "ending a session",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Before you finish a session", None),
+    ("J hygiene", "the utility scripts, each with a purpose",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Every tool in this repository", None),
 )
 
 #: Live scripts whose interface the documentation must actually specify.
@@ -142,6 +189,30 @@ EXTERNAL_BY_DESIGN = {
     # interpreter requirement inline precisely so a GitHub clone does not need this file.
     "docs/local-envs.md",
 }
+
+
+#: A directory whose README claims to index it. 13 of its 33 files were absent from that index on
+#: 2026-09-16, including the current-state note and every file covering shared-card operation --
+#: so "read this entire directory" pointed at a table that showed under half of it.
+INDEXED_DIRS = (("notes/production-host", "README.md"),)
+
+
+def index_completeness() -> list[str]:
+    """Every file in an indexed directory must appear in that directory's index."""
+    problems: list[str] = []
+    for rel, index_name in INDEXED_DIRS:
+        d = ROOT / rel
+        index = d / index_name
+        if not index.is_file():
+            problems.append(f"{rel}/{index_name} does not exist")
+            continue
+        text = index.read_text(errors="replace")
+        for f in sorted(d.glob("*.md")):
+            if f.name == index_name:
+                continue
+            if f.name not in text:
+                problems.append(f"{rel}/{f.name} is not indexed in {index_name}")
+    return problems
 
 
 def clone_completeness() -> list[str]:
@@ -278,6 +349,16 @@ def main() -> int:
         print()
 
     if not args.gaps and not args.interfaces:
+        print("INDEX COMPLETENESS -- does every file appear in its directory's own index?\n")
+        idx = index_completeness()
+        if idx:
+            for prob in idx:
+                print(f"  FAIL  {prob}")
+            failures.extend(idx)
+        else:
+            print(f"  PASS  every file in {INDEXED_DIRS[0][0]} appears in its README")
+        print()
+
         print("CLONE COMPLETENESS -- does every path the guide tells you to run exist here?\n")
         problems = clone_completeness()
         if problems:

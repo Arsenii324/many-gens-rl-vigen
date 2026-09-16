@@ -15,6 +15,8 @@ because knowing **which categories exist** is the thing that was actually missin
     python scripts/production_gates.py      # is the fleet launchable, recomputed from the tree
     python scripts/open_decisions.py        # what the project's own records say awaits a person
     python scripts/requirements.py          # R1–R7, recomputed
+    python scripts/campaign_status.py       # coverage per baseline and seed
+    python scripts/operator_readiness.py    # can an operator get from zero to results, unaided
 
 The gate script is the only artefact here that cannot go stale, because it reads the tree instead of
 remembering it.
@@ -22,6 +24,14 @@ remembering it.
 ---
 
 ## The categories, and where each lives
+
+**Running anything on the production host**: [`production-host/README.md`](production-host/README.md)
+indexes 33 numbered operational notes and says "read this entire directory before touching
+anything" — the prohibitions, the upper-bound rule, what fails when, what a cell actually uses, what
+a yield costs, and the dated state audits. The executable procedure is
+[`RUNNING-ON-PRODUCTION-HOST.md`](RUNNING-ON-PRODUCTION-HOST.md); the directory carries the reasoning
+and the incident record behind it.
+
 
 **The research claim's own status**: [`SAME-AXES-VERDICT.md`](SAME-AXES-VERDICT.md) —
 `requirements.py` reads R3 NOT MET, on one UNITS axis, with a 3%-of-campaign remedy and a

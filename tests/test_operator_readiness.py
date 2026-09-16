@@ -81,3 +81,18 @@ def test_runs_clean_as_a_command():
     out = subprocess.run([sys.executable, str(ROOT / "scripts/operator_readiness.py")],
                          capture_output=True, text=True, cwd=ROOT, timeout=120)
     assert out.returncode == 0, f"operator_readiness.py exited {out.returncode}\n{out.stdout[-2000:]}"
+
+
+def test_the_script_inventory_in_the_guide_is_current():
+    """158 entry points, generated from their own docstrings. A hand-edited table of that size is
+    wrong within a week; this makes staleness fail instead of accumulating."""
+    out = subprocess.run([sys.executable, str(ROOT / "scripts/script_inventory.py"), "--check"],
+                         capture_output=True, text=True, cwd=ROOT, timeout=120)
+    assert out.returncode == 0, out.stdout + out.stderr
+
+
+def test_every_file_in_the_production_host_directory_is_indexed():
+    """Its README says 'read this entire directory'. On 2026-09-16 thirteen of its thirty-three
+    files were missing from that index, including the current-state note."""
+    problems = opr.index_completeness()
+    assert not problems, "unindexed operator documents:\n  " + "\n  ".join(problems)

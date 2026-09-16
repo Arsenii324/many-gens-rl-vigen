@@ -29,6 +29,20 @@ and the specifics are where the harm is.
 | [`18-the-watch-that-would-have-expired-first.md`](18-the-watch-that-would-have-expired-first.md) | **a near-miss with nothing failing** — both card watches were sized to expire before the cell reached the GPU, and both would have exited 0; plus why `--no-cache-dir` was right in its reasoning and wrong in its option set |
 | [`19-environment-lifecycle-vs-run-lifecycle.md`](19-environment-lifecycle-vs-run-lifecycle.md) | **the structural fix behind 18** — `apt` is 71s and `pip` is over two hours, there are exactly TWO requirement sets across twelve baselines, and a read-only prebuilt venv freezes the environment by construction |
 | [`16-host-work-log.md`](16-host-work-log.md) | **what was actually run on cds2, what it cost, the container recipes that worked, mistakes made — and the RAM/VRAM/disk contention arithmetic that blocks the GPU steps** |
+| [`20-egl-renderer-problem-STATEMENT.md`](20-egl-renderer-problem-STATEMENT.md) | the EGL/llvmpipe failure, **RESOLVED 2026-09-09** — kept because the symptom recurs whenever a container loses the `graphics` driver capability |
+| [`21-which-baselines-to-run-on-a-shared-card.md`](21-which-baselines-to-run-on-a-shared-card.md) | **which baselines are cheap enough to co-tenant**, measured rather than assumed |
+| [`22-what-a-cell-actually-uses.md`](22-what-a-cell-actually-uses.md) | **what one cell actually costs on the card** — VRAM, cores, RAM, measured during the first idaac cell |
+| [`23-the-first-complete-cell.md`](23-the-first-complete-cell.md) | the first cell on `cds2` to complete end to end |
+| [`24-what-a-yield-actually-costs.md`](24-what-a-yield-actually-costs.md) | **a yield is not cheap** — the co-tenancy design assumed it was |
+| [`25-a-production-cell-is-half-training.md`](25-a-production-cell-is-half-training.md) | a production cell is ~half training and half evaluation; budget the whole thing |
+| [`26-the-vram-cap-never-reached-a-trainer.md`](26-the-vram-cap-never-reached-a-trainer.md) | **the per-process VRAM cap has never bound a trainer**, and why a cap is the wrong instrument |
+| [`27-disk-not-vram-is-what-caps-parallelism.md`](27-disk-not-vram-is-what-caps-parallelism.md) | **disk headroom, not VRAM, is what limits how much runs at once** |
+| [`28-eval-is-sixty-percent-of-a-cell.md`](28-eval-is-sixty-percent-of-a-cell.md) | evaluation is 60% of a cell, and it is the half that is hardest to read |
+| [`29-two-drifts-a-self-yield-and-a-wrong-cost.md`](29-two-drifts-a-self-yield-and-a-wrong-cost.md) | **a whole-card job that yielded to itself**, plus three corrections to earlier notes |
+| [`30-did-we-crowd-anyone-out.md`](30-did-we-crowd-anyone-out.md) | **the audit of what our cells took from co-tenants**, per cell, from the sampler |
+| [`31-state-at-the-pause-2026-09-10.md`](31-state-at-the-pause-2026-09-10.md) | state at the owner's 24h pause |
+| [`32-what-we-actually-have-2026-09-14.md`](32-what-we-actually-have-2026-09-14.md) | **full artifact audit** — what each run left behind, what "collected" means, and the two long runs worth re-measuring |
+| [`33-what-we-actually-have-2026-09-16.md`](33-what-we-actually-have-2026-09-16.md) | **current state.** The re-evaluation landed (732 admissible rows, was 28); the seed discrepancy that makes the campaign count 1 of 36; the co-tenant arithmetic that decides a launch; three wrong VRAM numbers and two retracted claims |
 
 ## The rule that comes before the others
 
@@ -37,8 +51,19 @@ the GPU, CPU, RAM or disk — theirs, or not certainly yours, or even certainly 
 not sure the remainder covers your whole run, do not run yours.** Peaks combine, and CUDA OOM
 happens at the combined peak, not at typical usage. [`10`](10-resource-upper-bound-rule.md).
 
-**We do not currently satisfy this for VRAM**: six of seven families have no VRAM measurement at
-all. That blocks the first shared-GPU cell until it is closed.
+**VRAM, as of 2026-09-16: six of seven families ARE measured** — this paragraph previously said the
+opposite and blocked on it. See [`33`](33-what-we-actually-have-2026-09-16.md) §2 for the table.
+Two things still bite:
+
+- **`ibac_sni` is the one family with no measurement**, and three different figures for it were
+  quoted as fact in a single day, one of which was a colleague's memory read through a defective
+  instrument. Only a lower bound survives, ~6.6 GiB.
+- **`ctrl` at 32,435 MiB exceeds a 32,494 MiB card once the 4,000 MiB floor is added**, so it cannot
+  satisfy floor-plus-peak at all. It needs an empty card and an explicit decision about the floor.
+
+And the rule has a precondition nobody wrote down: **before a number decides anything, find where it
+was produced.** An estimate written in a code comment is indistinguishable from a measurement six
+hours later, and this is exactly how the ~15 GiB ibac_sni figure entered two agents' reasoning.
 
 ## The three that override everything else
 
