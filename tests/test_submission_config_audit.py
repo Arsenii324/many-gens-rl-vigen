@@ -92,8 +92,31 @@ def test_every_live_config_passes_the_auditor():
 
 
 def test_superseded_is_opt_in_so_forgetting_is_safe():
+    """A live config must not be marked superseded, and is_submittable must be able to fail.
+
+    [Claude 2026-09-16] This previously ended with `assert audit.is_submittable(live[0]...)`, which
+    made the test **clone-dependent and therefore usually broken**. `is_submittable` returns False
+    when any declared input path is missing, and the config declares
+    `datasphere/native/payload-v116.tgz` -- a build artifact matched by `*.tgz` in .gitignore and so
+    never committed. The assertion passed only on a machine where that payload happened to have been
+    built and not cleaned up; on a fresh clone, and here, it fails for a reason that has nothing to
+    do with supersession being opt-in.
+
+    What the test is *for* is the opt-in property: forgetting to mark a config superseded must be
+    safe. That is asserted below without depending on an uncommitted artifact, and
+    `is_submittable`'s real behaviour is exercised against inputs whose existence the test controls.
+    """
     audit = _load("_sub_audit3", ROOT / "scripts" / "audit_submission_configs.py")
     live = [p for p in sorted(NATIVE.glob("cfg-*functional-v11*.yaml"))
             if "# SUPERSEDED" not in p.read_text()]
     assert live, "the live validation configs must not be marked superseded"
-    assert audit.is_submittable(live[0].read_text())
+
+    # is_submittable must accept a config whose declared inputs all exist ...
+    present = "inputs:\n  - datasphere/native/run_probe.sh: JOB\n  - result.tgz: RESULT\n"
+    assert audit.is_submittable(present), (
+        "is_submittable rejected a config whose every declared path exists")
+    # ... and must reject one naming a path that does not. A checker that cannot fail is the
+    # defect this repository names most often.
+    absent = "inputs:\n  - datasphere/native/definitely-not-here-9f3a.tgz: CODE\n"
+    assert not audit.is_submittable(absent), (
+        "is_submittable accepted a config declaring a path that does not exist")

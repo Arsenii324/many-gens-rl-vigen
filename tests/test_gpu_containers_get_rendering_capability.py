@@ -76,9 +76,20 @@ def _gpucomp_block(text: str) -> str:
     [Claude 2026-09-09] These slices were 1200 chars and the explanatory comment above the mount
     grew past that, so the assertions stopped seeing the code they were about and failed on
     correct source. A window measured in characters is a window that expires.
+
+    [Claude 2026-09-16] And the replacement expired too, which is the more interesting failure. The
+    end anchor was `DOCKER_MOUNT_ARGS=(-v`, i.e. the assignment PLUS its first value. Commit
+    8d735a4 ("svea/sgqn/soda need more than Docker's 64 MB /dev/shm") made that line
+    `DOCKER_MOUNT_ARGS=(--shm-size "$NATIVE_SHM_SIZE"`, so `.index()` raised ValueError and THREE
+    tests in this file have been failing ever since -- not asserting something false, failing to
+    assert at all. The fix above swapped a character count for a string anchor and kept the same
+    mistake: it anchored on something that had no reason to stay put.
+
+    Anchor on the NAME only. `DOCKER_MOUNT_ARGS=(` is what the block is defined to end at; whatever
+    that array's first element happens to be is not part of this test's subject.
     """
     start = text.index("NATIVE_INJECT_GPUCOMP")
-    end = text.index("DOCKER_MOUNT_ARGS=(-v", start)
+    end = text.index("DOCKER_MOUNT_ARGS=(", start)
     return text[start:end]
 
 

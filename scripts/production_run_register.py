@@ -35,6 +35,7 @@ import argparse
 import collections
 import datetime
 import json
+import re
 import pathlib
 import sys
 
@@ -448,6 +449,23 @@ def build() -> str:
     return "\n".join(lines) + "\n"
 
 
+#: The register prints how long ago each status was recorded, which is genuinely useful to a reader
+#: and is WALL-CLOCK RELATIVE. Comparing it byte-for-byte made `--check` fail once an hour, forever,
+#: for a reason that has nothing to do with the register drifting: the file said "164h ago" and a
+#: freshly built one said "165h ago". `tests/test_production_run_register.py` failed on the clock.
+#:
+#: A check that fails hourly for the wrong reason is a check people switch off, and this project has
+#: already shipped several instruments that silently did nothing. So the age annotations are
+#: normalised out of the comparison and everything else still compares exactly -- `--check` now
+#: fails when the register's CONTENT drifts, which is what it was always meant to mean.
+_AGE_RE = re.compile(r"\*\*status recorded \d+h ago\*\*|status recorded under an hour ago")
+
+
+def _comparable(text: str) -> str:
+    """The register with its wall-clock-relative age annotations neutralised."""
+    return _AGE_RE.sub("**status recorded <age>**", text)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--check", action="store_true", help="exit 1 if the written file is stale")
@@ -462,11 +480,12 @@ def main() -> int:
         if not OUT.is_file():
             print(f"{OUT.relative_to(ROOT)} does not exist; run without --check to generate it")
             return 1
-        if OUT.read_text() != text:
+        if _comparable(OUT.read_text()) != _comparable(text):
             print(f"{OUT.relative_to(ROOT)} is STALE. Regenerate: "
                   "python scripts/production_run_register.py")
             return 1
-        print(f"{OUT.relative_to(ROOT)} is current.")
+        print(f"{OUT.relative_to(ROOT)} is current "
+              "(age annotations excluded from the comparison -- see _comparable).")
         return 0
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text)
