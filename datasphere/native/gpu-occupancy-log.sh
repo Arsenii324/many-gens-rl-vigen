@@ -30,6 +30,20 @@ HOURS="${GPU_LOG_HOURS:-24}"
 #
 # flock holds a real kernel lock on a real file: it cannot match a command line, and it releases
 # automatically when the holder dies, so a killed logger leaves no stale lock to clear by hand.
+#
+# [Claude 2026-09-16] "When the holder dies" needs a qualifier, and it cost a gap in this log. fd 9
+# is INHERITED by every child this loop starts -- `sleep`, `nvidia-smi`, `docker` -- so killing the
+# bash process does not release the lock while a child is still alive. Killed mid-`sleep 60`, the
+# logger's orphaned sleep kept the lock for up to a minute, and a replacement started in that minute
+# printed "another logger holds ... not starting a second" and exited. Nothing was running and
+# nothing was logging, which is exactly the state this guard exists to prevent from being silent.
+# Observed directly afterwards: the lock is held by BOTH `bash .../gpu-occupancy-log.sh` and
+# `sleep 60`. So to restart it: stop it, wait one INTERVAL, then start the new one -- and check
+# for a fresh `# gpu-occupancy-log started` line rather than assuming.
+#
+# Restart it before HOURS runs out if you need the record to cover a later window. The 2026-09-15
+# instance would have ended at 22:46 on 09-16, before the morning a new booking might begin; it
+# was replaced with GPU_LOG_HOURS=40.
 LOCK="${GPU_LOG_LOCK:-$HOME/.gpu-occupancy-log.lock}"
 exec 9>"$LOCK" || { echo "cannot open lock $LOCK" >&2; exit 3; }
 if ! flock -n 9; then

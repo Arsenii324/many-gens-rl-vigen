@@ -1016,6 +1016,15 @@ traps, each of which has produced a false reading here:
 - **Progress strings differ by family, and so does how OFTEN they appear.** `ibac_sni` and `ppg`
   log `F {:06}`; `idaac` logs a key/value table with `train/total_num_steps`. A monitor matching
   only `F [0-9]+` reads zero forever against an idaac cell.
+- **Run monitor loops under `bash` explicitly.** The laptop shell is zsh, which does not word-split
+  an unquoted `$var`: a loop `for h in $holders` saw three known group names as ONE unknown name
+  and raised a false "new group on the machine" alarm. Put the loop in a file and run
+  `bash file.sh`, and split lists with `IFS=, read -r -a` rather than relying on the shell.
+- **The host occupancy logger has a 24-hour life by default** (`GPU_LOG_HOURS`). If you need its
+  record to cover tomorrow morning, restart it with a longer window — stop it, wait one interval
+  (its orphaned `sleep` child holds the flock), start the new one, and confirm a fresh
+  `# gpu-occupancy-log started` line. It is the only record that answers "was a card free while
+  nobody was watching", which is how the co-tenant model in §9.1 was finally measured.
 - **A stall detector must be longer than the logging interval it watches.** idaac writes a block
   every ~24,600 steps, which is about **11 minutes** of wall clock. A 9-minute stall threshold
   fired on a cell sitting at 99.5% CPU with its GPU processes resident. Use the **log file's
