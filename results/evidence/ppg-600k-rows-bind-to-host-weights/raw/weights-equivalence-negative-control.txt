@@ -1,0 +1,17 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: weights-equivalence-negative-control
+# note: control: two consecutive checkpoints must come out DIFFERENT, or the probe proves nothing
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model011.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd
+# repo-head: c4a90f38a7372c43876e5073053ceb7cb1d9eef9
+# inputs: scripts/probe_torch_checkpoint_equivalence.py=28ef28d1760e17c2
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model011.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd ) | head -n 200
+# matched-lines: 6  shown-lines: 6
+# captured-at: 2026-09-16T11:09:57+00:00
+#---------------------------------------------------------------------------------------------------
+A sha256 ffd540bec085a3408864d1b0a57b4659282889feec6804de74d116ec23633442  members 75
+B sha256 753736df8bb4983dc709aba60dbec81118f530fe85fa96ad5671344ac66dffd6  members 75
+storages A 71 B 71  same keys True  byte-identical 0
+data.pkl bytes A 17032 B 17032
+object graph sha256 A 593aca7e2d2944c4 B 593aca7e2d2944c4  tensors A 71 B 71
+VERDICT DIFFERENT

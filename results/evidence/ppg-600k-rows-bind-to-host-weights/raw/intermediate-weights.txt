@@ -1,0 +1,23 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: intermediate-weights
+# note: the 13 IC-stamped checkpoints the training run saved, hashed in place
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/checkpoints
+# name-glob: model*.jd  listing-sha256: 830e53ace1cc220c612d51dce6744aee577950d18156884f8cb25345a45a9542
+# extraction: cd "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/checkpoints && find . -maxdepth 1 -type f -name 'model*.jd' | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 13  shown-lines: 13
+# captured-at: 2026-09-16T11:09:29+00:00
+#---------------------------------------------------------------------------------------------------
+5024129 1788944592 ba41ccdcfe10eb5dfe15aafe9c8d8872891a8484b34873918f6d7a927cf06217  ./model000.jd
+5024129 1788945606 10c94eec2e55f3984d4c904fbb9a0d364a07e57b06f9f748a439a3a8bfa53ca1  ./model001.jd
+5024129 1788946676 7da66e7768771f3b24391420814cdf5b958668a7356e656de6369f4e21c32cfe  ./model002.jd
+5024129 1788947786 804e5c628eb6089a24efff1900310a4c6b4eb70592c4d60806bae4e2feaab938  ./model003.jd
+5024129 1788948819 c2d5363f2db6cf2f65fe797e9537d77572999041c38523e94a6d2af9a634e99c  ./model004.jd
+5024129 1788949834 da25f5563dbe961b30902afcea9256cbaa64dfc56b73eebc0da3a618f7d21bdb  ./model005.jd
+5024129 1788950867 dccb06b01fd42c2637ed945aae0bb8116a5b055d58a2fe11b9283d312739ab53  ./model006.jd
+5024129 1788951914 667467898636cb5ebcb60e21e7337050c4413493c999a3596151d3fb84bb590d  ./model007.jd
+5024129 1788953016 8548fb9133d213926cf425e7c493e5350a7a26c798ef145c50a546dcb1663537  ./model008.jd
+5024129 1788954019 80c02563bf34c119e019d9a9d7aace8775623f1ab08283cdd4917a60690a4db6  ./model009.jd
+5024129 1788955128 847ab98fa64cf5550c60fcbb06184a023956ac0da38255693e4ef0e334449db9  ./model010.jd
+5024129 1788956192 ffd540bec085a3408864d1b0a57b4659282889feec6804de74d116ec23633442  ./model011.jd
+5024129 1788957269 753736df8bb4983dc709aba60dbec81118f530fe85fa96ad5671344ac66dffd6  ./model012.jd

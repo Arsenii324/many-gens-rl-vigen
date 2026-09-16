@@ -1,0 +1,11 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: terminal-weights
+# note: the retained terminal checkpoint (retained.json: copied from model_terminal.jd)
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1
+# name-glob: snapshot.pt  listing-sha256: 04ac12fd984801da6bffa6c526d1de013c6acd855a09affc7de48a242e205e07
+# extraction: cd "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:09:32+00:00
+#---------------------------------------------------------------------------------------------------
+5033857 1788957269 a328e63e6ffa96f8cde493dfef15e70589d9811bad0cb387a194f9cc4ab0d220  ./snapshot.pt

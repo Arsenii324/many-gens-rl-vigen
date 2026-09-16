@@ -17,6 +17,7 @@ answer without re-running anything:
 |---|---|---|
 | [ppg-nminibatch-declared-32-executed-1](ppg-nminibatch-declared-32-executed-1/CLAIM.md) | ppg declared `--nminibatch 32`. What executed, and is the executed run faithful? | resolved (policy phase) |
 | [evaluator-run-to-run-noise-ppg](evaluator-run-to-run-noise-ppg/CLAIM.md) | Re-evaluating the same ppg checkpoint gave a different mean. Changed estimand, or evaluator noise? | resolved (noise, 0.095 SE; placements identical, actions differ) |
+| [ppg-600k-rows-bind-to-host-weights](ppg-600k-rows-bind-to-host-weights/CLAIM.md) | Do the 616 committed ppg 600k rows name the weights the run saved, at the right stamps? Do the curve end and the endpoint read the same model? | resolved (all bound; same tensors, different files) |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 
 ## Finding something

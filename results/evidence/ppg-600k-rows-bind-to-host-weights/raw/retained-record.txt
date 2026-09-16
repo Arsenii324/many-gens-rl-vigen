@@ -1,0 +1,35 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: retained-record
+# note: what the runner says it retained, and from where
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/retained.json
+# source-bytes: 636  source-sha256: 0edbef6a7eff99e407825114c19b9ed44779107c9cd6c5e56c51ac5b74f9f25b  source-mtime: 2026-09-09T12:36:53+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/retained.json
+# matched-lines: 25  shown-lines: 25
+# captured-at: 2026-09-16T11:09:36+00:00
+#---------------------------------------------------------------------------------------------------
+{
+  "artifact_root": "/tmp/native-work/runs/ppg-s1",
+  "checkpoint_bytes": 5033857,
+  "checkpoint_source": "/tmp/native-work/runs/ppg-s1/model_terminal.jd",
+  "curves": [
+    "progress.csv"
+  ],
+  "directories": [],
+  "family": "ppg",
+  "intermediate_checkpoints": {
+    "model000.jd": 5024129,
+    "model001.jd": 5024129,
+    "model002.jd": 5024129,
+    "model003.jd": 5024129,
+    "model004.jd": 5024129,
+    "model005.jd": 5024129,
+    "model006.jd": 5024129,
+    "model007.jd": 5024129,
+    "model008.jd": 5024129,
+    "model009.jd": 5024129,
+    "model010.jd": 5024129,
+    "model011.jd": 5024129,
+    "model012.jd": 5024129
+  }
+}

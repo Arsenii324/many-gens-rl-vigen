@@ -262,6 +262,22 @@ register exists to prevent.
 
 **Supersedes.** The pre-measurement claim that the ppg/idaac re-evaluation was 'superseded by re-hashing, not by a change of estimand' as a matter of reading diffs; it now rests on measurement.
 
+### `ppg-600k-rows-bind-to-host-weights` — **resolved**
+
+**Q.** Do the committed ppg 600k endpoint and curve rows evaluate the weights the training run actually saved, at the stamps they claim, and do the curve's 600,064 point and the endpoint evaluate the same model?
+
+**Verdict.** Yes on all three. 528 curve rows over 12 frames and 88 endpoint rows each name one checkpoint hash per frame; every hash is a retained host file saved at that frame (model001..model012 by the training log's IC stamps; the endpoint is the terminal snapshot.pt); none is unmatched. model012.jd and snapshot.pt differ in bytes (pickle protocol 5 vs 2) but hold 71/71 byte-identical tensor storages in an identical object graph, so the curve's last point and the endpoint measure the same model. A negative control (model011 vs model012: 0/71 identical, DIFFERENT) shows the probe discriminates.
+
+**Why.** The note PPG-600K-COMPLETE.md asserted the sha check; its inputs were host-only. The bundle keeps the host listing (size, mtime, sha256 of each file, taken in place with sha256sum), the training log's save stamps, and a join run over the committed records. The same-weights question was never asked before: two different files at one frame could have been two different models. scripts/probe_torch_checkpoint_equivalence.py compares storages and a stub-unpickled object graph without importing the model classes.
+
+**Evidence.** `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt:68`, `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt:80`, `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt:83`, `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/weights-equivalence.txt:17`, `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/weights-equivalence-negative-control.txt:17`, `results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join-failures.txt:9`
+
+**Falsified by.** A committed ppg row whose checkpoint_sha256 is not in the captured listing, or whose file was saved at another interaction count; tests/test_evidence_backed_register_rows.py recomputes the join offline and fails on either.
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+
+**Supersedes.** The unevidenced sentence '14 checkpoints were sha-verified against their own rows' in notes/endgame/PPG-600K-COMPLETE.md, which stands and now has its evidence (13 intermediate + 1 terminal retained; model000 is IC=0 and unevaluated).
+
 ## host-safety
 
 ### `yield-is-memory-not-process` — **resolved**

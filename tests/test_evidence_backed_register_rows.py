@@ -30,3 +30,36 @@ def test_evaluator_sampling_rows_reproduce_within_noise():
     assert "torch" not in per_episode, "seed_episode_placement now touches torch; re-derive the row"
     ppg = (ROOT / "runnable" / "ppg" / "phasic_policy_gradient" / "ppg.py").read_text()
     assert "ac = pd.sample()" in ppg, "ppg no longer samples its action from the torch distribution"
+
+
+def _listing(path: pathlib.Path) -> dict[str, str]:
+    body = path.read_text().split("#" + "-" * 99 + "\n", 1)[1]
+    return {line.split()[2]: line.split(maxsplit=3)[3].lstrip("./") for line in body.splitlines()}
+
+
+def test_ppg_600k_rows_bind_to_host_weights():
+    """`ppg-600k-rows-bind-to-host-weights`: every committed ppg 600k row names a retained file.
+
+    Recomputed from the committed records and the captured host listing, so it needs no host. A
+    re-collected record file whose hashes are not in that listing fails here, and the bundle must
+    be re-taken against whatever weights the new rows name.
+    """
+    import json
+    import re
+
+    raw = ROOT / "results" / "evidence" / "ppg-600k-rows-bind-to-host-weights" / "raw"
+    weights = {**_listing(raw / "intermediate-weights.txt"), **_listing(raw / "terminal-weights.txt")}
+    stamps = {m.group(1): int(m.group(2))
+              for m in re.finditer(r"(model\d+\.jd) IC=(\d+)", (raw / "save-stamps.txt").read_text())}
+    records = ROOT / "results" / "records"
+    for name, terminal in (("reeval-v214-ppg-curve__records.jsonl", False),
+                           ("reeval-v214-ppg-endpoint__records.jsonl", True)):
+        rows = [json.loads(line) for line in (records / name).read_text().splitlines() if line.strip()]
+        assert rows, name
+        for row in rows:
+            file = weights.get(row["checkpoint_sha256"])
+            assert file, f"{name}: frame {row['frame']} names {row['checkpoint_sha256'][:16]}, not on the host"
+            if terminal:
+                assert file == "snapshot.pt", f"{name}: endpoint row reads {file}"
+            else:
+                assert stamps[file] == row["frame"], f"{name}: frame {row['frame']} reads {file} (IC {stamps[file]})"

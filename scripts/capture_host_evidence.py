@@ -38,7 +38,7 @@ needed to tell whether it is still what it says it is:
 ## Host rule
 
 The production host allows docker operations and trivial shell only. Everything run there is
-`stat`, `sha256sum`, `wc`, `grep`, `sed`, `head` or `tar`. No python, no writes.
+`stat`, `sha256sum`, `find`, `wc`, `grep`, `sed`, `head` or `tar`. No python, no writes.
 """
 from __future__ import annotations
 
@@ -85,7 +85,22 @@ def _q(path: str) -> str:
     return shlex.quote(path)
 
 
+def _hashes_command(args) -> str:
+    d = _q(_host_path(args.host_hashes))
+    glob = shlex.quote(args.name_glob)
+    # sizes and hashes of every matching regular file, in name order; nothing is written
+    return (f"cd {d} && find . -maxdepth 1 -type f -name {glob} | LC_ALL=C sort | "
+            f"while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; "
+            f"sha256sum \"$f\"; done")
+
+
 def _source_meta(args) -> dict:
+    if args.host_hashes:
+        d = _q(_host_path(args.host_hashes))
+        out = _ssh(f"test -d {d} && echo DIR || echo MISSING")
+        if out.strip() != "DIR":
+            raise SystemExit(f"directory does not exist on the host: {args.host_hashes}")
+        return {"kind": "host-dir-hashes", "host": HOST, "path": args.host_hashes, "glob": args.name_glob}
     if args.host_path:
         p = _q(_host_path(args.host_path))
         out = _ssh(f"test -e {p} || {{ echo MISSING; exit 0; }}; "
@@ -128,6 +143,10 @@ def command_inputs(command: str) -> dict[str, str]:
 def _extract(args) -> tuple[str, str, int]:
     """Return (excerpt text, the exact extraction command, total matching lines)."""
     cap = f" | head -n {args.max}" if args.max else ""
+    if args.host_hashes:
+        command = _hashes_command(args)
+        text = _ssh(command)
+        return text, command, text.count("\n")
     # -o prints each match on its own line, so a 27 KB JSON row can be cut to the fields that matter
     gflags = "-n -o -E" if args.only_matching else "-n -E"
     cflags = "-o -E" if args.only_matching else "-c -E"
@@ -212,8 +231,11 @@ def main() -> int:
     ap.add_argument("name", help="excerpt name; written to raw/<name>.txt")
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--host-path")
+    src.add_argument("--host-hashes", help="a host DIRECTORY: size, mtime and sha256 of each file "
+                                           "matching --name-glob (default '*')")
     src.add_argument("--local-path", help="path relative to the project root")
     src.add_argument("--command", help="local shell command run at the project root")
+    ap.add_argument("--name-glob", default="*", help="with --host-hashes")
     ap.add_argument("--tar-member", help="with --host-path: read this member of a .tgz")
     how = ap.add_mutually_exclusive_group()
     how.add_argument("--grep", help="extended regex; matching lines, with line numbers")
@@ -237,6 +259,9 @@ def main() -> int:
 
     meta = _source_meta(args)
     text, command, total = _extract(args)
+    if meta["kind"] == "host-dir-hashes":
+        # the listing IS the source; its hash is what a later recheck recomputes
+        meta["listing_sha256"] = hashlib.sha256(text.encode()).hexdigest()
     # count newline-terminated lines the way grep and wc do; str.splitlines also splits on form
     # feeds, which pdftotext emits at page breaks
     shown = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
@@ -252,8 +277,10 @@ def main() -> int:
         f"# source-kind: {meta['kind']}",
         (f"# source: {meta.get('host', '')}{':' if meta.get('host') else ''}"
          f"{meta.get('path', meta.get('command', ''))}").replace("\n", "\n#   "),
-        f"# source-bytes: {meta['bytes']}  source-sha256: {meta['sha256']}  source-mtime: {meta.get('mtime', '')}"
-        if "sha256" in meta else f"# repo-head: {meta['repo_head']}",
+        (f"# source-bytes: {meta['bytes']}  source-sha256: {meta['sha256']}  source-mtime: {meta.get('mtime', '')}"
+         if "sha256" in meta else
+         f"# name-glob: {meta['glob']}  listing-sha256: {meta['listing_sha256']}"
+         if meta["kind"] == "host-dir-hashes" else f"# repo-head: {meta['repo_head']}"),
         ("# inputs: " + "  ".join(f"{k}={v[:16]}" for k, v in meta["inputs"].items()))
         if meta.get("inputs") else None,
         f"# tar-member: {args.tar_member}" if args.tar_member else None,
@@ -290,7 +317,7 @@ def main() -> int:
         manifest["facts"].append({"key": key, "value": value, "excerpt": args.name, "anchor": anchor})
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
 
-    print(f"wrote {out.relative_to(ROOT)}  ({shown}/{total} lines, source {meta.get('sha256', meta.get('repo_head'))[:12]})")
+    print(f"wrote {out.relative_to(ROOT)}  ({shown}/{total} lines, source {(meta.get('sha256') or meta.get('listing_sha256') or meta.get('repo_head'))[:12]})")
     return 0
 
 

@@ -1,0 +1,84 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: join
+# note: every committed row names a checkpoint hash; each hash is looked up among the host files
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json, re
+#   def listing(name):
+#       body = open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#       out = {}
+#       for line in body.splitlines():
+#           size, mtime, sha, path = line.split(maxsplit=3)
+#           out[sha] = (path.lstrip('./'), int(size))
+#       return out
+#   weights = {**listing('intermediate-weights'), **listing('terminal-weights')}
+#   stamps = {}
+#   for line in open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt').read().split('#' + '-' * 99 + '\n', 1)[1].splitlines():
+#       m = re.search(r'(model\d+\.jd) IC=(\d+)', line)
+#       stamps[m.group(1)] = int(m.group(2))
+#   for f in ('results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-ppg-endpoint__records.jsonl'):
+#       by_frame = {}
+#       n = 0
+#       for line in open(f):
+#           r = json.loads(line)
+#           n += 1
+#           by_frame.setdefault(r['frame'], set()).add(r['checkpoint_sha256'])
+#       print(f, 'rows', n, 'frames', len(by_frame))
+#       for frame, shas in sorted(by_frame.items()):
+#           for sha in sorted(shas):
+#               name, size = weights.get(sha, ('NOT-ON-HOST', 0))
+#               ic = stamps.get(name, 'terminal' if name == 'snapshot.pt' else '?')
+#               print('  frame', frame, 'sha', sha[:16], '->', name, 'IC', ic, 'match' if ic in (frame, 'terminal') else 'MISMATCH')
+#       print('  distinct checkpoints per frame:', sorted({len(v) for v in by_frame.values()}))
+#   "
+# repo-head: c4a90f38a7372c43876e5073053ceb7cb1d9eef9
+# inputs: results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt=9a132826a8474ae0  results/records/reeval-v214-ppg-curve__records.jsonl=32203ed92d3a076a  results/records/reeval-v214-ppg-endpoint__records.jsonl=dbfff3625bb7a00f
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json, re
+#   def listing(name):
+#       body = open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\n', 1)[1]
+#       out = {}
+#       for line in body.splitlines():
+#           size, mtime, sha, path = line.split(maxsplit=3)
+#           out[sha] = (path.lstrip('./'), int(size))
+#       return out
+#   weights = {**listing('intermediate-weights'), **listing('terminal-weights')}
+#   stamps = {}
+#   for line in open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt').read().split('#' + '-' * 99 + '\n', 1)[1].splitlines():
+#       m = re.search(r'(model\d+\.jd) IC=(\d+)', line)
+#       stamps[m.group(1)] = int(m.group(2))
+#   for f in ('results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-ppg-endpoint__records.jsonl'):
+#       by_frame = {}
+#       n = 0
+#       for line in open(f):
+#           r = json.loads(line)
+#           n += 1
+#           by_frame.setdefault(r['frame'], set()).add(r['checkpoint_sha256'])
+#       print(f, 'rows', n, 'frames', len(by_frame))
+#       for frame, shas in sorted(by_frame.items()):
+#           for sha in sorted(shas):
+#               name, size = weights.get(sha, ('NOT-ON-HOST', 0))
+#               ic = stamps.get(name, 'terminal' if name == 'snapshot.pt' else '?')
+#               print('  frame', frame, 'sha', sha[:16], '->', name, 'IC', ic, 'match' if ic in (frame, 'terminal') else 'MISMATCH')
+#       print('  distinct checkpoints per frame:', sorted({len(v) for v in by_frame.values()}))
+#   " ) | head -n 200
+# matched-lines: 17  shown-lines: 17
+# captured-at: 2026-09-16T11:09:41+00:00
+#---------------------------------------------------------------------------------------------------
+results/records/reeval-v214-ppg-curve__records.jsonl rows 528 frames 12
+  frame 51200 sha 10c94eec2e55f398 -> model001.jd IC 51200 match
+  frame 100352 sha 7da66e7768771f3b -> model002.jd IC 100352 match
+  frame 151552 sha 804e5c628eb6089a -> model003.jd IC 151552 match
+  frame 200704 sha c2d5363f2db6cf2f -> model004.jd IC 200704 match
+  frame 251904 sha da25f5563dbe961b -> model005.jd IC 251904 match
+  frame 301056 sha dccb06b01fd42c26 -> model006.jd IC 301056 match
+  frame 350208 sha 667467898636cb5e -> model007.jd IC 350208 match
+  frame 401408 sha 8548fb9133d21392 -> model008.jd IC 401408 match
+  frame 450560 sha 80c02563bf34c119 -> model009.jd IC 450560 match
+  frame 501760 sha 847ab98fa64cf555 -> model010.jd IC 501760 match
+  frame 550912 sha ffd540bec085a340 -> model011.jd IC 550912 match
+  frame 600064 sha 753736df8bb4983d -> model012.jd IC 600064 match
+  distinct checkpoints per frame: [1]
+results/records/reeval-v214-ppg-endpoint__records.jsonl rows 88 frames 1
+  frame 600064 sha a328e63e6ffa96f8 -> snapshot.pt IC terminal match
+  distinct checkpoints per frame: [1]

@@ -1,0 +1,253 @@
+{
+  "slug": "ppg-600k-rows-bind-to-host-weights",
+  "excerpts": {
+    "intermediate-weights": {
+      "file": "raw/intermediate-weights.txt",
+      "sha256": "3f84fe4bd1cda51267728e1f38f65d0d6d79804d453f02d0f5d7697ef8b53d8a",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/checkpoints",
+        "glob": "model*.jd",
+        "listing_sha256": "830e53ace1cc220c612d51dce6744aee577950d18156884f8cb25345a45a9542"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/checkpoints && find . -maxdepth 1 -type f -name 'model*.jd' | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 13,
+      "shown_lines": 13,
+      "captured_at": "2026-09-16T11:09:29+00:00",
+      "note": "the 13 IC-stamped checkpoints the training run saved, hashed in place"
+    },
+    "terminal-weights": {
+      "file": "raw/terminal-weights.txt",
+      "sha256": "163bfffd87a493b2149f116e070a2d9acec25e4d76093cdd1b49b5710857942b",
+      "source": {
+        "kind": "host-dir-hashes",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1",
+        "glob": "snapshot.pt",
+        "listing_sha256": "04ac12fd984801da6bffa6c526d1de013c6acd855a09affc7de48a242e205e07"
+      },
+      "extraction": "cd \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1 && find . -maxdepth 1 -type f -name snapshot.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' \"$(stat -c %s \"$f\")\" \"$(stat -c %Y \"$f\")\"; sha256sum \"$f\"; done",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:09:32+00:00",
+      "note": "the retained terminal checkpoint (retained.json: copied from model_terminal.jd)"
+    },
+    "retained-record": {
+      "file": "raw/retained-record.txt",
+      "sha256": "d4fa755150956fbd9e523793d3ae5cd7da4ed430d92fac1da92d8f1fa738c54f",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/retained.json",
+        "bytes": 636,
+        "sha256": "0edbef6a7eff99e407825114c19b9ed44779107c9cd6c5e56c51ac5b74f9f25b",
+        "mtime": "2026-09-09T12:36:53+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/retained.json",
+      "tar_member": null,
+      "matched_lines": 25,
+      "shown_lines": 25,
+      "captured_at": "2026-09-16T11:09:36+00:00",
+      "note": "what the runner says it retained, and from where"
+    },
+    "save-stamps": {
+      "file": "raw/save-stamps.txt",
+      "sha256": "9a132826a8474ae0efff613f87bf18768bb6e3e8272d09982f88ad9d1f69c83d",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log",
+        "bytes": 738318,
+        "sha256": "b433d8a37f71bb8a08bb867360e2ca81632d1b46f5b1d78dbdd801246f623aeb",
+        "mtime": "2026-09-09T20:24:54+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/training.log | grep -n -E 'Saving to .*IC=' | head -n 20",
+      "tar_member": null,
+      "matched_lines": 13,
+      "shown_lines": 13,
+      "captured_at": "2026-09-16T11:09:41+00:00",
+      "note": "which checkpoint file holds which interaction count"
+    },
+    "join": {
+      "file": "raw/join.txt",
+      "sha256": "bdd86940adba0b15e747ff87b69198cd01f245d66301db3ae4c6124f9a416e67",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json, re\ndef listing(name):\n    body = open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    out = {}\n    for line in body.splitlines():\n        size, mtime, sha, path = line.split(maxsplit=3)\n        out[sha] = (path.lstrip('./'), int(size))\n    return out\nweights = {**listing('intermediate-weights'), **listing('terminal-weights')}\nstamps = {}\nfor line in open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt').read().split('#' + '-' * 99 + '\\n', 1)[1].splitlines():\n    m = re.search(r'(model\\d+\\.jd) IC=(\\d+)', line)\n    stamps[m.group(1)] = int(m.group(2))\nfor f in ('results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-ppg-endpoint__records.jsonl'):\n    by_frame = {}\n    n = 0\n    for line in open(f):\n        r = json.loads(line)\n        n += 1\n        by_frame.setdefault(r['frame'], set()).add(r['checkpoint_sha256'])\n    print(f, 'rows', n, 'frames', len(by_frame))\n    for frame, shas in sorted(by_frame.items()):\n        for sha in sorted(shas):\n            name, size = weights.get(sha, ('NOT-ON-HOST', 0))\n            ic = stamps.get(name, 'terminal' if name == 'snapshot.pt' else '?')\n            print('  frame', frame, 'sha', sha[:16], '->', name, 'IC', ic, 'match' if ic in (frame, 'terminal') else 'MISMATCH')\n    print('  distinct checkpoints per frame:', sorted({len(v) for v in by_frame.values()}))\n\"",
+        "repo_head": "c4a90f38a7372c43876e5073053ceb7cb1d9eef9",
+        "inputs": {
+          "results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt": "9a132826a8474ae0efff613f87bf18768bb6e3e8272d09982f88ad9d1f69c83d",
+          "results/records/reeval-v214-ppg-curve__records.jsonl": "32203ed92d3a076a98bf2245ca7d1529baf9331b94035828941dc9670cf386b9",
+          "results/records/reeval-v214-ppg-endpoint__records.jsonl": "dbfff3625bb7a00f6b1c69ac2eb3cbae6ea9659ed7863dabee09b805f5147e57"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json, re\ndef listing(name):\n    body = open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/' + name + '.txt').read().split('#' + '-' * 99 + '\\n', 1)[1]\n    out = {}\n    for line in body.splitlines():\n        size, mtime, sha, path = line.split(maxsplit=3)\n        out[sha] = (path.lstrip('./'), int(size))\n    return out\nweights = {**listing('intermediate-weights'), **listing('terminal-weights')}\nstamps = {}\nfor line in open('results/evidence/ppg-600k-rows-bind-to-host-weights/raw/save-stamps.txt').read().split('#' + '-' * 99 + '\\n', 1)[1].splitlines():\n    m = re.search(r'(model\\d+\\.jd) IC=(\\d+)', line)\n    stamps[m.group(1)] = int(m.group(2))\nfor f in ('results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-ppg-endpoint__records.jsonl'):\n    by_frame = {}\n    n = 0\n    for line in open(f):\n        r = json.loads(line)\n        n += 1\n        by_frame.setdefault(r['frame'], set()).add(r['checkpoint_sha256'])\n    print(f, 'rows', n, 'frames', len(by_frame))\n    for frame, shas in sorted(by_frame.items()):\n        for sha in sorted(shas):\n            name, size = weights.get(sha, ('NOT-ON-HOST', 0))\n            ic = stamps.get(name, 'terminal' if name == 'snapshot.pt' else '?')\n            print('  frame', frame, 'sha', sha[:16], '->', name, 'IC', ic, 'match' if ic in (frame, 'terminal') else 'MISMATCH')\n    print('  distinct checkpoints per frame:', sorted({len(v) for v in by_frame.values()}))\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 17,
+      "shown_lines": 17,
+      "captured_at": "2026-09-16T11:09:41+00:00",
+      "note": "every committed row names a checkpoint hash; each hash is looked up among the host files"
+    },
+    "join-failures": {
+      "file": "raw/join-failures.txt",
+      "sha256": "b9749ef1881d6876bba69c9ba1ab618ce23b00c887da4addfeafe96cc7431ef1",
+      "source": {
+        "kind": "local-command",
+        "command": "sed '1,/^#---/d' results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt",
+        "repo_head": "c4a90f38a7372c43876e5073053ceb7cb1d9eef9",
+        "inputs": {
+          "results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt": "bdd86940adba0b15e747ff87b69198cd01f245d66301db3ae4c6124f9a416e67"
+        }
+      },
+      "extraction": "( sed '1,/^#---/d' results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt ) | grep -n -E 'NOT-ON-HOST|MISMATCH' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 0,
+      "shown_lines": 0,
+      "captured_at": "2026-09-16T11:09:41+00:00",
+      "note": "absence: no row names a hash missing from the host, and no hash sits at the wrong stamp"
+    },
+    "weights-equivalence": {
+      "file": "raw/weights-equivalence.txt",
+      "sha256": "beff800210d668fb603bf7f05446bab61e78981802cc816a106a6e505f602a05",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/snapshot.pt",
+        "repo_head": "c4a90f38a7372c43876e5073053ceb7cb1d9eef9",
+        "inputs": {
+          "scripts/probe_torch_checkpoint_equivalence.py": "28ef28d1760e17c2b966cf377ddefa889faf3dd4cba7d7908996c54bc47a2bb3"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/snapshot.pt ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:09:56+00:00",
+      "note": "model012.jd (curve stamp 600,064) against snapshot.pt (endpoint): different bytes, different pickle protocol"
+    },
+    "weights-equivalence-negative-control": {
+      "file": "raw/weights-equivalence-negative-control.txt",
+      "sha256": "33e1fe4490731a8d9a829e8b3b96fac3a0c907bed7534b27c7d0e8472d2f8ceb",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model011.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd",
+        "repo_head": "c4a90f38a7372c43876e5073053ceb7cb1d9eef9",
+        "inputs": {
+          "scripts/probe_torch_checkpoint_equivalence.py": "28ef28d1760e17c2b966cf377ddefa889faf3dd4cba7d7908996c54bc47a2bb3"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model011.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 6,
+      "shown_lines": 6,
+      "captured_at": "2026-09-16T11:09:57+00:00",
+      "note": "control: two consecutive checkpoints must come out DIFFERENT, or the probe proves nothing"
+    }
+  },
+  "facts": [
+    {
+      "key": "intermediate_count",
+      "value": "13",
+      "excerpt": "intermediate-weights",
+      "anchor": "header:# matched-lines: 13 "
+    },
+    {
+      "key": "terminal_count",
+      "value": "1",
+      "excerpt": "terminal-weights",
+      "anchor": "header:# matched-lines: 1 "
+    },
+    {
+      "key": "terminal_source",
+      "value": "model_terminal.jd",
+      "excerpt": "retained-record",
+      "anchor": "\"checkpoint_source\": \"/tmp/native-work/runs/ppg-s1/model_terminal.jd\""
+    },
+    {
+      "key": "terminal_bytes",
+      "value": "5033857",
+      "excerpt": "retained-record",
+      "anchor": "\"checkpoint_bytes\": 5033857"
+    },
+    {
+      "key": "model012_ic",
+      "value": "600064",
+      "excerpt": "save-stamps",
+      "anchor": "model012.jd IC=600064"
+    },
+    {
+      "key": "curve_rows",
+      "value": "528",
+      "excerpt": "join",
+      "anchor": "reeval-v214-ppg-curve__records.jsonl rows 528 frames 12"
+    },
+    {
+      "key": "endpoint_rows",
+      "value": "88",
+      "excerpt": "join",
+      "anchor": "reeval-v214-ppg-endpoint__records.jsonl rows 88 frames 1"
+    },
+    {
+      "key": "curve_600064_is_model012",
+      "value": "true",
+      "excerpt": "join",
+      "anchor": "-> model012.jd IC 600064 match"
+    },
+    {
+      "key": "curve_51200_is_model001",
+      "value": "true",
+      "excerpt": "join",
+      "anchor": "-> model001.jd IC 51200 match"
+    },
+    {
+      "key": "endpoint_is_terminal",
+      "value": "true",
+      "excerpt": "join",
+      "anchor": "-> snapshot.pt IC terminal match"
+    },
+    {
+      "key": "unmatched_rows",
+      "value": "0",
+      "excerpt": "join-failures",
+      "anchor": "header:# matched-lines: 0 "
+    },
+    {
+      "key": "model012_sha",
+      "value": "753736df8bb4983d",
+      "excerpt": "weights-equivalence",
+      "anchor": "A sha256 753736df8bb4983d"
+    },
+    {
+      "key": "snapshot_sha",
+      "value": "a328e63e6ffa96f8",
+      "excerpt": "weights-equivalence",
+      "anchor": "B sha256 a328e63e6ffa96f8"
+    },
+    {
+      "key": "storages_identical",
+      "value": "71/71",
+      "excerpt": "weights-equivalence",
+      "anchor": "storages A 71 B 71  same keys True  byte-identical 71"
+    },
+    {
+      "key": "curve_end_and_endpoint_same_weights",
+      "value": "true",
+      "excerpt": "weights-equivalence",
+      "anchor": "VERDICT same tensors, same structure"
+    },
+    {
+      "key": "control_storages_identical",
+      "value": "0/71",
+      "excerpt": "weights-equivalence-negative-control",
+      "anchor": "byte-identical 0"
+    },
+    {
+      "key": "control_verdict",
+      "value": "DIFFERENT",
+      "excerpt": "weights-equivalence-negative-control",
+      "anchor": "VERDICT DIFFERENT"
+    }
+  ]
+}

@@ -29,7 +29,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from capture_host_evidence import EVIDENCE, SSH, _host_path, _q  # noqa: E402
+from capture_host_evidence import EVIDENCE, SSH, _hashes_command, _host_path, _q  # noqa: E402
 
 
 def _host_hashes(paths: list[str]) -> dict[str, str | None]:
@@ -67,7 +67,16 @@ def main() -> int:
         print(f"== {slug}")
         for name, entry in manifest["excerpts"].items():
             src = entry["source"]
-            if src["kind"] == "host-file":
+            if src["kind"] == "host-dir-hashes":
+                if args.local_only:
+                    status = "SKIPPED"
+                else:
+                    listing = subprocess.run(
+                        SSH + [_hashes_command(argparse.Namespace(host_hashes=src["path"], name_glob=src["glob"]))],
+                        capture_output=True, text=True, timeout=600)
+                    now = hashlib.sha256(listing.stdout.encode()).hexdigest() if listing.returncode == 0 else None
+                    status = "GONE" if now is None else ("SAME" if now == src["listing_sha256"] else "DRIFT")
+            elif src["kind"] == "host-file":
                 if args.local_only:
                     status = "SKIPPED"
                 else:

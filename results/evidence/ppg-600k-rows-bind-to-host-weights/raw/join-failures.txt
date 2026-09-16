@@ -1,0 +1,11 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: join-failures
+# note: absence: no row names a hash missing from the host, and no hash sits at the wrong stamp
+# source-kind: local-command
+# source: sed '1,/^#---/d' results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt
+# repo-head: c4a90f38a7372c43876e5073053ceb7cb1d9eef9
+# inputs: results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt=bdd86940adba0b15
+# extraction: ( sed '1,/^#---/d' results/evidence/ppg-600k-rows-bind-to-host-weights/raw/join.txt ) | grep -n -E 'NOT-ON-HOST|MISMATCH' | head -n 200
+# matched-lines: 0  shown-lines: 0
+# captured-at: 2026-09-16T11:09:41+00:00
+#---------------------------------------------------------------------------------------------------

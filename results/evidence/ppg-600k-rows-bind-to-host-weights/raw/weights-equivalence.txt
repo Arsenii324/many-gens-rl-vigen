@@ -1,0 +1,17 @@
+# evidence-slug: ppg-600k-rows-bind-to-host-weights
+# excerpt: weights-equivalence
+# note: model012.jd (curve stamp 600,064) against snapshot.pt (endpoint): different bytes, different pickle protocol
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/snapshot.pt
+# repo-head: c4a90f38a7372c43876e5073053ceb7cb1d9eef9
+# inputs: scripts/probe_torch_checkpoint_equivalence.py=28ef28d1760e17c2
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" scripts/probe_torch_checkpoint_equivalence.py /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/model012.jd /Users/a2mogus/.claude/jobs/8f653a27/tmp/ppgw/snapshot.pt ) | head -n 200
+# matched-lines: 6  shown-lines: 6
+# captured-at: 2026-09-16T11:09:56+00:00
+#---------------------------------------------------------------------------------------------------
+A sha256 753736df8bb4983dc709aba60dbec81118f530fe85fa96ad5671344ac66dffd6  members 75
+B sha256 a328e63e6ffa96f8cde493dfef15e70589d9811bad0cb387a194f9cc4ab0d220  members 75
+storages A 71 B 71  same keys True  byte-identical 71
+data.pkl bytes A 17032 B 26762
+object graph sha256 A 593aca7e2d2944c4 B 593aca7e2d2944c4  tensors A 71 B 71
+VERDICT same tensors, same structure
