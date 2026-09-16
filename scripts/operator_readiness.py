@@ -93,6 +93,8 @@ NEEDS: tuple[tuple[str, str, str, str, str | None], ...] = (
      "notes/RUNNING-ON-PRODUCTION-HOST.md", "Preconditions, checked on the host every time", "scripts/production_gates.py"),
     ("C preflight", "who else is on the cards, and the return arithmetic",
      "notes/production-host/33-what-we-actually-have-2026-09-16.md", "", None),
+    ("C preflight", "decide whether to launch at all, not just what",
+     "notes/RUNNING-ON-PRODUCTION-HOST.md", "Decide whether to launch at all", None),
     ("C preflight", "which baselines can share a card",
      "notes/production-host/21-which-baselines-to-run-on-a-shared-card.md", "", None),
     ("C preflight", "disk, not VRAM, is what caps parallelism",

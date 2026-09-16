@@ -786,6 +786,36 @@ five-minute vacancy on card 1 and the co-tenant returned within minutes. Watch a
 sustained period before committing a multi-hour job to it. Card 0 went 12,354 -> 6,190 MiB free in
 ten minutes on the same day.
 
+### Decide whether to launch at all, before deciding what
+
+Measured across seven training attempts and eleven eval cells on 2026-09-16:
+
+> **On this host, under the current co-tenant, EVALUATION work is viable and TRAINING work is not.**
+
+An eval cell is 841 MiB and coexists with a 21.7 GiB co-tenant. A training cell is 2.6 GiB or more
+and does not survive the spikes, because the floor stands it down the instant free memory drops
+under 4,000 MiB. That is the floor working — our cell dies, the colleague's does not — but plan
+around it rather than relearning it:
+
+- idaac s102 was killed at 41% when free fell **6,422 → 224 MiB in twenty seconds**.
+- ibac_sni s101 was killed **eight minutes after launch**, mid-ramp, when free fell 8,575 → 2,595.
+- In the same afternoon, eleven eval cells completed on card 0 and produced an entire 11-stamp
+  curve while co-tenants held 26 GiB of that card.
+
+**The two cards are not interchangeable.** Card 0's co-tenants (`sg_sam2`, `rl4vla_cudagl`) are
+long-lived and stable; card 1's (`rlvigen_kalugin_df`) cycles off and back within tens of minutes.
+Put work you care about on card 0.
+
+**The launch criterion, and it is not "is there room now".** A window is only worth a multi-hour
+cell if it would survive the co-tenant's *return*:
+
+```
+free  >=  (the family's measured peak)  +  4000 floor  +  (the co-tenant's usual hold, ~21,300 MiB)
+```
+
+For idaac that is 27,938 MiB, not 6,638. Anything less is a cell you will pay for and lose, and —
+as §9.1's worked example shows — it can take a healthy cell down with it.
+
 Read occupancy with the aggregate queries only — never `ps aux`, never another user's directories:
 
 ```bash
