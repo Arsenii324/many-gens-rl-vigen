@@ -23,7 +23,7 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run: gates **36 pass / 0 fail / 10 owner**; fleet **3673 rows, 732 on the current
+As of the last run: gates **36 pass / 0 fail / 10 owner**; fleet **4157 rows, 1216 on the current
 closure**; campaign **36 cells: 35 MISSING, 1 DONE**.
 
 ## 2. Where the campaign actually is
@@ -34,7 +34,7 @@ new since 2026-09-14 — the fleet held 28 current rows then and holds 732 now.
 | baseline | seed | endpoint | curve | note |
 |---|---|---|---|---|
 | `ppg` | 1 | 88 rows | 528 rows, 12 stamps | complete |
-| `idaac` | 101 | 88 rows | in progress | the only cell the campaign counts |
+| `idaac` | 101 | 88 rows | 484 rows, 11 stamps | complete — the only cell the campaign counts |
 | `idaac` | 102 | — | — | **training now**, card 1, since 14:32 MSK |
 
 **The campaign counts 1 of 36 and that is not a mistake in the counter.**

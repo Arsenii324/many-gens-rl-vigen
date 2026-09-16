@@ -11,10 +11,10 @@ there are three, all of the same shape.
 production"*. Today:
 
 ```
-3673 rows, 732 on the CURRENT closure, 2941 superseded
+4157 rows, 1216 on the CURRENT closure, 2941 superseded
 ```
 
-The 704 new rows are the re-evaluation `32` §6 argued for — *"because the checkpoints are retained,
+The 1,188 new rows are the re-evaluation `32` §6 argued for — *"because the checkpoints are retained,
 re-measuring costs no training... the single most valuable recoverable asset on the host"*. It was
 done, and it cost no training:
 
@@ -23,6 +23,12 @@ done, and it cost no training:
 | `reeval-v214-ppg-endpoint` | 88 | ppg seed 1 @ 600,064, 11 scene sets x 4 regimes x 2 policy modes |
 | `reeval-v214-ppg-curve` | 528 | ppg seed 1, 12 stamps from 51,200 to 600,064 |
 | `reeval-v214-idaac-endpoint` | 88 | idaac seed 101 @ 598,016 |
+| `reeval-v214-idaac-curve` | 484 | idaac seed 101, 11 stamps from 51,200 to 550,912 |
+
+**idaac's curve completed and was collected at 16:00 MSK**, so idaac and ppg now both have a full
+endpoint grid AND a full curve. It was collected with `scripts/collect_reeval_sweep.py`, written
+the same afternoon because nothing merged a sweep's per-stamp archives — ppg's 528 rows had been
+merged by hand — and the ledger accepted it: `paired=True`, `diagnostics_complete=True`.
 
 So `32`'s "strong evidence they are scientifically intact, formally inadmissible until re-measured"
 is resolved the honest way — by re-measuring, not by ratifying the diff-reading.
