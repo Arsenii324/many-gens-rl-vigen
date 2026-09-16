@@ -32,6 +32,9 @@ validating nothing).
     RUNNING     submitted, no records yet. Note the honest ambiguity: from disk alone RUNNING and
                 a crash that emitted nothing are indistinguishable, which is why the state is read
                 against the submission ledger rather than guessed
+    PARTIAL     records exist below the endpoint AND the host run ledger records that attempt as
+                ENDED (yielded, failed, stopped). Real measurements of real checkpoints -- not a
+                production cell, and not still running. See _host_ended
     MISSING     scheduled and never submitted
     BLOCKED     the family has no current evaluator attestation, so a cell run now would produce a
                 record nothing can validate. This is the state that should stop a launch
@@ -122,7 +125,64 @@ def _submitted() -> set[tuple[str, int]]:
     return out
 
 
-def state_of(baseline, family, seed, endpoint, records, submitted, attested, live):
+def _host_ended() -> set[tuple[str, int]]:
+    """(baseline, seed) whose NEWEST host attempt carries a terminal status.
+
+    [Claude 2026-09-16] Added because this file reported idaac seed 102 as RUNNING hours after that
+    cell had been stood down at 41% of 600k. state_of returned RUNNING whenever records existed
+    below the endpoint, and collecting that run's partial curve created exactly such records. The
+    module docstring names the ambiguity ("from disk alone RUNNING and a crash that emitted nothing
+    are indistinguishable") and resolves it against the DataSphere submission ledger. Host cells are
+    not DataSphere jobs, so for them it was never resolved, and a stopped run read as running
+    indefinitely. results/host-runs.jsonl records what became of each host attempt.
+    """
+    import json
+    path = ROOT / "results" / "host-runs.jsonl"
+    if not path.is_file():
+        return set()
+    newest: dict[tuple[str, int], tuple[str, str]] = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        key = (row.get("baseline"), int(row.get("seed") or 0))
+        run = str(row.get("run_id") or "")
+        if key not in newest or run > newest[key][0]:
+            newest[key] = (run, str(row.get("status") or "").lower())
+    terminal = ("fail", "yield", "stopped", "abandon", "cancel")
+    return {k for k, (_r, status) in newest.items() if any(w in status for w in terminal)}
+
+
+def _host_running() -> set[tuple[str, int]]:
+    """(baseline, seed) whose NEWEST host attempt is recorded as still running.
+
+    The mirror of _host_ended. Without it a host cell that is actively training but has written no
+    records yet reads MISSING, because RUNNING was only ever inferred from DataSphere submissions or
+    from records -- ibac_sni seed 101 read MISSING while at 27% of 600k on 2026-09-16.
+    """
+    import json
+    path = ROOT / "results" / "host-runs.jsonl"
+    if not path.is_file():
+        return set()
+    newest: dict[tuple[str, int], tuple[str, str]] = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        key = (row.get("baseline"), int(row.get("seed") or 0))
+        run = str(row.get("run_id") or "")
+        if key not in newest or run > newest[key][0]:
+            newest[key] = (run, str(row.get("status") or "").lower())
+    return {k for k, (_r, status) in newest.items() if status.startswith("running")}
+
+
+def state_of(baseline, family, seed, endpoint, records, submitted, attested, live, ended=frozenset(), running=frozenset()):
     if family not in attested:
         return "BLOCKED", "family has no current evaluator attestation"
     rows = records.get((baseline, seed), [])
@@ -134,7 +194,12 @@ def state_of(baseline, family, seed, endpoint, records, submitted, attested, liv
         return "SUPERSEDED", f"{len(at_endpoint)} record(s) at frame {endpoint}, stale closure"
     if rows:
         frames = sorted({r.get("frame") for r in rows if r.get("frame") is not None})
+        if (baseline, int(seed)) in ended:
+            return "PARTIAL", (f"host attempt ENDED before {endpoint}; {len(rows)} record(s) up to "
+                               f"frame {max(int(f) for f in frames)}")
         return "RUNNING", f"records exist but none at {endpoint} (have: {frames[:4]})"
+    if (baseline, int(seed)) in running:
+        return "RUNNING", "host attempt recorded as running in results/host-runs.jsonl, no records yet"
     if (baseline, seed) in submitted:
         return "RUNNING", "submitted, no records yet"
     return "MISSING", "scheduled, never submitted"
@@ -149,6 +214,8 @@ def main() -> int:
     schedule = json.loads(pathlib.Path(args.schedule).read_text())
     live, attested = _live_revisions(), _attested()
     records, submitted = _records_index(), _submitted()
+    ended = _host_ended()
+    running = _host_running()
 
     rows = schedule.get("rows", [])
     seeds = schedule.get("seeds", [])
@@ -164,7 +231,7 @@ def main() -> int:
         cells = []
         for seed in row.get("seeds", seeds):
             state, why = state_of(baseline, family, seed, endpoint,
-                                  records, submitted, attested, live)
+                                  records, submitted, attested, live, ended, running)
             tally[state] += 1
             cells.append(f"{state:<8}")
             if state in ("BLOCKED", "SUPERSEDED"):

@@ -187,11 +187,11 @@
   "idaac": {
     "baseline": "idaac",
     "code_revision": null,
-    "diagnostics_basis": "484 rows carry the required fields",
+    "diagnostics_basis": "220 rows carry the required fields",
     "diagnostics_complete": true,
-    "evaluation_records_path": "results/records/reeval-v214-idaac-curve__records.jsonl",
-    "evaluation_records_sha256": "df04e44f81d7d80b347b2dc43e6d9345b5e30ab29dce04c145f9e6cd8e987a95",
-    "evaluator_measurement_revision": "671609f4bc4b2f97afd33be9845aa4a61e6114c36f8feed389439ec9f26ab50a",
+    "evaluation_records_path": "results/records/reeval-v214-idaac-s102-partial-curve__records.jsonl",
+    "evaluation_records_sha256": "1fc93bfac3bd2f08bbedf8346c7f90cdad5641883afc55fad5bd0235e48c14fa",
+    "evaluator_measurement_revision": "9e84f7c4721893c150ee0d5a05b06d6434fbe2879c4d8c48779b4ef874b2a403",
     "evaluator_revision": "1b092f978fdc6fb2fcc08a8c2e0e8921d51d75afc654c2b1b11f188f17f0c9b4",
     "evaluator_scope": {
       "action_repeat": 1,
@@ -229,13 +229,13 @@
         8,
         9
       ],
-      "seed": 101,
+      "seed": 102,
       "task": "Door"
     },
-    "evaluator_scope_revision": "a9e82f46debf59c816ad377a1ce0dc82463f5464682338343c20cd1e93cf540f",
+    "evaluator_scope_revision": "ae479eb15af379e77b346e7e26511c51213d79fe0a1c44d4a1b0e82e9eff01b2",
     "family_code_revision": "55b956d68fc9a11607c236222f2a0ed407f7753956b7c8d315efe51fc675f71d",
     "family_config_revision": "fe1a5195a450a73a651fe2ba94715dccbf54af22e0a2aeead14df80361ec117a",
-    "job": "reeval-v214-idaac-curve",
+    "job": "reeval-v214-idaac-s102-partial-curve",
     "paired": true,
     "paired_basis": "4 regimes share one placement sequence",
     "runtime_imports_checked": true,

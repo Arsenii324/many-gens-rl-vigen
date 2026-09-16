@@ -77,12 +77,45 @@ PATTERNS = [
 ]
 
 
+#: Door's action space is Box(-1, 1, (7,)) and every head here is a diagonal Gaussian over it.
+ACTION_DIMS = 7
+_GAUSS_ENTROPY_PER_DIM = 0.5 * __import__("math").log(2 * __import__("math").pi * __import__("math").e)
+#: ibac_sni's torch_rl progress line: `... | H <entropy> | V ...`. It logs entropy, never log_std.
+ENTROPY_PATTERN = re.compile(r"\|\s*H\s+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)\s*\|")
+
+
+def log_std_from_entropy(entropy: float, dims: int = ACTION_DIMS) -> float:
+    """Mean log(sigma) of a diagonal Gaussian, recovered from its total entropy.
+
+    H = D * 0.5 * log(2*pi*e) + sum_i log(sigma_i), so mean log(sigma) = (H - D*0.5*log(2*pi*e)) / D.
+
+    [Claude 2026-09-16] Added because this watcher was SILENT on ibac_sni -- the one baseline whose
+    documented failure it was written for. PRODUCTION-RUNBOOK records ibac_sni at "sigma ~4.3,
+    entropy climbing 9.95 -> 20.03, success 0.00 throughout", and ibac's torch_rl loop logs entropy
+    `H` but never a log_std field, so values_in parsed zero readings from a 3,392-line live ibac log.
+
+    Checked against that ground truth before use: H = 20.03 over 7 dims gives
+    sigma = exp((20.03 - 9.9326) / 7) = 4.23, against the runbook's recorded ~4.3. It assumes a
+    DIAGONAL Gaussian over exactly ACTION_DIMS dimensions; a squashed or categorical head has a
+    different entropy and must not be fed through this.
+    """
+    return (entropy - dims * _GAUSS_ENTROPY_PER_DIM) / dims
+
+
 def values_in(text: str) -> list[float]:
     out: list[float] = []
     for pattern in PATTERNS:
         for match in pattern.finditer(text):
             try:
                 out.append(float(match.group(1)))
+            except ValueError:
+                pass
+    # Only when no direct log_std field exists: a family that logs mean_log_std keeps its direct
+    # reading, and the entropy route never overrides it.
+    if not out:
+        for match in ENTROPY_PATTERN.finditer(text):
+            try:
+                out.append(log_std_from_entropy(float(match.group(1))))
             except ValueError:
                 pass
     return out
