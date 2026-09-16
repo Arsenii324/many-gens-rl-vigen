@@ -1,0 +1,179 @@
+{
+  "slug": "ppg-banked-seed-is-off-schedule",
+  "excerpts": {
+    "schedule-now": {
+      "file": "raw/schedule-now.txt",
+      "sha256": "3b6dbdd8d7e88172122b5b2e26e5d915d98062dafe1ace83b7354a99b01a6407",
+      "source": {
+        "kind": "repo-file",
+        "path": "datasphere/native/production-schedule-v100.json",
+        "bytes": 14324,
+        "sha256": "895663ca6cfb38a6533fe572e51a8987f5e2e9278335a228657168bbb1a09c9c"
+      },
+      "extraction": "cat datasphere/native/production-schedule-v100.json | grep -n '' | sed -n '21,25p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T11:25:40+00:00",
+      "note": "the production schedule names seeds 101, 102, 103"
+    },
+    "schedule-ppg-row": {
+      "file": "raw/schedule-ppg-row.txt",
+      "sha256": "e983fc94e8f4edb4584407aea7967826552d9dd663bf195a0395486112841b2f",
+      "source": {
+        "kind": "repo-file",
+        "path": "datasphere/native/production-schedule-v100.json",
+        "bytes": 14324,
+        "sha256": "895663ca6cfb38a6533fe572e51a8987f5e2e9278335a228657168bbb1a09c9c"
+      },
+      "extraction": "cat datasphere/native/production-schedule-v100.json | grep -n '' | sed -n '385,393p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 9,
+      "shown_lines": 9,
+      "captured_at": "2026-09-16T11:25:40+00:00",
+      "note": "and names the same three for ppg specifically"
+    },
+    "schedule-at-launch": {
+      "file": "raw/schedule-at-launch.txt",
+      "sha256": "a6ed977efd55785feccf5ce44edcc87af85218ce62f566b2449af02c98ab6430",
+      "source": {
+        "kind": "local-command",
+        "command": "git show 672202d:datasphere/native/production-schedule-v100.json",
+        "repo_head": "a318c00434068754fd8223e7a21c0d823a364bad",
+        "inputs": {}
+      },
+      "extraction": "( git show 672202d:datasphere/native/production-schedule-v100.json ) | grep -n '' | sed -n '21,25p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 5,
+      "shown_lines": 5,
+      "captured_at": "2026-09-16T11:25:40+00:00",
+      "note": "the schedule already said 101-103 at commit 672202d (2026-09-09 11:52 MSK), before the ppg run launched"
+    },
+    "launch-commit-time": {
+      "file": "raw/launch-commit-time.txt",
+      "sha256": "69f258acc9a54f6a19897f3d9b5fb533edeb18c4e57a80f30bbf62e15ed3a528",
+      "source": {
+        "kind": "local-command",
+        "command": "git log -1 --format=\"%h %ci\" 672202d",
+        "repo_head": "a318c00434068754fd8223e7a21c0d823a364bad",
+        "inputs": {}
+      },
+      "extraction": "( git log -1 --format=\"%h %ci\" 672202d ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 1,
+      "shown_lines": 1,
+      "captured_at": "2026-09-16T11:25:41+00:00",
+      "note": "when that schedule revision was committed"
+    },
+    "run-seed": {
+      "file": "raw/run-seed.txt",
+      "sha256": "8d417cff10d241c9d5b452586f2904fa89841811d2ca2598fb23016715d2bbd8",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json",
+        "bytes": 2406,
+        "sha256": "71d1c02cc24a66ae70dba4cf84db7b703f1ba589797238f6b6437031a86d15e1",
+        "mtime": "2026-09-09T09:03:00+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json | grep -n -E '\"(SEED|seed|CELLS)\": ' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:25:45+00:00",
+      "note": "the banked ppg run was launched as seed 1 (run dir card0-20260909-115331, i.e. 11:53 MSK)"
+    },
+    "committed-seeds": {
+      "file": "raw/committed-seeds.txt",
+      "sha256": "844ba29561045c23a2c70adad658250ba6b1aeb91b36811ef117654128157a34",
+      "source": {
+        "kind": "local-command",
+        "command": "\"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\nfor f in ('results/records/reeval-v214-ppg-endpoint__records.jsonl', 'results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-idaac-endpoint__records.jsonl'):\n    rows = [json.loads(l) for l in open(f)]\n    print(f, 'seeds', sorted({r['seed'] for r in rows}), 'cells', sorted({r['cell'] for r in rows}))\n\"",
+        "repo_head": "a318c00434068754fd8223e7a21c0d823a364bad",
+        "inputs": {
+          "results/records/reeval-v214-ppg-endpoint__records.jsonl": "dbfff3625bb7a00f6b1c69ac2eb3cbae6ea9659ed7863dabee09b805f5147e57",
+          "results/records/reeval-v214-ppg-curve__records.jsonl": "32203ed92d3a076a98bf2245ca7d1529baf9331b94035828941dc9670cf386b9",
+          "results/records/reeval-v214-idaac-endpoint__records.jsonl": "a564cd2179f8f03dac353c92e47ebc87bdd0f7e2a43cc57969f83345c949ead8"
+        }
+      },
+      "extraction": "( \"/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python\" -c \"\nimport json\nfor f in ('results/records/reeval-v214-ppg-endpoint__records.jsonl', 'results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-idaac-endpoint__records.jsonl'):\n    rows = [json.loads(l) for l in open(f)]\n    print(f, 'seeds', sorted({r['seed'] for r in rows}), 'cells', sorted({r['cell'] for r in rows}))\n\" ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:25:45+00:00",
+      "note": "the seeds the admissible records carry"
+    },
+    "why-named": {
+      "file": "raw/why-named.txt",
+      "sha256": "82e1caa58c9f53935e0b49b39c09eb7d6fb4e857dbd075e7ec04875dfdde14fc",
+      "source": {
+        "kind": "repo-file",
+        "path": "docs/CONSTRUCTION.md",
+        "bytes": 551305,
+        "sha256": "f6ca8f24d96f528221f798dc7824a8f9932a11b9933ea1108f695cd465f91dce"
+      },
+      "extraction": "cat docs/CONSTRUCTION.md | grep -n '' | sed -n '954,956p' | head -n 200",
+      "tar_member": null,
+      "matched_lines": 3,
+      "shown_lines": 3,
+      "captured_at": "2026-09-16T11:25:45+00:00",
+      "note": "why the schedule names seeds at all: the trees default to different ones"
+    }
+  },
+  "facts": [
+    {
+      "key": "schedule_seeds",
+      "value": "101,102,103",
+      "excerpt": "schedule-now",
+      "anchor": "22:    101,\n23:    102,\n24:    103"
+    },
+    {
+      "key": "ppg_row_seeds",
+      "value": "101,102,103",
+      "excerpt": "schedule-ppg-row",
+      "anchor": "390:        101,\n391:        102,\n392:        103"
+    },
+    {
+      "key": "schedule_seeds_at_launch",
+      "value": "101,102,103",
+      "excerpt": "schedule-at-launch",
+      "anchor": "22:    101,\n23:    102,\n24:    103"
+    },
+    {
+      "key": "schedule_commit_time",
+      "value": "2026-09-09 11:52:24 +0300",
+      "excerpt": "launch-commit-time",
+      "anchor": "672202d 2026-09-09 11:52:24 +0300"
+    },
+    {
+      "key": "run_seed",
+      "value": "1",
+      "excerpt": "run-seed",
+      "anchor": "\"SEED\": \"1\""
+    },
+    {
+      "key": "run_cells",
+      "value": "ppg:1",
+      "excerpt": "run-seed",
+      "anchor": "\"CELLS\": \"ppg:1\""
+    },
+    {
+      "key": "ppg_records_seed",
+      "value": "1",
+      "excerpt": "committed-seeds",
+      "anchor": "reeval-v214-ppg-endpoint__records.jsonl seeds [1] cells ['ppg-s1']"
+    },
+    {
+      "key": "idaac_records_seed",
+      "value": "101",
+      "excerpt": "committed-seeds",
+      "anchor": "reeval-v214-idaac-endpoint__records.jsonl seeds [101] cells ['idaac-s101']"
+    },
+    {
+      "key": "defaults_disagree",
+      "value": "1, 0, None",
+      "excerpt": "why-named",
+      "anchor": "the default seeds still disagree across trees (1, 0, `None`)"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: schedule-ppg-row
+# note: and names the same three for ppg specifically
+# source-kind: repo-file
+# source: datasphere/native/production-schedule-v100.json
+# source-bytes: 14324  source-sha256: 895663ca6cfb38a6533fe572e51a8987f5e2e9278335a228657168bbb1a09c9c  source-mtime: 
+# extraction: cat datasphere/native/production-schedule-v100.json | grep -n '' | sed -n '385,393p' | head -n 200
+# matched-lines: 9  shown-lines: 9
+# captured-at: 2026-09-16T11:25:40+00:00
+#---------------------------------------------------------------------------------------------------
+385:      "baseline": "ppg",
+386:      "family": "ppg",
+387:      "requested_frames": 600000,
+388:      "executed_endpoint": 600064,
+389:      "seeds": [
+390:        101,
+391:        102,
+392:        103
+393:      ],

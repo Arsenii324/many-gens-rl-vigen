@@ -496,3 +496,17 @@ register exists to prevent.
 
 **Pinned by.** `tests/test_production_schedule_not_stale.py`
 
+### `ppg-banked-seed-is-off-schedule` — **resolved**
+
+**Q.** Which seed is the admissible ppg 600k result, and is it one the production schedule names?
+
+**Verdict.** Seed 1 (run card0-20260909-115331, CELLS=ppg:1). production-schedule-v100.json names 101/102/103 globally and for ppg, and already did at 672202d (2026-09-09 11:52 MSK), before the run was launched at 11:53. The admissible idaac result is seed 101. Any join of records to the schedule by seed misses ppg.
+
+**Why.** Reported by the production session and checked here against the run's own launch record, the committed records and the schedule's history. Why seed 1 was chosen is not recorded; whether it matters statistically is not addressed.
+
+**Evidence.** `results/evidence/ppg-banked-seed-is-off-schedule/raw/run-seed.txt:12`, `results/evidence/ppg-banked-seed-is-off-schedule/raw/schedule-at-launch.txt:12`, `results/evidence/ppg-banked-seed-is-off-schedule/raw/committed-seeds.txt:22`, `results/evidence/ppg-banked-seed-is-off-schedule/raw/launch-commit-time.txt:11`, `datasphere/native/production-schedule-v100.json:22`
+
+**Falsified by.** A ppg result at a scheduled seed replacing the banked one, or the schedule adding seed 1; tests/test_evidence_backed_register_rows.py fails on either.
+
+**Pinned by.** `tests/test_evidence_backed_register_rows.py`, `tests/test_evidence_bundles_hold.py`
+

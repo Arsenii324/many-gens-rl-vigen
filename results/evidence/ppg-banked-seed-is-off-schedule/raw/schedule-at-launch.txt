@@ -1,0 +1,15 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: schedule-at-launch
+# note: the schedule already said 101-103 at commit 672202d (2026-09-09 11:52 MSK), before the ppg run launched
+# source-kind: local-command
+# source: git show 672202d:datasphere/native/production-schedule-v100.json
+# repo-head: a318c00434068754fd8223e7a21c0d823a364bad
+# extraction: ( git show 672202d:datasphere/native/production-schedule-v100.json ) | grep -n '' | sed -n '21,25p' | head -n 200
+# matched-lines: 5  shown-lines: 5
+# captured-at: 2026-09-16T11:25:40+00:00
+#---------------------------------------------------------------------------------------------------
+21:  "seeds": [
+22:    101,
+23:    102,
+24:    103
+25:  ],

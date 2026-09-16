@@ -1,0 +1,15 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: schedule-now
+# note: the production schedule names seeds 101, 102, 103
+# source-kind: repo-file
+# source: datasphere/native/production-schedule-v100.json
+# source-bytes: 14324  source-sha256: 895663ca6cfb38a6533fe572e51a8987f5e2e9278335a228657168bbb1a09c9c  source-mtime: 
+# extraction: cat datasphere/native/production-schedule-v100.json | grep -n '' | sed -n '21,25p' | head -n 200
+# matched-lines: 5  shown-lines: 5
+# captured-at: 2026-09-16T11:25:40+00:00
+#---------------------------------------------------------------------------------------------------
+21:  "seeds": [
+22:    101,
+23:    102,
+24:    103
+25:  ],

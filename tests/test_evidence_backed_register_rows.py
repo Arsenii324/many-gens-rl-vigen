@@ -99,3 +99,16 @@ def test_ibac_sni_16sep_stops_were_the_floor_not_the_process_count():
     row2 = next(line for line in notes.splitlines() if line.startswith("| 2 |"))
     assert "it killed ibac_sni-s1" not in row2.replace("~~it killed ibac_sni-s1~~", ""), (
         "STOP-MECHANISMS.md row 2 asserts the process-count yield killed ibac_sni-s1 again")
+
+
+def test_ppg_banked_seed_is_off_schedule():
+    """`ppg-banked-seed-is-off-schedule`: the admissible ppg rows are seed 1; the schedule says 101-103."""
+    import json
+
+    schedule = json.loads((ROOT / "datasphere" / "native" / "production-schedule-v100.json").read_text())
+    ppg_row = next(r for r in schedule["rows"] if r["baseline"] == "ppg")
+    assert schedule["seeds"] == [101, 102, 103] and ppg_row["seeds"] == [101, 102, 103]
+    for name in ("reeval-v214-ppg-endpoint__records.jsonl", "reeval-v214-ppg-curve__records.jsonl"):
+        seeds = {json.loads(line)["seed"] for line in
+                 (ROOT / "results" / "records" / name).read_text().splitlines() if line.strip()}
+        assert seeds == {1}, f"{name} now carries seeds {seeds}; re-derive the off-schedule row"

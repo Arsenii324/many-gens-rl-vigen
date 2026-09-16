@@ -1,0 +1,11 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: launch-commit-time
+# note: when that schedule revision was committed
+# source-kind: local-command
+# source: git log -1 --format="%h %ci" 672202d
+# repo-head: a318c00434068754fd8223e7a21c0d823a364bad
+# extraction: ( git log -1 --format="%h %ci" 672202d ) | head -n 200
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T11:25:41+00:00
+#---------------------------------------------------------------------------------------------------
+672202d 2026-09-09 11:52:24 +0300

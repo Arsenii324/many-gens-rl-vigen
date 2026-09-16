@@ -1,0 +1,24 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: committed-seeds
+# note: the seeds the admissible records carry
+# source-kind: local-command
+# source: "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   for f in ('results/records/reeval-v214-ppg-endpoint__records.jsonl', 'results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-idaac-endpoint__records.jsonl'):
+#       rows = [json.loads(l) for l in open(f)]
+#       print(f, 'seeds', sorted({r['seed'] for r in rows}), 'cells', sorted({r['cell'] for r in rows}))
+#   "
+# repo-head: a318c00434068754fd8223e7a21c0d823a364bad
+# inputs: results/records/reeval-v214-ppg-endpoint__records.jsonl=dbfff3625bb7a00f  results/records/reeval-v214-ppg-curve__records.jsonl=32203ed92d3a076a  results/records/reeval-v214-idaac-endpoint__records.jsonl=a564cd2179f8f03d
+# extraction: ( "/Users/a2mogus/build-projs/barannikov-work/.venv/bin/python" -c "
+#   import json
+#   for f in ('results/records/reeval-v214-ppg-endpoint__records.jsonl', 'results/records/reeval-v214-ppg-curve__records.jsonl', 'results/records/reeval-v214-idaac-endpoint__records.jsonl'):
+#       rows = [json.loads(l) for l in open(f)]
+#       print(f, 'seeds', sorted({r['seed'] for r in rows}), 'cells', sorted({r['cell'] for r in rows}))
+#   " ) | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:25:45+00:00
+#---------------------------------------------------------------------------------------------------
+results/records/reeval-v214-ppg-endpoint__records.jsonl seeds [1] cells ['ppg-s1']
+results/records/reeval-v214-ppg-curve__records.jsonl seeds [1] cells ['ppg-s1']
+results/records/reeval-v214-idaac-endpoint__records.jsonl seeds [101] cells ['idaac-s101']

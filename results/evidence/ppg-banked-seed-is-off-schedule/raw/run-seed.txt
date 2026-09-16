@@ -1,0 +1,13 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: run-seed
+# note: the banked ppg run was launched as seed 1 (run dir card0-20260909-115331, i.e. 11:53 MSK)
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json
+# source-bytes: 2406  source-sha256: 71d1c02cc24a66ae70dba4cf84db7b703f1ba589797238f6b6437031a86d15e1  source-mtime: 2026-09-09T09:03:00+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json | grep -n -E '"(SEED|seed|CELLS)": ' | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:25:45+00:00
+#---------------------------------------------------------------------------------------------------
+45:    "CELLS": "ppg:1",
+76:    "SEED": "1",
+83:  "seed": "1",

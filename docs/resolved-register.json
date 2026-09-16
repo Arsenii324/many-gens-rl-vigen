@@ -640,6 +640,35 @@
       ],
       "gated_by": [],
       "supersedes": "bb05db6's 'The cause was our own process-count yield' and STOP-MECHANISMS.md row 2's 'it killed ibac_sni-s1' (struck through in place). d0899fb's account of attempt 3 stands and is now evidenced."
+    },
+    {
+      "id": "ppg-banked-seed-is-off-schedule",
+      "domain": "reproducibility",
+      "status": "resolved",
+      "question": "Which seed is the admissible ppg 600k result, and is it one the production schedule names?",
+      "verdict": "Seed 1 (run card0-20260909-115331, CELLS=ppg:1). production-schedule-v100.json names 101/102/103 globally and for ppg, and already did at 672202d (2026-09-09 11:52 MSK), before the run was launched at 11:53. The admissible idaac result is seed 101. Any join of records to the schedule by seed misses ppg.",
+      "why": "Reported by the production session and checked here against the run's own launch record, the committed records and the schedule's history. Why seed 1 was chosen is not recorded; whether it matters statistically is not addressed.",
+      "evidence": [
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/run-seed.txt:12",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/schedule-at-launch.txt:12",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/committed-seeds.txt:22",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/launch-commit-time.txt:11",
+        "datasphere/native/production-schedule-v100.json:22"
+      ],
+      "evidence_expect": {
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/run-seed.txt:12": "\"SEED\": \"1\"",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/schedule-at-launch.txt:12": "22:    101,",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/committed-seeds.txt:22": "reeval-v214-ppg-endpoint__records.jsonl seeds [1]",
+        "results/evidence/ppg-banked-seed-is-off-schedule/raw/launch-commit-time.txt:11": "672202d 2026-09-09 11:52:24 +0300",
+        "datasphere/native/production-schedule-v100.json:22": "101,"
+      },
+      "falsifier": "A ppg result at a scheduled seed replacing the banked one, or the schedule adding seed 1; tests/test_evidence_backed_register_rows.py fails on either.",
+      "pinned_by": [
+        "tests/test_evidence_backed_register_rows.py",
+        "tests/test_evidence_bundles_hold.py"
+      ],
+      "gated_by": [],
+      "supersedes": ""
     }
   ]
 }

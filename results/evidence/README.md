@@ -20,6 +20,7 @@ answer without re-running anything:
 | [ppg-600k-rows-bind-to-host-weights](ppg-600k-rows-bind-to-host-weights/CLAIM.md) | Do the 616 committed ppg 600k rows name the weights the run saved, at the right stamps? Do the curve end and the endpoint read the same model? | resolved (all bound; same tensors, different files) |
 | [idaac-600k-endpoint-binds-to-host-weights](idaac-600k-endpoint-binds-to-host-weights/CLAIM.md) | Which of four host idaac snapshots do the 88 committed endpoint rows evaluate? Did that run finish? Are all regimes and modes covered? | resolved (card0-20260909-035152; 598,016; 11 per regime and mode) |
 | [ibac-sni-16sep-three-stops](ibac-sni-16sep-three-stops/CLAIM.md) | What stopped each of ibac_sni's three production attempts on 16 Sep? | resolved (floor, worker death, floor; corrects STOP-MECHANISMS row 2) |
+| [ppg-banked-seed-is-off-schedule](ppg-banked-seed-is-off-schedule/CLAIM.md) | Which seed is the admissible ppg result, against the production schedule? | resolved (seed 1; schedule names 101-103, already at launch) |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 
 ## Finding something

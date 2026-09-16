@@ -1,0 +1,13 @@
+# evidence-slug: ppg-banked-seed-is-off-schedule
+# excerpt: why-named
+# note: why the schedule names seeds at all: the trees default to different ones
+# source-kind: repo-file
+# source: docs/CONSTRUCTION.md
+# source-bytes: 551305  source-sha256: f6ca8f24d96f528221f798dc7824a8f9932a11b9933ea1108f695cd465f91dce  source-mtime: 
+# extraction: cat docs/CONSTRUCTION.md | grep -n '' | sed -n '954,956p' | head -n 200
+# matched-lines: 3  shown-lines: 3
+# captured-at: 2026-09-16T11:25:45+00:00
+#---------------------------------------------------------------------------------------------------
+954:> **What is unchanged**: the default seeds still disagree across trees (1, 0, `None`), so a seed
+955:> set still has to be named rather than inherited. The production default is 101/102/103, named
+956:> for that reason.
