@@ -38,6 +38,44 @@ is still not caught, and TIED says so.
 **UNVERIFIABLE** -- no checkpoint matched the row's hash, or the row carries no hash, or the file is
 named by index and no log line mentions it. Nothing was checked. It must never print like a pass.
 
+## A case this file cannot currently grade, measured 2026-09-17 on `ibac_sni` s101
+
+`ibac_sni` retains twelve frame-named intermediates (`checkpoints/model_600064.pt`) and one terminal
+`snapshot.pt`. The curve rows read the intermediates and will grade CORROBORATED: the frame is in the
+name, `FRAME_IN_NAME` matches it, and `eval_grid.py` wrote the frame independently.
+
+The endpoint rows read `snapshot.pt`, and the alias route below does NOT rescue them, because
+`snapshot.pt` is not byte-identical to any frame-named file:
+
+    snapshot.pt          4,620,135 bytes  md5 bbf3263c3e323e968807e8214fadd074
+    model_600064.pt      4,619,623 bytes  md5 2869a098f4cd998098346e36fb176fa5
+
+All twelve intermediates are *exactly* 4,619,623 bytes, so the 512-byte gap is structural rather
+than a different training state. The cause is in the trainer, not in us:
+`runnable/ibac_sni/torch_rl/scripts/train.py:324-326` calls `acmodel.cpu()` and then writes both
+`model.pt` and the stamped copy, while line 352 restores `acmodel.cuda()` and the guaranteed
+terminal write at line 371 runs after the loop with the model back on the device. `save_model`
+(`utils/save.py:24-43`) pickles the whole ACModel and never moves it, so the terminal file carries
+CUDA device tags and the in-loop ones carry CPU tags. Same weights, different serialization.
+
+That is not an assumption. Both files were fetched and loaded: **37 of 37 parameter tensors are
+bitwise equal** (`max |a-b| == 0.0` on every tensor, keys identical). So ibac's endpoint measures
+frame 600,064's policy exactly, and `snapshot.pt` is the retained copy of `model.pt`, itself
+confirmed by md5 against the trainer's own `model.pt`.
+
+**Why this still grades UNVERIFIABLE, and why that is correct.** This auditor indexes checkpoints by
+the sha256 of the FILE. Two files holding identical weights under different device tags have
+different file hashes, so nothing here can see the equality. Grading it CORROBORATED on the strength
+of a measurement taken by hand, in a session, and not re-run by any check, would be exactly the
+"agrees with our own narrative and nothing outside it" failure this file was written against.
+
+The honest fix is a weight-level hash -- load the checkpoint, hash the state_dict in key order --
+which would tie `snapshot.pt` to `model_600064.pt` automatically and would also subsume the existing
+byte-alias route. It is deliberately NOT implemented here yet: it requires torch and the family's
+model class importable at audit time, which this script does not currently need, and that cost
+should be decided rather than slipped in. Until then the endpoint rows are UNVERIFIABLE, with this
+paragraph as the reason and the measurement above as what is actually known.
+
 ## The cadence check, which is independent
 
 `IC=` values are emitted by the trainer on a fixed save cadence. Uneven deltas mean a save was missed

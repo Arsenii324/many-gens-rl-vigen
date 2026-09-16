@@ -1,0 +1,11 @@
+# evidence-slug: ibac-endpoint-weights-equal-frame-600064
+# excerpt: trainer-model-pt
+# note: the trainer's own model.pt; the retained snapshot.pt is a copy of it, not a separate write
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-203537/native-work/runs/ibac_sni-s101/cell
+# name-glob: model.pt  listing-sha256: 3d82b7795d342158e608f36d13613b97d7919bd5199c87c3d971d251bce2295d
+# extraction: cd "$HOME"/rlvigen-runs/card1-20260916-203537/native-work/runs/ibac_sni-s101/cell && find . -maxdepth 1 -type f -name model.pt | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 1  shown-lines: 1
+# captured-at: 2026-09-16T23:12:58+00:00
+#---------------------------------------------------------------------------------------------------
+4620135 1789582725 d0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef  ./model.pt

@@ -1,0 +1,22 @@
+# evidence-slug: ibac-endpoint-weights-equal-frame-600064
+# excerpt: intermediate-hashes
+# note: all twelve retained frame-named intermediates; every one is 4,619,623 bytes
+# source-kind: host-dir-hashes
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/checkpoints
+# name-glob: model_*.pt  listing-sha256: 9d71348be3a7db22a1480b3a1124745b07f727bccd0e964467e717ec7383718b
+# extraction: cd "$HOME"/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/checkpoints && find . -maxdepth 1 -type f -name 'model_*.pt' | LC_ALL=C sort | while read -r f; do printf '%s %s ' "$(stat -c %s "$f")" "$(stat -c %Y "$f")"; sha256sum "$f"; done
+# matched-lines: 12  shown-lines: 12
+# captured-at: 2026-09-16T23:13:00+00:00
+#---------------------------------------------------------------------------------------------------
+4619623 1789581288 f3ef2e8734d782a0d8d66dcc8e68f5b49dfb7b1da68bae1785838d99c718fd43  ./model_100352.pt
+4619623 1789581434 0420539b10b7d924019c999ab175c38357bfde05cba978bcdfcee3b0fb2c86e4  ./model_151552.pt
+4619623 1789581575 cf581d1cc83bdc7311c5e49678861b0ef3569bfd3d99d04026facda578eae6e3  ./model_200704.pt
+4619623 1789581722 a746a5cde76aa3f063866d69e20848585712418845236d7174ef3e349fadf62d  ./model_251904.pt
+4619623 1789581863 40a34e4cd9de95ac49fb109001578dc41364b270c394968df81a7bcfc57e0b89  ./model_301056.pt
+4619623 1789582005 ff97ad478acd5e544dfadc194271b792779293b9cbe0ce854b6b9e9df28c2217  ./model_350208.pt
+4619623 1789582153 de45de9ae236e9d9cb66964f3e0a5b9da57ddede1029637f52a23414e68eb34f  ./model_401408.pt
+4619623 1789582294 d0c5ba42feea03f3471eff23b3250a8912be4540f214adad990ca121e8f49e7d  ./model_450560.pt
+4619623 1789582440 8ed62c4a82994ea80fbaea4d6b5f0d0308af55816b8f8c0a6b82ea6c10bf0a3b  ./model_501760.pt
+4619623 1789581111 872853c34474fd95257f72027b0ec88dea7e7060a33851de579c63017230b014  ./model_51200.pt
+4619623 1789582582 0acd635f922f7b080a86a3c41b9f290005dece422f47a239ec83b4015d203bfe  ./model_550912.pt
+4619623 1789582725 3c07f06ef8d95acbcab4d0d67615ec166ca168f3c3e033fb3c19e8256c90e073  ./model_600064.pt
