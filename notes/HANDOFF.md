@@ -6,9 +6,63 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated 2026-09-16, ~15:30 MSK, by Claude. The previous version (2026-09-07) planned the v196
-attestation wave; that wave landed, the host ran, and two 600k baselines are banked. What follows
-replaces that plan entirely.
+Last updated **2026-09-17, ~02:20 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
+executed, and the section below it is kept because the reasoning still reads correctly — but items
+1-3 have happened. Read this block first; it is what changed overnight.
+
+## Overnight, 2026-09-16 20:35 → 2026-09-17 02:20
+
+**Two cells are on card 1 at once, deliberately, and the packing was measured rather than assumed.**
+
+- `ibac_sni` s101 **finished training** at 21:19, F 600,064, in **44 minutes of wall clock**. That is
+  the first ibac cell ever to complete a 600k run, and it breaks the cell-cost model this project
+  has been planning against: the model says training is 4.95 h and evaluation 4.6-5.5 h. For an
+  on-policy family at procs=16 training is ~45 minutes and the **in-cell grid is the whole cost**
+  (3,476 episodes, 13 stamps). If that generalises to ppg and ctrl, the campaign's bottleneck is
+  evaluation, not training, and the planning arithmetic in §9 should be re-derived per family.
+- On entering the grid its card delta fell **7,421 → 839 MiB**, matching the separately measured 841
+  MiB eval-cell figure. The 16 EGL contexts really do go away at `num_envs=1`. I had said I would
+  check that against the card rather than assume it; it held.
+- `idaac` s102 was launched **from zero** at 21:32 onto the same card, since idaac cannot resume.
+  At 02:15 it is at step 395,264 of 600,000 with 7 checkpoints already retained.
+- **Packing ratio r = 0.90** (ibac eval 1.872 → 1.680 log-lines/min), against the runbook's `r<0.5`
+  "packing loses" threshold. `docker stats` shows each cell at ~1 core, not sixteen. A load average
+  of 42.67 on this 16-core host was **other people's jobs**, not ours — check `docker stats` before
+  concluding anything from `loadavg` here.
+
+**The co-tenant is back and the margin is thin.** At 02:15 `rlvigen_kalugin_df` holds 22,536 MiB in
+two processes on card 1; ours are idaac 2,640 and ibac 831; free is **4,950 against the 4,000 floor**.
+I decided not to intervene, and the reason is structural rather than optimistic:
+`run_probe.sh:196` polls the yield sentinel only `while kill -0 "$training_pid"`. ibac's training PID
+exited at 21:19, so **ibac's in-cell grid does not obey the sentinel**; idaac, still training, does.
+If free crosses the floor, idaac is stood down and ibac's grid continues untouched — which is the
+sacrifice ordering I would have chosen by hand. Do not "fix" this by stopping idaac early.
+
+**What to do when ibac's result lands** (`ibac_sni-s101-prod-result.tgz`, estimated ~09:20 on 09-17,
+watch budget expires 04:43 on 09-18 so there is slack): collect, ledger, bind — and expect the
+**endpoint rows to grade UNVERIFIABLE**. That is not a defect to chase at collection time. It is
+understood and written up in `results/evidence/ibac-endpoint-weights-equal-frame-600064/`: ibac's
+terminal `snapshot.pt` is not byte-identical to `model_600064.pt` because the terminal write happens
+with the model back on CUDA, but all 37 parameter tensors are bitwise equal, so the endpoint really
+does measure the 600,064-frame policy. The auditor indexes by file hash and cannot see that.
+
+**A suspicion I did not chase.** A weight-level hash in `audit_record_frame_provenance.py` would tie
+those two files automatically and would subsume the byte-alias route. I left it out because it needs
+torch and each family's model class importable at audit time, which the auditor does not currently
+require. If someone decides that cost is acceptable, ibac's endpoint and ppg's 88 both move off
+UNVERIFIABLE for the right reason.
+
+**Three of my own instruments were wrong tonight**, which is the recurring lesson rather than a new
+one. The monitor read idaac at "0%" for 4.5 hours because `train/total_num_steps | 3.71e+05` is
+scientific notation and the regex captured the leading `3`. `watch_policy_health.py` ignored ibac's
+actual `lns` field while I had written "ibac never logs log_std" into three places. And two live
+scripts still carried a claim I had already retracted elsewhere. Validate against the artifact, not
+against the last thing you wrote.
+
+---
+
+The previous version (2026-09-07) planned the v196 attestation wave; that wave landed, the host ran,
+and two 600k baselines are banked.
 
 ## What I would do next, and why that order
 
