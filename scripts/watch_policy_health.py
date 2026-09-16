@@ -74,13 +74,23 @@ PATTERNS = [
     # the same log yields 7 readings.
     re.compile(r"mean_log_std[\"'\s:=|]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
     re.compile(r"\bpi_logstd[\"'\s:=|]+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
+    # [Claude 2026-09-16] ibac_sni prints mean_log_std under the SHORT name `lns` --
+    # `| s 0.749 | lns -0.293 | bf 0.181` -- from the formatter at
+    # runnable/ibac_sni/torch_rl/scripts/train.py:294. Its CSV header spells the field
+    # `mean_log_std`; the human-readable progress line does not, so the pattern above matched the
+    # header row and nothing else. The watcher therefore fell through to the entropy route on a
+    # family that logs the value directly. Anchored on the pipe form so `lns` cannot match a
+    # substring somewhere else in a log.
+    re.compile(r"\|\s*lns\s+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)"),
 ]
 
 
 #: Door's action space is Box(-1, 1, (7,)) and every head here is a diagonal Gaussian over it.
 ACTION_DIMS = 7
 _GAUSS_ENTROPY_PER_DIM = 0.5 * __import__("math").log(2 * __import__("math").pi * __import__("math").e)
-#: ibac_sni's torch_rl progress line: `... | H <entropy> | V ...`. It logs entropy, never log_std.
+#: ibac_sni's torch_rl progress line: `... | H <entropy> | V ...`. A FALLBACK, not ibac's route:
+#: train.py:280 gates the `s`/`lns`/`bf` fields on `acmodel.log_std` existing, so a Gaussian head
+#: logs log_std directly and the pattern above takes it. This fires only for a head that has none.
 ENTROPY_PATTERN = re.compile(r"\|\s*H\s+(-?\d+\.?\d*(?:[eE][-+]?\d+)?)\s*\|")
 
 
@@ -91,13 +101,26 @@ def log_std_from_entropy(entropy: float, dims: int = ACTION_DIMS) -> float:
 
     [Claude 2026-09-16] Added because this watcher was SILENT on ibac_sni -- the one baseline whose
     documented failure it was written for. PRODUCTION-RUNBOOK records ibac_sni at "sigma ~4.3,
-    entropy climbing 9.95 -> 20.03, success 0.00 throughout", and ibac's torch_rl loop logs entropy
-    `H` but never a log_std field, so values_in parsed zero readings from a 3,392-line live ibac log.
+    entropy climbing 9.95 -> 20.03, success 0.00 throughout", and values_in parsed zero readings
+    from a 3,392-line live ibac log.
 
     Checked against that ground truth before use: H = 20.03 over 7 dims gives
     sigma = exp((20.03 - 9.9326) / 7) = 4.23, against the runbook's recorded ~4.3. It assumes a
     DIAGONAL Gaussian over exactly ACTION_DIMS dimensions; a squashed or categorical head has a
     different entropy and must not be fed through this.
+
+    [Claude 2026-09-16, correction] The reason given above for adding it was WRONG in one respect,
+    and the error is worth keeping visible: ibac does log a log_std field. It prints it as `lns`,
+    which the direct patterns did not match, so the silence was a parsing gap and not an absent
+    field. The direct pattern now exists and wins; this route is the fallback.
+
+    That mistake bought a real validation, though, because the two can now be compared on the same
+    lines. Over 232 progress lines of the live ibac_sni s101 cell, derived-vs-direct mean log(sigma)
+    agree to a maximum absolute difference of 0.00178 and a mean of 0.00046, across a range of
+    -0.293 to -0.004. Both fields print at 3 decimals, which alone accounts for ~0.0006; the
+    remainder is that `H` is averaged over an update while `lns` is read at the end of it. Against
+    COLLAPSED_SIGMA = 0.05 and RISE = 0.02 that is two orders of magnitude of headroom, so the
+    fallback is sound where it is the only option.
     """
     return (entropy - dims * _GAUSS_ENTROPY_PER_DIM) / dims
 
