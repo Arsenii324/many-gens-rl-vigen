@@ -98,7 +98,9 @@ carries the `checkpoint_sha256` it was measured from. §10.1 has the table and t
 
 ### Three facts that are not obvious and change what you do
 
-1. **Evaluation is the expensive half.** Measured: 4.95 h training, 4.60 h curve, 5.52 h endpoint.
+1. **Evaluation is the expensive half**, and for a fast-training family it is nearly the whole
+   cell. Measured on `idaac`: 4.95 h training, 4.60 h curve, 5.52 h endpoint. Measured on
+   `ibac_sni` at procs=16: **44 minutes** training against the same 3,476-episode grid. See §5.
    Budget the whole cell, not the training (§0b, §3b).
 2. **Exact reproduction is not available.** Two runs of the SAME invocation reproduce ~35% of
    episodes, in both policy modes. It is ~0.2–0.3 SE and the mechanism is open (§10.3).
@@ -212,6 +214,24 @@ The first complete production cell, `card0-20260909-035152` (`idaac-s101`, 600k 
 | curve evaluation | **4.60 h** | 11 stamps x 44 rows x 3 episodes = 1,452 episodes |
 | endpoint grid | **5.52 h** | 44 rows x 20 episodes x **2 policy-mode passes** |
 | **total** | **≈15 h** | evaluation is **twice** the training that precedes it |
+
+**This table is one family, and the training row does not generalise.** [Claude 2026-09-17]
+`ibac_sni` s101 trained the same 600,064 frames in **44 minutes**, not 4.95 hours — a 6.7x
+difference, measured from its own log (launched 20:35, `F 600064` at 21:19).
+
+| family | procs / envs | 600k training | source |
+|---|---|---|---|
+| `idaac` | 8 | **4.95 h** (33.7 frames/s) | `card0-20260909-035152` |
+| `ibac_sni` | 16 | **0.73 h** (~228 frames/s) | `card1-20260916-203537` |
+
+The difference is parallel environments, so it is a property of the family's configuration rather
+than of the host. Do not budget a cell by scaling this table's training row; read the family's
+`procs` and, if it has never run here, treat its training time as **unmeasured**.
+
+What *does* generalise is the shape: the in-cell grid is a fixed 3,476 episodes whatever produced
+the checkpoints, so for a fast-training family the grid is not "twice the training" — it is
+**essentially the entire cell**. ibac's grid was still running 4.7 hours after a 44-minute training
+run. Plan the booking around the grid.
 
 **Budget the whole thing, not the training.** `CELL_TIMEOUT_SECONDS` wraps training only. The
 allowance that covers evaluation used to default to the training budget and was **69 % short**;
