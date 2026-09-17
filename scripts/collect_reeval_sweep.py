@@ -65,9 +65,37 @@ def _row_key(row: dict) -> tuple:
     by reading the code. `evaluator_measurement_revision` is included as well because it differs
     between the two passes and is identical between two copies of the same archive -- so a genuine
     duplicate still collides, which is the behaviour this key exists to produce.
+
+    [Claude 2026-09-17] And `conventions.eval_policy_mode` is NOT the authoritative field either,
+    which the reeval files hide because on them the two agree. Measured across the committed record
+    sets:
+
+        reeval-v214-ppg-endpoint      conventions 44/44 split   evaluator_scope 44/44 split
+        reeval-v214-idaac-endpoint    conventions 44/44 split   evaluator_scope 44/44 split
+        card0-20260909-035152         conventions 569x 'sample' evaluator_scope 528 + 41 'mode'
+
+    The last line is an IN-RUN delivery rather than a sweep, and on that path `conventions`
+    carries the FAMILY's native rule -- a constant -- while `evaluator_scope.eval_policy_mode`
+    carries the pass that actually ran. eval_grid.py:1462 says so in as many words: it "MUST reflect
+    what ran, not what the family natively does".
+
+    **What this did NOT do, checked before it was written down.** It is tempting to say the old
+    order "would have collapsed 41 mode rows onto their native twins". It would not have, and the
+    measurement says so: over that file's 85 endpoint rows the old order and the new one both yield
+    85 distinct keys. `evaluator_measurement_revision` differs between the two passes and is already
+    part of the key, so the passes stayed apart by way of a field that happens to vary rather than
+    the field that names the difference.
+
+    That is the actual argument for reordering, and it is weaker than a bug but not nothing: the
+    key's mode component should MEAN the pass that ran, and separation should not rest on a
+    coincidence in a neighbouring field. Reordering is free -- on all four committed sweep files the
+    two fields agree and every key count is unchanged (88, 88, 484, 528) -- so it costs nothing to
+    stop depending on the coincidence.
     """
     conventions = row.get("conventions") or {}
-    mode = (conventions.get("eval_policy_mode")
+    scope = row.get("evaluator_scope") or {}
+    mode = (scope.get("eval_policy_mode")
+            or conventions.get("eval_policy_mode")
             or (row.get("evaluator_identity") or {}).get("policy_mode")
             or row.get("eval_policy_mode"))
     return (row.get("cell"), row.get("frame"), row.get("regime"), row.get("scene_set"),

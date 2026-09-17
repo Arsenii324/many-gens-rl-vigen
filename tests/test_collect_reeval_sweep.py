@@ -57,3 +57,29 @@ def test_a_duplicated_archive_still_collides():
     """Two copies of the SAME archive must produce identical keys, or duplicates go undetected."""
     rows = _rows("reeval-v214-ppg-curve")
     assert _row_key(rows[0]) == _row_key(dict(rows[0]))
+
+
+def test_the_key_names_the_pass_that_ran_not_the_family_convention():
+    """`conventions.eval_policy_mode` is the FAMILY's native rule and is constant on in-run rows.
+
+    [Claude 2026-09-17] Measured across the committed record sets: on every reeval sweep the two
+    fields agree (44/44 on both endpoint files), but on the in-run delivery
+    `card0-20260909-035152__records.jsonl` conventions reads 'sample' for all 569 rows while
+    `evaluator_scope.eval_policy_mode` reads 528 'sample' + 41 'mode'. eval_grid.py:1462: the scope
+    field "MUST reflect what ran, not what the family natively does".
+
+    This does NOT assert that the old order collapsed rows -- it did not, because
+    `evaluator_measurement_revision` differs between passes and is already in the key. It asserts
+    the narrower thing that should hold on its own: two passes that differ ONLY in the pass that
+    ran must key differently, without leaning on a neighbouring field that happens to vary.
+    """
+    from collect_reeval_sweep import _row_key
+    common = {"cell": "ibac_sni-s101", "frame": 600064, "regime": "train", "scene_set": "0",
+              "conventions": {"eval_policy_mode": "sample"},
+              "evaluator_measurement_revision": "identical-on-purpose"}
+    native = dict(common, evaluator_scope={"eval_policy_mode": "sample"})
+    mode = dict(common, evaluator_scope={"eval_policy_mode": "mode"})
+    assert _row_key(native) != _row_key(mode), (
+        "the two endpoint passes produced the same key when only the pass differed")
+    assert _row_key(native)[4] == "sample" and _row_key(mode)[4] == "mode", (
+        "the key's mode component must name the pass that ran")
