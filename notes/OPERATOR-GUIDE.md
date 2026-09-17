@@ -23,6 +23,22 @@ procedure with this page open beside it.
   [`../docs/RUN-THIS-PROJECT.md`](../docs/RUN-THIS-PROJECT.md). That is the canonical cold start and
   this page does not repeat it; §4b says how the two fit together.
 
+What this page deliberately does **not** cover, and where it lives instead. Read these when the
+question is *what a number means* rather than *how to produce it*:
+
+- **What was asked, as checkable criteria (R1–R7):** [`../docs/TASK.md`](../docs/TASK.md).
+- **Which claim the design can support:** [`../docs/RESEARCH-FRAME.md`](../docs/RESEARCH-FRAME.md);
+  where the project stands against the original goal:
+  [`../docs/STATUS-AGAINST-THE-GOAL.md`](../docs/STATUS-AGAINST-THE-GOAL.md).
+- **The evaluation protocol** — the grid, the endpoint-as-headline rule, the seed rule; its own
+  status line says PROPOSED: [`../docs/EVAL-PROTOCOL.md`](../docs/EVAL-PROTOCOL.md).
+- **When two baselines' numbers may be compared:**
+  [`../docs/COMPARABILITY_CONTRACT.md`](../docs/COMPARABILITY_CONTRACT.md), and per baseline what is
+  actually emitted: [`../docs/PART2-METRIC-INVENTORY.md`](../docs/PART2-METRIC-INVENTORY.md).
+- **The nine OWNER judgements and what to do if results look wrong because of one:**
+  [`DECISIONS-IF-PRODUCTION-GOES-WRONG.md`](DECISIONS-IF-PRODUCTION-GOES-WRONG.md).
+- **Every project document, routed:** [`../docs/PROJECT-INDEX.md`](../docs/PROJECT-INDEX.md).
+
 ---
 
 ## 1. What the campaign is, in five lines
