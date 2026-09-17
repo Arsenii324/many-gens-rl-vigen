@@ -283,6 +283,22 @@ Procedure §9.6 has the commands. Two things that are not obvious:
    `assemble_reaped_delivery.py` into `<run-dir>/native-out/records_delivery.jsonl` — that exact
    path — then `NATIVE_ACCEPT_WATCH_STOP=1 bash collect-host-run.sh …`. The collector prints this
    recipe in its own refusal message; read the stderr rather than guessing.
+4. **Expect a large "unverifiable" count, and know what it is made of.** Run
+   `audit_record_frame_provenance.py <records> --checkpoints <dir>` — without `--checkpoints` it has
+   nothing to match and calls *everything* unverifiable. With it, a complete cell decomposes
+   predictably. Measured on `idaac` s102's 598 rows (2026-09-17):
+
+   | count | what | why |
+   |---|---|---|
+   | 484 | curve rows | **corroborated** — frame in the checkpoint's name, frame in the record, hashes agree |
+   | 0 | — | **mismatched**: this is the number that must stay zero |
+   | 88 | endpoint rows | unverifiable: the terminal checkpoint has no frame in its name (same for `ppg` and `ibac_sni`) |
+   | 26 | `phase: "eval"` rows | unverifiable: in-training evaluation, logged during the run, carries no `checkpoint_sha256` at all |
+
+   The tool prints "UNVERIFIABLE IS NOT OK" over the total, which is right as a default and
+   misleading here: 114 of 598 were unverifiable for two understood reasons, and **MISMATCHED was
+   zero**. Read the decomposition, not the headline, and treat a non-zero MISMATCHED as the alarm.
+
 3. **Never run `populate_evaluator_ledger.py` on a production run.** That script records a
    family's *evaluator attestation*, and the gate accepts only single-scope endpoint evidence
    (one frame, one policy pass) such as an `attest-v2xx` job. A production delivery has a twelve-frame

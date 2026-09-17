@@ -197,9 +197,28 @@ def main() -> int:
     out.write_text("\n".join(json.dumps(r) for r in merged) + "\n")
     fams = collections.Counter(r.get("family") for r in merged)
     print(f"\n  wrote {out.relative_to(ROOT)} ({len(merged)} rows)")
+    # [Claude 2026-09-17] This used to print
+    #     next: python scripts/populate_evaluator_ledger.py <family> <tag>
+    # for every sweep, which is the one command that must NOT be run on one. That script records a
+    # family's evaluator ATTESTATION, and production_gates accepts only single-scope endpoint
+    # evidence -- one frame, one policy pass. A curve sweep is many frames, so the entry would be
+    # rejected; and because each run REPLACES the family's entry, writing a rejected one REMOVES a
+    # valid attestation with no error. It had already done that to idaac and ppg before being
+    # caught. populate_evaluator_ledger now refuses using the gate's own check, so this hint was
+    # advice that its own target would reject.
+    endpoint_only = all((r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"
+                        for r in merged)
     for family, n in fams.most_common():
-        print(f"    next: python scripts/populate_evaluator_ledger.py {family} {args.tag}   "
-              f"({n} rows)")
+        print(f"    {family}: {n} rows")
+    if endpoint_only:
+        print("\n  These rows are endpoint-scope. If this sweep is a single-scope attestation job,")
+        print("  populate_evaluator_ledger.py may accept it; it verifies with the gate's own check")
+        print("  and refuses otherwise.")
+    else:
+        print("\n  Do NOT run populate_evaluator_ledger.py on this: it is not single-scope endpoint")
+        print("  evidence, and a rejected write would REMOVE the family's current attestation.")
+    print("  Next: scripts/campaign_status.py, and scripts/audit_record_frame_provenance.py")
+    print("  --checkpoints <dir> to bind these rows to the files they measured.")
     return 0
 
 
