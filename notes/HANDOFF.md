@@ -10,6 +10,50 @@ Last updated **2026-09-17, ~02:20 MSK**, by Claude. The 15:30 version's ordered 
 executed, and the section below it is kept because the reasoning still reads correctly — but items
 1-3 have happened. Read this block first; it is what changed overnight.
 
+## Morning state, 2026-09-17 07:20 — read this before the 02:20 block below
+
+**Both cells survived the night. Neither will finish, and that was expected rather than a failure.**
+
+| cell | state at 07:20 | what exists |
+|---|---|---|
+| `ibac_sni` s101 | endpoint grid, native pass ~40/44 | **528 curve rows** (12 stamps, complete) + the native endpoint |
+| `idaac` s102 | training COMPLETE ~07:00, now in its curve grid | 11 intermediates + terminal checkpoint, curve ~132 rows |
+
+**The single most useful thing to know: the native endpoint pass alone is a result.** The endpoint
+grid runs two passes into two files (`run_probe.sh:1127`), and the native pass is the estimand ibac
+actually reports — SAMPLED return. So `528 curve + 44 native endpoint` stands on its own. The `mode`
+pass is the extra that makes the cross-family policy-mode block possible; at ~5.7 min/row it needs
+~4.2 h more and will not finish before the booking ends. Losing it costs a comparison axis, not the
+cell.
+
+**Everything is already banked to the laptop**, so an interruption costs compute and not artifacts:
+
+    scratchpad/fetched/card1-20260916-203537   81 MB  ibac: 528 curve rows, 12 checkpoints, endpoint so far
+    scratchpad/fetched/card1-20260916-213222   69 MB  idaac: 11 checkpoints + terminal, curve rows so far
+
+Re-sync before relying on them; rsync moves only the changed `.jsonl` (2.4 MB last time).
+
+**The recovery route is proven, not assumed.** A cell cut mid-grid never writes `result.tgz`, so
+collection goes through `assemble_reaped_delivery.py`, the same path used for the reaped idaac s101.
+I dry-ran it at 07:05 against the banked ibac copy: 528 rows assembled, correctly sourced, every row
+marked `_assembled_after_reaping`. Use it rather than inventing something:
+
+```bash
+python scripts/assemble_reaped_delivery.py ./fetched/card1-20260916-203537 \
+  --out <bundle>.jsonl --reason "<why the cell was cut>"
+```
+
+**idaac has no 600,064 checkpoint and that is correct.** Its last logged update is 288 at step
+591,872, so the 50k cadence boundary was never crossed again; intermediates stop at 550,912 and the
+terminal `agent-robosuite:Door-idaac-s102.pt` is the only artifact for the final policy. It reads as
+a missing file if you do not know it is expected.
+
+**Card 1 is now in a state with no yield capability at all.** Both cells are past training, and
+`run_probe.sh:196` polls the sentinel only while the training PID lives. Our combined hold is
+1,640 MiB of 32,494, so we are unlikely to be what crowds a co-tenant — but the honest claim is
+"unlikely to matter", not "protected", and handing the card back is now a manual act. Free was 6,944
+at 07:06, having widened from 4,956 when idaac left training and released its EGL contexts.
+
 ## Overnight, 2026-09-16 20:35 → 2026-09-17 02:20
 
 **Two cells are on card 1 at once, deliberately, and the packing was measured rather than assumed.**
