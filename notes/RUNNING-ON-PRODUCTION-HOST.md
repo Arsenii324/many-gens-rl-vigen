@@ -1134,7 +1134,7 @@ average of 42.67 on 16 cores was *other people's* jobs — our two cells account
 
 So the one-launcher lock is a duplicate-prevention rule, not a capacity limit. The bounds on a second
 cell are **VRAM** (see the capacity model in §9.3), **disk** — a bootstrap costs up to ~7 GiB
-transiently, against a floor of 98 GiB that the cells enforce on themselves — and **whether the
+transiently, against the floor of **every** cell already running, not one shared number (see §9.5c) — and **whether the
 vacancy you are launching into is real**, which is the one that has actually killed cells.
 
 > **Correction, 2026-09-17.** This paragraph used to say "launch a second cell by calling
