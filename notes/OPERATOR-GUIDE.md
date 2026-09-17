@@ -265,6 +265,89 @@ required rather than advisory.
 Evidence:
 [`results/evidence/only-a-training-cell-obeys-the-sentinel`](../results/evidence/only-a-training-cell-obeys-the-sentinel/CLAIM.md).
 
+## 6b. Every way a cell ends early, and what each leaves behind
+
+No trainer in this campaign stops on performance: a search of all seven families' training code for
+early stopping, patience or KL-based stops finds none. A cell runs to its frame budget, then its grid,
+unless one of the mechanisms below ends it. Read from `launch-card-cell.sh`, `run_probe.sh` and
+`self-vram-cap.sh` on 2026-09-17. [`model/STOP-MECHANISMS.md`](model/STOP-MECHANISMS.md) has the
+history behind each; its "state now" column dates from 2026-09-16.
+
+| Mechanism | Fires when | Active during | Launcher-log marker | What survives |
+|---|---|---|---|---|
+| **Training wall clock** — `timeout --foreground ${CELL_TIMEOUT_SECONDS}s` (`run_probe.sh:400-402`); v5 sets 43,200 s | training runs past it | training only | expected `NATIVE_CELL_FAILED` (exit 124); **never observed here** | stamps so far, in `native-work/` |
+| **Stall watchdog** (`run_probe.sh:127-159`) | `training.log` unchanged for `CELL_STALL_SECONDS` (default 1,800 s) | training PID lifetime only | `NATIVE_CELL_STALLED`, then `NATIVE_CELL_FAILED_STALLED` | stamps so far |
+| **Memory floor** — the `-yield-` container, `yield_gpu_to_neighbour.py --floor-mib ${NATIVE_FLOOR_MIB:-4000} --interval 20`, one-shot | card free memory below the floor | obeyed only while the training PID lives (`run_probe.sh:197`) | `NATIVE_CELL_YIELDED`, **then** `NATIVE_CELL_FAILED`; the reason is only in `native-work/yield.sentinel` | stamps so far — **observed twice on 2026-09-17** |
+| **Disk floor** — the `-disk-` container, `watch_disk_headroom.py --interval 60` | free space under `/work` below this cell's floor: free at launch minus 2 × the family's disk need, never below 50 GiB (`launch-card-cell.sh:425-453`) | same sentinel, same training-only obedience | as the memory floor; the sentinel says `free_gib=` | stamps so far; **never fired here** |
+| **Reaper** (`launch-card-cell.sh:370-399`) | once the watch budget (training + eval allowance + bootstrap + slack, printed in the banner) is spent: stops the container if it emitted nothing for 900 s (`NATIVE_REAP_STALL_SECONDS`), otherwise grants 900 s at a time up to 10,800 s (`NATIVE_REAP_MAX_GRACE_SECONDS`) | the whole container, grid included | `!! REAPING <cell>` on the launcher's stderr; no `result.tgz` | every row already written; collect as in §8 item 2 |
+| **`self-vram-cap.sh`** (host, optional) | the summed **compute-app** memory of our container's PIDs exceeds the cap, sampled every 20 s | the whole container | its own log: `NATIVE_SELF_VRAM_CAP_TRIPPED`; `docker stop -t 30` | as a reap |
+| **Post-training checks** (`run_probe.sh:508-535`) | the executed endpoint is not the family's expected one; `retain` fails; the terminal checkpoint is non-finite; a strict curve is incomplete; the endpoint grid fails | after training | `NATIVE_CELL_FAILED` | checkpoints, if `retain` ran before the failing step |
+| **Terminal checkpoint write fails** (e.g. `idaac/train.py:351`, RL-ViGen `train.py:373`) | the safe write of the terminal file still fails after its wait | end of training | the trainer's `RuntimeError`, then `NATIVE_CELL_FAILED` | earlier stamps |
+| **Killed by a signal** — OOM killer, `kill` | the training process receives a fatal signal | training | `NATIVE_CELL_SIGNALLED` (ignore the `Exit status: 0` that `time -v` prints after it) | stamps so far |
+| **You** — `docker stop <exact cell name>` | — | the whole container | nothing | as a reap |
+
+Three things this table implies for an operator:
+
+- **A yield prints two markers, and the second hides the first.** `NATIVE_CELL_YIELDED` is followed
+  by `NATIVE_CELL_FAILED` a few lines later (for example lines 2612 and 2616 of the 16 Sep job log in
+  [`ibac-sni-16sep-three-stops`](../results/evidence/ibac-sni-16sep-three-stops/CLAIM.md)). Reading
+  only the last marker reports a yield as a plain failure. §10.1 question 1 reads all of them.
+- **`NATIVE_VRAM_CAP_MIB` is not in this table on purpose.** `train-production-cell-v5.sh` sets it
+  to 4096, and it prints `NATIVE_VRAM_CAP_APPLIED`, but every family launcher overwrites
+  `PYTHONPATH` (`runnable/_launch/*.sh`, still true on 2026-09-17), so the cap has never reached a
+  trainer ([`production-host/26`](production-host/26-the-vram-cap-never-reached-a-trainer.md)).
+  It protects nobody.
+- **`self-vram-cap.sh` cannot see EGL render memory.** It sums compute apps. For `ibac_sni` that is
+  2,199 of 7,421 MiB, so a cap set from the family's observed peak would never trip on it; size the
+  cap against the compute part.
+
+## 6c. Checkpoints, restart and resume, per family
+
+**Where the checkpoints are while a cell trains.** Each family writes under its `artifact_root`
+from `families.json`, inside `<run>/native-work/runs/<baseline>-s<seed>/`. `family.py retain` copies
+them to `native-out/cells/<cell>/checkpoints/` only **after** training passes its endpoint check
+(`run_probe.sh:515-516`). So a cell stopped mid-training has them only here:
+
+| family | under `native-work/runs/<baseline>-s<seed>/` | stamp is named by |
+|---|---|---|
+| `rlvigen` | `snapshot.pt`, `snapshot_<frame>.pt` | frame |
+| `dmc_gb` | `robosuite_{task}/{baseline}/{seed}/model/<step>.pt` | step |
+| `alda` | `alda_robosuite_door/seed_{seed}/checkpoints/sac_*_step_<n>.pt` | step |
+| `idaac` | `models/agent-robosuite:{task}-{baseline}-s{seed}[_<frames>].pt` | frame |
+| `ppg` | `model<NNN>.jd`, `model_terminal.jd` | **save index**, not frame |
+| `ibac_sni` | `<model_name>/model.pt`, `model_<frames>.pt`, `status.json` — `<model_name>` was `cell` in every executed run | frame |
+| `ctrl` | `models/robosuite:{task}/checkpoint_<frames>.msgpack` | frame |
+
+The `ibac_sni` row is the only one fetched from a stopped cell so far (seven stamps from s102
+attempt 2). The others are read from `families.json` and the trainers, not from a stopped cell.
+
+**Can a stopped cell be continued?** Read from each trainer's code; none of it has been executed.
+
+| family | a checkpoint holds | code that would restore it | what a restore loses | wired in a launcher |
+|---|---|---|---|---|
+| `rlvigen` | the pickled agent — networks **and** their Adam optimizers (`algos/drqv2.py:148-150`) — plus timer, global step and episode (`train.py:354`) | **automatic**: `train.py:409-412` loads `snapshot.pt` if the run directory has one | the **replay buffer**: loader workers delete each episode file once read (`replay_buffer.py:94,116-117`), so nothing on disk can refill it | only `RESUME_SNAPSHOT` (`run_probe.sh:361-371`), written for a diagnostic and never used to restart |
+| `dmc_gb` | the pickled agent, optimizers included (`algorithms/sac.py:39-45`) | **none**: `train.py:140` starts at step 0 and never loads | would need a code change; the buffer is in memory only | no |
+| `alda` | networks, all optimizers, `log_alpha`, `env_steps` (`alda_trainer.py:767-784`) | `--load_from_checkpoint` (`scripts/train.py:28,140-142`) | the replay buffer (its reload is commented out, `alda_trainer.py:818-819`); and the loop is `range(self.n_train_steps)` from zero (`:610`), so a resumed run would train a **full** budget more, not the remainder | no launcher passes the flag |
+| `idaac` | `[actor_critic, ob_rms]` (`train.py:345`) — no optimizer, no update counter | **none** | would need a code change | no |
+| `ppg` | the pickled model (`log_save_helper.py:146`); the optimizers are not on it — `opts` in `ppo.py:194-197`, the auxiliary one in `ppg.py:256` | **none** | would need a code change | no |
+| `ibac_sni` | the pickled model (`model.pt`) and `status.json` with frames and update count (`train.py:326,354`); **no optimizer** — checked across the whole tree and in the pickle itself (37 tensors, no optimizer attribute) | **automatic**: `train.py:176,183` loads both if the model directory has them | Adam's moment estimates, rollout storage and environment state | no. Each launch makes a fresh run directory (`launch-card-cell.sh:177`), so nothing is found. Setting `NATIVE_RUN_DIR` to an old run **would** trigger the automatic load — never tried |
+| `ctrl` | the serialized `train_state`, including `opt_state` (`train_ppo.py:40-60`, `algo.py:623`); `train_state_target` is not saved | **none** in `train_ppo.py`; `evaluate_ppo.py:65` restores for evaluation only | would need a code change | no |
+
+What the campaign has actually done with a stopped cell, and what remains a judgement:
+
+- **Practice so far:** record the stopped attempt as failed (§10.3), keep its stamps, and rerun the
+  seed **from zero** as a new attempt. `ibac_sni` s102 is queued that way.
+- **A stopped cell's stamps are still worth evaluating**, one by one, as a partial curve —
+  `curve-sweep-v3.sh` did this for `ibac_sni` s102 (§11.2). That is a separate record, not a
+  substitute for the seed.
+- **Open, not decided:** whether a continued run could stand in for the seed. For the off-policy
+  families it restarts with an empty buffer, which is a different experiment. For `ibac_sni` it
+  resets Adam's state, a smaller difference, but a difference. It is an owner question, and if it
+  is ever tried the attempt should say so in its record.
+- **A hazard that follows from the table:** the two automatic loaders (`rlvigen`, `ibac_sni`) fire
+  on whatever is in the run directory. Reusing a run directory via `NATIVE_RUN_DIR` without meaning
+  to would silently continue an old run under a new attempt.
+
 ## 7. Watching a run, and the traps that make a monitor lie
 
 Full detail in procedure §9.5; the complete tool list is §10.4. What you actually reach for:
@@ -360,8 +443,10 @@ Paths below assume the conventions this host uses: a run directory
 `~/rlvigen-runs/card<N>-<YYYYmmdd-HHMMSS>/`, and a launcher log
 `~/rlvigen-runs/prod-v214/<baseline>-s<seed>-prod.log`.
 
-    # 1. Did it stop, and how?            (nothing, FAILED, YIELDED or COMPLETED)
-    grep -aoE 'NATIVE_CELL_(COMPLETED|FAILED|YIELDED)' "$LOG" | tail -1
+    # 1. Did it stop, and how? Read the last FEW markers, not the last one: a yield prints
+    #    NATIVE_CELL_YIELDED and then NATIVE_CELL_FAILED (§6b). This is the grep
+    #    train-production-cell-v5.sh itself runs at the end of every launch.
+    grep -aoE "NATIVE_(CELL_[A-Z_]+|RECORDS_EMITTED [0-9]+|ENDPOINT[A-Z_]*)[^=]*|CELL EXIT=[0-9]+" "$LOG" | tail -4
 
     # 2. WHY did it stop? The marker never says. The sentinel does.
     cat "$RUN/native-work/yield.sentinel"
@@ -372,7 +457,8 @@ Paths below assume the conventions this host uses: a run directory
 
     # 4. What survived?
     ls "$RUN/native-out/cells/<cell>/checkpoints/"        # only after training COMPLETED
-    ls "$RUN/native-work/runs/<cell>/cell/"*.pt           # while training, or if it stopped early
+    ls "$RUN/native-work/runs/<baseline>-s<seed>/"        # while training, or if it stopped early;
+                                                          # each family's subpath is in §6c
     wc -l "$RUN/native-out/cells/<cell>/"offline_eval_*.jsonl
 
 Question 3 has saved a healthy cell more than once: a quiet log is not a dead cell, and a host load
@@ -453,9 +539,9 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
   32,494 MiB card. It needs an empty card and an explicit decision about the floor.
 - **`docs/RUN-THIS-PROJECT.md` §5a** (any Linux host with Docker) and **§5b** (DataSphere) were not
   exercised in this session.
-- **Resuming a stopped cell.** `run_probe.sh`'s `RESUME_SNAPSHOT` hook copies into RL-ViGen's
-  `snapshot.pt` name and has never been used for a restart; the RL-ViGen five cannot resume anyway
-  because their replay buffer is not saved.
+- **Resuming a stopped cell, in any family.** §6c reads each trainer's restore path from code; none
+  has been executed. Two families load automatically from their run directory, one has a flag no
+  launcher passes, four have no restore path at all, and every restore loses something.
 - **Any host other than `cds2`.**
 
 ### 11.4 How to use this section
