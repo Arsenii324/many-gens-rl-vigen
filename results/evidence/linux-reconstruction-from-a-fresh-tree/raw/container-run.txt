@@ -3,11 +3,11 @@
 # note: python:3.11-slim on the production host, against the repository's committed tree shipped as a 37 MB archive. Closes the half of OPERATOR-GUIDE 11.4 O8 a macOS laptop cannot test: bootstrap_sources.py refuses on a case-insensitive filesystem.
 # source-kind: local-command
 # source: cat results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log
-# repo-head: 7a2cafb3e1c7fc14d362bcce658931cfedd3a09a
+# repo-head: 0fc12a3db5997ea3d2298e1a39eff9840ae45da5
 # inputs: results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log=561446aef8361f6a
 # extraction: ( cat results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log ) | grep -n -E 'git version|tree:|bootstrap_sources|bootstrap rc|real|runnable|RL-ViGen-upstream|verify_sources|verify rc|docker rc|free' | head -n 25
 # matched-lines: 12  shown-lines: 12
-# captured-at: 2026-09-17T22:03:32+00:00
+# captured-at: 2026-09-17T22:16:18+00:00
 #---------------------------------------------------------------------------------------------------
 1:=== free before: 175 GiB ===
 3:git version 2.47.3

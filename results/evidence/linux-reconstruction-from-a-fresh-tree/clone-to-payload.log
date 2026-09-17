@@ -1,0 +1,20 @@
+=== free before: 169 GiB ===
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+=== 1. reconstruct ===
+bootstrap rc=0
+source reconstruction verified
+verify_sources rc=0
+=== 2. the runner contract this tree declares ===
+154:RUNNER_CONTRACT = 19
+=== 3. build and check a payload for each family ===
+payload idaac     build=0 verify=0 binding=0 size=5.1M
+payload ibac_sni  build=0 verify=0 binding=0 size=55M
+payload ppg       build=0 verify=0 binding=0 size=324K
+payload rlvigen   build=0 verify=0 binding=0 size=284K
+payload dmc_gb    build=0 verify=0 binding=0 size=13M
+payload alda      build=0 verify=0 binding=0 size=37M
+payload ctrl      build=0 verify=0 binding=0 size=308K
+=== docker rc=0 ===
+=== free after: 167 GiB ===
+
+[exited with code 0]

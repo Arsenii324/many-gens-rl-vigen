@@ -47,3 +47,11 @@ C $S container-run --command "cat $B/container-run.log" \
   --fact verify_rc=0 --anchor 'verify rc=0' \
   --fact wall_clock=9m40.266s --anchor 'real	9m40.266s' \
   --fact runnable_size=408M --anchor '408M	runnable'
+
+# The second excerpt: the same fresh tree taken all the way to verified payloads. Its own run is
+# `linux-clone-to-payload`, kept beside this script as clone-to-payload.log for the same reason.
+C $S clone-to-payload --command "cat $B/clone-to-payload.log" \
+  --grep 'reconstruct|bootstrap rc|verify_sources rc|RUNNER_CONTRACT|payload |docker rc' --max 20 \
+  --note "fresh tree -> reconstruct -> build-payload + verify-payload + verify-evaluator-binding for all seven families, in one container on the host" \
+  --fact families_all_zero=7 --anchor 'payload ctrl      build=0 verify=0 binding=0' \
+  --fact runner_contract=19 --anchor 'RUNNER_CONTRACT = 19'

@@ -838,8 +838,8 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 
 | Executed and worked | Written but not executed here, and why |
 |---|---|
-| `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | ~~**`setup/bootstrap_sources.py` doing a real reconstruction.**~~ **Executed 2026-09-17** in a container on the host: bootstrap then `verify_sources.py`, both exit 0 (§11.4 O8). It still refuses on macOS, so it cannot be run here. |
-| `contract.py build-payload --source . --output <tgz> --families <family>`, then `verify-payload --require-evaluator-identity --require-runner-contract 19` and `verify-evaluator-binding --archive … --source . --families <family>` — all exit 0 for **`idaac` (5.26 MB) and, on 2026-09-17, for the four families that have never run: `rlvigen` 284 KB, `dmc_gb` 13 MB, `alda` 37 MB, `ctrl` 312 KB**. (`rlvigen` is small because the payload never carries `RL-ViGen-upstream/`; the cell clones it at run time.) | **A fresh clone taken all the way to a payload.** Blocked by the line above: a clone without reconstructed sources cannot hash the evaluator. What *was* run in a fresh clone: `operator_readiness.py` → exit 0, and `campaign_status.py` → a readable instruction instead of a traceback. |
+| `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | ~~**`setup/bootstrap_sources.py` doing a real reconstruction.**~~ **Executed 2026-09-17/18** in a container on the host: bootstrap, `verify_sources.py`, then payload build + verify + binding for all seven families, every exit code 0 (§11.4 O8). It still refuses on macOS, so it cannot be run here. |
+| `contract.py build-payload --source . --output <tgz> --families <family>`, then `verify-payload --require-evaluator-identity --require-runner-contract 19` and `verify-evaluator-binding --archive … --source . --families <family>` — all exit 0 for **all seven families**, on the laptop for `idaac`, `rlvigen`, `dmc_gb`, `alda` and `ctrl`, and on Linux from a freshly reconstructed tree for all seven (§11.4 O8). (`rlvigen`'s payload is 284 KB because it never carries `RL-ViGen-upstream/`; the cell clones that at run time.) | `operator_readiness.py` → exit 0 and `campaign_status.py` → a readable instruction were also run in a fresh clone. What no one has done is take a fresh clone through to a **running cell** — the payloads are verified, not exercised. |
 | `collect-host-run.sh ibac_sni <run-dir>` on a cleanly completed cell → 910 rows installed. **Needed `BP=<python>` set explicitly**; the script falls back to `python3` otherwise | `collect-host-run.sh` on a **reaped** cell with `NATIVE_ACCEPT_WATCH_STOP=1` was run for `idaac` s101 earlier in the campaign, not in this session |
 | `assemble_reaped_delivery.py` as a dry run on a mid-flight `ibac_sni` copy → 528 rows, correctly marked | |
 | `populate_evaluator_ledger.py`: refused two production files, accepted three `attest-v212-*` files; gate went 5/7 → 7/7 | |
@@ -961,9 +961,11 @@ of questions. The disk floor came within one 60-second sample of firing on 2026-
   `source reconstruction verified`. 9 min 40 s, about 1.7 GB of disk, removed afterwards. Evidence:
   [`results/evidence/linux-reconstruction-from-a-fresh-tree`](../results/evidence/linux-reconstruction-from-a-fresh-tree/CLAIM.md),
   which carries the recipe as `capture.sh` (`RERUN=1` does the whole thing again).
-- *Still open, narrowly:* a fresh clone taken all the way to a **payload** on Linux — the build and
-  binding checks have only ever run on the laptop, against the long-standing tree — and any host
-  other than `cds2`.
+- *And the rest of the cold start, same night:* from the same fresh tree, `build-payload`,
+  `verify-payload --require-evaluator-identity --require-runner-contract 19` and
+  `verify-evaluator-binding` were run for **all seven families** — every exit code 0, against a
+  `RUNNER_CONTRACT` of 19 read out of that tree. So clone → reconstruct → build → verify holds end
+  to end on Linux. The same bundle carries that run as `raw/clone-to-payload.txt`.
 
 **O8b — Any host other than `cds2`**
 - *Why not done:* no other host has been available.

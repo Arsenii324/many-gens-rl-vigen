@@ -1,0 +1,25 @@
+# evidence-slug: linux-reconstruction-from-a-fresh-tree
+# excerpt: clone-to-payload
+# note: fresh tree -> reconstruct -> build-payload + verify-payload + verify-evaluator-binding for all seven families, in one container on the host
+# source-kind: local-command
+# source: cat results/evidence/linux-reconstruction-from-a-fresh-tree/clone-to-payload.log
+# repo-head: 0fc12a3db5997ea3d2298e1a39eff9840ae45da5
+# inputs: results/evidence/linux-reconstruction-from-a-fresh-tree/clone-to-payload.log=0379d6184676c9b7
+# extraction: ( cat results/evidence/linux-reconstruction-from-a-fresh-tree/clone-to-payload.log ) | grep -n -E 'reconstruct|bootstrap rc|verify_sources rc|RUNNER_CONTRACT|payload |docker rc' | head -n 20
+# matched-lines: 14  shown-lines: 14
+# captured-at: 2026-09-17T22:16:18+00:00
+#---------------------------------------------------------------------------------------------------
+3:=== 1. reconstruct ===
+4:bootstrap rc=0
+5:source reconstruction verified
+6:verify_sources rc=0
+8:154:RUNNER_CONTRACT = 19
+9:=== 3. build and check a payload for each family ===
+10:payload idaac     build=0 verify=0 binding=0 size=5.1M
+11:payload ibac_sni  build=0 verify=0 binding=0 size=55M
+12:payload ppg       build=0 verify=0 binding=0 size=324K
+13:payload rlvigen   build=0 verify=0 binding=0 size=284K
+14:payload dmc_gb    build=0 verify=0 binding=0 size=13M
+15:payload alda      build=0 verify=0 binding=0 size=37M
+16:payload ctrl      build=0 verify=0 binding=0 size=308K
+17:=== docker rc=0 ===

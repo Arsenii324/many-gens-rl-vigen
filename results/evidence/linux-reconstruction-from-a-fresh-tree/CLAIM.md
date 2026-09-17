@@ -1,4 +1,4 @@
-# The pinned sources reconstruct from a fresh tree on Linux, and the result verifies
+# A fresh tree reconstructs on Linux, and goes all the way to verified payloads
 
 `setup/bootstrap_sources.py` is the first step of the operator's cold start
 (`docs/RUN-THIS-PROJECT.md` §1): it clones each upstream at its pinned commit, applies this
@@ -22,6 +22,12 @@ and says nothing about whether a new operator could produce it.
 
 Both printed `source reconstruction verified`. `runnable/` came out at fact:runnable_size.
 
+**And the rest of the cold start followed**, in a second container run from the same fresh tree:
+payloads built and checked for **fact:families_all_zero of seven families**, every
+`build-payload`, `verify-payload --require-evaluator-identity --require-runner-contract 19` and
+`verify-evaluator-binding` exiting 0, against a `RUNNER_CONTRACT` of fact:runner_contract read out
+of that tree rather than assumed. `raw/clone-to-payload.txt` is that run.
+
 ## Chain
 
 1. **A fresh tree, not ours.** What was shipped is `git archive HEAD` — the committed tree, with no
@@ -33,6 +39,10 @@ Both printed `source reconstruction verified`. `runnable/` came out at fact:runn
    `source reconstruction verified` and `verify rc=0`, in a tree built minutes earlier from
    upstream clones rather than from the maintainer's working copy.
 4. **The container exited cleanly** (`docker rc=0`), and the host had 173 GiB free afterwards.
+5. **A payload built from that tree binds to it.** In the second run, each family's payload was
+   built, verified against the runner contract, and its evaluator hashes compared with the tree's:
+   all zero, all seven. So the chain a new operator follows — clone, reconstruct, build, verify —
+   holds end to end on Linux, not only the reconstruction step.
 
 ## What this does not show
 
@@ -73,7 +83,7 @@ arbitrary Python on the host shell. So:
 - **Does:** the pinned commits are still fetchable, the patches still apply, and the reconstruction
   a new operator would perform produces a tree that passes `verify_sources.py`. The cold start's
   first step is no longer untested.
-- **Does not:** say anything about the *payload* built from such a tree — that was verified
-  separately, on the laptop, against the already-reconstructed tree. Nor about Places365
-  (OPERATOR-GUIDE §11.4 O1), which this step does not touch.
+- **Does not:** say anything about Places365 (OPERATOR-GUIDE §11.4 O1), which neither step touches,
+  nor about running a cell from those payloads — only that they are complete, contract-correct and
+  bound to the tree that produced them.
 - **Cost, for planning:** 9 min 40 s and about 1.7 GB of disk, on this host's network.
