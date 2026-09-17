@@ -71,7 +71,9 @@ at 07:06, having widened from 4,956 when idaac left training and released its EG
 
 **Two cells are on card 1 at once, deliberately, and the packing was measured rather than assumed.**
 
-- `ibac_sni` s101 **finished training** at 21:19, F 600,064, in **44 minutes of wall clock**. That is
+- `ibac_sni` s101 **finished training** at 21:19, F 600,064, in **44 minutes of wall clock**
+  [corrected 2026-09-17: 44 minutes is counted from the 20:35 launch and includes ~13 minutes of
+  in-container bootstrap; `time -v` in its `training.log` gives 31 min 32 s of training]. That is
   the first ibac cell ever to complete a 600k run, and it breaks the cell-cost model this project
   has been planning against: the model says training is 4.95 h and evaluation 4.6-5.5 h. For an
   on-policy family at procs=16 training is ~45 minutes and the **in-cell grid is the whole cost**

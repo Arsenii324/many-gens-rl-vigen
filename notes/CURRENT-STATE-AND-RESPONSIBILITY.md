@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-17, ~09:15 MSK, by Claude.** This file says what is *true right now*. It is
+**Last updated: 2026-09-17, ~21:05 MSK, by Claude.** This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -23,27 +23,26 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run (2026-09-17 09:11): gates **36 pass / 0 fail / 10 owner**; campaign **36 cells:
-33 MISSING, 2 RUNNING, 1 DONE**; `ibac_sni` now carries **1,397** fleet rows where it had none of
-its own at production length.
+As of the last run (2026-09-17 21:03): gates **36 pass / 1 fail / 9 owner**, and the one FAIL is
+`source tree frozen` counting three uncommitted documentation edits that were committed minutes
+later; campaign **36 cells: 32 MISSING, 3 DONE, 1 PARTIAL**; fleet export **6,193 rows, 2,932 on
+the current closure**. Nothing of ours was running on either card at that time.
 
 ## 2. Where the campaign actually is
 
-**Three baselines now have production-length rows**, and the third arrived overnight on 2026-09-17.
+**Three baselines have production-length rows. Three cells count as DONE and one as PARTIAL.**
 
-| baseline | seed | endpoint | curve | note |
+| baseline | seed | state | rows collected | note |
 |---|---|---|---|---|
-| `ppg` | 1 | 88 rows | 528 rows, 12 stamps | complete |
-| `idaac` | 101 | 88 rows | 484 rows, 11 stamps | complete |
-| `ibac_sni` | 101 | **44 native, mode pass running** | **528 rows, 12 stamps** | trained 600k in **44 minutes**; NOT yet collected into `results/records/` |
-| `idaac` | 102 | — | curve running | trained to completion 2026-09-17 ~07:00; 11 checkpoints + terminal retained |
-| `ibac_sni` | 102 | — | — | **FAILED** 08:01, memory floor, frame 28,672, nothing salvaged |
+| `ppg` | 1 | complete | 88 endpoint + 528 curve | seed 1 is outside the schedule's `{101,102,103}`, so the counter reads it as MISSING (below) |
+| `idaac` | 101 | complete (DONE) | 569: 484 curve + 85 of 88 endpoint | stopped by the watch budget during the second endpoint pass on 2026-09-09 |
+| `idaac` | 102 | complete (DONE) | 598: 484 curve + 88 endpoint | trained 7 h 15 min, grid about 13.5 h; finished 18:43 on 2026-09-17 |
+| `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
+| `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**`ibac_sni` s101 is the first ibac cell ever to finish 600k**, which retires the "never completed"
-entry that stood here for five attempts. Its native endpoint pass is complete and its curve is
-complete; only the second (`mode`) endpoint pass is outstanding. Both runs are banked to a laptop
-copy, and a cell cut mid-grid never writes `result.tgz`, so collection goes through
-`assemble_reaped_delivery.py` — dry-run and proven for this cell.
+Next in the queue when a card is genuinely vacant (the co-tenant absent for ten consecutive
+minutes): `idaac` s103, which makes `idaac` the first baseline at three seeds; then `ibac_sni` s102
+from zero; then `ppg` s101.
 
 **The first three-baseline same-axes reading exists**, in
 [`production-host/34-first-three-baseline-reading-2026-09-17.md`](production-host/34-first-three-baseline-reading-2026-09-17.md).
@@ -56,7 +55,7 @@ as a ranking (`ibac_sni` −48%, `ppg` −21%, `idaac` −17%). At 15:30 `idaac`
 alone is larger than the spread the ranking rested on. Do not quote a generalisation ranking from one
 seed per baseline. `eval-medium` < `eval-hard` holds in both idaac seeds, so that finding stands.
 
-**The campaign counts 1 of 36 and that is not a mistake in the counter.**
+**`ppg` still counts as MISSING, and that is not a mistake in the counter.**
 `production-schedule-v100.json` names seeds `[101, 102, 103]`; ppg is banked at **seed 1**, so every
 ppg column reads MISSING however good the rows are. The rows are valid — fixed in advance, not
 outcome-selected, which is what `docs/EVAL-PROTOCOL.md` §4b requires. **Implemented default, awaiting
@@ -66,13 +65,14 @@ GPU-hours reproducing a number we have.
 **Nine of twelve baselines have no production record at all**, and three of them are blocked on
 things that are not compute:
 
-- ~~`ibac_sni` has never completed a 600k cell~~ — **done 2026-09-16/17**, seed 101, 44 minutes of
-  training at procs=16. The constraint that remains is the one that killed seed 102 eleven minutes
-  in: it needs ~11.4 GiB (7,421 peak + the 4,000 floor) that **stays** free, and a card the
-  co-tenant released minutes ago does not count as free. Counted from `results/host-runs.jsonl`:
-  of ibac's six failed attempts, **five** were the memory floor against a colleague's job and one
-  (`card0-20260916-010515`) was an EGL worker dying 24 s in. An earlier draft of this line said
-  "six of its seven attempts died this way", which miscounted both numbers.
+- ~~`ibac_sni` has never completed a 600k cell~~ — **done 2026-09-16/17**, seed 101, 31.5 minutes of
+  training at procs=16. The constraint that remains is memory that **stays** free: ~11.4 GiB
+  (7,421 peak + the 4,000 floor). Counted from `results/host-runs.jsonl` at 21:05 on 2026-09-17:
+  of ibac's **seven** failed attempts, **six** were the memory floor against a colleague's job and
+  one (`card0-20260916-010515`) was an EGL worker dying 24 s in. Seed 102's first attempt launched
+  two minutes after the co-tenant left and died eleven minutes in; its second waited out a
+  15-minute absence and still died 32 minutes in, when the co-tenant returned. The ten-minute
+  vacancy rule lowers this risk; it does not remove it.
 - `ctrl` has never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a
   32,494 MiB card at all. It needs an empty card and an explicit decision about the floor.
 - **`svea`, `sgqn` and `soda` are blocked on Places365**, found 2026-09-16 and not previously

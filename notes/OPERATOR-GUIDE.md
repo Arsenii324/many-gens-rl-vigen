@@ -256,7 +256,8 @@ lifetime, not from policy.
 
 The **stall watchdog shares that lifetime**: `run_probe.sh:135` runs the same
 `while kill -0 "$training_pid"` loop. So during the evaluation grid — which is the *longer* half of
-a cell, about 17 hours against 45 minutes of training for an on-policy family — neither the sentinel
+a cell: about 13.5–14 hours in both complete cells of 16–17 Sep, against 31 minutes of training for
+`ibac_sni` and 7.3 hours for `idaac` (`time -v` in each `training.log`) — neither the sentinel
 poller nor the stall watchdog is active. A grid that hangs will not be killed by the cell itself.
 That is what the reaper in `launch-card-cell.sh` and your own monitor are for; it is also why the
 watch budget must cover training **plus** evaluation, and why §3b treats the wall-clock ceiling as
@@ -538,7 +539,7 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 
 | Executed and worked | Written but not executed here, and why |
 |---|---|
-| **Launch through `wait-and-train-v3.sh`** — `ibac_sni` s101, 2026-09-16 20:35, trained 600k in 44 min and completed its full grid | `wait-and-train-v3.sh` has launched **one** cell. Its lock and hold logic are proven by that one run and by reading, not by repetition. |
+| **Launch through `wait-and-train-v3.sh`** — `ibac_sni` s101, 2026-09-16 20:35, trained 600k in 31.5 min (`time -v`; 44 min counted from launch) and completed its full grid | `wait-and-train-v3.sh` has launched **one** cell. Its lock and hold logic are proven by that one run and by reading, not by repetition. |
 | **Launch through `train-production-cell-v5.sh` directly** — `idaac` s102 (21:32), `ibac_sni` s102 twice (07:50, 11:00) | |
 | `self-vram-cap.sh` armed on three cells; `gpu-occupancy-log.sh` as the only record of card vacancy | |
 | **Two and three cells packed on one card** — throughput ratio measured at r = 0.90 | Packing more than three, or two *training* cells at once |
