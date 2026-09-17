@@ -18,6 +18,9 @@ procedure with this page open beside it.
 - **What someone was thinking mid-flight**, including unproven suspicions:
   [`HANDOFF.md`](HANDOFF.md).
 - **Index of every surface**: [`START-HERE.md`](START-HERE.md).
+- **Getting from `git clone` to a submitted run, on any Docker host**:
+  [`../docs/RUN-THIS-PROJECT.md`](../docs/RUN-THIS-PROJECT.md). That is the canonical cold start and
+  this page does not repeat it; §4b says how the two fit together.
 
 ---
 
@@ -94,9 +97,9 @@ completes**. A cell stopped mid-training leaves them in `native-work/`, which th
 |---|---|---|---|
 | 0 | Read the prohibitions | You can state the host rule in §2 from memory | `production-host/README.md` |
 | 1 | Laptop environment | The interpreter in §0c runs `scripts/production_gates.py` | §0c |
-| 2 | Sources reconstructed | `setup/verify_sources.py` passes | `setup/SOURCE-BOOTSTRAP.md` |
-| 3 | Datasets present | `setup/verify_datasets.py` passes for the families you will run | §2b |
-| 4 | Payload built | `contract.py verify-payload` accepts the tgz you will ship | §2 |
+| 2 | Sources reconstructed | `setup/verify_sources.py` passes | `docs/RUN-THIS-PROJECT.md` §1 |
+| 3 | Datasets present **on the machine that runs the cell** | `setup/verify_datasets.py` passes there — see §4b | `docs/RUN-THIS-PROJECT.md` §3, procedure §2b |
+| 4 | Payload built | `contract.py verify-payload` accepts the tgz you will ship | `docs/RUN-THIS-PROJECT.md` §4, procedure §2 |
 | 5 | Host preconditions | The ten checks pass on the host | §1 |
 | 6 | Dry run | The wrapper completes a short cell end to end | §2c |
 | 7 | Launch | The launch banner prints its watch budget, disk floor and eval workload | §3, §9.2 |
@@ -105,30 +108,31 @@ completes**. A cell stopped mid-training leaves them in `native-work/`, which th
 
 Stages 0–4 are laptop-only and can be done before you have the host. Do them first.
 
-## 4b. Cold start: a fresh clone to a shipped payload
+## 4b. Cold start — use `docs/RUN-THIS-PROJECT.md`, not this page
 
-Stages 1–4 need no host. Each step produces something the next one consumes, and each has a
-verifier that proves the step rather than asserting it. Commands live in the procedure §2 and
-`setup/SOURCE-BOOTSTRAP.md`; what follows is the ordering and what each check actually establishes.
+**The canonical cold start already exists**:
+[`../docs/RUN-THIS-PROJECT.md`](../docs/RUN-THIS-PROJECT.md), which the repository README calls
+"start here from a fresh clone". It runs clone → reconstruct pinned sources → build the environment
+→ provision Places365 → build and check a payload → submit, and each step states what proves it
+worked. It also carries a portable route (§5a) for any Linux host with Docker and a GPU, not just
+this one.
 
-| Step | Command (see §2 / SOURCE-BOOTSTRAP) | Proves |
-|---|---|---|
-| 1 | `python3 -c "import numpy, json, pathlib"` | you have an interpreter these scripts can use (3.10+, numpy; matplotlib only for plots) |
-| 2 | `setup/bootstrap_sources.py [--family F]` | the pinned upstream trees are reconstructed under `runnable/` |
-| 3 | `setup/verify_sources.py` | they reconstruct **without network access** — a clean clone is self-sufficient |
-| 4 | `setup/verify_datasets.py [--split train]` | an external corpus this repo deliberately does not carry is present. **Only `svea`, `sgqn`, `soda` need it**; a clone without Places365 is correctly reconstructed and simply cannot run those three |
-| 5 | `contract.py build-payload --source . --output payload-vNNN-<family>.tgz --families <family>` | a source-only archive; the allowlist rejects `results`, `logs`, `models`, `data`, `.git`, `.venv`, credentials |
-| 6 | `contract.py verify-payload --archive … --require-evaluator-identity --require-runner-contract 19` | the archive carries the per-family identity and matches the runner contract the host expects |
-| 7 | `contract.py verify-evaluator-binding --archive …` | the evaluator in the archive binds to the families it claims |
-| 8 | `scp payload… <asset tgz> user@host:~/` | the host has what it needs |
+Do not work from a second copy of those steps. [Claude 2026-09-17] An earlier revision of this
+section restated them, which is the duplication this project keeps paying for; it was written
+without checking whether the document existed. It does, and it is better.
 
-`RUNNER_CONTRACT` is **19** today (`contract.py:154`). It is written in two places — that constant
-and the `--require-runner-contract` argument in the procedure — and them drifting apart has killed a
-job before, so read it from the source rather than from memory.
+What this page adds on top of it, and the order to take them in:
 
-**The payload is source only.** Everything third-party — apt packages, pip, RL-ViGen upstream — is
-fetched *inside the container at run time*, so **the host needs outbound network access**. A cell on
-an air-gapped host will fail in its bootstrap, not at launch.
+- Stages 1–4 of §4 map onto its §§0–4. **Do them before you have the host.**
+- Then come back here for §5 (which launcher), §6 (the containers), §7 (watching) and §8
+  (collection), which are specific to the shared V100 box rather than to any Docker host.
+- Two facts that belong to the host and so live here rather than there:
+  - `RUNNER_CONTRACT` is **19** today (`contract.py:154`). It is written in two places — that
+    constant and `--require-runner-contract` in the procedure — and them drifting apart has killed a
+    job before. Read it from the source.
+  - `setup/verify_datasets.py` checks **wherever you run it**. Passing on your laptop says nothing
+    about the host, and the cell reads Places365 from an archive passed to the launcher
+    *positionally*. Stage 3's finish line is "present on the machine that will run the cell".
 
 ## 4c. Per-family divergences — the table that decides what bites you
 
