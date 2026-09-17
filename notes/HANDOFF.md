@@ -39,9 +39,22 @@ I dry-ran it at 07:05 against the banked ibac copy: 528 rows assembled, correctl
 marked `_assembled_after_reaping`. Use it rather than inventing something:
 
 ```bash
+# 1. rebuild the delivery the cell never got to assemble. --out is NOT a free choice: it must be
+#    the exact path collect-host-run.sh reads (collect-host-run.sh:62).
 python scripts/assemble_reaped_delivery.py ./fetched/card1-20260916-203537 \
-  --out <bundle>.jsonl --reason "<why the cell was cut>"
+  --out ./fetched/card1-20260916-203537/native-out/records_delivery.jsonl \
+  --reason "<why the cell was cut>"
+# 2. collect it. The flag is REQUIRED -- without it the collector refuses a run with no completion
+#    marker, and with it the collector re-checks that EVERY row carries _assembled_after_reaping.
+NATIVE_ACCEPT_WATCH_STOP=1 bash datasphere/native/collect-host-run.sh ibac_sni \
+  ./fetched/card1-20260916-203537
 ```
+
+[Claude 2026-09-17] Both details are corrections to what this section said an hour earlier. I had
+written `--out <bundle>.jsonl` and omitted the flag, and either would have failed at collection.
+`collect-host-run.sh:105-106` prints this exact two-line recipe when it refuses, so the script
+already knew; I had not read that far. If you hit a refusal here, read its stderr rather than
+guessing — it names the commands.
 
 **idaac has no 600,064 checkpoint and that is correct.** Its last logged update is 288 at step
 591,872, so the 50k cadence boundary was never crossed again; intermediates stop at 550,912 and the
