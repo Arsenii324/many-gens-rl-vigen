@@ -718,6 +718,48 @@ status and a note; `scripts/audit_attempt_ledger.py --strict` fails when an earl
 outcome. The procedure section "Recording an attempt that failed before it wrote anything" covers
 the case where there is no run directory to point at.
 
+### 10.4 Off the golden path: what you see, what it means, what to do next
+
+Keyed on the exact text the scripts print. **Seen** means it happened on this host in this
+campaign. **Code** means the text was read from the script and the branch has not been hit here.
+
+**Before the cell starts** — nothing ran, nothing to salvage, nothing to record beyond a note:
+
+| You see | From | Meaning | Next |
+|---|---|---|---|
+| `SKIP <tag> (result present)` | `train-production-cell-v5.sh` (code) | a result archive for this baseline and seed already exists | check `campaign_status.py`; do not delete the archive to relaunch |
+| `VACANCY NOT SUSTAINED -- aborting` | the §5.2 launch block (seen) | the co-tenant is back or memory is short | wait for `capacity-check.sh` to say AVAILABLE again |
+| `ABORTING: preflight refused the card.` | `launch-card-cell.sh:243` (code) | the card lacks the free memory the preflight needs right now | wait; do not lower `NATIVE_NEED_MIB` (§5.1) |
+| `ABORTING: CARD=1 is not card 0, and NATIVE_YIELD_ON_PROCESSES is not 1.` | `launch-card-cell.sh:270` (code) | card 1 needs process yield armed | relaunch with `YIELD_PROCS=1` |
+| `ABORTING: the … watch refused to arm.` / `… is not running ten seconds after launch. It refused:` | `launch-card-cell.sh:254,302,334,456-459` (code) | a watch container rejected its arguments; the reason is printed below the line | read it; usually a budget that cannot cover the cell |
+| `refusing: DOCKER_GPUS is unset` / `… with no NATIVE_VRAM_CAP_MIB` | `run_on_production_host.sh:124,172` (code) | called the wrapper outside `launch-card-cell.sh` | use the layers in §5 |
+| `refusing: FRAMES=… is production scale and <X> is unset.` | `run_on_production_host.sh:311-349` (code) | a production-scale run without its required setting | set it; v5 sets all of them |
+| `refusing: NATIVE_RESULT_MIRROR is on the SAME filesystem …` | `run_on_production_host.sh:421` (code) | `cds2` has one data disk | v5 passes `NATIVE_ACCEPT_SAME_DEVICE=1`, which prints `NATIVE_RESULT_MIRROR_SINGLE_DEVICE_HOST` instead. That means **the host copy has no second failure domain; your laptop fetch is the only other copy** |
+| `refusing: … GB free at …, below the … GB this job needs.` | `run_on_production_host.sh:529` (code) | not enough disk for this family (§4c.1) | wait, or run a family with a smaller need |
+| `=== NATIVE_EDITABLE_NOT_INSTALLED <module> ===` | `run_probe.sh:1801` (code) | a prebuilt environment without the RL-ViGen editable installs | drop `NATIVE_VENV_HOST` (§6d) |
+| Places365 split refusal naming `NATIVE_PLACES365_ACCEPT_VAL` | `run_probe.sh:2088-2093` (code) | a Places365 baseline pointed at `val` | O1 in §11.4; accepting `val` is an owner decision |
+
+**During or after training** — something may have survived; record the attempt either way (§10.3):
+
+| You see | Meaning | What survives | Next |
+|---|---|---|---|
+| `NATIVE_CELL_YIELDED`, then `NATIVE_CELL_FAILED` (**seen**, seven times across `ibac_sni` and `idaac` attempts) | the memory or disk floor fired; the sentinel says which | stamps in `native-work/` | §5.2 failure branch; rerun only after a real vacancy |
+| `EGL_NOT_INITIALIZED` about 24 s in (**seen** once) | rendering failed to start | nothing | relaunch; not a capacity problem |
+| `NATIVE_CELL_FAILED_STALLED` (code on this host; seen on DataSphere) | no output for 30 min during training | stamps so far | read the last lines of `training.log` before relaunching; a deadlock recurs |
+| `NATIVE_CELL_SIGNALLED` (code on this host) | the trainer was killed, e.g. by the kernel OOM killer | stamps so far | find out whose memory ran out before relaunching; on a shared host this may have hurt someone else |
+| `final evaluation marker missing: NATIVE_FINAL_EVALUATION_COMPLETED frame=<n>` (code) | training ended somewhere other than the family's own endpoint | stamps; no retained checkpoints | a trainer or budget defect; do not rerun unchanged |
+| `NATIVE_CURVE_EVAL_NO_STAMPS` / `NATIVE_ENDPOINT_SUPPLEMENTARY_INCOMPLETE` (code) | the in-cell grid could not find stamps, or one endpoint pass failed | retained checkpoints and any rows written | the rows can be re-made offline from the checkpoints (§11.2 sweep) |
+| `!! REAPING <cell>` (code; a watch-budget stop was **seen** on `idaac` s101 on 9 Sep, before the reaper printed this text) | the watch budget ran out; the reason (silent or out of grace) is on the next line | every row written | `assemble_reaped_delivery.py`, then `NATIVE_ACCEPT_WATCH_STOP=1 collect-host-run.sh` (§8 item 2) |
+| `NATIVE_SELF_VRAM_CAP_TRIPPED` in the cap log (code) | our compute memory crossed the cap you set | as a reap | the cap or the family's peak figure is wrong; recheck §4c before relaunching |
+
+**At collection:**
+
+| You see | Meaning | Next |
+|---|---|---|
+| `REFUSING: no NATIVE_CELL_COMPLETED marker.` plus a two-line recipe (code; the recipe's path was used for `idaac` s101) | the cell was stopped mid-grid | run the printed recipe exactly |
+| a NOTE that the evaluator ledger declined a production run (**seen**) | correct behaviour | nothing; never run `populate_evaluator_ledger.py` on it |
+| `audit_record_frame_provenance.py` MISMATCHED > 0 (never seen) | a row's frame disagrees with its checkpoint | stop and investigate; do not report those rows |
+
 Further reading, in order of usefulness during an incident:
 `production-host/15-what-fails-when.md` (symptom → cause), `model/STOP-MECHANISMS.md` (every stop
 mechanism and which actually fire), `DECISIONS-IF-PRODUCTION-GOES-WRONG.md` (decisions already
