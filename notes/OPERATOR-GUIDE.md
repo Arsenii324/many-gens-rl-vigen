@@ -256,6 +256,10 @@ The traps, each of which has produced a false reading here:
 
 Procedure §9.6 has the commands. Two things that are not obvious:
 
+0. **Set the interpreter explicitly.** `collect-host-run.sh` runs repo Python as `BP="${BP:-python3}"`,
+   so without `BP` it uses whatever `python3` is first on `PATH`. On 2026-09-17 the collection of
+   `ibac_sni` s101 was run as `BP=<the interpreter from procedure §0c> bash collect-host-run.sh …`
+   and succeeded; that is the executed form.
 1. **A cell stopped mid-grid never writes `result.tgz`.** Collect it with
    `assemble_reaped_delivery.py` into `<run-dir>/native-out/records_delivery.jsonl` — that exact
    path — then `NATIVE_ACCEPT_WATCH_STOP=1 bash collect-host-run.sh …`. The collector prints this
@@ -330,11 +334,58 @@ Further reading, in order of usefulness during an incident:
 mechanism and which actually fire), `DECISIONS-IF-PRODUCTION-GOES-WRONG.md` (decisions already
 taken, so you do not re-litigate them at 3 a.m.).
 
-## 11. Honest limits of this document
+## 11. What has actually been executed — the boundary
 
-It maps the path that has actually been run: `idaac`, `ppg` and `ibac_sni` at 600k on this host.
-Nine baselines have never completed a production cell here, and three of them (`svea`, `sgqn`,
-`soda`) are blocked on the Places365 corpus rather than on compute. `ctrl` has never run at 600k and
-does not fit beside its own memory floor on a 32 GiB card. Treat the stages above as verified for the
-families that have run and as untested elsewhere — the procedure says which is which, and
-`campaign_status.py` will not pretend.
+This section separates **what someone ran and saw work** from **what is written down but was never
+run**. The first kind is evidence. The second is a proposal, however careful, and on 2026-09-17
+running four "documented" commands for the first time found two that exit 2 as written. Treat
+anything in the right-hand column as untested until you have run it yourself.
+
+Everything in the left column was run between 2026-09-09 and 2026-09-17 on the production host
+(`cds2`, 2× V100-32GB, shared) or the maintainer's macOS laptop, and is recorded in
+`results/host-runs.jsonl`, `results/records/` or `results/evidence/`.
+
+### 11.1 Laptop side
+
+| Executed and worked | Written but not executed here, and why |
+|---|---|
+| `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | **`setup/bootstrap_sources.py` doing a real reconstruction.** It requires a case-sensitive filesystem because RL-ViGen has two files differing only by case, and it refuses on macOS. It has not been run on Linux in this campaign. |
+| `contract.py build-payload --families idaac` → 5.26 MB; `verify-payload --require-evaluator-identity --require-runner-contract 19` → 0; `verify-evaluator-binding --archive … --source . --families idaac` → 0 | **A fresh clone taken all the way to a payload.** Blocked by the line above: a clone without reconstructed sources cannot hash the evaluator. What *was* run in a fresh clone: `operator_readiness.py` → exit 0, and `campaign_status.py` → a readable instruction instead of a traceback. |
+| `collect-host-run.sh ibac_sni <run-dir>` on a cleanly completed cell → 910 rows installed. **Needed `BP=<python>` set explicitly**; the script falls back to `python3` otherwise | `collect-host-run.sh` on a **reaped** cell with `NATIVE_ACCEPT_WATCH_STOP=1` was run for `idaac` s101 earlier in the campaign, not in this session |
+| `assemble_reaped_delivery.py` as a dry run on a mid-flight `ibac_sni` copy → 528 rows, correctly marked | |
+| `populate_evaluator_ledger.py`: refused two production files, accepted three `attest-v212-*` files; gate went 5/7 → 7/7 | |
+| `production_gates.py` (37 pass / 0 fail / 9 owner), `campaign_status.py`, `operator_readiness.py` | |
+
+### 11.2 Host side
+
+| Executed and worked | Written but not executed here, and why |
+|---|---|
+| **Launch through `wait-and-train-v3.sh`** — `ibac_sni` s101, 2026-09-16 20:35, trained 600k in 44 min and completed its full grid | `wait-and-train-v3.sh` has launched **one** cell. Its lock and hold logic are proven by that one run and by reading, not by repetition. |
+| **Launch through `train-production-cell-v5.sh` directly** — `idaac` s102 (21:32), `ibac_sni` s102 twice (07:50, 11:00) | |
+| `self-vram-cap.sh` armed on three cells; `gpu-occupancy-log.sh` as the only record of card vacancy | |
+| **Two and three cells packed on one card** — throughput ratio measured at r = 0.90 | Packing more than three, or two *training* cells at once |
+| **The memory floor stopping a training cell** — seen twice on 2026-09-17, both documented with their sentinels; grid cells ignored the same event | The disk watch actually **firing**: it came within one 60 s sample of doing so and did not |
+| **A mid-training stop leaving checkpoints in `native-work/`** — 7 salvaged from `ibac_sni` s102 attempt 2 and fetched explicitly | Offline re-evaluation of those 7 checkpoints |
+| `watch-cell.sh` in both modes; verified against a really-stopped cell and a healthy one | |
+
+### 11.3 Never run in this campaign, at all
+
+- **Nine of twelve baselines have never completed a production cell here**: `drqv2`, `svea`, `drq`,
+  `sgqn`, `curl`, `rad`, `soda`, `alda`, `ctrl`. Every per-family quirk this guide records comes from
+  `idaac`, `ppg` and `ibac_sni`. Expect new ones.
+- **Places365 on the host.** The ~24 GB corpus has never been placed there. `svea`, `sgqn` and `soda`
+  need it and have never run. The laptop has it, which proves nothing about the host.
+- **`ctrl` at 600k.** Its observed peak, 32,435 MiB, does not fit beside the 4,000 MiB floor on a
+  32,494 MiB card. It needs an empty card and an explicit decision about the floor.
+- **`docs/RUN-THIS-PROJECT.md` §5a** (any Linux host with Docker) and **§5b** (DataSphere) were not
+  exercised in this session.
+- **Resuming a stopped cell.** `run_probe.sh`'s `RESUME_SNAPSHOT` hook copies into RL-ViGen's
+  `snapshot.pt` name and has never been used for a restart; the RL-ViGen five cannot resume anyway
+  because their replay buffer is not saved.
+- **Any host other than `cds2`.**
+
+### 11.4 How to use this section
+
+Run a left-column item and it should behave as described; if it does not, something changed and it
+is worth a note. Run a right-column item and **assume nothing** — read its output, check what it
+wrote, and move it to the left column in this file once it has worked for you.
