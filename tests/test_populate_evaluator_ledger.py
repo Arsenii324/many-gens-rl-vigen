@@ -69,7 +69,21 @@ def test_incomplete_diagnostics_are_refused(tmp_path):
     assert "diagnostics_complete=False" in result.stdout
 
 
-def test_a_current_paired_complete_record_is_accepted(tmp_path):
+def test_a_current_paired_complete_record_clears_the_build_level_checks(tmp_path):
+    """Current, paired and complete is NECESSARY for an attestation; since 2026-09-17 it is not
+    SUFFICIENT.
+
+    This test asserted `returncode == 0` on a synthetic record. Acceptance now also requires the
+    entry to satisfy production_gates' own check -- endpoint scope, a canonical evaluator_scope, and
+    every row in the evidence file agreeing with the entry's identity -- which a two-row fixture
+    cannot meet and should not be able to fake. So it asserts what it was written to assert: that a
+    current, paired, complete record passes the build-level checks and is NOT refused for staleness,
+    pairing or diagnostics. The refusal it does get names the further condition.
+    """
     result = _run(tmp_path, _rows(_live_revision()))
-    assert result.returncode == 0, result.stderr
     assert "paired=True" in result.stdout and "diagnostics_complete=True" in result.stdout
+    out = result.stdout + result.stderr
+    assert "certify a tree that no longer exists" not in out, "refused as stale, but it is current"
+    assert "requires paired + diagnostics_complete" not in out, "refused on flags it satisfies"
+    assert "endpoint-scope" in out or "production_gates would reject" in out, (
+        f"expected the refusal to name the scope/gate condition, got:\n{out}")

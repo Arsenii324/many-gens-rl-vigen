@@ -72,6 +72,22 @@ def build(family: str, job_id: str) -> dict:
     if not offline:
         raise SystemExit(f"{family}: no offline-eval rows in {records_rel}")
 
+    # [Claude 2026-09-17] Staleness is checked BEFORE the endpoint-scope requirement below. A record
+    # that certifies a tree which no longer exists is the more fundamental error and the more
+    # actionable message ("rebuild the payload and re-run the wave"); reporting "no endpoint rows"
+    # for a stale curve file would send the reader after the wrong thing. Found when the scope check,
+    # added earlier the same day, started pre-empting the staleness test.
+    code_rev = evaluator_family_code_revision(ROOT, family)
+    config_rev = evaluator_family_config_revision(ROOT, family)
+    static_rev = evaluator_family_revision(ROOT, family)
+    if offline[0]["evaluator_revision"] != static_rev:
+        raise SystemExit(
+            f"{family}: the record attests {offline[0]['evaluator_revision'][:12]}... but the live tree is "
+            f"{static_rev[:12]}...\n"
+            "  A closure member changed after this job was submitted. Do NOT write this entry: it "
+            "would certify a tree that no longer exists.\n"
+            "  Rebuild the payload from the current tree and re-run the wave.")
+
     # [Claude 2026-09-17] The attesting row must be an ENDPOINT row, and this used to take offline[0].
     # The entry below is `validation_kind: functional_endpoint`, and production_gates.py:269 rejects
     # any entry whose evaluator_scope is not `eval_scope == "endpoint"`. That held while attestation
@@ -88,30 +104,16 @@ def build(family: str, job_id: str) -> dict:
     # So: choose an endpoint row, preferring the family's native policy pass over the `mode` pass
     # (earlier attestations were native), and REFUSE when there is no endpoint row. Refusing keeps an
     # existing valid attestation in place; silently writing a curve row is what removed three.
+    # [Claude 2026-09-17] build() no longer RAISES when there is no endpoint row. It reports the
+    # fact and lets main() refuse in a deliberate order: staleness first, then paired/diagnostics,
+    # then scope. Raising here pre-empted the pairing and diagnostics messages, so a record that was
+    # both unpaired AND curve-only reported the scope problem and hid the pairing one.
     endpoint = [r for r in offline if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
-    if not endpoint:
-        raise SystemExit(
-            f"{family}: {records_rel} has no endpoint-scope offline-eval rows "
-            f"({len(offline)} offline rows, all curve). Refusing: this entry is a functional_endpoint "
-            "attestation and the gate rejects any other scope. Overwriting the family's current entry "
-            "with a curve row would un-validate it silently -- which is exactly what happened to idaac "
-            "and ppg. Populate from the run's ENDPOINT records instead.")
     native = [r for r in endpoint if (r.get("evaluator_scope") or {}).get("eval_policy_mode") != "mode"]
-    row = (native or endpoint)[0]
+    row = (native or endpoint or offline)[0]
     for other in offline:
         if other["evaluator_revision"] != row["evaluator_revision"]:
             raise SystemExit(f"{family}: rows disagree on evaluator_revision within one job")
-
-    code_rev = evaluator_family_code_revision(ROOT, family)
-    config_rev = evaluator_family_config_revision(ROOT, family)
-    static_rev = evaluator_family_revision(ROOT, family)
-    if row["evaluator_revision"] != static_rev:
-        raise SystemExit(
-            f"{family}: the record attests {row['evaluator_revision'][:12]}... but the live tree is "
-            f"{static_rev[:12]}...\n"
-            "  A closure member changed after this job was submitted. Do NOT write this entry: it "
-            "would certify a tree that no longer exists.\n"
-            "  Rebuild the payload from the current tree and re-run the wave.")
 
     paired, paired_why = _pairing_is_physical(offline)
     complete, complete_why = _diagnostics_complete(offline)
@@ -133,6 +135,8 @@ def build(family: str, job_id: str) -> dict:
         "paired_basis": paired_why,
         "runtime_imports_checked": True,
         "validation_kind": "functional_endpoint",
+        "_endpoint_rows": len(endpoint),
+        "_offline_rows": len(offline),
     }
 
 
@@ -164,6 +168,16 @@ def main() -> int:
     #
     # Importing the gate's function rather than re-implementing its rules is the point: two copies of
     # one rule will disagree, and this script's copy was the one that drifted.
+    if not entry.pop("_endpoint_rows", 0):
+        n = entry.pop("_offline_rows", 0)
+        print(f"  REFUSING to write: {n} offline-eval row(s) and NONE is endpoint-scope. This entry is\n"
+              "  a functional_endpoint attestation and production_gates rejects any other scope.\n"
+              "  Overwriting the family's current entry with a curve row would un-validate it\n"
+              "  silently -- which is exactly what happened to idaac and ppg. Populate from the\n"
+              "  run's ENDPOINT records instead.", file=sys.stderr)
+        return 1
+    entry.pop("_offline_rows", None)
+
     sys.path.insert(0, str(ROOT / "scripts"))
     from production_gates import _validation_entry_problem  # noqa: E402
     problem = _validation_entry_problem(

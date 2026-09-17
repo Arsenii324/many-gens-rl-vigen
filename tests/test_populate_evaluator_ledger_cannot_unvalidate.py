@@ -42,7 +42,8 @@ def test_a_curve_only_sweep_is_refused_and_not_written():
     before = hashlib.sha256(LEDGER.read_bytes()).hexdigest()
     result = _dry_run("ppg", job)
     assert result.returncode != 0, "a curve-only file was accepted as endpoint attestation evidence"
-    assert "no endpoint-scope" in result.stderr + result.stdout
+    assert "endpoint-scope" in result.stderr + result.stdout, (
+        "the refusal must say WHY -- that no row is endpoint-scope")
     assert hashlib.sha256(LEDGER.read_bytes()).hexdigest() == before
 
 
