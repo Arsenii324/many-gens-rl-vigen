@@ -108,6 +108,24 @@ implies. Technique and its yield here: [`docs/STEP-ZERO.md`](docs/STEP-ZERO.md) 
 Keep this list to documents that govern how to work; anything holding what is true is routed into
 via [`docs/PROJECT-INDEX.md`](docs/PROJECT-INDEX.md).
 
+## Keeping a multi-part request whole
+
+Considerations to weigh against the request in front of you, not a procedure. (Owner's suggestion,
+2026-09-17.)
+
+- A request with several parts, a vague end, or pieces arriving while other work runs tends to get
+  closed at an intermediate step: one facet done, or done but not verified, reported as the whole.
+  [`notes/ACCOUNTABILITY.md`](notes/ACCOUNTABILITY.md) is one place to keep such a taskset — each
+  item with what would close it, marked done only with a short note on how it was done and what
+  verified it. Whether a request needs an entry, and how finely to split it, is a judgement call.
+- A finish line written early can itself be too narrow. Re-reading the request's own words is
+  usually what exposes that.
+- The superpowers plugin skills
+  (`~/.claude/plugins/cache/claude-plugins-official/superpowers/<version>/skills/`) are optional
+  and best used leanly. Parts of them are general software-engineering process that may not fit
+  this project; take what helps — for example `verification-before-completion`'s "name the
+  command that proves the claim, run it, read the output, then claim" — or skip them.
+
 ## Nulls
 
 These hold by default. Each names where the conditions for relaxing it live, and that link is the
