@@ -1040,6 +1040,19 @@ traps, each of which has produced a false reading here:
   an unquoted `$var`: a loop `for h in $holders` saw three known group names as ONE unknown name
   and raised a false "new group on the machine" alarm. Put the loop in a file and run
   `bash file.sh`, and split lists with `IFS=, read -r -a` rather than relying on the shell.
+- **"Has a sentinel fired?" must be asked of ONE run directory, never a glob.** A yielded cell
+  leaves `native-work/yield.sentinel` behind in its own run directory, and those directories are
+  never cleaned up. Asking `ls ~/rlvigen-runs/card1-2026091*/native-work/yield.sentinel` on
+  2026-09-17 returned **fourteen** sentinel files, every one of them from a cell that died days or
+  hours earlier, while both live cells were untouched. The list looks exactly like a fleet-wide
+  stand-down and is pure history. Name the run directory of the cell you are asking about:
+
+  ```bash
+  ls ~/rlvigen-runs/card1-20260916-203537/native-work/yield.sentinel 2>/dev/null || echo "not fired"
+  ```
+
+  The same caution applies to counting `cell-c1-*` containers and to anything else globbed over
+  `~/rlvigen-runs/`: that directory is an archive of every attempt, not a picture of what is running.
 - **The host occupancy logger has a 24-hour life by default** (`GPU_LOG_HOURS`). If you need its
   record to cover tomorrow morning, restart it with a longer window — stop it, wait one interval
   (its orphaned `sleep` child holds the flock), start the new one, and confirm a fresh
