@@ -287,7 +287,8 @@ def main(argv: list[str] | None = None) -> int:
     if not a.legacy_exploratory:
         print("REFUSING TO RENDER THE LEGACY RESULTS TABLE WITHOUT --legacy-exploratory.")
         print("Its interval resamples episodes from one trained policy; the production outer unit "
-              "is the training seed. Use the production reporting path for headline numbers.")
+              "is the training seed. For headline numbers use:")
+        print("    python scripts/production_reading.py       # seeds as replicates, EVAL-PROTOCOL 4c")
         return 2
 
     floor_mean, floor_succ, floor_episodes = _door_random_floor()

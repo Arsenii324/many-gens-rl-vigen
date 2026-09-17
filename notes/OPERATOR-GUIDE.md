@@ -713,6 +713,7 @@ confidence in this project came from reading a check as broader than it is.
 | `audit_record_frame_provenance.py <records> --checkpoints <dir>` | each curve row's frame agrees with the checkpoint it names; **MISMATCHED must be 0** | yes, `idaac` s102: 484 corroborated, 0 mismatched (§8 item 3) |
 | `campaign_status.py` | which (baseline, seed) cells are DONE / PARTIAL / MISSING against the schedule | yes |
 | `export_fleet.py` | one flat table of every record, and how many are on the current evaluator closure | yes: 6,193 rows, 2,932 current |
+| `production_reading.py` | the headline reading: endpoint returns aggregated episodes → scenes → **seeds**, per EVAL-PROTOCOL §4c, with every seed point printed and fewer than three marked PROVISIONAL | yes, 2026-09-18: reproduces the hand-computed two-seed `idaac` numbers exactly |
 | `audit_attempt_ledger.py --strict` | no rerun silently replaces an earlier attempt; host attempts come from `results/host-runs.jsonl` | yes, exit 0 on 2026-09-17 |
 | `populate_evaluator_ledger.py` | **attestation jobs only** (§8 item 4) | yes: accepted three `attest-v212` files, refused two production files |
 
