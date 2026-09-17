@@ -59,6 +59,15 @@ the others.
 | B10 | Links to project-wide docs instead of duplicating | DONE 21:35 | see closing report B10 |
 | B11 | Grounding pass: nothing in the guide that I did not execute is stated as working | DONE 21:45 | see closing report B11 |
 
+## D. Out-of-reach items being closed while compute is unavailable
+
+Catalogue in OPERATOR-GUIDE §11.4. These are the ones that can move without a free card.
+
+| id | item | status | what closes it |
+|---|---|---|---|
+| D1 | O2, payloads for the four families that have never run | PARTIAL — laptop half DONE 2026-09-17 21:20 | `build-payload` + `verify-payload` + `verify-evaluator-binding` exit 0 for `rlvigen`, `dmc_gb`, `alda`, `ctrl`. Left: the payload-naming decision (v5 reads a literal `payload-v214-` name) and the copy to the host. |
+| D2 | O8, a fresh clone reconstructed on Linux | IN PROGRESS 2026-09-17 21:25 | The laptop cannot do it (case-insensitive filesystem, no local Docker daemon). Running it instead inside a `python:3.11-slim` container on the host, against the committed tree shipped as a 37 MB archive. Closes when `setup/bootstrap_sources.py` then `setup/verify_sources.py` exit 0 there. The scratch directory `~/bootstrap-test` is mine and is removed by exact name afterwards. |
+
 ## C. Housekeeping questions
 
 | id | task | status | what closes it |

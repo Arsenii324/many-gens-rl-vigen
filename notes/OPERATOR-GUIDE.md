@@ -813,7 +813,7 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 | Executed and worked | Written but not executed here, and why |
 |---|---|
 | `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | **`setup/bootstrap_sources.py` doing a real reconstruction.** It requires a case-sensitive filesystem because RL-ViGen has two files differing only by case, and it refuses on macOS. It has not been run on Linux in this campaign. |
-| `contract.py build-payload --families idaac` → 5.26 MB; `verify-payload --require-evaluator-identity --require-runner-contract 19` → 0; `verify-evaluator-binding --archive … --source . --families idaac` → 0 | **A fresh clone taken all the way to a payload.** Blocked by the line above: a clone without reconstructed sources cannot hash the evaluator. What *was* run in a fresh clone: `operator_readiness.py` → exit 0, and `campaign_status.py` → a readable instruction instead of a traceback. |
+| `contract.py build-payload --source . --output <tgz> --families <family>`, then `verify-payload --require-evaluator-identity --require-runner-contract 19` and `verify-evaluator-binding --archive … --source . --families <family>` — all exit 0 for **`idaac` (5.26 MB) and, on 2026-09-17, for the four families that have never run: `rlvigen` 284 KB, `dmc_gb` 13 MB, `alda` 37 MB, `ctrl` 312 KB**. (`rlvigen` is small because the payload never carries `RL-ViGen-upstream/`; the cell clones it at run time.) | **A fresh clone taken all the way to a payload.** Blocked by the line above: a clone without reconstructed sources cannot hash the evaluator. What *was* run in a fresh clone: `operator_readiness.py` → exit 0, and `campaign_status.py` → a readable instruction instead of a traceback. |
 | `collect-host-run.sh ibac_sni <run-dir>` on a cleanly completed cell → 910 rows installed. **Needed `BP=<python>` set explicitly**; the script falls back to `python3` otherwise | `collect-host-run.sh` on a **reaped** cell with `NATIVE_ACCEPT_WATCH_STOP=1` was run for `idaac` s101 earlier in the campaign, not in this session |
 | `assemble_reaped_delivery.py` as a dry run on a mid-flight `ibac_sni` copy → 528 rows, correctly marked | |
 | `populate_evaluator_ledger.py`: refused two production files, accepted three `attest-v212-*` files; gate went 5/7 → 7/7 | |
@@ -879,9 +879,12 @@ executed, the entry says so; treat it as a proposal until it has run.
   `v212` payloads for all seven. Whether a `v212` payload binds to today's tree has not been checked.
 - *Target:* each family's payload on the host, built from the committed tree, with the same sha256
   as on the laptop.
-- *Operation:* on the laptop, `contract.py build-payload --families <family>`, `verify-payload
-  --require-evaluator-identity --require-runner-contract 19`, `verify-evaluator-binding --archive
-  <tgz> --source . --families <family>` (all three executed for `idaac`), then `scp`.
+- *Operation:* on the laptop, `contract.py build-payload --source . --output <tgz> --families
+  <family>`, `verify-payload --require-evaluator-identity --require-runner-contract 19`,
+  `verify-evaluator-binding --archive <tgz> --source . --families <family>`, then `scp`.
+  **The laptop half is done:** on 2026-09-17 all three steps ran and exited 0 for `rlvigen`,
+  `dmc_gb`, `alda` and `ctrl` against the committed tree. What is left is the naming decision below
+  and the copy to the host.
   **Caveat:** `train-production-cell-v5.sh` reads `payload-v214-$FAMILY.tgz` by that literal name.
   Naming a newer build `v214` would mislabel it, so the wrapper needs a payload parameter first. That
   change has not been made or tested.
