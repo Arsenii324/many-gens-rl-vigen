@@ -13,6 +13,28 @@ Two facts shape the whole table:
    `$training_pid` (`run_probe.sh:194-212`). A cell that runs `run_offline_eval` instead never
    starts that poller, so an eval cell ignores a sentinel entirely. **This asymmetry is why the
    defect stayed invisible: every eval cell survived it, and the first training cell died.**
+3. **A training cell STOPS obeying it partway through, and that is not the same statement as 2.**
+   [Claude 2026-09-17] The poller's loop is `while kill -0 "$training_pid"` (`run_probe.sh:196`).
+   The training process exits when training finishes, so from the moment a cell enters its in-cell
+   curve/endpoint grid the poller is gone and the cell is, for sentinel purposes, an eval cell. The
+   distinction is not "eval cells vs training cells" but "before vs after the training PID exits",
+   **inside one cell**.
+
+   This has two consequences, observed live on card 1 on 2026-09-17 with `ibac_sni` s101 in its
+   grid and `idaac` s102 still training:
+
+   - **It decides who is sacrificed when the floor fires.** Only the still-training cell obeys, so
+     the floor stands down idaac and leaves ibac's grid untouched. That happens to be the right
+     ordering -- the grid cell has already banked its training -- but it is a consequence of PID
+     lifetime, not a policy anyone chose, and nothing would stop it being the wrong ordering in a
+     different pairing.
+   - **It means a card can reach a state where NOTHING of ours can yield.** Once every cell on the
+     card is past training, the sentinel has no reader. The footprint is small then (a grid cell
+     holds ~840 MiB against a training cell's 2,600-7,400), so we are unlikely to be what crowds a
+     co-tenant -- but "unlikely to matter" is the honest claim, not "protected". If a co-tenant
+     needs the card while our cells are all in their grids, the only way to give it back is by hand.
+
+   Do not read row 8's "ARMED" in the table below as meaning armed for the life of the cell.
 
 ---
 
