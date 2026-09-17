@@ -1132,13 +1132,36 @@ come close. `docker stats --no-stream` is the decisive instrument here: each con
 about **one core**, not sixteen, so two cells are nowhere near saturating the host. A later load
 average of 42.67 on 16 cores was *other people's* jobs — our two cells accounted for ~2 of it.
 
-So the one-launcher lock is a duplicate-prevention rule, not a capacity limit. Launch a second cell
-by calling `train-production-cell-v5.sh` directly, which is what the waiter does anyway, and know
-that you are doing it: the lock will still be held by the first cell's waiter, and that is correct
-rather than stale. The two conditions that actually bound a second cell are **VRAM** (see the
-capacity model in §9.3) and **disk** — each cell pip-installs torch into its own venv, and the host
-fell 116 → 109 GiB while the second one bootstrapped, against a floor of 98 GiB that the cells
-enforce on themselves.
+So the one-launcher lock is a duplicate-prevention rule, not a capacity limit. The bounds on a second
+cell are **VRAM** (see the capacity model in §9.3), **disk** — a bootstrap costs up to ~7 GiB
+transiently, against a floor of 98 GiB that the cells enforce on themselves — and **whether the
+vacancy you are launching into is real**, which is the one that has actually killed cells.
+
+> **Correction, 2026-09-17.** This paragraph used to say "launch a second cell by calling
+> `train-production-cell-v5.sh` directly, which is what the waiter does anyway". That is the advice
+> that lost `ibac_sni` s102, and "what the waiter does anyway" was false in the part that matters.
+> The waiter does not just call v5: it first requires card capacity to hold for **`HOLD=10` polls at
+> `POLL=60` s — ten sustained minutes**. Calling v5 directly throws that check away.
+>
+> **That ten minutes is the right number, and it is measured, not chosen.** Thirty hours of the
+> occupancy log show the co-tenant `rlvigen_kalugin_df` leaving card 1 twelve times. The absences
+> lasted **2, 1, 1, 36, 1, 1, 171, 1, 5, 1, 1 and 4 minutes**. Ten of the twelve are ≤5 minutes:
+> those are not vacancies, they are the co-tenant **restarting between jobs**, and its next job
+> reclaims ~22 GiB within minutes. Only two were real windows — 36 and 171 minutes, the second being
+> the window `ibac_sni` s101 trained in. A ten-minute hold rejects every restart in that record and
+> admits both real windows.
+>
+> s102 was launched at 07:50 into the 07:48 absence, which lasted four minutes. The co-tenant came
+> back while s102's EGL contexts were still ramping, free memory hit 75 MiB, and the floor stood it
+> down at frame 28,672 — before its first 50k checkpoint, so nothing was kept. The same trap
+> presented itself again at 10:28 (card 1 used fell to 2,994 MiB); waiting one minute showed a new
+> `rlvigen_kalugin_df` process already ramping 466 → 1,358 MiB.
+>
+> **So: to add a cell to a shared card, require the vacancy to persist for ten minutes first.** Use
+> the waiter when its lock is free. When the lock is held by a running cell's waiter — as it is for
+> the life of that cell — reproduce its check by hand: sample the card once a minute and launch only
+> after ten consecutive samples have the capacity you need. Checking the occupancy log's `holders=`
+> for the co-tenant's name over those ten minutes is the same test with a better label.
 
 **What packing does not change:** on card 1 with `NATIVE_ALLOW_SHARED_CARD=1`, process yield is not
 armed (`launch-card-cell.sh:276`), so a second cell of ours does not trip the other's count trigger.
