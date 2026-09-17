@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-16, ~15:30 MSK, by Claude.** This file says what is *true right now*. It is
+**Last updated: 2026-09-17, ~09:15 MSK, by Claude.** This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -23,19 +23,33 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run: gates **36 pass / 0 fail / 10 owner**; fleet **4157 rows, 1216 on the current
-closure**; campaign **36 cells: 35 MISSING, 1 DONE**.
+As of the last run (2026-09-17 09:11): gates **36 pass / 0 fail / 10 owner**; campaign **36 cells:
+33 MISSING, 2 RUNNING, 1 DONE**; `ibac_sni` now carries **1,397** fleet rows where it had none of
+its own at production length.
 
 ## 2. Where the campaign actually is
 
-**Two baselines are banked at production length and admissible on the current closure**, which is
-new since 2026-09-14 — the fleet held 28 current rows then and holds 732 now.
+**Three baselines now have production-length rows**, and the third arrived overnight on 2026-09-17.
 
 | baseline | seed | endpoint | curve | note |
 |---|---|---|---|---|
 | `ppg` | 1 | 88 rows | 528 rows, 12 stamps | complete |
-| `idaac` | 101 | 88 rows | 484 rows, 11 stamps | complete — the only cell the campaign counts |
-| `idaac` | 102 | — | — | **training now**, card 1, since 14:32 MSK |
+| `idaac` | 101 | 88 rows | 484 rows, 11 stamps | complete |
+| `ibac_sni` | 101 | **44 native, mode pass running** | **528 rows, 12 stamps** | trained 600k in **44 minutes**; NOT yet collected into `results/records/` |
+| `idaac` | 102 | — | curve running | trained to completion 2026-09-17 ~07:00; 11 checkpoints + terminal retained |
+| `ibac_sni` | 102 | — | — | **FAILED** 08:01, memory floor, frame 28,672, nothing salvaged |
+
+**`ibac_sni` s101 is the first ibac cell ever to finish 600k**, which retires the "never completed"
+entry that stood here for five attempts. Its native endpoint pass is complete and its curve is
+complete; only the second (`mode`) endpoint pass is outstanding. Both runs are banked to a laptop
+copy, and a cell cut mid-grid never writes `result.tgz`, so collection goes through
+`assemble_reaped_delivery.py` — dry-run and proven for this cell.
+
+**The first three-baseline same-axes reading exists**, in
+[`production-host/34-first-three-baseline-reading-2026-09-17.md`](production-host/34-first-three-baseline-reading-2026-09-17.md).
+It is a reading and not a result: one seed per baseline against a policy requiring three. Two things
+in it are worth carrying — `eval-medium` scores below `eval-hard` in all three, and train-time
+strength does not predict generalisation (`ibac_sni` is strongest on train and loses the most).
 
 **The campaign counts 1 of 36 and that is not a mistake in the counter.**
 `production-schedule-v100.json` names seeds `[101, 102, 103]`; ppg is banked at **seed 1**, so every
@@ -47,8 +61,10 @@ GPU-hours reproducing a number we have.
 **Nine of twelve baselines have no production record at all**, and three of them are blocked on
 things that are not compute:
 
-- `ibac_sni` has never completed a 600k cell — five attempts, four stopped by the memory floor on a
-  card a colleague was holding. It needs ~11 GiB that *stays* free.
+- ~~`ibac_sni` has never completed a 600k cell~~ — **done 2026-09-16/17**, seed 101, 44 minutes of
+  training at procs=16. The constraint that remains is the one that killed seed 102 eleven minutes
+  in: it needs ~11.4 GiB (7,421 peak + the 4,000 floor) that **stays** free, and a card the
+  co-tenant released minutes ago does not count as free. Six of its seven attempts died this way.
 - `ctrl` has never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a
   32,494 MiB card at all. It needs an empty card and an explicit decision about the floor.
 - **`svea`, `sgqn` and `soda` are blocked on Places365**, found 2026-09-16 and not previously
