@@ -105,6 +105,63 @@ completes**. A cell stopped mid-training leaves them in `native-work/`, which th
 
 Stages 0–4 are laptop-only and can be done before you have the host. Do them first.
 
+## 4b. Cold start: a fresh clone to a shipped payload
+
+Stages 1–4 need no host. Each step produces something the next one consumes, and each has a
+verifier that proves the step rather than asserting it. Commands live in the procedure §2 and
+`setup/SOURCE-BOOTSTRAP.md`; what follows is the ordering and what each check actually establishes.
+
+| Step | Command (see §2 / SOURCE-BOOTSTRAP) | Proves |
+|---|---|---|
+| 1 | `python3 -c "import numpy, json, pathlib"` | you have an interpreter these scripts can use (3.10+, numpy; matplotlib only for plots) |
+| 2 | `setup/bootstrap_sources.py [--family F]` | the pinned upstream trees are reconstructed under `runnable/` |
+| 3 | `setup/verify_sources.py` | they reconstruct **without network access** — a clean clone is self-sufficient |
+| 4 | `setup/verify_datasets.py [--split train]` | an external corpus this repo deliberately does not carry is present. **Only `svea`, `sgqn`, `soda` need it**; a clone without Places365 is correctly reconstructed and simply cannot run those three |
+| 5 | `contract.py build-payload --source . --output payload-vNNN-<family>.tgz --families <family>` | a source-only archive; the allowlist rejects `results`, `logs`, `models`, `data`, `.git`, `.venv`, credentials |
+| 6 | `contract.py verify-payload --archive … --require-evaluator-identity --require-runner-contract 19` | the archive carries the per-family identity and matches the runner contract the host expects |
+| 7 | `contract.py verify-evaluator-binding --archive …` | the evaluator in the archive binds to the families it claims |
+| 8 | `scp payload… <asset tgz> user@host:~/` | the host has what it needs |
+
+`RUNNER_CONTRACT` is **19** today (`contract.py:154`). It is written in two places — that constant
+and the `--require-runner-contract` argument in the procedure — and them drifting apart has killed a
+job before, so read it from the source rather than from memory.
+
+**The payload is source only.** Everything third-party — apt packages, pip, RL-ViGen upstream — is
+fetched *inside the container at run time*, so **the host needs outbound network access**. A cell on
+an air-gapped host will fail in its bootstrap, not at launch.
+
+## 4c. Per-family divergences — the table that decides what bites you
+
+Every column below is read from `datasphere/native/families.json`, `rlgen/protocol.py`
+(`OBSERVATION_GEOMETRY`) and `datasphere/native/measured-vram-bounds.json`, not from prose.
+
+| family | baselines | terminal checkpoint | intermediates | render | estimand | observed peak |
+|---|---|---|---|---|---|---|
+| `rlvigen` | drqv2, svea, drq, sgqn, curl | `snapshot.pt` | `snapshot_*.pt` | 84×84, fs 3 | mode | 4,549 MiB |
+| `dmc_gb` | rad, soda | `model/{frames}.pt` | `model/*.pt` | 100→84, fs 3 | mode | 2,529 MiB |
+| `alda` | alda | `checkpoints/sac_*_step_{…}` | `checkpoints/sac_*_step_*` | 64×64, fs 3 | mode | 2,397 MiB |
+| `idaac` | idaac | `models/agent-robosuite:{task}…` | same, frame-stamped | 64×64, fs 3 | **sample** | 2,638 MiB |
+| `ppg` | ppg | `model_terminal.jd` | `model[0-9]*.jd` | 64×64, fs 3 | **sample** | 7,146 MiB |
+| `ibac_sni` | ibac_sni | `model.pt` | `model_[0-9]*.pt` | 64×64, fs 3 | **sample** | 7,421 MiB |
+| `ctrl` | ctrl | `models/robosuite:{task}/check…` | same | 64×64, fs 3 | mode | **32,435 MiB** |
+
+What the columns mean for you:
+
+- **estimand** — `idaac`, `ppg` and `ibac_sni` report a **sampled** return; the other nine report the
+  **mode**. These are different quantities. `comparison_blocks.py` blocks on it, and the three
+  sampled families are exactly the set that can be compared to each other without the extra pass.
+- **observed peak** — read `per_family_observed_peak_mib` from the JSON. **Do not aggregate the
+  `cells` array yourself**: it contains rows from shared cards and partial ramps, and taking a `max`
+  over it reports `ibac_sni` at 22,675 MiB — a retracted number that is 94% a colleague's memory. I
+  made exactly that mistake while writing this table.
+- `ibac_sni`'s 7,421 MiB is a **card delta**: 2,199 MiB of compute apps plus 5,222 MiB of EGL render
+  contexts. Per-process sums miss EGL entirely, so a tool that adds up compute processes will
+  under-report this family by a factor of three.
+- `ctrl` at 32,435 MiB does not fit beside the 4,000 MiB floor on a 32,494 MiB card. It needs an
+  empty card and an explicit decision about the floor; it has never run at 600k here.
+- **checkpoint names differ per family**, which matters at collection: the frame-provenance audit
+  ties a row to a file by name or by hash, and `ppg` names by save index rather than frame. See §8.
+
 ## 5. What to launch with, and why there are three layers
 
     wait-and-train-v3.sh   waits for a sustained free card, then calls ↓   (use this by default)
