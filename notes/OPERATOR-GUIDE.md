@@ -178,6 +178,44 @@ occupancy log the co-tenant's absences were 2, 1, 1, 36, 1, 1, 171, 1, 5, 1, 1 a
 twelve were **restarts between its jobs**, not vacancies. Launching into one of those killed a cell
 twice on 2026-09-17. Procedure §9.5b has the arithmetic; note 34 has the campaign consequence.
 
+### 5.1 Why the vacancy rule applies to every family, not only the big ones
+
+The ten-minute rule was first derived for `ibac_sni`, which needs 7,421 MiB plus the 4,000 MiB floor.
+It is tempting to conclude that a small cell — `idaac` trains in about 2,640 MiB — can simply sit
+beside the co-tenant. On 2026-09-17 I nearly launched on exactly that reasoning, and checked the
+co-tenant's history first. The check refuted it.
+
+Over the whole occupancy log, `rlvigen_kalugin_df`'s peak on card 1 with no cell of ours present was
+**32,346 MiB of 32,768** — the entire card, held by **one process**, **flat** for about 1 h 45 m on
+2026-09-16 while its utilisation swung between 28% and 85%. A memory figure that never moves while
+the work varies is the signature of a framework **preallocating whatever is free**, not of a job
+whose working set is 32 GiB. It happened in four separate episodes over three days. On the single
+day I looked at first, its peak was about 22.8 GiB, which is why one day's view was misleading.
+
+What that means, and what it does not:
+
+- Beside that peak, **nothing of ours fits** — 422 MiB remain.
+- Whether its allocator **adapts** to the memory available when a job starts (then our presence only
+  shrinks what it takes) or needs a **fixed** amount (then our presence could make its job fail at
+  startup) **cannot be determined from outside**, and inspecting another group's process or
+  container is not permitted here. Twenty hours of co-residence on 2026-09-17 produced no visible
+  failure, and the co-tenant started new jobs beside our cells — but that is consistent with both.
+- Our memory floor protects the co-tenant against **gradual** growth: the yield watch polls every
+  20 s. It cannot help against an **atomic** allocation that fails before the next poll.
+
+So the rule is: **launch any cell only after the co-tenant has been absent from the card for ten
+consecutive minutes**, and when a window opens, launch the **smallest** useful cell first. This is a
+risk the design reduces, not one it removes; the residual case is a fixed-size allocation by the
+co-tenant arriving while we hold memory. Record every launch so that, if a co-tenant ever reports a
+failure, the timeline can be checked against ours.
+
+The check that caught this, for reuse:
+
+```bash
+grep "card=1 " ~/rlvigen-runs/gpu-occupancy.log | grep -v "cell-c1" \
+  | awk '{m=$0; sub(/.*mem=/,"",m); sub(/ .*/,"",m); print m, substr($1,1,16)}' | sort -rn | head -5
+```
+
 It also takes a `flock` and holds it for the life of the cell it started, so a second waiter
 refuses. That lock is duplicate prevention, not a capacity limit.
 
