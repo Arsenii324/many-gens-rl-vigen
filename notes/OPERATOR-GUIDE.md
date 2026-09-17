@@ -166,6 +166,38 @@ What the columns mean for you:
 - **checkpoint names differ per family**, which matters at collection: the frame-provenance audit
   ties a row to a file by name or by hash, and `ppg` names by save index rather than frame. See §8.
 
+### 4c.1 Resources other than VRAM — and which numbers were measured
+
+The host is 16 cores, 113 GiB RAM, two V100-32GB (`families.json` `_host_profiles.v100`). Free disk
+on the shared filesystem was about 175 GiB on 2026-09-17 and moves with other users' work.
+
+| baseline | disk need at 600k | host RAM | CPU | 600k training time on this host |
+|---|---|---|---|---|
+| `drqv2`, `drq`, `curl` | 48 GiB, computed | replay capacity 620k ⇒ **36.7 GiB worker-resident per cell, computed**; never measured here | trainer plus 4 replay-loader workers | **never run** |
+| `svea`, `sgqn` | 95 GiB, computed (47.5 of it Places365) | as above | as above | **never run** |
+| `rad` | 29 GiB, computed | replay buffer uncapped and in memory; not measured here | — | **never run** |
+| `soda` | 77 GiB, computed (includes Places365) | as `rad` | — | **never run** |
+| `alda` | 12 GiB, computed | not measured here | — | **never run** |
+| `idaac` | 9 GiB, computed | max RSS 2.8 GiB, **measured** | 1 process, 100% of one core, **measured** | **4 h 50 min** (s101), **7 h 15 min** (s102, sharing the host with another cell's grid), **measured** |
+| `ppg` | 9 GiB, computed | max RSS 4.7 GiB, **measured** | 1 env, ~100% of one core, **measured** | **3 h 34 min** (s1), **measured** |
+| `ibac_sni` | 10 GiB, computed | max RSS of the largest process 2.6 GiB, **measured**; the 16 workers together were not | **16 processes, 626% CPU, measured** — a whole-host job | **31 min 32 s** (s101), **measured** |
+| `ctrl` | 10 GiB, computed | **54.3 GiB at 64 envs — a linear extrapolation** of a 13.6 GiB 16-env peak, not a measurement | 64 envs | **never run at 600k** |
+
+Where each number comes from, so you can re-derive it:
+
+- **Disk need**: `python datasphere/native/family.py disk-requirement --cells <baseline>:1 --frames
+  600000 --profile v100 --ceil-total`, run on the laptop. The launcher runs the same computation and
+  sets this cell's disk floor to *free at launch − 2 × need*, clamped at 50 GiB. For `svea`, `sgqn`
+  and `soda` at today's free space, that clamp binds, so the disk watch guards only the last 50 GiB.
+  For the RL-ViGen five the figure includes a 35.5 GiB replay line; `families.json`'s own replay note
+  says loader workers delete episode files once read, so disk stays roughly flat. That line is
+  probably conservative, and it has never been checked on this host.
+- **Training time, CPU and RSS**: GNU `time -v` output at the end of each cell's `training.log`
+  (`Elapsed (wall clock)`, `Percent of CPU`, `Maximum resident set size`).
+- **Evaluation time is not in this table** because it barely depends on the family: the in-cell grid
+  took about 13.5–14 hours in both complete cells of 16–17 Sep. Budget for it (§6b, reaper row).
+- **Launch to training** is a further 7–22 minutes of bootstrap (§6d).
+
 ## 5. What to launch with, and why there are three layers
 
     wait-and-train-v3.sh   waits for a sustained free card, then calls ↓   (use this by default)
