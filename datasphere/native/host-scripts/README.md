@@ -62,6 +62,7 @@ only on the host until 2026-09-16, so the host copy has been the newer one befor
 | `curve-sweep-v3.sh` | evaluates every retained checkpoint of a run, several cells at a time; skips stamps whose result already exists |
 | `reeval-cell-cached.sh` | one eval cell against one checkpoint, with the pip cache mounted |
 | `self-vram-cap.sh` | stops **our** container, by exact name, when **our** GPU usage crosses a cap. Also committed at `datasphere/native/self-vram-cap.sh` |
+| `watch-cell.sh` | **runs on the laptop.** Watches one cell: stop marker, result, disk against the cell's own floor, stall, occupancy logger, new groups. `trip` exits on the first actionable event; `beat` also prints a heartbeat. This is the watcher that actually ran production on 2026-09-17, committed with only its run paths parameterised, and checked three ways before commit: it fired in 2 s on a cell the floor really stopped, it stayed silent on a healthy live cell, and it refuses to start without its parameters |
 | `neighbour-yield.sh`, `host-run.sh` | supporting; the host copies differ from the `datasphere/native/` copies and these are what actually ran |
 
 ## Superseded — do not start these

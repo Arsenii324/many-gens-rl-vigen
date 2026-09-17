@@ -222,7 +222,8 @@ Full detail in procedure §9.5; the complete tool list is §10.4. What you actua
 
 | What you want to know | Tool | Runs on |
 |---|---|---|
-| is the cell alive, progressing, and is the card/disk safe | `datasphere/native/prod-monitor-laptop.sh` | **laptop**, against the host over ssh |
+| is the cell alive, progressing, and is the card/disk safe | `datasphere/native/host-scripts/watch-cell.sh` (`trip` / `beat`) — **the watcher that actually ran production**, verified against a really-stopped cell and a healthy one | **laptop**, against the host over ssh |
+| an older, broader monitor | `datasphere/native/prod-monitor-laptop.sh` — predates today's fixes to stop detection and per-cell disk floors; prefer `watch-cell.sh` | laptop |
 | was a card free while nobody was watching | `datasphere/native/gpu-occupancy-log.sh` | host, detached; it outlives the ssh session |
 | is our own footprint about to endanger a co-tenant | `datasphere/native/self-vram-cap.sh` | host; stops **our** container by exact name |
 | is the policy healthy, or saturating/collapsing | `scripts/watch_policy_health.py --log <training.log>` | laptop; warns, never kills |
