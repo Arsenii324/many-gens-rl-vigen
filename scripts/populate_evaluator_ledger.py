@@ -72,7 +72,32 @@ def build(family: str, job_id: str) -> dict:
     if not offline:
         raise SystemExit(f"{family}: no offline-eval rows in {records_rel}")
 
-    row = offline[0]
+    # [Claude 2026-09-17] The attesting row must be an ENDPOINT row, and this used to take offline[0].
+    # The entry below is `validation_kind: functional_endpoint`, and production_gates.py:269 rejects
+    # any entry whose evaluator_scope is not `eval_scope == "endpoint"`. That held while attestation
+    # jobs emitted endpoint rows only. A production delivery runs its curve grid FIRST, so offline[0]
+    # is a curve row -- and a curve-only sweep file has no endpoint row at all.
+    #
+    # The failure was silent and cumulative, because every run of this script overwrites the family's
+    # entry and the most recent one wins. Measured on 2026-09-17: idaac's entry had been rewritten
+    # from `reeval-v214-idaac-s102-partial-curve` (a curve file, from a SUPERSEDED trajectory) and
+    # ppg's from `reeval-v214-ppg-curve`; both read "evaluator_scope is not an endpoint scope". Then
+    # collecting ibac_sni s101's production run took ibac_sni from validated to invalid the same way,
+    # dropping the gate from 5/7 to 4/7. Nothing errored at any point.
+    #
+    # So: choose an endpoint row, preferring the family's native policy pass over the `mode` pass
+    # (earlier attestations were native), and REFUSE when there is no endpoint row. Refusing keeps an
+    # existing valid attestation in place; silently writing a curve row is what removed three.
+    endpoint = [r for r in offline if (r.get("evaluator_scope") or {}).get("eval_scope") == "endpoint"]
+    if not endpoint:
+        raise SystemExit(
+            f"{family}: {records_rel} has no endpoint-scope offline-eval rows "
+            f"({len(offline)} offline rows, all curve). Refusing: this entry is a functional_endpoint "
+            "attestation and the gate rejects any other scope. Overwriting the family's current entry "
+            "with a curve row would un-validate it silently -- which is exactly what happened to idaac "
+            "and ppg. Populate from the run's ENDPOINT records instead.")
+    native = [r for r in endpoint if (r.get("evaluator_scope") or {}).get("eval_policy_mode") != "mode"]
+    row = (native or endpoint)[0]
     for other in offline:
         if other["evaluator_revision"] != row["evaluator_revision"]:
             raise SystemExit(f"{family}: rows disagree on evaluator_revision within one job")
@@ -126,6 +151,30 @@ def main() -> int:
     if not (entry["paired"] and entry["diagnostics_complete"]):
         print("  REFUSING to write: the gate requires paired + diagnostics_complete, and writing "
               "them as unchecked True is how a ledger stops meaning anything.", file=sys.stderr)
+        return 1
+    # [Claude 2026-09-17] Validate the candidate with the GATE'S OWN check before writing it. This
+    # script and production_gates.py used to judge an entry by different rules, so it wrote entries
+    # the gate then rejected -- and because each write replaces the family's entry, a rejected write
+    # REMOVES a valid attestation. Selecting an endpoint row (above) was necessary and not
+    # sufficient: the gate also requires EVERY offline-eval row in the evidence file to share one
+    # scope and one measurement revision. A production delivery never does -- its curve spans twelve
+    # frames and its endpoint runs two policy passes -- so a production file can never be attestation
+    # evidence, by the gate's design. Writing one anyway took ibac_sni from validated to
+    # "offline-eval row 44 disagrees with ledger identity" on 2026-09-17.
+    #
+    # Importing the gate's function rather than re-implementing its rules is the point: two copies of
+    # one rule will disagree, and this script's copy was the one that drifted.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from production_gates import _validation_entry_problem  # noqa: E402
+    problem = _validation_entry_problem(
+        ROOT, args.family, entry, entry["family_code_revision"],
+        entry["family_config_revision"], entry["evaluator_revision"])
+    if problem:
+        print(f"  REFUSING to write: production_gates would reject this entry -- {problem}.\n"
+              "  The family's CURRENT entry is left untouched. Writing this one would replace a\n"
+              "  possibly-valid attestation with one the gate rejects. Attestation evidence must be a\n"
+              "  single-scope evaluation (one frame, one policy pass), such as an attest-v2xx job;\n"
+              "  a production run's records never are.", file=sys.stderr)
         return 1
     if args.dry_run:
         return 0
