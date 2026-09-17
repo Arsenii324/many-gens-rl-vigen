@@ -69,6 +69,24 @@
       "shown_lines": 1,
       "captured_at": "2026-09-16T23:12:58+00:00",
       "note": "the trainer's own model.pt; the retained snapshot.pt is a copy of it, not a separate write"
+    },
+    "endpoint-row-names-the-snapshot": {
+      "file": "raw/endpoint-row-names-the-snapshot.txt",
+      "sha256": "11d6f4b4f841eb6ee6479cbe80387a4a90fc59471bbfea9941aeac96ade71a1a",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/offline_eval_endpoint.jsonl",
+        "bytes": 104030,
+        "sha256": "6f7a9ec5ceae67d248565613b108f110d71cd4a5912688d1194c5e0f0fc4d57d",
+        "mtime": "2026-09-17T00:40:47+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/offline_eval_endpoint.jsonl | grep -n -o -E '\"checkpoint_sha256\": \"[a-f0-9]+\"' | head -n 1",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 1,
+      "captured_at": "2026-09-17T00:40:57+00:00",
+      "note": "the endpoint row's own hash, taken from the live grid; it names the frame-less snapshot.pt and no frame-named file"
     }
   },
   "facts": [
@@ -113,6 +131,12 @@
       "value": "0.0",
       "excerpt": "weight-equality",
       "anchor": "max |snapshot - model_600064| over every parameter: 0.0"
+    },
+    {
+      "key": "endpoint_row_checkpoint_sha256",
+      "value": "d0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef",
+      "excerpt": "endpoint-row-names-the-snapshot",
+      "anchor": "d0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef"
     }
   ]
 }

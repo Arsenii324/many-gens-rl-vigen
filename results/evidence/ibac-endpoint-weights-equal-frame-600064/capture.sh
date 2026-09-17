@@ -31,3 +31,9 @@ C $S weight-equality --command "$PY results/evidence/$S/compare_weights.py" \
   --fact tensors_compared=37 --anchor 'tensors compared: 37' \
   --fact max_abs_parameter_difference=0.0 \
   --anchor 'max |snapshot - model_600064| over every parameter: 0.0'
+
+C $S endpoint-row-names-the-snapshot --host-path "$R/native-out/cells/ibac_sni-s101/offline_eval_endpoint.jsonl" \
+  --grep '"checkpoint_sha256": "[a-f0-9]+"' --only-matching --max 1 \
+  --note "the endpoint row's own hash, taken from the live grid; it names the frame-less snapshot.pt and no frame-named file" \
+  --fact endpoint_row_checkpoint_sha256=d0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef \
+  --anchor 'd0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef'

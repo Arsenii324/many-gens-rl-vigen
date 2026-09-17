@@ -38,6 +38,14 @@ byte-identical to any frame-named checkpoint, so the byte-alias route in
    fact:tensors_compared tensors with identical keys. The 600,064 intermediate is
    fact:frame_600064_sha256.
 
+5. **The endpoint row itself names that file, observed rather than predicted.** The four steps above
+   were written at 02:50 on 2026-09-17, while the cell was still in its curve grid and no endpoint
+   row existed. The endpoint grid began at 03:28 and its first row carries
+   `"checkpoint_sha256": fact:endpoint_row_checkpoint_sha256` (`raw/endpoint-row-names-the-snapshot.txt`)
+   -- the same hash as the retained `snapshot.pt` and the trainer's `model.pt`, and one that no
+   frame-named checkpoint shares. So the prediction that these rows would grade UNVERIFIABLE for
+   this specific reason was made before the evidence existed and is now confirmed by it.
+
 ## What this does not show
 
 It establishes that ibac's endpoint number is a measurement of the 600,064-frame policy, so the

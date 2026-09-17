@@ -1,0 +1,11 @@
+# evidence-slug: ibac-endpoint-weights-equal-frame-600064
+# excerpt: endpoint-row-names-the-snapshot
+# note: the endpoint row's own hash, taken from the live grid; it names the frame-less snapshot.pt and no frame-named file
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/offline_eval_endpoint.jsonl
+# source-bytes: 104030  source-sha256: 6f7a9ec5ceae67d248565613b108f110d71cd4a5912688d1194c5e0f0fc4d57d  source-mtime: 2026-09-17T00:40:47+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card1-20260916-203537/native-out/cells/ibac_sni-s101/offline_eval_endpoint.jsonl | grep -n -o -E '"checkpoint_sha256": "[a-f0-9]+"' | head -n 1
+# matched-lines: 2  shown-lines: 1  (TRUNCATED -- the excerpt is capped; matched-lines is the full count)
+# captured-at: 2026-09-17T00:40:57+00:00
+#---------------------------------------------------------------------------------------------------
+1:"checkpoint_sha256": "d0298c76da7fe34695fb12aaae1479e9a69e99ee5126edf4f5b14788623965ef"
