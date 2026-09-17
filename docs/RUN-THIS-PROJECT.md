@@ -190,7 +190,9 @@ base-image digest and the requirement-set hash, and every mismatch **refuses** r
 back to `pip`, because a silent fallback costs two hours and executes an environment nobody checked.
 Rationale: `notes/production-host/19-environment-lifecycle-vs-run-lifecycle.md`.
 
-Read `notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,
+Read `notes/OPERATOR-GUIDE.md` first for the shape of the whole thing — the stages, what
+produces what, the four containers a cell creates and which of them can stop it — then
+`notes/RUNNING-ON-PRODUCTION-HOST.md` before a production-length cell: it covers detaching,
 packing, GPU pinning and the arrival checklist, and `datasphere/native/preflight_production_host.sh`
 runs nine mechanical host checks that must all pass first.
 
@@ -237,6 +239,6 @@ python3 scripts/requirements.py # whether the research requirements are met, and
 | Why is this baseline configured this way? | `notes/DECISION-SHEET.md` |
 | Are the twelve actually comparable? | `notes/SAME-AXES-VERDICT.md`, `scripts/audit_comparability_seam.py` |
 | What geometry does each baseline run at, and is it verified? | `python3 scripts/audit_observation_geometry.py` |
-| How do I run on a bare host? | `notes/RUNNING-ON-PRODUCTION-HOST.md` |
+| How do I run on a bare host? | `notes/OPERATOR-GUIDE.md` for the map, then `notes/RUNNING-ON-PRODUCTION-HOST.md` for the procedure |
 | What did we change in each upstream, and why? | `runnable/_patches/*.patch`, `scripts/deviations.py` |
 | What is still unproven? | `notes/HANDOFF.md` |
