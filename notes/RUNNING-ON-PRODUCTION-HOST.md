@@ -1084,6 +1084,13 @@ traps, each of which has produced a false reading here:
   The general form of the mistake: a monitor's alarm branches are the part that never runs during
   normal operation, so they are the part that is never exercised. A green heartbeat says nothing
   about them.
+- **Retire a handled failure from the monitor, or it masks the runs that still matter.** Once the
+  stop detection was fixed, the dead cell became the dominant state at every heartbeat and the two
+  LIVE grids dropped out of the line entirely. A monitor should report what needs attention now, not
+  the last thing that went wrong: when a failure has been recorded in `results/host-runs.jsonl` and
+  nothing further can be done about it, drop its alarm branch and keep at most a counter for context.
+  The same applies to the alert TEXT — a generic "checkpoints from 51200 onward are retained" read
+  as reassurance on a cell that stopped at frame 28,672 and had none.
 - **A stop marker does not name its cause.** `NATIVE_CELL_YIELDED` is written by the poller, which
   deliberately does not say why — the reason is in the cell's `yield.sentinel`, and it is not always
   a co-tenant. Read the sentinel: `cat <run-dir>/native-work/yield.sentinel`.
