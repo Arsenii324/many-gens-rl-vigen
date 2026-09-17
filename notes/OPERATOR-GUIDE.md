@@ -267,15 +267,23 @@ The traps, each of which has produced a false reading here:
 
 Procedure §9.6 has the commands. Two things that are not obvious:
 
-0. **Set the interpreter explicitly.** `collect-host-run.sh` runs repo Python as `BP="${BP:-python3}"`,
+0. **Know which file a cell's rows are in — it depends on the kind of cell.** A training cell's
+   in-cell grid writes `native-out/cells/<cell>/offline_eval_{curve,endpoint,endpoint_mode}.jsonl`.
+   An offline re-evaluation cell launched by `curve-sweep-v3.sh` writes
+   **`native-out/offline_eval_cuda.jsonl`**, one run directory per stamp, and packages it into
+   `~/rlvigen-runs/reeval-v214/<baseline>-s<seed>-curve-<frame>-result.tgz`. Looking for the first
+   path in a sweep's run directory finds nothing and reads like a stalled cell; on 2026-09-17 it
+   nearly produced a false stall report about two cells that were at 99% CPU and 42 of 44 rows. A
+   sweep is collected with `scripts/collect_reeval_sweep.py`, not `collect-host-run.sh` (procedure §9.6).
+1. **Set the interpreter explicitly.** `collect-host-run.sh` runs repo Python as `BP="${BP:-python3}"`,
    so without `BP` it uses whatever `python3` is first on `PATH`. On 2026-09-17 the collection of
    `ibac_sni` s101 was run as `BP=<the interpreter from procedure §0c> bash collect-host-run.sh …`
    and succeeded; that is the executed form.
-1. **A cell stopped mid-grid never writes `result.tgz`.** Collect it with
+2. **A cell stopped mid-grid never writes `result.tgz`.** Collect it with
    `assemble_reaped_delivery.py` into `<run-dir>/native-out/records_delivery.jsonl` — that exact
    path — then `NATIVE_ACCEPT_WATCH_STOP=1 bash collect-host-run.sh …`. The collector prints this
    recipe in its own refusal message; read the stderr rather than guessing.
-2. **Never run `populate_evaluator_ledger.py` on a production run.** That script records a
+3. **Never run `populate_evaluator_ledger.py` on a production run.** That script records a
    family's *evaluator attestation*, and the gate accepts only single-scope endpoint evidence
    (one frame, one policy pass) such as an `attest-v2xx` job. A production delivery has a twelve-frame
    curve and a two-pass endpoint, so it can never qualify — and because every run **replaces** the
@@ -376,7 +384,8 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 | `self-vram-cap.sh` armed on three cells; `gpu-occupancy-log.sh` as the only record of card vacancy | |
 | **Two and three cells packed on one card** — throughput ratio measured at r = 0.90 | Packing more than three, or two *training* cells at once |
 | **The memory floor stopping a training cell** — seen twice on 2026-09-17, both documented with their sentinels; grid cells ignored the same event | The disk watch actually **firing**: it came within one 60 s sample of doing so and did not |
-| **A mid-training stop leaving checkpoints in `native-work/`** — 7 salvaged from `ibac_sni` s102 attempt 2 and fetched explicitly | Offline re-evaluation of those 7 checkpoints |
+| **A mid-training stop leaving checkpoints in `native-work/`** — 7 salvaged from `ibac_sni` s102 attempt 2 and fetched explicitly | |
+| **Offline re-evaluation of stamped checkpoints with `curve-sweep-v3.sh`** — `ibac_sni` s102, launched 15:54 on 2026-09-17 with `MAXCELLS=3`. The first result was checked, not assumed: 44 rows, curve scope, frame 100,352 on every row, 3 episodes, and `checkpoint_sha256` equal to the sha256 of `model_100352.pt` on the host, with the evaluator revision binding to the live tree. It skipped the frame-less `model.pt` and held at 3 cells as configured. (Moved here from the right column once it had worked, as §11.4 says to.) | |
 | `watch-cell.sh` in both modes; verified against a really-stopped cell and a healthy one | |
 
 ### 11.3 Never run in this campaign, at all
