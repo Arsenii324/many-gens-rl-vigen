@@ -212,7 +212,33 @@ def main() -> int:
     args = parser.parse_args()
 
     schedule = json.loads(pathlib.Path(args.schedule).read_text())
-    live, attested = _live_revisions(), _attested()
+    # [Claude 2026-09-17] A FRESH CLONE cannot answer this question, and until now it said so with a
+    # traceback. `evaluator_family_revision` hashes the runtime members, and on a clone whose sources
+    # have not been reconstructed those files do not exist, so it raises
+    #   RuntimeError: evaluator runtime manifest names missing source: RL-ViGen-upstream/algos, ...
+    # Verified by cloning the published repository and running this script: a new operator's first
+    # command produced a stack trace naming six paths, with nothing saying what to do.
+    #
+    # The message could not be improved where it is raised: datasphere/native/evaluator_identity.py
+    # is a hashed CODE_MEMBER, so editing it -- comment bytes included -- moves every family's
+    # evaluator revision and invalidates every attestation. So the CALLER explains instead.
+    try:
+        live, attested = _live_revisions(), _attested()
+    except RuntimeError as error:
+        if "missing source" not in str(error):
+            raise
+        print("CAMPAIGN STATUS -- unavailable: the source trees are not reconstructed yet.\n")
+        print("  This is a fresh checkout. The evaluator identity is a hash over the runtime")
+        print("  sources, and they are not in git -- they are rebuilt from pinned public commits.\n")
+        print("  Run this first, then re-run this command:\n")
+        print("      python3 setup/bootstrap_sources.py        # clones the pinned upstreams")
+        print("      python3 setup/verify_sources.py           # proves the trees are right\n")
+        print("  It needs network access and a CASE-SENSITIVE filesystem: RL-ViGen has two files")
+        print("  whose names differ only by case, so the bootstrap refuses on macOS rather than")
+        print("  silently dropping one. See setup/SOURCE-BOOTSTRAP.md, and notes/OPERATOR-GUIDE.md")
+        print("  for where this sits in the whole path.\n")
+        print(f"  (underlying: {error})")
+        return 2
     records, submitted = _records_index(), _submitted()
     ended = _host_ended()
     running = _host_running()

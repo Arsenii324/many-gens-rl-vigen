@@ -1322,10 +1322,17 @@ subdirectory.
 
 **ppg's ENDPOINT rows stay unverifiable by this instrument, and that is honest rather than fixable
 here.** The endpoint measures the terminal `snapshot.pt`, which carries no frame in its name and
-has no save line. The repo does hold that policy at
+has no save line. That policy is retained **on the maintainer's disk** at
 `results/superseded-runs/checkpoints/ppg-s1-600064-a328e63e.pt` and its sha matches the rows — but
 that is a name *we* chose, and teaching the audit to parse it would make the check agree with our
-own convention instead of with the trainer's. Those rows are instead covered independently: a peer
+own convention instead of with the trainer's.
+
+> **If you cloned this repository, that file is not there.** It is a 5 MB run artifact excluded by
+> `*.pt` in `.gitignore`, and nothing in a clone reconstructs it. Found on 2026-09-17 by cloning the
+> published repository and running `scripts/operator_readiness.py` inside it, which is the only way
+> this class of gap shows up — every path in an instruction doc resolves on the machine that wrote
+> it. What a reader of a clone *can* check instead is the independent evidence below, which rests on
+> committed records rather than on that file. Those rows are instead covered independently: a peer
 session compared all 71 tensor storages between the endpoint's `snapshot.pt` and the curve's
 `model012.jd` at 600,064 and found them byte-identical, with `model011` as a negative control that
 came out DIFFERENT.

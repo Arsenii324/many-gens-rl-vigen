@@ -44,6 +44,7 @@ anyone reread 725 lines lately", which nobody can answer.
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import re
 import sys
@@ -192,6 +193,13 @@ EXTERNAL_BY_DESIGN = {
     # Lives in the maintainer's parent workspace. Section 0c says so explicitly and states the
     # interpreter requirement inline precisely so a GitHub clone does not need this file.
     "docs/local-envs.md",
+    # [Claude 2026-09-17] A 5 MB run artifact, excluded by `*.pt` in .gitignore and reconstructed by
+    # nothing. §10's frame-provenance discussion names it as the retained ppg endpoint policy, and
+    # that citation is legitimate -- it explains why ppg's endpoint rows stay UNVERIFIABLE -- but a
+    # reader of a clone cannot open it. Allowed here only because the guide now says so in place,
+    # and points such a reader at the independent evidence, which rests on committed records.
+    # Found by cloning the published repository and running this script inside it.
+    "results/superseded-runs/checkpoints/ppg-s1-600064-a328e63e.pt",
 }
 
 
@@ -219,9 +227,32 @@ def index_completeness() -> list[str]:
     return problems
 
 
+def _reconstructible_families() -> frozenset[str]:
+    """Families that `setup/bootstrap_sources.py` rebuilds, read from its own manifest."""
+    try:
+        manifest = json.loads((ROOT / "setup" / "source-reconstruction.json").read_text())
+    except (OSError, ValueError):
+        return frozenset()
+    return frozenset(manifest.get("families", {}))
+
+
 def clone_completeness() -> list[str]:
-    """Every repo-relative path the instruction docs name, that a fresh clone would not have."""
+    """Every repo-relative path the instruction docs name, that a fresh clone would not have.
+
+    [Claude 2026-09-17] Two kinds of absence were being reported as one, and the difference is the
+    whole point of this check. Verified by cloning the published repository and running it there:
+
+      runnable/ctrl/train_ppo.py   absent from git, but `ctrl` is in source-reconstruction.json, so
+                                   bootstrap_sources.py RECONSTRUCTS it. Reporting this as missing
+                                   sends an operator looking for a publication bug that is not one.
+      results/superseded-runs/...  a 5 MB run artifact, matched by `*.pt` in .gitignore. No command
+                                   produces it in a clone. THAT is a real gap in an instruction doc.
+
+    So a path under `runnable/<family>/` for a family the manifest covers is reported as
+    RECONSTRUCTED rather than missing, and everything else still fails.
+    """
     import re
+    reconstructible = _reconstructible_families()
     problems: list[str] = []
     pattern = (r'(?:scripts|datasphere/native(?:/host-scripts)?|setup|runnable|notes|docs|results)'
                r'/[A-Za-z0-9_./-]+')
@@ -231,7 +262,11 @@ def clone_completeness() -> list[str]:
             rel = raw.rstrip('.,`)"\'')
             if rel in EXTERNAL_BY_DESIGN or (ROOT / rel).exists():
                 continue
-            problems.append(f"{doc} names {rel}, which is not in the repository")
+            parts = rel.split("/")
+            if len(parts) > 2 and parts[0] == "runnable" and parts[1] in reconstructible:
+                continue  # rebuilt by setup/bootstrap_sources.py; see the docstring
+            problems.append(f"{doc} names {rel}, which is not in the repository "
+                            "and no command in it reconstructs")
     return problems
 
 
