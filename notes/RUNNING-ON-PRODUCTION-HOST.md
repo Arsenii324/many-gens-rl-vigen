@@ -1167,6 +1167,48 @@ vacancy you are launching into is real**, which is the one that has actually kil
 armed (`launch-card-cell.sh:276`), so a second cell of ours does not trip the other's count trigger.
 The 4,000 MiB memory floor stays armed for both, independently, for the life of each cell.
 
+### 9.5c Every running cell has its own disk floor, and a new launch eats into all of them
+
+**The disk floor is not one number.** `launch-card-cell.sh:439-453` sets it per cell, once, at that
+cell's launch: `floor = free space at launch − allowance`, where the allowance is twice
+`family.py disk-requirement` (absolute minimum 50 GiB). Each cell prints its own in its banner. On
+2026-09-17 three cells were live with three different floors:
+
+| cell | free at its launch | allowance | its floor |
+|---|---|---|---|
+| `ibac_sni` s101 | 118 GiB | 20 | **98** |
+| `idaac` s102 | 117 GiB | 18 | **99** |
+| `ibac_sni` s102, attempt 2 | 109 GiB | 20 | 89 |
+
+**Nothing checks a new launch against the floors of cells already running.** A new cell sizes its
+own allowance from the free space it sees and never looks at anyone else's floor. But its
+bootstrap installs torch into a fresh container layer, which costs **~7-10 GiB transiently** — and
+that transient lands on every running cell's margin at once.
+
+It came within one sampling interval of stopping a cell. `ibac_sni` s102 attempt 2 launched at
+11:00 with 108 GiB free, against `idaac` s102's floor of 99. At 11:06:18, mid-`pip install`, free
+space read **98 GiB — below idaac's floor.** idaac survived only because `watch_disk_headroom.py`
+samples every 60 s (`--interval 60`) and the dip had recovered to 101 by 11:06:33; its sentinel was
+untouched. The earlier launch at 07:50 had done the same thing less severely (108 → 101).
+
+I had reasoned before both launches that disk was "comfortably above the 98 floor". That compared
+the wrong cell's floor against a transient I had measured once and then underestimated.
+
+**Before launching onto a host with cells already running:**
+
+```bash
+# every live cell's floor, from its own banner
+grep -h "^disk: " ~/rlvigen-runs/prod-v214/*-prod.log | tail -5
+df -Pk ~ | awk 'NR==2{printf "%d GiB free\n", $4/1048576}'
+```
+
+Take the **highest** floor among cells still running, add ~10 GiB for the new cell's bootstrap
+transient, and launch only if current free space exceeds that sum. On 2026-09-17 that was
+99 + 10 = 109 against 108 free — so neither launch should have been made on disk grounds alone.
+
+A monitor's disk threshold has the same shape: it must be above the highest live floor, not above a
+remembered constant. The committed `prod-monitor-laptop.sh` defaults assume 98 and say so.
+
 ### 9.6 After a run — the steps that turn a cell into a result
 
 A collected archive is not yet a result. In order:
