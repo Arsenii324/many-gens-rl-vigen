@@ -48,14 +48,14 @@ the others.
 | id | facet | status | what closes it |
 |---|---|---|---|
 | B1 | Stages and what feeds what (artifact spine) | DONE (§3, §4) | — |
-| B2 | Checkpoint / restart / resume capability, per family, all seven | OPEN | Per family: what is written, when, where on host (mid-training vs after completion), what a resume restores and what it loses, whether the launcher wires resume. Each fact cited to code or families.json, and the claims I made from memory re-read. |
-| B3 | Early-stopping and stop mechanisms: every way a cell ends before 600k | OPEN in the guide (exists in notes/model/STOP-MECHANISMS.md) | List each mechanism (timeout, stall watchdog, memory floor, disk floor, reaper, self-vram-cap, manual sentinel), what triggers it, which marker it writes, which contexts it covers, and what state it leaves. Link STOP-MECHANISMS.md, don't duplicate; verify it against current scripts. |
-| B4 | Docker images, run flags, caveats (EGL/graphics, --gpus, venv mount, caches) | PARTIAL (§6 topology) | Image refs quoted from source-lock.json / launcher, each flag's reason, known caveats that bit us. |
-| B5 | Resources per family (VRAM, disk, CPU, wall time) | PARTIAL (§4c) | Measured numbers with their source file; which are measured vs extrapolated. |
-| B6 | Integrations and checks (contract verify, gates, evaluator binding, collectors, provenance, ledger) | PARTIAL (§8, RUNNING-ON-PRODUCTION-HOST) | One table: check → what it proves → when to run → what a failure means. Each command actually run once. |
-| B7 | Golden path fully fleshed, as executed | PARTIAL | A single ordered procedure from clone to collected result, using only commands executed in this campaign, with expected output at each step. |
+| B2 | Checkpoint / restart / resume capability, per family, all seven | DONE 21:00 | see closing report B2 |
+| B3 | Early-stopping and stop mechanisms: every way a cell ends before 600k | DONE 21:00 | see closing report B3 |
+| B4 | Docker images, run flags, caveats (EGL/graphics, --gpus, venv mount, caches) | DONE 21:20 | see closing report B4 |
+| B5 | Resources per family (VRAM, disk, CPU, wall time) | DONE 21:10 | see closing report B5 |
+| B6 | Integrations and checks | DONE 21:05 | see closing report B6 |
+| B7 | Golden path fully fleshed, as executed | DONE 21:10 | see closing report B7 |
 | B8 | Off-golden-path model | PARTIAL (§10) | Failure triage extended by B2/B3 facts: what to do after each stop kind. |
-| B9 | Out-of-reach catalogue, each narrowed and labelled (target / state / operation) | PARTIAL (§11.3 lists, not narrowed) | Every never-executed part as its own entry with: isolated part, why out of reach, target state, the operation that achieves it, and how to tell it worked. |
+| B9 | Out-of-reach catalogue, each narrowed and labelled (target / state / operation) | DONE 21:15 | see closing report B9 |
 | B10 | Links to project-wide docs instead of duplicating | PARTIAL | docs/RUN-THIS-PROJECT.md already deferred to; check PROJECT-INDEX, EVAL-PROTOCOL, COMPARABILITY_CONTRACT, STATUS-AGAINST-THE-GOAL, compute.md and link where they own the fact. |
 | B11 | Grounding pass: nothing in the guide that I did not execute is stated as working | PARTIAL (§11 boundary) | Re-read the whole guide at the end; every command either executed (and where) or labelled untested. |
 
@@ -71,3 +71,44 @@ the others.
 
 (Each DONE item gets a dated paragraph here: what was done, what verified it, what remains out of
 scope and why.)
+
+**B2, B3 — 2026-09-17 ~21:00.** OPERATOR-GUIDE §6b (ten stop paths: trigger, active window, marker,
+what survives) and §6c (where each family's checkpoints sit mid-training; what a restore holds,
+uses and loses; whether any launcher wires it). *Verified:* every file:line citation re-read with
+grep after writing; four were off and corrected. The yield marker order (YIELDED then FAILED) was
+checked against the 16 Sep job log in an evidence bundle, which exposed a real defect in guide §10.1
+(it read only the last marker) — fixed. Resume is labelled unexecuted everywhere. *Out of scope:*
+whether a continued run may stand in for a seed is an owner decision (§11.4 O5).
+
+**B6 — ~21:05.** §8b: each check with what it proves, what it does not, when it runs, and whether it
+ran here. *Verified:* gates, campaign_status, export_fleet, operator_readiness, open_decisions and
+audit_attempt_ledger --strict all re-run fresh (gates showed 1 FAIL for uncommitted docs, 37/0/9
+after commit). Two descriptions corrected against the collector's and launcher's code.
+
+**B5 — ~21:10.** §4c.1: disk from family.py disk-requirement run for all twelve; training time, CPU
+and RSS from `time -v` in the four executed training logs on the host; RAM figures from
+families.json labelled computed/extrapolated, plus the fact that the launcher never checks host RAM.
+*Found while verifying:* "ibac trained in 44 min" (really 31.5; 44 included bootstrap), "idaac has
+8 processes" (really 1), "grid 17 h vs 45 min training" (wrong for idaac, 7.3 h) — corrected in the
+guide, the procedure, HANDOFF, CURRENT-STATE and the idaac s102 ledger note.
+
+**B7 — ~21:10.** §5.2: one cell from vacancy check to collected rows, with the launch block copied
+from the 11:00 ibac_sni s102 launch and the record/watch/collect/failure commands copied from the
+16–17 Sep sessions (pulled from the transcript, not recalled). The two capacity tools that ran all
+afternoon were committed; capacity-check.sh re-validated from the committed copy (11:00 AVAILABLE,
+07:52 not).
+
+**B4 — ~21:20.** §6d: images, GPU/graphics/mount/limit settings with file:line, the per-launch
+environment build (launch-to-first-GPU 7–22 min measured from the occupancy log), and which code
+the host really runs: payload inside the cell, host checkout for launcher and watches. *Verified by
+hash on the host:* launch-path files match laptop HEAD apart from comments; the in-cell
+watch_policy_health.py is the payload's 229ed01 copy.
+
+**B9 — ~21:15.** §11.4 O1–O9, each with state, why, target, operation, done-when. *Grounded by
+execution:* the Places365 check was run in the helper container on the host (train FAIL 20/365,
+val PASS structure-only). *Found while doing it:* the procedure told operators to run
+populate_evaluator_ledger.py on production runs (two places plus HANDOFF) and to run Python on the
+host shell for Places365; the host-scripts README claimed Places365 was in place. All corrected.
+
+**Noticed, not acted on:** `production_run_register.py` marks terminal `failed` statuses as
+"likely stale" by age, which is misleading for a status that cannot change.
