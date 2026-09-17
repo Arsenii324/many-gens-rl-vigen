@@ -189,10 +189,21 @@ launcher's PID, e.g. `cell-c1-1437491`.
 | Container | Role | Stops the cell? |
 |---|---|---|
 | `cell-c<card>-<pid>` | the cell: training, then the in-cell evaluation grid | — |
-| `cell-c<card>-yield-<pid>` | GPU memory floor, re-checked every 20 s for the cell's whole life | **yes**, via the sentinel |
+| `cell-c<card>-yield-<pid>` | GPU memory floor, re-checked every 20 s **until it fires once** — then it writes the sentinel and exits (see below) | **yes**, via the sentinel |
 | `cell-c<card>-disk-<pid>` | disk headroom against **this cell's own floor**, every 60 s | **yes**, via the sentinel |
 | `cell-c<card>-exclusivity-<pid>` | counts foreign processes on the card | no — it only reports |
 | `self-vram-cap.sh` (host, optional) | stops **our** container if **our** usage crosses a cap | yes, by name |
+
+**The memory-floor watch is one-shot.** [Claude 2026-09-17, corrected — this table said "for the
+cell's whole life", which is wrong.] After writing the sentinel, `yield_gpu_to_neighbour.py:270` does
+`return 0`, and `--rm` removes its container. Combine that with the rule below — a cell past training
+ignores the sentinel — and a cell in its evaluation grid that has *already seen its watcher fire once*
+carries on with **no memory-floor watch at all** for the rest of its life. Observed: `idaac` s102's
+watcher fired at 08:01:35 during a card crunch, `idaac` was past training and kept going, and from then
+on `docker ps` showed only its `cell`, `disk` and `exclusivity` containers. Its footprint by then was
+~820 MiB, so the practical risk to a co-tenant was small, but the cell was unwatched on that axis for
+the rest of the day. If a missing `-yield-` container surprises you, this is why; check the run's
+`native-work/yield.sentinel` for when it fired.
 
 Two images are involved: a **helper** (`python:3.11-slim`) for small tasks, and the **cell** image
 pinned by digest in `datasphere/native/source-lock.json`
