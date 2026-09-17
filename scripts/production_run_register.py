@@ -40,6 +40,15 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "scripts"))
+from audit_attempt_ledger import _TERMINAL_HINTS  # noqa: E402
+
+
+def _is_terminal(status: object) -> bool:
+    """Has this run reached an outcome that cannot change? Same vocabulary as the attempt ledger."""
+    low = str(status or "").strip().lower()
+    return bool(low) and any(hint in low for hint in _TERMINAL_HINTS)
 RECORDS = ROOT / "results" / "records"
 LOGS = ROOT / "results" / "logs"
 OUT = ROOT / "results" / "PRODUCTION-RUNS.md"
@@ -359,7 +368,13 @@ def build() -> str:
                     hrs = (datetime.datetime.now(datetime.timezone.utc) - dt).total_seconds() / 3600
                     age = (f" — **status recorded {hrs:.0f}h ago**" if hrs >= 1
                            else " — status recorded under an hour ago")
-                    if hrs >= 24:
+                    # [Claude 2026-09-17] Only a NON-terminal status can go stale. A run recorded
+                    # `failed` or `complete` is not going to change, and flagging it after 24 hours
+                    # told the reader to distrust the one thing in the row that is settled -- while
+                    # the genuinely stale case, an attempt left at `running`, looked identical.
+                    # The terminal vocabulary is audit_attempt_ledger's, imported rather than
+                    # restated: two spellings of one rule drift apart and nothing notices.
+                    if hrs >= 24 and not _is_terminal(e.get("status")):
                         age += " ⚠ **likely stale**"
                 except ValueError:
                     age = f" — recorded {asof}"

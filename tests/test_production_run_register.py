@@ -271,3 +271,42 @@ def test_the_pairing_table_covers_every_regime_the_protocol_declares():
     from rlgen.protocol import MODES
     missing = [m for m in MODES if m not in mod.PAIRING]
     assert not missing, f"regimes with no pairing verdict: {missing}"
+
+
+def test_only_a_non_terminal_status_is_flagged_as_likely_stale(tmp_path, monkeypatch):
+    """A `failed` run does not become questionable by sitting there for a day.
+
+    The register used to append "likely stale" to any status older than 24 hours, which pointed the
+    reader at the settled rows and left the genuinely stale case -- an attempt still recorded
+    `running` -- looking exactly the same.
+    """
+    import importlib.util, json, datetime
+    spec = importlib.util.spec_from_file_location("_reg_stale", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    old = (datetime.datetime.now(datetime.timezone.utc)
+           - datetime.timedelta(hours=48)).isoformat()
+    # the script derives the ledger path from ROOT, so pointing ROOT at tmp_path is enough
+    ledger = tmp_path / "results" / "host-runs.jsonl"
+    ledger.parent.mkdir(parents=True)
+    def entry(run_id, status):
+        return json.dumps({"run_id": run_id, "cell": "idaac-s101", "baseline": "idaac",
+                           "family": "idaac", "seed": 101, "frames_requested": 600000,
+                           "host": "h", "host_profile": "v100", "card": 1,
+                           "launched_msk": "2026-09-16T21:32", "run_dir": "~/x",
+                           "curve_eval_episodes": 3, "endpoint_eval_episodes": 20,
+                           "endpoint_policy_modes": "native,mode",
+                           "status": status, "status_as_of": old})
+    ledger.write_text(entry("card1-terminal", "failed") + "\n"
+                      + entry("card1-live", "running") + "\n")
+    monkeypatch.setattr(mod, "RECORDS", tmp_path / "records")
+    monkeypatch.setattr(mod, "LOGS", tmp_path / "logs")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    text = mod.build()
+
+    lines = [l for l in text.splitlines() if l.startswith("- **status**")]
+    flagged = [l for l in lines if "likely stale" in l]
+    assert len(lines) == 2, lines
+    assert len(flagged) == 1, f"exactly the running row must be flagged, got: {flagged}"
+    assert "running" in flagged[0], flagged
