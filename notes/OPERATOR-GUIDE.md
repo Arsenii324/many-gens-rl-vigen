@@ -509,6 +509,30 @@ incidents behind the last three rows.
 Two environments cover the fleet: eleven baselines share the torch requirement set, and `ctrl` needs
 the JAX one. So `ctrl` cannot be packed into a container with any other family (`check-co-schedulable`).
 
+**Which code the host actually runs.** Three sources meet in a launch, and they are updated
+differently:
+
+- **Everything that runs inside the cell container** comes from the payload tgz
+  (`~/rlvigen-work/payload-v214-<family>.tgz`), extracted into `/tmp/native-work`: the trainers, the
+  evaluator, and also `run_probe.sh`, `family.py`, `families.json` and the in-cell
+  `watch_policy_health.py` (`contract.py:89`). The binding check ties those hashes to a tree (§8b).
+  So the in-cell `watch_policy_health.py` is the one in the payload: by hash, the version of commit
+  `229ed01` (8 Sep). That predates the 16 Sep fixes that let it read `idaac`'s and `ibac_sni`'s log
+  formats, so inside those cells it cannot report on the policy. It only warns, so nothing stops;
+  run the current copy from the laptop against a fetched `training.log` instead (§7).
+- **The launcher and the watch containers** run from the host's own checkout,
+  `~/rlvigen-work/repo`: `train-production-cell-v5.sh` does `cd "$R/repo"`, and the helper
+  containers mount it read-only. That covers `launch-card-cell.sh`, `run_on_production_host.sh`,
+  and the `watch_*` and `yield_*` scripts. The checkout's `git log` says commit `672202d` of 9 Sep,
+  with 34 locally changed paths, because files have been deployed by copying rather than by
+  `git pull`. **Its git history is not evidence of what runs; compare hashes.** On 2026-09-17 the
+  launch-path files matched laptop `HEAD` byte for byte, except comment-only differences in
+  `run_on_production_host.sh`.
+- **The wrappers** — `train-production-cell-v5.sh`, `self-vram-cap.sh`, `gpu-occupancy-log.sh`,
+  the sweep scripts — sit loose in `~/rlvigen-work/`. The authoritative copies are in
+  `datasphere/native/host-scripts/`. The host's `v5` and `self-vram-cap.sh` differed from those
+  only in comments on 2026-09-17.
+
 ## 7. Watching a run, and the traps that make a monitor lie
 
 Full detail in procedure §9.5; the complete tool list is §10.4. What you actually reach for:
