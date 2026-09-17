@@ -214,7 +214,24 @@ Evidence:
 
 ## 7. Watching a run, and the traps that make a monitor lie
 
-Full detail in procedure §9.5. The short version:
+Full detail in procedure §9.5; the complete tool list is §10.4. What you actually reach for:
+
+| What you want to know | Tool | Runs on |
+|---|---|---|
+| is the cell alive, progressing, and is the card/disk safe | `datasphere/native/prod-monitor-laptop.sh` | **laptop**, against the host over ssh |
+| was a card free while nobody was watching | `datasphere/native/gpu-occupancy-log.sh` | host, detached; it outlives the ssh session |
+| is our own footprint about to endanger a co-tenant | `datasphere/native/self-vram-cap.sh` | host; stops **our** container by exact name |
+| is the policy healthy, or saturating/collapsing | `scripts/watch_policy_health.py --log <training.log>` | laptop; warns, never kills |
+| has the run gone NaN | `scripts/watch_divergence.py` | laptop |
+| will a cell fit on this card right now | `scripts/watch_gpu_headroom.py` | pre-launch verdict |
+| where is the campaign as a whole | `scripts/campaign_status.py`, `scripts/production_gates.py` | laptop |
+
+`gpu-occupancy-log.sh` is the one to start **before** you need it. It is the only record that can
+answer "was the card free at 04:00", which is what the ten-minute vacancy rule in §5 was derived
+from. It has a 24-hour default life (`GPU_LOG_HOURS`); if you want tomorrow morning covered, say so
+when you start it.
+
+The traps, each of which has produced a false reading here:
 
 - **Run the monitor from your laptop.** A monitor writing to a file on the host is not monitoring.
 - **Test the alarm branch against a log of a cell that really stopped.** Alarm code never executes
@@ -255,11 +272,58 @@ attestations built against the old one.
 
 ## 10. When something goes wrong
 
-- Symptom → cause table: procedure §9.4 and `production-host/15-what-fails-when.md`.
-- Decisions already made about failure modes: `DECISIONS-IF-PRODUCTION-GOES-WRONG.md`.
-- Every stop mechanism, and which ones actually fire: `model/STOP-MECHANISMS.md`.
-- A failed attempt is recorded, not discarded: procedure "Recording an attempt that failed before it
-  wrote anything", and `scripts/record_host_run.py`.
+### 10.1 The four questions, in order
+
+Paths below assume the conventions this host uses: a run directory
+`~/rlvigen-runs/card<N>-<YYYYmmdd-HHMMSS>/`, and a launcher log
+`~/rlvigen-runs/prod-v214/<baseline>-s<seed>-prod.log`.
+
+    # 1. Did it stop, and how?            (nothing, FAILED, YIELDED or COMPLETED)
+    grep -aoE 'NATIVE_CELL_(COMPLETED|FAILED|YIELDED)' "$LOG" | tail -1
+
+    # 2. WHY did it stop? The marker never says. The sentinel does.
+    cat "$RUN/native-work/yield.sentinel"
+
+    # 3. Is it actually dead, or just quiet?
+    docker ps --format '{{.Names}}' | grep -E '^cell-c1-[0-9]+$'
+    docker stats --no-stream <cell-container>        # ~100% CPU means working, not stalled
+
+    # 4. What survived?
+    ls "$RUN/native-out/cells/<cell>/checkpoints/"        # only after training COMPLETED
+    ls "$RUN/native-work/runs/<cell>/cell/"*.pt           # while training, or if it stopped early
+    wc -l "$RUN/native-out/cells/<cell>/"offline_eval_*.jsonl
+
+Question 3 has saved a healthy cell more than once: a quiet log is not a dead cell, and a host load
+average of 40 has so far always been someone else's job.
+
+### 10.2 Symptoms seen on this host, and what each cost
+
+| Symptom | Where it shows | What it was | What survived |
+|---|---|---|---|
+| Cell gone minutes after launch, sentinel says `free memory … below the 4000 MiB floor` | sentinel | the co-tenant reclaimed the card during the cell's ramp | **nothing** if it stopped before the first 50k checkpoint; everything up to the last stamp otherwise |
+| Same, but hours in | sentinel | co-tenant returned mid-run | all stamped checkpoints, in `native-work/` |
+| Cell exits ~24 s in, no floor message | launcher log: `EGL_NOT_INITIALIZED` | rendering never initialised | nothing; relaunch |
+| Cell vanishes at the end of a long grid, no `result.tgz` | launcher log: watch budget exhausted | the watch expired mid-evaluation | every row already written; collect with `assemble_reaped_delivery.py` |
+| Log silent 10–20 min, cell alive at ~100% CPU | `docker stats` | normal cadence for `idaac` (~11 min) or a slow endpoint row | nothing lost — **do not intervene** |
+| Disk alarm, cells still running | `df` vs each cell's banner floor | a *new* cell's bootstrap ate into an older cell's margin | nothing, if it recovered inside one 60 s sample (§9.5c) |
+
+**The rule underneath the first two rows:** a training cell stamps a checkpoint every 50,000 frames,
+so the question "what survived" reduces to "did it pass frame 51,200". Attempt 1 of `ibac_sni` s102
+died at 28,672 and kept nothing; attempt 2 died at 376,832 and kept seven checkpoints, each
+separately evaluable. That difference is the whole argument for the ten-minute vacancy rule in §5.
+
+### 10.3 After any failure
+
+Record it. A failed attempt is part of the record, not something to discard — otherwise a rerun
+silently replaces a failed seed and nobody can tell. `scripts/record_host_run.py` takes a terminal
+status and a note; `scripts/audit_attempt_ledger.py --strict` fails when an earlier attempt has no
+outcome. The procedure section "Recording an attempt that failed before it wrote anything" covers
+the case where there is no run directory to point at.
+
+Further reading, in order of usefulness during an incident:
+`production-host/15-what-fails-when.md` (symptom → cause), `model/STOP-MECHANISMS.md` (every stop
+mechanism and which actually fire), `DECISIONS-IF-PRODUCTION-GOES-WRONG.md` (decisions already
+taken, so you do not re-litigate them at 3 a.m.).
 
 ## 11. Honest limits of this document
 
