@@ -42,7 +42,10 @@ the current closure**. Nothing of ours was running on either card at that time.
 
 Next in the queue when a card is genuinely vacant (the co-tenant absent for ten consecutive
 minutes): `idaac` s103, which makes `idaac` the first baseline at three seeds; then `ibac_sni` s102
-from zero; then `ppg` s101.
+from zero, `ibac_sni` s103, and `ppg`'s two remaining seeds. **Why those five and not the other
+27:** [`production-host/35-what-the-campaign-costs-at-measured-rates.md`](production-host/35-what-the-campaign-costs-at-measured-rates.md)
+puts the measured 15–21 hours per cell against 32 missing cells. The full campaign cannot finish on
+this host; the sampled-estimand block can.
 
 **The first three-baseline same-axes reading exists**, in
 [`production-host/34-first-three-baseline-reading-2026-09-17.md`](production-host/34-first-three-baseline-reading-2026-09-17.md).

@@ -15,7 +15,7 @@ procedure with this page open beside it.
   [`CURRENT-STATE-AND-RESPONSIBILITY.md`](CURRENT-STATE-AND-RESPONSIBILITY.md). It goes stale by
   design; re-run the commands it names rather than trusting its numbers.
 - **Why things are the way they are**, and every incident behind a rule:
-  [`production-host/README.md`](production-host/README.md), 34 numbered notes.
+  [`production-host/README.md`](production-host/README.md), 35 numbered notes.
 - **What someone was thinking mid-flight**, including unproven suspicions:
   [`HANDOFF.md`](HANDOFF.md).
 - **Index of every surface**: [`START-HERE.md`](START-HERE.md).
