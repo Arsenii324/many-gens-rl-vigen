@@ -55,9 +55,19 @@ This is my recommendation, not a decision taken: the scope belongs to the owner.
 
 **Finish the sampled-estimand block first: `idaac`, `ppg`, `ibac_sni` at three seeds each.**
 
-- Those three are the only families that report a **sampled** return. `comparison_blocks.py` blocks
-  on the estimand, so they are exactly the set that can be compared to each other with no extra
-  evaluation pass — see `docs/COMPARABILITY_CONTRACT.md` and OPERATOR-GUIDE §4c.
+- Those three are the only families that report a **sampled** return, and
+  `scripts/comparison_blocks.py`, run on 2026-09-17, prints exactly their three pairs as the
+  PRIMARY set of the on-policy block:
+
+      on-policy PPO, differing in what regularizes it
+        6 pairs: 3 primary, 3 descriptive (RAW RETURN)
+          PRIMARY      idaac vs ibac_sni
+          PRIMARY      idaac vs ppg
+          PRIMARY      ibac_sni vs ppg
+          descriptive  idaac vs ctrl   (differs on: policy mode)
+
+  So finishing these three completes a whole primary block rather than a fragment of one. See
+  `docs/COMPARABILITY_CONTRACT.md` and OPERATOR-GUIDE §4c.
 - Three of the nine are already banked (`idaac` s101, `idaac` s102, `ibac_sni` s101) and `ppg` s1
   is banked at an off-schedule seed, which is an open owner item rather than a rerun.
 - The remaining cells are the cheapest we have measured: `ibac_sni` trains in half an hour and
@@ -70,6 +80,11 @@ This is my recommendation, not a decision taken: the scope belongs to the owner.
 Concretely, in order: `idaac` s103 (makes the first baseline at n = 3), `ibac_sni` s102 rerun from
 zero, `ibac_sni` s103, then `ppg`'s two remaining seeds. **Five cells**; at measured rates and with
 windows like today's, that is on the order of a week, not a day.
+
+**If there is time after that**, the same tool names the next target: the off-policy block has
+7 primary pairs, and the cheapest entry into it is `drqv2` with `drq`, a PRIMARY pair that needs
+**no Places365** — only a payload shipped (O2) and a first cell of a family that has never trained
+here, whose cost is unknown (O3). `rad` with `soda` is also PRIMARY, but `soda` needs the corpus.
 
 **What that leaves undone, stated rather than hidden:** the nine baselines with no production
 record — `drqv2`, `svea`, `drq`, `sgqn`, `curl`, `rad`, `soda`, `alda`, `ctrl`. Three of them are
