@@ -64,7 +64,10 @@ things that are not compute:
 - ~~`ibac_sni` has never completed a 600k cell~~ — **done 2026-09-16/17**, seed 101, 44 minutes of
   training at procs=16. The constraint that remains is the one that killed seed 102 eleven minutes
   in: it needs ~11.4 GiB (7,421 peak + the 4,000 floor) that **stays** free, and a card the
-  co-tenant released minutes ago does not count as free. Six of its seven attempts died this way.
+  co-tenant released minutes ago does not count as free. Counted from `results/host-runs.jsonl`:
+  of ibac's six failed attempts, **five** were the memory floor against a colleague's job and one
+  (`card0-20260916-010515`) was an EGL worker dying 24 s in. An earlier draft of this line said
+  "six of its seven attempts died this way", which miscounted both numbers.
 - `ctrl` has never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a
   32,494 MiB card at all. It needs an empty card and an explicit decision about the floor.
 - **`svea`, `sgqn` and `soda` are blocked on Places365**, found 2026-09-16 and not previously
