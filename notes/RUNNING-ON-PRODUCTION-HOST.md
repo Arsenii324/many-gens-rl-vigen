@@ -321,9 +321,15 @@ python datasphere/native/contract.py build-payload --source . \
     --output payload-vNNN-<family>.tgz --families <family>
 python datasphere/native/contract.py verify-payload --archive payload-vNNN-<family>.tgz \
     --require-evaluator-identity
-python datasphere/native/contract.py verify-evaluator-binding --archive payload-vNNN-<family>.tgz
+python datasphere/native/contract.py verify-evaluator-binding \
+    --archive payload-vNNN-<family>.tgz --source . --families <family>
 scp payload-vNNN-<family>.tgz rlvigen-door2-90d8b8c4.tgz varaksin_as@cds2:~/
 ```
+
+[Claude 2026-09-17] The `verify-evaluator-binding` line above used to name `--archive` alone.
+It exits 2: the subcommand requires `--archive`, `--source` AND `--families`. Found by running
+the three commands in this block for the first time rather than reading them -- the first two
+were right, the third had never been executed as written.
 
 The payload is source only — the allowlist in `contract.py` (`BASE_ALLOWED` plus the family's
 `payload_members`) rejects any path containing `results`, `logs`, `models`, `data`, `wandb`,
@@ -683,7 +689,8 @@ Three constraints:
   step 2. The script sets no `--memory` or `--cpus`: a cap guessed before that measurement would
   convert an honest overcommit into an OOM-kill mid-run.
 - **Disk doubles too, and that is now checked.** Two packed `drqv2` cells need 84 GiB against one
-  cell's 44 — the replay episode files are per cell. `family.py disk-requirement --cells a:1,a:2`
+  cell's 44 — the replay episode files are per cell. `family.py disk-requirement --cells a:1,a:2 --frames <frames>` (`--frames` is required; without
+  it the command exits 2)
   prints it and the runner refuses below it.
 
 **No config conflation.** `family.py production_env` refuses a cell list spanning families outright
