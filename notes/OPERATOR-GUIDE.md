@@ -249,6 +249,10 @@ called `wait-and-train-v3.sh` the default and said it enforced the vacancy.]
   2026-09-17, was reported correctly, and passed unused because no one was at the keyboard.
 - **By hand**, with §5.2, when you are there: `capacity-check.sh`, then the launch block.
 
+Whichever launches the cell, **the attempt still has to be recorded from the laptop** — no waiter
+does it, and `audit_attempt_ledger.py --strict` fails later on a run that never got a status. The
+same goes for `watch-cell.sh`: a waiter watches the card, not the cell it started.
+
 **A trap that silences a waiter for a day.** `wait-and-train-v3.sh` takes
 `~/rlvigen-runs/.wait-and-train.lock` and holds it for the life of the cell it starts. The reaper
 subshell inside `launch-card-cell.sh` — a plain `sleep $WATCH_SECONDS` — **inherits that open file

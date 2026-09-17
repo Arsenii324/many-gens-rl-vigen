@@ -25,6 +25,12 @@
 #
 # It never stops, kills or deletes anything. The only thing it starts is train-production-cell-v5.sh,
 # and after that the self-cap watcher for the container that appears.
+#
+# WHAT IT DOES NOT DO, and somebody has to: it does not record the attempt. `record_host_run.py` and
+# the attempt ledger live on the laptop, and `audit_attempt_ledger.py --strict` fails later on a run
+# with no terminal status. So when this waiter launches, fetch the cell's effective_config.json and
+# record it (OPERATOR-GUIDE §5.2), and arm `watch-cell.sh` -- this script watches the CARD, not the
+# cell it started.
 set -uo pipefail
 CARD="${CARD:-1}"
 FAMILY="${FAMILY:?set FAMILY}"; BASELINE="${BASELINE:?set BASELINE}"; SEED="${SEED:?set SEED}"
