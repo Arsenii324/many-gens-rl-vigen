@@ -1,0 +1,12 @@
+# evidence-slug: only-a-training-cell-obeys-the-sentinel
+# excerpt: sentinel-grid-ibac
+# note: ibac_sni s101, PAST training and in its endpoint grid: its watcher wrote a sentinel and the cell ignored it
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260916-203537/native-work/yield.sentinel
+# source-bytes: 102  source-sha256: 59e354c6fd4e2538e4923bedbdf6061f9414f99fda52e0232f71eeb6fcd854aa  source-mtime: 2026-09-17T05:01:02+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card1-20260916-203537/native-work/yield.sentinel | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-17T05:31:33+00:00
+#---------------------------------------------------------------------------------------------------
+yielded at 1789621263: free memory 2365 MiB is below the 4000 MiB floor
+free_mib=2365 procs=7 util=97

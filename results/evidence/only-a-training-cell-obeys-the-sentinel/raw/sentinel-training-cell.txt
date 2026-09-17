@@ -1,0 +1,12 @@
+# evidence-slug: only-a-training-cell-obeys-the-sentinel
+# excerpt: sentinel-training-cell
+# note: ibac_sni s102, the only cell still TRAINING: same event, and this is the one that died
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/card1-20260917-075047/native-work/yield.sentinel
+# source-bytes: 98  source-sha256: cd5cd5f660bd7d41a0945dcecfc1f592ed700c9a9c0414798cf52c4e7c8d26b2  source-mtime: 2026-09-17T05:01:33+00:00
+# extraction: cat "$HOME"/rlvigen-runs/card1-20260917-075047/native-work/yield.sentinel | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-17T05:31:42+00:00
+#---------------------------------------------------------------------------------------------------
+yielded at 1789621293: free memory 75 MiB is below the 4000 MiB floor
+free_mib=75 procs=7 util=99

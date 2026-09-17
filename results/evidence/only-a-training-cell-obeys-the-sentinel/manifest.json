@@ -1,0 +1,125 @@
+{
+  "slug": "only-a-training-cell-obeys-the-sentinel",
+  "excerpts": {
+    "sentinel-grid-ibac": {
+      "file": "raw/sentinel-grid-ibac.txt",
+      "sha256": "91c43c3110f1c6c67636cca2192806d75817beda614cb4197b4d1f1d962bb8db",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-203537/native-work/yield.sentinel",
+        "bytes": 102,
+        "sha256": "59e354c6fd4e2538e4923bedbdf6061f9414f99fda52e0232f71eeb6fcd854aa",
+        "mtime": "2026-09-17T05:01:02+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-203537/native-work/yield.sentinel | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-17T05:31:33+00:00",
+      "note": "ibac_sni s101, PAST training and in its endpoint grid: its watcher wrote a sentinel and the cell ignored it"
+    },
+    "sentinel-grid-idaac": {
+      "file": "raw/sentinel-grid-idaac.txt",
+      "sha256": "4d4892c8f59f7a57c9aba8ab83a2802f28b8e89f45b9b5cb205dc14d3eaeddd1",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260916-213222/native-work/yield.sentinel",
+        "bytes": 101,
+        "sha256": "668803c4dbcfcaa3ea8cb8621b074830e93ed1e3d0e3e2cec3149049ce599140",
+        "mtime": "2026-09-17T05:01:35+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260916-213222/native-work/yield.sentinel | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-17T05:31:37+00:00",
+      "note": "idaac s102, PAST training and in its curve grid: its watcher wrote a sentinel and the cell ignored it"
+    },
+    "sentinel-training-cell": {
+      "file": "raw/sentinel-training-cell.txt",
+      "sha256": "fb28f24da2933c797c373fdb2cd9d06ea67fc2c83b3ad2a046a91aaf6feeb759",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/card1-20260917-075047/native-work/yield.sentinel",
+        "bytes": 98,
+        "sha256": "cd5cd5f660bd7d41a0945dcecfc1f592ed700c9a9c0414798cf52c4e7c8d26b2",
+        "mtime": "2026-09-17T05:01:33+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/card1-20260917-075047/native-work/yield.sentinel | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-17T05:31:42+00:00",
+      "note": "ibac_sni s102, the only cell still TRAINING: same event, and this is the one that died"
+    },
+    "training-cell-stopped": {
+      "file": "raw/training-cell-stopped.txt",
+      "sha256": "9718aa2beb1413bbb1b14685442b3647a1d57c8054137487e69f1b1c11546a12",
+      "source": {
+        "kind": "host-file",
+        "host": "varaksin_as@100.98.2.11",
+        "path": "~/rlvigen-runs/prod-v214/ibac_sni-s102-prod.log",
+        "bytes": 268136,
+        "sha256": "f3facde33826078cca19cafb37e1b55a8b16e21f1ec95e4ab6ad83cb2cb7b5d3",
+        "mtime": "2026-09-17T05:02:12+00:00"
+      },
+      "extraction": "cat \"$HOME\"/rlvigen-runs/prod-v214/ibac_sni-s102-prod.log | grep -n -o -E 'NATIVE_CELL_(YIELDED|FAILED)' | head -n 4",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-17T05:31:46+00:00",
+      "note": "the training cell's own log: it announced the yield and stopped"
+    },
+    "grids-still-running": {
+      "file": "raw/grids-still-running.txt",
+      "sha256": "8cc9acf3008214e209687bfc924b5899c4dcc6aabdaf22a8beaf444e5c8b3fb7",
+      "source": {
+        "kind": "local-command",
+        "command": "ssh -o BatchMode=yes varaksin_as@100.98.2.11 'docker ps --format \"{{.Names}} {{.Status}}\" | grep -E \"^cell-c1-(1437491|1567571) \"'",
+        "repo_head": "820e1ce698dc8bc6dcd11ed5ee239aa58dbb65e5",
+        "inputs": {}
+      },
+      "extraction": "( ssh -o BatchMode=yes varaksin_as@100.98.2.11 'docker ps --format \"{{.Names}} {{.Status}}\" | grep -E \"^cell-c1-(1437491|1567571) \"' ) | head -n 200",
+      "tar_member": null,
+      "matched_lines": 2,
+      "shown_lines": 2,
+      "captured_at": "2026-09-17T05:31:50+00:00",
+      "note": "taken after the event: both grid cells are still up, having ignored their sentinels"
+    }
+  },
+  "facts": [
+    {
+      "key": "grid_ibac_free_mib",
+      "value": "2365",
+      "excerpt": "sentinel-grid-ibac",
+      "anchor": "free_mib=2365"
+    },
+    {
+      "key": "grid_idaac_free_mib",
+      "value": "321",
+      "excerpt": "sentinel-grid-idaac",
+      "anchor": "free_mib=321"
+    },
+    {
+      "key": "training_cell_free_mib",
+      "value": "75",
+      "excerpt": "sentinel-training-cell",
+      "anchor": "free_mib=75"
+    },
+    {
+      "key": "training_cell_marker",
+      "value": "NATIVE_CELL_YIELDED",
+      "excerpt": "training-cell-stopped",
+      "anchor": "NATIVE_CELL_YIELDED"
+    },
+    {
+      "key": "grid_cells_still_up",
+      "value": "2",
+      "excerpt": "grids-still-running",
+      "anchor": "cell-c1-1437491"
+    }
+  ]
+}

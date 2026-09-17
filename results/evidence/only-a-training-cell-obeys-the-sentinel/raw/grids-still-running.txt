@@ -1,0 +1,12 @@
+# evidence-slug: only-a-training-cell-obeys-the-sentinel
+# excerpt: grids-still-running
+# note: taken after the event: both grid cells are still up, having ignored their sentinels
+# source-kind: local-command
+# source: ssh -o BatchMode=yes varaksin_as@100.98.2.11 'docker ps --format "{{.Names}} {{.Status}}" | grep -E "^cell-c1-(1437491|1567571) "'
+# repo-head: 820e1ce698dc8bc6dcd11ed5ee239aa58dbb65e5
+# extraction: ( ssh -o BatchMode=yes varaksin_as@100.98.2.11 'docker ps --format "{{.Names}} {{.Status}}" | grep -E "^cell-c1-(1437491|1567571) "' ) | head -n 200
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-17T05:31:50+00:00
+#---------------------------------------------------------------------------------------------------
+cell-c1-1567571 Up 11 hours
+cell-c1-1437491 Up 12 hours

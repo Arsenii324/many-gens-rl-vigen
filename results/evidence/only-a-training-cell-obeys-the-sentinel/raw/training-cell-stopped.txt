@@ -1,0 +1,12 @@
+# evidence-slug: only-a-training-cell-obeys-the-sentinel
+# excerpt: training-cell-stopped
+# note: the training cell's own log: it announced the yield and stopped
+# source-kind: host-file
+# source: varaksin_as@100.98.2.11:~/rlvigen-runs/prod-v214/ibac_sni-s102-prod.log
+# source-bytes: 268136  source-sha256: f3facde33826078cca19cafb37e1b55a8b16e21f1ec95e4ab6ad83cb2cb7b5d3  source-mtime: 2026-09-17T05:02:12+00:00
+# extraction: cat "$HOME"/rlvigen-runs/prod-v214/ibac_sni-s102-prod.log | grep -n -o -E 'NATIVE_CELL_(YIELDED|FAILED)' | head -n 4
+# matched-lines: 2  shown-lines: 2
+# captured-at: 2026-09-17T05:31:46+00:00
+#---------------------------------------------------------------------------------------------------
+3255:NATIVE_CELL_YIELDED
+3259:NATIVE_CELL_FAILED
