@@ -223,15 +223,27 @@ Where each number comes from, so you can re-derive it:
 
 ## 5. What to launch with, and why there are three layers
 
-    wait-and-train-v3.sh   waits for a sustained free card, then calls ↓   (use this by default)
+    wait-and-train-v3.sh   waits for enough free memory, then calls ↓   (optional; see below)
     train-production-cell-v5.sh   sets the production environment, calls ↓
     launch-card-cell.sh    sizes the watches, starts the containers
 
-Use the **waiter** unless you have a reason not to. It enforces a **ten-minute sustained vacancy**
-(`HOLD=10` polls at `POLL=60`), and that number is measured, not chosen: over 30 hours of the
-occupancy log the co-tenant's absences were 2, 1, 1, 36, 1, 1, 171, 1, 5, 1, 1 and 4 minutes. Ten of
-twelve were **restarts between its jobs**, not vacancies. Launching into one of those killed a cell
-twice on 2026-09-17. Procedure §9.5b has the arithmetic; note 34 has the campaign consequence.
+**The launch rule is a ten-minute sustained vacancy**: no foreign holder on the card, and enough
+free memory, for ten consecutive one-minute samples. That number is measured, not chosen: over
+30 hours of the occupancy log the co-tenant's absences were 2, 1, 1, 36, 1, 1, 171, 1, 5, 1, 1 and
+4 minutes. Ten of twelve were **restarts between its jobs**, not vacancies. On 2026-09-17 a cell
+launched two minutes into one of those gaps was stopped eleven minutes in. A second launch that
+waited out a 15-minute absence was still stopped 32 minutes in, when the co-tenant came back. The
+rule lowers the risk; it does not remove it. Procedure §9.5b has the arithmetic; note 34 has the
+campaign consequence.
+
+**Use the §5.2 sequence, not the waiter, to apply that rule.** [Corrected 2026-09-17: this section
+called the waiter the default and said it enforced the vacancy.] `wait-and-train-v3.sh` counts
+polls with **free memory ≥ `NEED`** (default 15,000 MiB) and nothing else. It does not look at who
+holds the card. Beside a co-tenant holding 12 GiB, a card still has about 20 GiB free, so the waiter
+would launch, and §5.1 explains why that is the case to avoid. It launched one cell, `ibac_sni` s101
+at 20:35 on 16 Sep, into what happened to be a real vacancy. The three launches after it went
+through `train-production-cell-v5.sh` directly, after `capacity-check.sh` (which does check holders)
+or the equivalent manual check.
 
 ### 5.1 Why the vacancy rule applies to every family, not only the big ones
 
@@ -271,8 +283,10 @@ grep "card=1 " ~/rlvigen-runs/gpu-occupancy.log | grep -v "cell-c1" \
   | awk '{m=$0; sub(/.*mem=/,"",m); sub(/ .*/,"",m); print m, substr($1,1,16)}' | sort -rn | head -5
 ```
 
-It also takes a `flock` and holds it for the life of the cell it started, so a second waiter
-refuses. That lock is duplicate prevention, not a capacity limit.
+If you do use `wait-and-train-v3.sh` anyway — for instance to catch a window while you are asleep,
+knowing what it does not check — note that it takes a `flock` for the life of the cell it starts and
+refuses when `train-production-cell-v5.sh` is already running. That is duplicate prevention, not a
+capacity limit, and it is worth having: a stale waiter once double-launched a production cell.
 
 ### 5.2 One cell from vacancy to collected rows, as it was actually run
 
@@ -287,7 +301,9 @@ is the golden path at the level of what you type. The procedure has the reasonin
     # To be told instead of polling, run watch-capacity.sh trip in the background.
 
 `AVAILABLE` means ten consecutive minutes with no foreign holder and at least 11,421 MiB free.
-Anything else: wait. Both launches that ignored this were stopped by the memory floor.
+Anything else: wait. The launch that ignored it, at 07:50 on 2026-09-17, was stopped eleven minutes
+in. Passing it is not a guarantee either: the 11:00 launch waited out a 15-minute absence, passed,
+and was stopped 32 minutes in when the co-tenant returned.
 
 **Host, one ssh session: re-check at the moment of launch, preserve the old log, launch detached.**
 This is the 11:00 launch of `ibac_sni` s102, verbatim apart from the placeholders:
@@ -435,7 +451,7 @@ history behind each; its "state now" column dates from 2026-09-16.
 |---|---|---|---|---|
 | **Training wall clock** — `timeout --foreground ${CELL_TIMEOUT_SECONDS}s` (`run_probe.sh:400-402`); v5 sets 43,200 s | training runs past it | training only | expected `NATIVE_CELL_FAILED` (exit 124); **never observed here** | stamps so far, in `native-work/` |
 | **Stall watchdog** (`run_probe.sh:127-159`) | `training.log` unchanged for `CELL_STALL_SECONDS` (default 1,800 s) | training PID lifetime only | `NATIVE_CELL_STALLED`, then `NATIVE_CELL_FAILED_STALLED` | stamps so far |
-| **Memory floor** — the `-yield-` container, `yield_gpu_to_neighbour.py --floor-mib ${NATIVE_FLOOR_MIB:-4000} --interval 20`, one-shot | card free memory below the floor | obeyed only while the training PID lives (`run_probe.sh:197`) | `NATIVE_CELL_YIELDED`, **then** `NATIVE_CELL_FAILED`; the reason is only in `native-work/yield.sentinel` | stamps so far — **observed twice on 2026-09-17** |
+| **Memory floor** — the `-yield-` container, `yield_gpu_to_neighbour.py --floor-mib ${NATIVE_FLOOR_MIB:-4000} --interval 20`, one-shot | card free memory below the floor | obeyed only while the training PID lives (`run_probe.sh:197`) | `NATIVE_CELL_YIELDED`, **then** `NATIVE_CELL_FAILED`; the reason is only in `native-work/yield.sentinel` | stamps so far — **observed five times on 2026-09-16 and twice on 2026-09-17** |
 | **Disk floor** — the `-disk-` container, `watch_disk_headroom.py --interval 60` | free space under `/work` below this cell's floor: free at launch minus 2 × the family's disk need, never below 50 GiB (`launch-card-cell.sh:425-453`) | same sentinel, same training-only obedience | as the memory floor; the sentinel says `free_gib=` | stamps so far; **never fired here** |
 | **Reaper** (`launch-card-cell.sh:370-399`) | once the watch budget (training + eval allowance + bootstrap + slack, printed in the banner) is spent: stops the container if it emitted nothing for 900 s (`NATIVE_REAP_STALL_SECONDS`), otherwise grants 900 s at a time up to 10,800 s (`NATIVE_REAP_MAX_GRACE_SECONDS`) | the whole container, grid included | `!! REAPING <cell>` on the launcher's stderr; no `result.tgz` | every row already written; collect as in §8 item 2 |
 | **`self-vram-cap.sh`** (host, optional) | the summed **compute-app** memory of our container's PIDs exceeds the cap, sampled every 20 s | the whole container | its own log: `NATIVE_SELF_VRAM_CAP_TRIPPED`; `docker stop -t 30` | as a reap |
@@ -551,7 +567,7 @@ differently:
 
 ## 7. Watching a run, and the traps that make a monitor lie
 
-Full detail in procedure §9.5; the complete tool list is §10.4. What you actually reach for:
+Full detail in procedure §9.5; its complete tool list is procedure §10.4. What you actually reach for:
 
 | What you want to know | Tool | Runs on |
 |---|---|---|
@@ -605,7 +621,7 @@ Procedure §9.6 has the commands. Two things that are not obvious:
    `assemble_reaped_delivery.py` into `<run-dir>/native-out/records_delivery.jsonl` — that exact
    path — then `NATIVE_ACCEPT_WATCH_STOP=1 bash collect-host-run.sh …`. The collector prints this
    recipe in its own refusal message; read the stderr rather than guessing.
-4. **Expect a large "unverifiable" count, and know what it is made of.** Run
+3. **Expect a large "unverifiable" count, and know what it is made of.** Run
    `audit_record_frame_provenance.py <records> --checkpoints <dir>` — without `--checkpoints` it has
    nothing to match and calls *everything* unverifiable. With it, a complete cell decomposes
    predictably. Measured on `idaac` s102's 598 rows (2026-09-17):
@@ -621,7 +637,7 @@ Procedure §9.6 has the commands. Two things that are not obvious:
    misleading here: 114 of 598 were unverifiable for two understood reasons, and **MISMATCHED was
    zero**. Read the decomposition, not the headline, and treat a non-zero MISMATCHED as the alarm.
 
-3. **Never run `populate_evaluator_ledger.py` on a production run.** That script records a
+4. **Never run `populate_evaluator_ledger.py` on a production run.** That script records a
    family's *evaluator attestation*, and the gate accepts only single-scope endpoint evidence
    (one frame, one policy pass) such as an `attest-v2xx` job. A production delivery has a twelve-frame
    curve and a two-pass endpoint, so it can never qualify — and because every run **replaces** the
@@ -642,7 +658,7 @@ confidence in this project came from reading a check as broader than it is.
 | `setup/verify_datasets.py --split train` | Places365 is complete **where you ran it** | anything about the host | yes, laptop only |
 | `contract.py verify-payload --require-evaluator-identity --require-runner-contract 19 <tgz>` | the payload is complete and carries the evaluator identity the host runner expects | that the evaluator is the attested one | yes, `idaac` |
 | `contract.py verify-evaluator-binding --archive <tgz> --source . --families <family>` | the payload's evaluator hashes equal the live tree's | that the live tree is attested | yes, `idaac` |
-| `scripts/production_gates.py` | 37 mechanical gates; the evaluator is attested 7/7; the tree is committed | the 9 OWNER items, which are decisions | yes, many times. It **FAILs on any uncommitted file**, including a doc edit — commit, then rerun |
+| `scripts/production_gates.py` | the mechanical gates (37 pass, 0 fail on 2026-09-17); that the evaluator is attested for all seven families; that the tree is committed | the 9 OWNER items, which are decisions | yes, many times. It **FAILs on any uncommitted file**, including a doc edit — commit, then rerun |
 | `scripts/operator_readiness.py` | every path the procedure names exists and every live script's interface is documented | that the procedure is correct (its own output says so) | yes, exit 0, including in a fresh clone |
 
 **At launch (inside the launcher, automatic)**
@@ -668,11 +684,11 @@ confidence in this project came from reading a check as broader than it is.
 | Check | Proves | Ran in this campaign |
 |---|---|---|
 | `collect-host-run.sh` | eight steps: the run succeeded by its own markers, the renderer was real (not `llvmpipe`), the bundle is non-empty, its source matches the log, the row count matches what the runner said it wrote, two audits that need host artifacts; then installs rows in `results/records/` | yes: `ibac_sni` s101 (910 rows), `idaac` s102 (598) |
-| `audit_record_frame_provenance.py <records> --checkpoints <dir>` | each curve row's frame agrees with the checkpoint it names; **MISMATCHED must be 0** | yes, `idaac` s102: 484 corroborated, 0 mismatched (§8 item 4) |
+| `audit_record_frame_provenance.py <records> --checkpoints <dir>` | each curve row's frame agrees with the checkpoint it names; **MISMATCHED must be 0** | yes, `idaac` s102: 484 corroborated, 0 mismatched (§8 item 3) |
 | `campaign_status.py` | which (baseline, seed) cells are DONE / PARTIAL / MISSING against the schedule | yes |
 | `export_fleet.py` | one flat table of every record, and how many are on the current evaluator closure | yes: 6,193 rows, 2,932 current |
 | `audit_attempt_ledger.py --strict` | no rerun silently replaces an earlier attempt; host attempts come from `results/host-runs.jsonl` | yes, exit 0 on 2026-09-17 |
-| `populate_evaluator_ledger.py` | **attestation jobs only** (§8 item 3) | yes: accepted three `attest-v212` files, refused two production files |
+| `populate_evaluator_ledger.py` | **attestation jobs only** (§8 item 4) | yes: accepted three `attest-v212` files, refused two production files |
 
 ## 9. What you must not improvise
 
