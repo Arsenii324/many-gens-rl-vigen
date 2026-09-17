@@ -1067,6 +1067,26 @@ traps, each of which has produced a false reading here:
   `NATIVE_CELL_YIELDED`, `Traceback`, `Killed` and `OOM` as well — a filter that matches only
   success signals stays silent through a crash.
 
+- **Test your stop detector against a log of a cell that actually stopped.** The marker is
+  `=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===`, so the usual
+  `grep -oE "=== NATIVE_CELL_(COMPLETED|FAILED|YIELDED) " | awk '{print $2}'` yields the WHOLE token
+  `NATIVE_CELL_YIELDED`. A `case "$mk" in FAILED|YIELDED)` therefore never matches, and the monitor
+  silently loses the one event it exists to report. Five monitors of mine carried that bare form on
+  2026-09-17; when `ibac_sni` s102 was stood down by the memory floor at 08:01 not one of them said
+  so, and the stop went unnoticed for eighteen minutes until a frame counter failed to move. Use
+  `*FAILED|*YIELDED`, and prove it on a real stopped cell:
+
+  ```bash
+  mk=$(grep -aoE "=== NATIVE_CELL_(COMPLETED|FAILED|YIELDED) " "$LOG" | tail -1 | awk '{print $2}')
+  echo "[$mk]"     # expect [NATIVE_CELL_YIELDED], not [YIELDED]
+  ```
+
+  The general form of the mistake: a monitor's alarm branches are the part that never runs during
+  normal operation, so they are the part that is never exercised. A green heartbeat says nothing
+  about them.
+- **A stop marker does not name its cause.** `NATIVE_CELL_YIELDED` is written by the poller, which
+  deliberately does not say why — the reason is in the cell's `yield.sentinel`, and it is not always
+  a co-tenant. Read the sentinel: `cat <run-dir>/native-work/yield.sentinel`.
 - **Do not pass a timeout to a watch you want to keep.** A long-lived poll loop launched as a
   background shell is not reaped on its own — one ran past ten minutes with no timeout argument and
   kept going. What killed the first one was a `timeout` of 600000 ms that *I* passed, and the

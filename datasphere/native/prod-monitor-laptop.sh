@@ -68,6 +68,15 @@ echo "$f0|$f1|$e0|$t1|$cur|$d|$sw|$wt|${fr:-0}|${mk:-none}|$age|$res|$lg|${holde
   [ "$wt" -eq 0 ] && [ "$t1" -eq 0 ] && [ "$res" -eq 0 ] && state="waiter-gone"
   [ "$t1" -gt 0 ] && state="ibac-running"
   [ "$t1" -gt 0 ] && [ "$age" -gt "$STALE_LOG_S" ] && state="ibac-stalled"
+  # [Claude 2026-09-17] This monitor extracted `mk` and then never branched on it: a cell could
+  # stop and the only trace was the marker appearing inside the unrelated `waiter-gone` message.
+  # The pattern below is `*FAILED|*YIELDED` and NOT `FAILED|YIELDED`, which is the whole point.
+  # The log line is `=== NATIVE_CELL_YIELDED stopping this cell; ... ===`, so the awk above yields
+  # the entire token `NATIVE_CELL_YIELDED`; a bare `FAILED|YIELDED` case never matches it. Five
+  # monitors of mine carried that bare form on 2026-09-17, and when ibac_sni s102 was stood down by
+  # the memory floor at 08:01 not one of them said so -- the stop went unreported for 18 minutes.
+  # Verified against the real host log, not a synthetic string.
+  case "$mk" in *FAILED|*YIELDED) state="cell-stopped";; esac
   [ "$res" -gt 0 ] && state="ibac-done"
   [ "$d" -lt "$DISK_CRIT" ] && state="disk-crit"
 
@@ -81,6 +90,7 @@ echo "$f0|$f1|$e0|$t1|$cur|$d|$sw|$wt|${fr:-0}|${mk:-none}|$age|$res|$lg|${holde
       curve-stalled) echo "CURVE-STALLED $(date +%H:%M) s102: no sweep and no eval cells, ${cur}/${CURVE_TOTAL}";;
       curve-done)    echo "CURVE-DONE $(date +%H:%M) idaac s102 partial curve ${cur}/${CURVE_TOTAL} -- collect it";;
       waiter-gone)   echo "WAITER-GONE $(date +%H:%M) no ibac waiter, no ibac cell, no result -- it gave up or died; last ibac marker ${mk}";;
+      cell-stopped)  echo "CELL-STOPPED $(date +%H:%M) marker ${mk} at frame ${fr}. Read the cell's yield.sentinel for the REASON -- the marker never names it. Checkpoints written before the stop are durable on the bind mounts and separately evaluable; whether any exist depends on whether the run passed its first cadence stamp.";;
       ibac-running)  echo "IBAC-RUNNING $(date +%H:%M) ibac_sni s101 on card 1 at frame ${fr}, log ${age}s old";;
       ibac-stalled)  echo "IBAC-STALLED $(date +%H:%M) ibac log untouched ${age}s at frame ${fr} -- check docker stats";;
       ibac-done)     echo "IBAC-DONE $(date +%H:%M) ibac_sni-s101-prod-result.tgz present -- THIRD baseline; collect it";;
