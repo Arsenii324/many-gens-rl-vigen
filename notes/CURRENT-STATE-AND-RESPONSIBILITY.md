@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-17, ~21:05 MSK, by Claude.** This file says what is *true right now*. It is
+**Last updated: 2026-09-18, ~01:20 MSK, by Claude.** This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -40,12 +40,23 @@ the current closure**. Nothing of ours was running on either card at that time.
 | `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-Next in the queue when a card is genuinely vacant (the co-tenant absent for ten consecutive
-minutes): `idaac` s103, which makes `idaac` the first baseline at three seeds; then `ibac_sni` s102
-from zero, `ibac_sni` s103, and `ppg`'s two remaining seeds. **Why those five and not the other
+**`idaac` s103 no longer waits for a person.** `wait-and-train-v4.sh` is armed on the host and will
+launch it when the card is genuinely vacant — no foreign holder and ≥ 11,421 MiB free for ten
+consecutive samples. It was written after 21:39 on 17 Sep, when the card was free for twenty minutes
+for the first time in the campaign and nothing launched because nobody was at the keyboard. When it
+fires, the attempt still has to be recorded and `watch-cell.sh` armed from the laptop; see
+[`HANDOFF.md`](HANDOFF.md). After s103: `ibac_sni` s102 from zero, `ibac_sni` s103, and `ppg`'s two
+remaining seeds. **Why those five and not the other
 27:** [`production-host/35-what-the-campaign-costs-at-measured-rates.md`](production-host/35-what-the-campaign-costs-at-measured-rates.md)
 puts the measured 15–21 hours per cell against 32 missing cells. The full campaign cannot finish on
 this host; the sampled-estimand block can.
+
+**The operator's cold start is no longer untested.** On the night of 17–18 Sep a fresh tree
+(`git archive HEAD` — what a clone gives you) was reconstructed inside a container on the host and
+taken all the way through: `bootstrap_sources.py`, `verify_sources.py`, then `build-payload`,
+`verify-payload` and `verify-evaluator-binding` for **all seven families**, every exit code 0.
+Evidence: [`results/evidence/linux-reconstruction-from-a-fresh-tree`](../results/evidence/linux-reconstruction-from-a-fresh-tree/CLAIM.md).
+What remains untested there is a fresh clone taken to a *running cell*, and any host but this one.
 
 **The first three-baseline same-axes reading exists**, in
 [`production-host/34-first-three-baseline-reading-2026-09-17.md`](production-host/34-first-three-baseline-reading-2026-09-17.md).
