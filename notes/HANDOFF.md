@@ -6,9 +6,43 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-17, ~02:20 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
+Last updated **2026-09-18, ~01:35 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
 executed, and the section below it is kept because the reasoning still reads correctly — but items
 1-3 have happened. Read this block first; it is what changed overnight.
+
+## Night state, 2026-09-18 ~01:35 — read this first; everything below is older
+
+**Nothing of ours is running. A waiter is armed and will launch `idaac` s103 by itself.**
+
+- **What is armed on the host:** `wait-and-train-v4.sh`, for `idaac` s103 on card 1
+  (`VRAM_MIB=5000`, `EXPECT_OURS=20`, `MAXWAIT=34000`, `HEARTBEAT=10`). Its log is
+  `~/rlvigen-runs/prod-v214/idaac-s103-prod-waiter-v4.log`; it writes a line every ten polls
+  whatever happens. It launches only on the validated rule — no foreign holder **and** ≥ 11,421 MiB
+  free for ten consecutive samples of `gpu-occupancy.log` — and re-checks `nvidia-smi` at the
+  instant of launch. All seven of its refusal branches were exercised before arming.
+- **When it fires, two things it does NOT do, and you must:** record the attempt
+  (`record_host_run.py`, after fetching that run's `effective_config.json`) and arm
+  `watch-cell.sh` from the laptop. It watches the card, not the cell it started.
+- **Deadlines on the monitoring itself.** The occupancy logger was started 2026-09-16T19:22 with
+  `hours=40`, so it stops about **11:22 MSK on 18 Sep**; the waiter's `MAXWAIT` ends about 10:45.
+  Restart the logger **first** (a waiter with a stale log refuses, correctly, and then nothing
+  launches), then re-arm the waiter. Do not start a second logger while the first is alive — two
+  writers would double the samples and corrupt the ten-sample rule.
+- **Why the waiter exists at all:** at 21:39 on 17 Sep the card was genuinely free for the first
+  time in the campaign, the watcher said so, and nobody was at the keyboard. The window closed
+  unused at ~21:50. Reporting is not enough when the windows are twenty minutes long.
+- **A trap worth carrying:** `flock` descriptors are inherited by children. `wait-and-train-v3.sh`'s
+  lock was still held at 01:07 by a `sleep 115668` from a cell that finished 14 hours earlier, and
+  my own v4 hit the same thing on restart until every long-lived child got `9>&-`.
+- **Closed overnight, so do not redo it:** the whole cold start now holds on Linux — fresh tree →
+  `bootstrap_sources.py` → `verify_sources.py` → payload build, verify and evaluator binding for all
+  **seven** families, every exit code 0, in containers on the host
+  (`results/evidence/linux-reconstruction-from-a-fresh-tree`). Both scratch directories were
+  removed; the host is at ~168 GiB free.
+- **The one number that should change the plan:** at the rates measured here, the 36-cell campaign
+  needs 20–28 days of uninterrupted card time. `production-host/35` argues for finishing the
+  sampled-estimand block (`idaac`, `ppg`, `ibac_sni` at three seeds) — five cells — and says what
+  that leaves undone.
 
 ## Morning state, 2026-09-17 07:20 — read this before the 02:20 block below
 
