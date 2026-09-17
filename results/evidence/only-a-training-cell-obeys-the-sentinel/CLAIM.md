@@ -3,7 +3,7 @@
 `notes/model/STOP-MECHANISMS.md` row 2 said "only a TRAINING cell obeys it", contrasting training
 cells with dedicated eval cells. On 2026-09-17 that turned out to be the coarser half of the truth,
 and the finer half is now demonstrated rather than read out of the code: the poller's loop is
-`while kill -0 "$training_pid"` (`run_probe.sh:196`), so a cell that has finished training and moved
+`while kill -0 "$training_pid"` (`run_probe.sh:197`), so a cell that has finished training and moved
 into its in-cell grid ignores the sentinel too. The distinction is **before vs after the training
 PID exits, inside one cell.**
 
@@ -49,7 +49,7 @@ ignored one. Either would mean the poller's lifetime is not what governs this. C
 future run shows `NATIVE_CELL_YIELDED` in a log whose training had already completed, this claim is
 wrong.
 
-A weaker one, not needing the host: if `run_probe.sh:196` ever stops keying its loop on
+A weaker one, not needing the host: if `run_probe.sh:197` ever stops keying its loop on
 `kill -0 "$training_pid"`, the mechanism behind the table above has changed and the rows say nothing
 about the new code.
 

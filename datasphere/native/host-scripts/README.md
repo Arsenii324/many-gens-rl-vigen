@@ -8,7 +8,15 @@ scripts, including everything then driving production — `curve-sweep-v3.sh`,
 `train-production-cell-v5.sh`, `reeval-cell-cached.sh` — had no copy anywhere else. A lost home
 directory would have taken the entire operational toolchain with it.
 
-Operational instructions are in [`notes/OPERATOR-GUIDE.md`](../../../notes/OPERATOR-GUIDE.md).
+Operational instructions are in [`notes/OPERATOR-GUIDE.md`](../../../notes/OPERATOR-GUIDE.md) —
+the end-to-end map: stages, what produces what, the container topology, and which tool belongs
+to which stage. The executable procedure it points into is
+[`notes/RUNNING-ON-PRODUCTION-HOST.md`](../../../notes/RUNNING-ON-PRODUCTION-HOST.md).
+
+[Claude 2026-09-17] That link was dangling until today: this README named OPERATOR-GUIDE.md
+and no such file existed, so the one pointer a host operator is most likely to follow led
+nowhere. Found by sweeping every internal .md link in the repo; it was the only genuinely
+broken one of 212.
 This file only says which script is which.
 
 ## Deploying a change back to the host

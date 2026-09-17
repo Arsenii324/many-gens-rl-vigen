@@ -14,7 +14,7 @@ Two facts shape the whole table:
    starts that poller, so an eval cell ignores a sentinel entirely. **This asymmetry is why the
    defect stayed invisible: every eval cell survived it, and the first training cell died.**
 3. **A training cell STOPS obeying it partway through, and that is not the same statement as 2.**
-   [Claude 2026-09-17] The poller's loop is `while kill -0 "$training_pid"` (`run_probe.sh:196`).
+   [Claude 2026-09-17] The poller's loop is `while kill -0 "$training_pid"` (`run_probe.sh:197`).
    The training process exits when training finishes, so from the moment a cell enters its in-cell
    curve/endpoint grid the poller is gone and the cell is, for sentinel purposes, an eval cell. The
    distinction is not "eval cells vs training cells" but "before vs after the training PID exits",

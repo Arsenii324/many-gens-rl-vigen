@@ -25,6 +25,12 @@ remembering it.
 
 ## The categories, and where each lives
 
+**Running the whole thing end to end, as a new operator**:
+[`OPERATOR-GUIDE.md`](OPERATOR-GUIDE.md) — the map. What exists, what produces what, what runs after
+what, the container topology per cell, and which tool belongs to which stage, with a finish line for
+each. Read it before the procedure; it is the file that assumes you have nothing but this repository
+and a host.
+
 **Running anything on the production host**: [`production-host/README.md`](production-host/README.md)
 indexes 33 numbered operational notes and says "read this entire directory before touching
 anything" — the prohibitions, the upper-bound rule, what fails when, what a cell actually uses, what

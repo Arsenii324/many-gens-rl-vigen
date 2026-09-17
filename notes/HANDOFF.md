@@ -62,7 +62,7 @@ terminal `agent-robosuite:Door-idaac-s102.pt` is the only artifact for the final
 a missing file if you do not know it is expected.
 
 **Card 1 is now in a state with no yield capability at all.** Both cells are past training, and
-`run_probe.sh:196` polls the sentinel only while the training PID lives. Our combined hold is
+`run_probe.sh:197` polls the sentinel only while the training PID lives. Our combined hold is
 1,640 MiB of 32,494, so we are unlikely to be what crowds a co-tenant — but the honest claim is
 "unlikely to matter", not "protected", and handing the card back is now a manual act. Free was 6,944
 at 07:06, having widened from 4,956 when idaac left training and released its EGL contexts.
@@ -90,7 +90,7 @@ at 07:06, having widened from 4,956 when idaac left training and released its EG
 **The co-tenant is back and the margin is thin.** At 02:15 `rlvigen_kalugin_df` holds 22,536 MiB in
 two processes on card 1; ours are idaac 2,640 and ibac 831; free is **4,950 against the 4,000 floor**.
 I decided not to intervene, and the reason is structural rather than optimistic:
-`run_probe.sh:196` polls the yield sentinel only `while kill -0 "$training_pid"`. ibac's training PID
+`run_probe.sh:197` polls the yield sentinel only `while kill -0 "$training_pid"`. ibac's training PID
 exited at 21:19, so **ibac's in-cell grid does not obey the sentinel**; idaac, still training, does.
 If free crosses the floor, idaac is stood down and ibac's grid continues untouched — which is the
 sacrifice ordering I would have chosen by hand. Do not "fix" this by stopping idaac early.
