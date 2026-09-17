@@ -1588,7 +1588,7 @@ current with `--check` (the release suite does).
 | `self-vram-cap.sh` | Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's. |
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 
-**`datasphere/native/host-scripts/*.sh`** — 32 file(s)
+**`datasphere/native/host-scripts/*.sh`** — 33 file(s)
 
 | script | what it is for |
 |---|---|
@@ -1622,10 +1622,11 @@ current with `--check` (the release suite does).
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 | `verify-places-folder.sh` | (no summary) |
 | `wait-and-train-v3.sh` | Launch ONE production cell when a card's capacity for us clears a threshold and STAYS clear. |
+| `wait-and-train-v4.sh` | Wait for a GENUINE vacancy on a card, then launch ONE production cell. Runs ON THE HOST, detached. |
 | `watch-capacity.sh` | Keep watching prod when NOTHING of ours is running, so a genuine opening is noticed without a prompt. |
 | `watch-cell.sh` | Watch ONE production cell from the laptop: stop detection, result, disk against the cell's own |
 
-*165 entry points. Generated; do not edit by hand.*
+*166 entry points. Generated; do not edit by hand.*
 
 <!-- END script-inventory -->
 

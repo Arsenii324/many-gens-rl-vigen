@@ -236,14 +236,28 @@ waited out a 15-minute absence was still stopped 32 minutes in, when the co-tena
 rule lowers the risk; it does not remove it. Procedure §9.5b has the arithmetic; note 34 has the
 campaign consequence.
 
-**Use the §5.2 sequence, not the waiter, to apply that rule.** [Corrected 2026-09-17: this section
-called the waiter the default and said it enforced the vacancy.] `wait-and-train-v3.sh` counts
-polls with **free memory ≥ `NEED`** (default 15,000 MiB) and nothing else. It does not look at who
-holds the card. Beside a co-tenant holding 12 GiB, a card still has about 20 GiB free, so the waiter
-would launch, and §5.1 explains why that is the case to avoid. It launched one cell, `ibac_sni` s101
-at 20:35 on 16 Sep, into what happened to be a real vacancy. The three launches after it went
-through `train-production-cell-v5.sh` directly, after `capacity-check.sh` (which does check holders)
-or the equivalent manual check.
+**Two ways to apply that rule, and one script that does not.** [Corrected 2026-09-17: this section
+called `wait-and-train-v3.sh` the default and said it enforced the vacancy.]
+
+- `wait-and-train-v3.sh` counts polls with **free memory ≥ `NEED`** (default 15,000 MiB) and nothing
+  else. It does not look at who holds the card. Beside a co-tenant holding 12 GiB, a card still has
+  about 20 GiB free, so it would launch — the case §5.1 exists to prevent. It launched one cell,
+  `ibac_sni` s101 at 20:35 on 16 Sep, into what happened to be a real vacancy.
+- **`wait-and-train-v4.sh`** applies the validated rule: no foreign holder **and** ≥ `NEED` MiB free
+  for ten consecutive samples of the occupancy log, re-checked against `nvidia-smi` at the instant of
+  launch. Use it when nobody will be watching. It was written after a real window opened at 21:39 on
+  2026-09-17, was reported correctly, and passed unused because no one was at the keyboard.
+- **By hand**, with §5.2, when you are there: `capacity-check.sh`, then the launch block.
+
+**A trap that silences a waiter for a day.** `wait-and-train-v3.sh` takes
+`~/rlvigen-runs/.wait-and-train.lock` and holds it for the life of the cell it starts. The reaper
+subshell inside `launch-card-cell.sh` — a plain `sleep $WATCH_SECONDS` — **inherits that open file
+descriptor**, so the lock outlives the cell by the whole remaining watch budget. Measured on
+2026-09-18: `ibac_sni` s101 finished at 11:16 on 17 Sep, and at 01:07 the next morning the lock was
+still held by `sleep 115668` started at 20:35 on 16 Sep. A second waiter sharing that file refuses
+every window until the sleep ends. `wait-and-train-v4.sh` therefore uses its own lock file and
+checks what is actually *running* (`train-production-cell-v5.sh`, `wait-and-train-v3.sh`, any
+`cell-c*` container) rather than trusting a descriptor.
 
 ### 5.1 Why the vacancy rule applies to every family, not only the big ones
 
