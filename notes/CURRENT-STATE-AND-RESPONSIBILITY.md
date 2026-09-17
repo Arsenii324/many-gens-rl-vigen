@@ -48,8 +48,13 @@ copy, and a cell cut mid-grid never writes `result.tgz`, so collection goes thro
 **The first three-baseline same-axes reading exists**, in
 [`production-host/34-first-three-baseline-reading-2026-09-17.md`](production-host/34-first-three-baseline-reading-2026-09-17.md).
 It is a reading and not a result: one seed per baseline against a policy requiring three. Two things
-in it are worth carrying — `eval-medium` scores below `eval-hard` in all three, and train-time
-strength does not predict generalisation (`ibac_sni` is strongest on train and loses the most).
+in it are worth carrying — `eval-medium` scores below `eval-hard` in all three.
+
+**The second claim that note made did not survive a second seed.** It read the train → eval-easy drop
+as a ranking (`ibac_sni` −48%, `ppg` −21%, `idaac` −17%). At 15:30 `idaac` s102 gave the same baseline
+**+18%** against s101's −17%: the gap changes *sign* between seeds, and a 35-point swing from the seed
+alone is larger than the spread the ranking rested on. Do not quote a generalisation ranking from one
+seed per baseline. `eval-medium` < `eval-hard` holds in both idaac seeds, so that finding stands.
 
 **The campaign counts 1 of 36 and that is not a mistake in the counter.**
 `production-schedule-v100.json` names seeds `[101, 102, 103]`; ppg is banked at **seed 1**, so every

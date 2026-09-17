@@ -37,6 +37,40 @@ conclusion, and the column order in this table invites exactly that.
 That is the shape the study exists to measure, so it should be the most suspected number here, not
 the most quoted one. With n=1 it is equally consistent with a seed that happened to overfit.
 
+## Update, 15:30 — a second idaac seed, and the headline does not survive it
+
+`idaac` s102's native endpoint completed at 15:30, so one baseline now has **two seeds on identical
+axes**: evaluator revision `1b092f97` on both, 20 episodes, frame 598,016, `sample` mode, 11 scene sets
+× 4 regimes. The comparison is paired by scene set.
+
+| regime | s101 | s102 | paired diff | sd of paired diff |
+|---|---|---|---|---|
+| train | 39.24 | **20.51** | −18.73 | 16.84 |
+| eval-easy | 32.62 | 24.24 | −8.38 | 21.07 |
+| eval-medium | 12.00 | 10.36 | −1.64 | 5.65 |
+| eval-hard | 17.18 | 18.52 | +1.34 | 11.25 |
+
+**The generalisation gap changes sign between seeds of the same baseline.** `idaac`'s train → eval-easy
+change is **−17%** at seed 101 and **+18%** at seed 102. A 35-point swing from the seed alone is larger
+than the entire spread this note ranked the three baselines on (−48%, −21%, −17%). So the claim above —
+that `ibac_sni` generalises worst — is **not supported**: it sits inside the variation one baseline shows
+across two seeds. This note had flagged that finding as the number to suspect rather than quote; the
+second seed is the evidence that the suspicion was right.
+
+Two things do survive:
+
+- **eval-medium < eval-hard holds in both seeds** (12.00 < 17.18 and 10.36 < 18.52), consistent with the
+  explanation that `eval-medium` alone sets `except_robot=False` and is a different distribution rather
+  than a rung on a ladder. Four independent measurements now show it, across three baselines.
+- **The per-scene variance is large.** The paired standard deviation is 17–21 on `train` and `eval-easy`
+  against means of 20–40. Any claim at this depth needs the scene set as the unit of variation, not the
+  episode, and more than one seed.
+
+Provenance: s101 is `results/records/reeval-v214-idaac-endpoint__records.jsonl`. **s102's rows are not
+yet collected** — the cell is still running its mode pass — and were read from a laptop copy of
+`card1-20260916-213222/native-out/cells/idaac-s102/offline_eval_endpoint.jsonl`, fetched at 15:30. Their
+evaluator revision was checked against the live tree and binds.
+
 ## What would make this a result
 
 - **Three seeds each.** `idaac` s102 trained to completion on 2026-09-17 and its grid is partial;
