@@ -1335,7 +1335,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s101` · **seed** 101 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T03:51 MSK · **run dir** `~/rlvigen-runs/card0-20260909-035152` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 192h ago** ⚠ **likely stale**
+- **status** STOPPED by watch budget 18:37 MSK during endpoint pass 2. Collected: 569 rows installed at results/records/card0-20260909-035152__records.jsonl (484 curve + 44 endpoint/native + 41 of 44 endpoint/mode). Evaluator ledger NOT written -- paired=False, 3 eval-hard mode rows missing. — **status recorded 194h ago** ⚠ **likely stale**
 - ⚠ Collected via assemble_reaped_delivery.py + NATIVE_ACCEPT_WATCH_STOP=1; every row carries _assembled_after_reaping and _run_provenance_missing. Frame provenance: 484 corroborated, 85 unverifiable (all endpoint rows -- the endpoint measures snapshot.pt and no _598016.pt is retained). Diagnostics: 3 flags (approx_kl_k3 median 0.9994, clip_fraction 0.827, sigma 0.996->0.167). MISSING for a complete grid: policy_mode=mode, regime=eval-hard, scene sets 8, 9, and 0,1,2,3,4,5,6,7,8,9.
 
 ### `card0-20260909-115331` — ppg — **not yet collected**
@@ -1343,7 +1343,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ppg-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-09T11:53 MSK · **run dir** `~/rlvigen-runs/card0-20260909-115331` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** complete: training 600k, then curve (528 rows) and endpoint (88 rows, both policy modes) re-evaluated offline and collected as reeval-v214-ppg-curve and reeval-v214-ppg-endpoint — **status recorded 8h ago**
+- **status** complete: training 600k, then curve (528 rows) and endpoint (88 rows, both policy modes) re-evaluated offline and collected as reeval-v214-ppg-curve and reeval-v214-ppg-endpoint — **status recorded 10h ago**
 - ⚠ nminibatch declared 32 but CLAMPED TO 1 at runtime (Warning: nminibatch > ntrain!! (32 > 1), 291 occurrences): minibatch_optimize splits on the batch axis and num_envs=1. Executed update density equals upstream PPG's released 1-rank density exactly. Cannot represent PPG against the other eleven. See notes/ppg-took-256-gradient-steps-not-8192.md.
 
 ### `card0-20260916-005601` — ibac_sni — **not yet collected**
@@ -1351,7 +1351,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T00:56 MSK · **run dir** `~/rlvigen-runs/card0-20260916-005601` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 28h ago** ⚠ **likely stale**
+- **status** failed — **status recorded 30h ago** ⚠ **likely stale**
 - ⚠ stood down by the memory floor: free memory 3705 MiB below the 4000 MiB floor. No checkpoints.
 
 ### `card0-20260916-010515` — ibac_sni — **not yet collected**
@@ -1359,7 +1359,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 0 · **profile** `v100`
 - **launched** 2026-09-16T01:05 MSK · **run dir** `~/rlvigen-runs/card0-20260916-010515` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 28h ago** ⚠ **likely stale**
+- **status** failed — **status recorded 30h ago** ⚠ **likely stale**
 - ⚠ NATIVE_CELL_FAILED, no checkpoints. Same window as 005601.
 
 ### `card1-20260916-115450` — ibac_sni — **not yet collected**
@@ -1367,7 +1367,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s1` · **seed** 1 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T11:54 MSK · **run dir** `~/rlvigen-runs/card1-20260916-115450` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 28h ago** ⚠ **likely stale**
+- **status** failed — **status recorded 30h ago** ⚠ **likely stale**
 - ⚠ reached F 100352 then stood down by the memory floor: free memory 125 MiB below 4000. Furthest any ibac_sni cell has trained.
 
 ### `card1-20260916-141636` — ibac_sni — **not yet collected**
@@ -1375,7 +1375,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T14:16 MSK · **run dir** `~/rlvigen-runs/card1-20260916-141636` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 28h ago** ⚠ **likely stale**
+- **status** failed — **status recorded 30h ago** ⚠ **likely stale**
 - ⚠ started training, then the floor fired: free memory 3063 MiB below 4000, co-tenant holding ~21.3 GiB. Its resources.json gave the card-delta lower bound of ~6.6 GiB for ibac_sni at procs=16.
 
 ### `card1-20260916-143204` — idaac — **not yet collected**
@@ -1383,14 +1383,14 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `idaac-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T14:32 MSK · **run dir** `~/rlvigen-runs/card1-20260916-143204` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** yielded at 41% (251,904 frames): co-tenant took ~6.2 GiB in 20s, free fell 6422 -> 224 MiB, below the 4000 floor. Our own peak was 2,640 MiB against a 5,000 cap and never moved. 5 checkpoints retained (51200-251904), each separately evaluable. — **status recorded 24h ago** ⚠ **likely stale**
+- **status** yielded at 41% (251,904 frames): co-tenant took ~6.2 GiB in 20s, free fell 6422 -> 224 MiB, below the 4000 floor. Our own peak was 2,640 MiB against a 5,000 cap and never moved. 5 checkpoints retained (51200-251904), each separately evaluable. — **status recorded 27h ago** ⚠ **likely stale**
 
 ### `card1-20260916-182538` — ibac_sni — **not yet collected**
 
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T18:25 MSK · **run dir** `~/rlvigen-runs/card1-20260916-182538` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 24h ago** ⚠ **likely stale**
+- **status** failed — **status recorded 27h ago** ⚠ **likely stale**
 - ⚠ attempt 6. Co-tenant reclaimed the card 8 min after launch, mid-ramp: our cap log shows card_free 8883->2595 MiB while ours grew 616->1375. Floor fired at free 2575 < 4000 with ours at 2199 MiB and still climbing. 2199 is a RAMP POINT, not a peak -- ibac_sni's procs=16 footprint remains unmeasured for the same reason it remains unrun.
 
 ### `card1-20260916-203537` — ibac_sni — **COLLECTED**
@@ -1398,7 +1398,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T20:35 MSK · **run dir** `~/rlvigen-runs/card1-20260916-203537` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** complete: CELL EXIT=0, NATIVE_CELL_COMPLETED 11:16 on 2026-09-17; 910 rows delivered and collected to results/records/card1-20260916-203537__records.jsonl (curve 528, endpoint 44 native + 44 mode, plus training-curve rows) — **status recorded 7h ago**
+- **status** complete: CELL EXIT=0, NATIVE_CELL_COMPLETED 11:16 on 2026-09-17; 910 rows delivered and collected to results/records/card1-20260916-203537__records.jsonl (curve 528, endpoint 44 native + 44 mode, plus training-curve rows) — **status recorded 10h ago**
 - ⚠ attempt 7, launched 20:35 by wait-and-train-v3.sh after card 1 held >=15000 MiB free for ten polls. TRAINING COMPLETE 21:19 MSK at F 600064 -- 44 minutes of wall clock, and the first ibac cell ever to finish its 600k. Held 7,421 MiB at procs=16 (2,199 compute + 5,222 EGL). On entering NATIVE_CURVE_EVAL_BEGIN the card delta fell to 839 MiB, matching the 841 MiB eval-cell figure measured separately, so the EGL contexts really do go away at num_envs=1 -- checked against the card rather than assumed. Learning through training: return 7 -> 91, entropy 9.90 -> 7.88, sigma 0.996 -> 0.746 read from its own lns field, SR 0.000 throughout, which is what Door's shaped reward gives. Now in the in-cell grid. Watch budget 115,668s from 20:35 expires 04:43 on 09-18 against an estimated finish of ~14:50 on 09-17, so there is about 14 hours of slack.
 
 ### `card1-20260916-213222` — idaac — **COLLECTED**
@@ -1407,14 +1407,14 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **launched** 2026-09-16T21:32 MSK · **run dir** `~/rlvigen-runs/card1-20260916-213222` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
 - **status** complete: NATIVE_CELL_COMPLETED 18:43 on 2026-09-17; curve 484/484 and endpoint 88/88 (44 native + 44 mode); 598 rows collected to results/records/card1-20260916-213222__records.jsonl — status recorded under an hour ago
-- ⚠ idaac seed 102 RE-RUN FROM ZERO, launched 21:32 on 2026-09-16 on card 1 beside ibac_sni s101's grid. idaac cannot resume, so this shares nothing with the 41% attempt of 2026-09-16 14:32 (card1-20260916-143204) but the seed; that attempt's log is preserved as prod-v214/idaac-s102-prod-attempt1-yielded-20260916.log and its 5 checkpoints come from a DIFFERENT trajectory and must not be pooled with this run. TRAINING COMPLETE by 07:00 on 2026-09-17, ~9.5 h. Last logged update 288 at step 591,872; 11 intermediates retained at the 50k cadence (51,200 through 550,912) plus the terminal agent-robosuite:Door-idaac-s102.pt -- there is NO 600,064 stamp because the cadence boundary was not crossed again before training ended, so the terminal checkpoint is the only artifact for the final policy. Now in its in-cell curve grid. Packing held: ibac's eval throughput ratio r = 0.90, each container ~1 core. On entering the grid idaac's card delta fell 2,640 -> 823, widening card-1 free from 4,956 to 6,508 against the 4,000 floor. Both cells are now past training, so per run_probe.sh:196 NEITHER polls the yield sentinel any more; combined hold is 1,640 MiB of 32,494. native-out banked to the laptop (69 MB, 11 checkpoints + 129 curve rows).
+- ⚠ idaac seed 102 RE-RUN FROM ZERO, launched 21:32 on 2026-09-16 on card 1 beside ibac_sni s101's grid. idaac cannot resume, so this shares nothing with the 41% attempt of 2026-09-16 14:32 (card1-20260916-143204) but the seed; that attempt's log is preserved as prod-v214/idaac-s102-prod-attempt1-yielded-20260916.log and its 5 checkpoints come from a DIFFERENT trajectory and must not be pooled with this run. TRAINING COMPLETE by 07:00 on 2026-09-17, ~9.5 h [corrected 2026-09-17 21:10: that is launch to observation; GNU time -v in the cell training.log gives 7 h 15 min 18 s of training, 100% of one core]. Last logged update 288 at step 591,872; 11 intermediates retained at the 50k cadence (51,200 through 550,912) plus the terminal agent-robosuite:Door-idaac-s102.pt -- there is NO 600,064 stamp because the cadence boundary was not crossed again before training ended, so the terminal checkpoint is the only artifact for the final policy. Now in its in-cell curve grid. Packing held: ibac's eval throughput ratio r = 0.90, each container ~1 core. On entering the grid idaac's card delta fell 2,640 -> 823, widening card-1 free from 4,956 to 6,508 against the 4,000 floor. Both cells are now past training, so per run_probe.sh:196 NEITHER polls the yield sentinel any more; combined hold is 1,640 MiB of 32,494. native-out banked to the laptop (69 MB, 11 checkpoints + 129 curve rows).
 
 ### `card1-20260917-075047` — ibac_sni — **not yet collected**
 
 - **cell** `ibac_sni-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-17T07:50 MSK · **run dir** `~/rlvigen-runs/card1-20260917-075047` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 10h ago**
+- **status** failed — **status recorded 13h ago**
 - ⚠ ibac_sni seed 102, launched 07:50 on 2026-09-17 onto a card 1 that rlvigen_kalugin_df had released two minutes earlier. STOOD DOWN BY THE MEMORY FLOOR at 08:01, eleven minutes in, at frame 28,672 of 600,000: 'yielded at 1789621293: free memory 75 MiB is below the 4000 MiB floor, free_mib=75 procs=7 util=99'. The co-tenant returned with 22,176 MiB while this cell's 16 EGL contexts were still ramping toward its measured 7,421 MiB, and the floor correctly sacrificed OUR cell rather than theirs. NOTHING WAS SALVAGED: ibac stamps checkpoints on a 50k cadence and this run stopped at 28,672, so it never wrote a single model_<frame>.pt -- only the overwritten model.pt. This repeats a trap recorded in notes/HANDOFF.md by me earlier the same night: 'ibac_sni, but only into a card that has been free for a while ... launching into a fresh vacancy is what failed'. Four of ibac's five earlier failures were this same floor-versus-colleague pattern. The two in-cell grids on the same card were UNAFFECTED, because run_probe.sh:196 polls the sentinel only while a training PID lives and both of them are past training.
 
 ### `card1-20260917-110044` — ibac_sni — **not yet collected**
@@ -1422,7 +1422,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-17T11:00 MSK · **run dir** `~/rlvigen-runs/card1-20260917-110044` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 3h ago**
+- **status** failed — **status recorded 5h ago**
 - ⚠ ibac_sni seed 102 ATTEMPT 2, launched 11:00 on 2026-09-17 after rlvigen_kalugin_df had been absent from card 1 for 15+ consecutive minutes (last seen 10:44:30) -- the ten-minute sustained-vacancy rule that attempt 1 skipped. STOOD DOWN BY THE MEMORY FLOOR at 11:32:34, 'free memory 532 MiB is below the 4000 MiB floor, free_mib=532 procs=6 util=99', when the co-tenant returned at 11:31 and ramped to its usual ~22 GiB. Reached frame 376,832 of 600,000 (63%) and RETAINED 7 CHECKPOINTS (51,200 through 350,208), each separately evaluable -- against attempt 1, which died at 28,672 before its first 50k stamp and kept nothing. The checkpoints live in native-work/runs/ibac_sni-s102/cell/, NOT native-out/cells/.../checkpoints/, because retention to native-out runs only after training completes; the documented rsync excludes native-work, so they must be fetched explicitly. Banked to the laptop (38 MB). idaac s102, sharing the card, was UNAFFECTED: it is past training, so per run_probe.sh:196 it does not poll the sentinel, and its curve completed 484/484 at about the same time. OFFLINE CURVE SWEEP LAUNCHED 15:54 on 2026-09-17 with datasphere/native/host-scripts/curve-sweep-v3.sh (FAMILY=ibac_sni BASELINE=ibac_sni SEED=102 CKPT_DIR=<this run>/native-work/runs/ibac_sni-s102/cell CARD=1 MAXCELLS=3) over the 7 retained checkpoints; MAXCELLS=3 rather than the default 6 because the count includes idaac s102's still-running cell and eval cells ignore the sentinel, so a co-tenant regrowing to ~22 GiB must still leave clear headroom. TAG-COLLISION HAZARD: results land as ~/rlvigen-runs/reeval-v214/ibac_sni-s102-curve-<frame>-result.tgz, a name that does NOT identify this attempt. A future full ibac_sni s102 rerun swept with the same tool would SKIP those frames as 'result present' and silently pool two trajectories. Move these results aside, or collect them under a distinct tag such as reeval-v214-ibac_sni-s102-attempt2-partial-curve, before any later s102 sweep.
 
 **9 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.

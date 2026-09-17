@@ -2,10 +2,11 @@
 
 **You are here because you have this repository and a production host, and nothing else.** This
 file is the **map**: what exists, what produces what, what runs after what, and which tool belongs
-to which stage. It deliberately does **not** restate commands. The executable procedure is
+to which stage. The executable procedure with its reasoning is
 [`RUNNING-ON-PRODUCTION-HOST.md`](RUNNING-ON-PRODUCTION-HOST.md) (referred to below as **the
-procedure**, cited by section), and duplicating it here would create two copies of one rule that
-drift apart — a failure this project has already had more than once.
+procedure**, cited by section). This page restates commands in one place only: §5.2, the sequence
+for one cell, copied from the sessions that ran it on 2026-09-16/17. Anywhere else, a command here
+that disagrees with the procedure is a defect in one of the two.
 
 Read this once, top to bottom, before running anything. It is about 15 minutes. Then work from the
 procedure with this page open beside it.
@@ -250,6 +251,108 @@ grep "card=1 " ~/rlvigen-runs/gpu-occupancy.log | grep -v "cell-c1" \
 
 It also takes a `flock` and holds it for the life of the cell it started, so a second waiter
 refuses. That lock is duplicate prevention, not a capacity limit.
+
+### 5.2 One cell from vacancy to collected rows, as it was actually run
+
+Everything in this subsection was executed on 2026-09-16/17 for `idaac` s102 and `ibac_sni` s102;
+the commands are copied from those sessions with only the seed and names left as placeholders. It
+is the golden path at the level of what you type. The procedure has the reasoning behind each piece.
+
+**Laptop, before anything: is a card genuinely vacant?**
+
+    bash datasphere/native/host-scripts/capacity-check.sh
+    # card 1 as of 2026-09-17T11:00: AVAILABLE  (10/10 clear samples; ...)
+    # To be told instead of polling, run watch-capacity.sh trip in the background.
+
+`AVAILABLE` means ten consecutive minutes with no foreign holder and at least 11,421 MiB free.
+Anything else: wait. Both launches that ignored this were stopped by the memory floor.
+
+**Host, one ssh session: re-check at the moment of launch, preserve the old log, launch detached.**
+This is the 11:00 launch of `ibac_sni` s102, verbatim apart from the placeholders:
+
+    ssh <host> 'bash -s' <<'EOF'
+    set -u
+    A="$HOME/rlvigen-runs/prod-v214"
+    if [ -f "$A/<baseline>-s<seed>-prod-result.tgz" ]; then echo "RESULT EXISTS -- abort"; exit 1; fi
+    # re-verify the vacancy now, not from a sample taken a minute ago
+    recent=$(grep "card=1 " ~/rlvigen-runs/gpu-occupancy.log | tail -10 | grep -c rlvigen_kalugin_df)
+    f1=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i 1)
+    if [ "$recent" -ne 0 ] || [ "$f1" -lt 15000 ]; then echo "VACANCY NOT SUSTAINED -- aborting"; exit 2; fi
+    echo "disk: $(df -Pk ~ | awk 'NR==2{printf "%d", $4/1048576}') GiB | load: $(cut -d' ' -f1 /proc/loadavg)"
+    # v5 truncates <tag>.log; keep a failed earlier attempt's log under an exact new name
+    if [ -f "$A/<baseline>-s<seed>-prod.log" ]; then
+      cp -p "$A/<baseline>-s<seed>-prod.log" "$A/<baseline>-s<seed>-prod-attempt<N>-<why>-<date>.log"
+    fi
+    nohup setsid env CARD=1 YIELD_PROCS=1 FAMILY=<family> BASELINE=<baseline> SEED=<seed> \
+      EXPECT_OURS=20 VRAM_MIB=4096 \
+      bash "$HOME/rlvigen-work/train-production-cell-v5.sh" \
+      > "$A/<baseline>-s<seed>-launch.log" 2>&1 &
+    sleep 25; tail -1 "$A/<baseline>-s<seed>-launch.log"
+    EOF
+
+Three things about that block that are easy to get wrong:
+
+- **`train-production-cell-v5.sh` exits with `SKIP` if a result archive for the tag already
+  exists**, and it **truncates** `<tag>.log` on every launch. The block checks the first and
+  preserves the second.
+- **`YIELD_PROCS=1` is required on card 1.** `launch-card-cell.sh:269-270` refuses a non-zero card
+  without it. `EXPECT_OURS=20` is what keeps process-count yield from firing on our own 16 workers.
+- **`VRAM_MIB` does not protect anyone** (§6b). v5 passes it on as `NATIVE_VRAM_CAP_MIB` (default
+  4096), which exists because the wrapper refuses a GPU container without one.
+- **The re-check greps for one co-tenant by name**, `rlvigen_kalugin_df`, the only one seen on
+  card 1. On another card or another day, check `capacity-check.sh`'s `last holders` and grep for
+  whoever is there.
+
+**Host, within the first minutes: read the banner, then arm the self-cap.** The launcher log
+`prod-v214/<tag>.log` prints, near the top, `container: cell-c1-<pid>`, the watch budget and
+`disk: <free> GiB free, floor <N> GiB`. Write down the container name and the floor. Then:
+
+    ssh <host> 'nohup setsid bash ~/rlvigen-work/self-vram-cap.sh cell-c1-<pid> 1 <cap_mib> \
+      ~/rlvigen-runs/self-vram-cap-<baseline>-s<seed>.log >/dev/null 2>&1 &'
+
+The caps used were 5,000 MiB for `idaac` and 8,000 MiB for `ibac_sni`. The script sums compute
+processes only, so for `ibac_sni` 8,000 is far above the 2,199 MiB it can see (§6b).
+
+**Laptop: record the attempt, then watch it.** `record_host_run.py` reads the cell's own
+`effective_config.json`, so fetch just that file first:
+
+    rsync -a --prune-empty-dirs --include='*/' --include='effective_config.json' --exclude='*' \
+      <host>:'~/rlvigen-runs/<run-id>' ./runs/
+    python scripts/record_host_run.py ./runs/<run-id> --status running --note "<why now, what card>"
+    python scripts/production_run_register.py
+    python scripts/audit_attempt_ledger.py --strict          # exit 0
+
+    RUN=<run-id> LOG=<tag>.log CELL=<baseline>-s<seed> FLOOR=<N> \
+      bash datasphere/native/host-scripts/watch-cell.sh trip  # in the background, no timeout
+
+**When the watcher reports COMPLETED** — about 14 hours later for a fast-training family:
+
+    rsync -a --exclude 'native-work' <host>:'~/rlvigen-runs/<run-id>' ./fetched/
+    BP=<interpreter from procedure §0c> bash datasphere/native/collect-host-run.sh <family> ./fetched/<run-id>
+    python scripts/audit_record_frame_provenance.py results/records/<run-id>__records.jsonl \
+      --checkpoints ./fetched/<run-id>/native-out/cells/<baseline>-s<seed>/checkpoints   # MISMATCHED 0
+    python scripts/record_host_run.py <run-id> --update-status --status "complete: <rows>"
+    python scripts/production_run_register.py
+    python scripts/audit_attempt_ledger.py --strict
+    python scripts/campaign_status.py
+
+`collect-host-run.sh` prints a NOTE, not an error, when the evaluator ledger declines a production
+run; that is correct (§8 item 3). Do **not** run `populate_evaluator_ledger.py` afterwards.
+
+**When the watcher reports YIELDED or FAILED** — the other branch, also executed:
+
+    ssh <host> 'cat ~/rlvigen-runs/<run-id>/native-work/yield.sentinel'     # why
+    rsync -a --exclude 'native-work' <host>:'~/rlvigen-runs/<run-id>' ./fetched/
+    # the stamps are ONLY in native-work after a mid-training stop; fetch them by name (§6c)
+    rsync -a <host>:'~/rlvigen-runs/<run-id>/native-work/runs/<baseline>-s<seed>/<artifact path>/<stamp glob>' ./fetched/<run-id>/native-work/...
+    python scripts/record_host_run.py ./fetched/<run-id> --status failed --note "<sentinel text, frame reached, stamps kept>"
+    python scripts/production_run_register.py
+    python scripts/audit_attempt_ledger.py --strict
+
+Then decide between evaluating the stamps offline as a partial curve (§11.2, `curve-sweep-v3.sh`)
+and a rerun from zero, which is a new attempt with a new run directory. Collect a partial curve under
+a distinct tag, such as `reeval-v214-<baseline>-s<seed>-attempt<N>-partial-curve`. A later sweep
+of the same seed would otherwise collide with it and silently pool two trajectories.
 
 ## 6. The containers, per cell
 

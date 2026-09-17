@@ -1559,7 +1559,7 @@ current with `--check` (the release suite does).
 | `self-vram-cap.sh` | Stop OUR OWN cell if its GPU memory would endanger a co-tenant. Never touches anyone else's. |
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 
-**`datasphere/native/host-scripts/*.sh`** — 30 file(s)
+**`datasphere/native/host-scripts/*.sh`** — 32 file(s)
 
 | script | what it is for |
 |---|---|
@@ -1568,6 +1568,7 @@ current with `--check` (the release suite does).
 | `attest-retry2.sh` | svea and soda, third attempt. Attempt 2 got the Places365 archive through (the launcher fix works) |
 | `attest-v212.sh` | ATTESTATION WAVE v212 -- all seven evaluator families against the frozen tree. |
 | `attest-v213-ctrl.sh` | ctrl only, against the tree that pins nvidia-cudnn-cu12==9.5.1.17. |
+| `capacity-check.sh` | Evaluate, from the host's occupancy log, whether each card is GENUINELY available for a training |
 | `ctrl-retry.sh` | Retry ctrl's attestation under the DATASPHERE profile. |
 | `curve-sweep-v2.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
 | `curve-sweep-v3.sh` | Evaluate every retained checkpoint of a run, several cells at a time. |
@@ -1592,9 +1593,10 @@ current with `--check` (the release suite does).
 | `train-production-cell.sh` | One PRODUCTION training cell to 600k, with the endpoint grid and WITHOUT the in-cell curve. |
 | `verify-places-folder.sh` | (no summary) |
 | `wait-and-train-v3.sh` | Launch ONE production cell when a card's capacity for us clears a threshold and STAYS clear. |
+| `watch-capacity.sh` | Keep watching prod when NOTHING of ours is running, so a genuine opening is noticed without a prompt. |
 | `watch-cell.sh` | Watch ONE production cell from the laptop: stop detection, result, disk against the cell's own |
 
-*163 entry points. Generated; do not edit by hand.*
+*165 entry points. Generated; do not edit by hand.*
 
 <!-- END script-inventory -->
 
