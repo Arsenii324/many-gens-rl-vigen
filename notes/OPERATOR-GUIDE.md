@@ -348,6 +348,25 @@ What the campaign has actually done with a stopped cell, and what remains a judg
   on whatever is in the run directory. Reusing a run directory via `NATIVE_RUN_DIR` without meaning
   to would silently continue an old run under a new attempt.
 
+## 6d. Images, the Docker settings that matter, and where a cell's environment comes from
+
+Values as the executed production launches used them (`train-production-cell-v5.sh` →
+`launch-card-cell.sh` → `run_on_production_host.sh`). The procedure's §3.0b and §3.0c have the
+incidents behind the last three rows.
+
+| What | Value in the executed launches | Set at | Why you care |
+|---|---|---|---|
+| Cell image | `nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b…` | `source-lock.json` `container_image`, read at `run_on_production_host.sh:285` | printed as `image:` near the top of every launch log; check it there |
+| Helper image | `python:3.11-slim` (`NATIVE_HELPER_IMAGE`) | `launch-card-cell.sh:120`, `run_on_production_host.sh:277` | runs the preflight, the disk-need computation and the three watch containers, with the repo mounted read-only. The preflight, exclusivity and yield containers get `--gpus all` so they can **query** both cards; they allocate nothing |
+| Which card the cell gets | `DOCKER_GPUS='"device=<CARD>"'` | `launch-card-cell.sh:471`, from `CARD` | the wrapper refuses when it is unset (`run_on_production_host.sh:123`); its old default was every card |
+| Rendering | `NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics` | `run_on_production_host.sh:219` | without `graphics`, EGL silently falls back to a CPU rasteriser — procedure §3.0c |
+| Durable output | host `<run>/native-work` → `/tmp/native-work`, `<run>/native-out` → `/tmp/native-out` | `launch-card-cell.sh:473` | the only things that outlive the container; `--rm` removes the rest |
+| CPU and RAM limits | none, deliberately (`run_on_production_host.sh:80`) | — | a cell may use every core; `ibac_sni` at 16 processes is a whole-host CPU job |
+| The Python environment | **built inside the container on every launch**: apt, then about 1.7 GB of pip wheels with `--no-cache-dir` (the log says `NATIVE_PIP_CACHE_DISCIPLINE off`). v5 sets no `NATIVE_VENV_HOST` | `run_probe.sh` bootstrap | **7–22 minutes from launch to the cell first holding GPU memory** in the four launches of 16–17 Sep (occupancy log, 60 s resolution: 20:35→20:48, 21:32→21:54, 07:50→07:57, 11:00→11:07). A pip cache **cannot** work on this image. The one prebuilt environment on the host was built for `idaac` only (`"editable": []`) and would be refused for `rlvigen`. The bootstrap's transient disk use is what ate into an older cell's disk margin (procedure §9.5c) |
+
+Two environments cover the fleet: eleven baselines share the torch requirement set, and `ctrl` needs
+the JAX one. So `ctrl` cannot be packed into a container with any other family (`check-co-schedulable`).
+
 ## 7. Watching a run, and the traps that make a monitor lie
 
 Full detail in procedure §9.5; the complete tool list is §10.4. What you actually reach for:
