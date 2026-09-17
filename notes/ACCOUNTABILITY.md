@@ -66,7 +66,7 @@ Catalogue in OPERATOR-GUIDE §11.4. These are the ones that can move without a f
 | id | item | status | what closes it |
 |---|---|---|---|
 | D1 | O2, payloads for the four families that have never run | PARTIAL — laptop half DONE 2026-09-17 21:20 | `build-payload` + `verify-payload` + `verify-evaluator-binding` exit 0 for `rlvigen`, `dmc_gb`, `alda`, `ctrl`. Left: the payload-naming decision (v5 reads a literal `payload-v214-` name) and the copy to the host. |
-| D2 | O8, a fresh clone reconstructed on Linux | IN PROGRESS 2026-09-17 21:25 | The laptop cannot do it (case-insensitive filesystem, no local Docker daemon). Running it instead inside a `python:3.11-slim` container on the host, against the committed tree shipped as a 37 MB archive. Closes when `setup/bootstrap_sources.py` then `setup/verify_sources.py` exit 0 there. The scratch directory `~/bootstrap-test` is mine and is removed by exact name afterwards. |
+| D2 | O8, a fresh clone reconstructed on Linux | **DONE 2026-09-17 22:05** | Ran in a `python:3.11-slim` container on the host against the committed tree: `bootstrap_sources.py` then `verify_sources.py`, both exit 0, both printing `source reconstruction verified`; 9 min 40 s, 1.7 GB. Evidence bundle `results/evidence/linux-reconstruction-from-a-fresh-tree` (tests green). Scratch removed — which took a second container, because container output is root-owned. Left open and renamed O8b: a fresh clone taken to a payload on Linux, and any host other than cds2. |
 
 ## C. Housekeeping questions
 

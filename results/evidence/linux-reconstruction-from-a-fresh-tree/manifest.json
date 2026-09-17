@@ -1,0 +1,49 @@
+{
+  "slug": "linux-reconstruction-from-a-fresh-tree",
+  "excerpts": {
+    "container-run": {
+      "file": "raw/container-run.txt",
+      "sha256": "f348146cbacc51560db3417dbf842751412ce504e816615b4200571c64178ef8",
+      "source": {
+        "kind": "local-command",
+        "command": "cat results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log",
+        "repo_head": "7a2cafb3e1c7fc14d362bcce658931cfedd3a09a",
+        "inputs": {
+          "results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log": "561446aef8361f6a906654f4a79cf7a898ad7673f79a81c806e108814f64e792"
+        }
+      },
+      "extraction": "( cat results/evidence/linux-reconstruction-from-a-fresh-tree/container-run.log ) | grep -n -E 'git version|tree:|bootstrap_sources|bootstrap rc|real|runnable|RL-ViGen-upstream|verify_sources|verify rc|docker rc|free' | head -n 25",
+      "tar_member": null,
+      "matched_lines": 12,
+      "shown_lines": 12,
+      "captured_at": "2026-09-17T22:03:32+00:00",
+      "note": "python:3.11-slim on the production host, against the repository's committed tree shipped as a 37 MB archive. Closes the half of OPERATOR-GUIDE 11.4 O8 a macOS laptop cannot test: bootstrap_sources.py refuses on a case-insensitive filesystem."
+    }
+  },
+  "facts": [
+    {
+      "key": "bootstrap_rc",
+      "value": "0",
+      "excerpt": "container-run",
+      "anchor": "bootstrap rc=0"
+    },
+    {
+      "key": "verify_rc",
+      "value": "0",
+      "excerpt": "container-run",
+      "anchor": "verify rc=0"
+    },
+    {
+      "key": "wall_clock",
+      "value": "9m40.266s",
+      "excerpt": "container-run",
+      "anchor": "real\t9m40.266s"
+    },
+    {
+      "key": "runnable_size",
+      "value": "408M",
+      "excerpt": "container-run",
+      "anchor": "408M\trunnable"
+    }
+  ]
+}

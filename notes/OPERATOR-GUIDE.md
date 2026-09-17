@@ -560,6 +560,14 @@ differently:
   `git pull`. **Its git history is not evidence of what runs; compare hashes.** On 2026-09-17 the
   launch-path files matched laptop `HEAD` byte for byte, except comment-only differences in
   `run_on_production_host.sh`.
+**Anything a container writes to a bind mount is owned by root**, because the cell runs as root
+inside its image. Your own scratch directory is no exception: after the reconstruction test of
+2026-09-17, `rm -rf ~/bootstrap-test` as `varaksin_as` returned `Permission denied` on every file
+the container had written. Removing it needed a second container with **that directory as its only
+mount** — the mount is what bounds a root `rm -rf` — and then `rmdir` for the empty parent. The same
+wall is why 13.4 GB of old, empty run directories still sit on this host
+([`production-host/README`](production-host/README.md), the disk notes).
+
 - **The wrappers** — `train-production-cell-v5.sh`, `self-vram-cap.sh`, `gpu-occupancy-log.sh`,
   the sweep scripts — sit loose in `~/rlvigen-work/`. The authoritative copies are in
   `datasphere/native/host-scripts/`. The host's `v5` and `self-vram-cap.sh` differed from those
@@ -812,7 +820,7 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 
 | Executed and worked | Written but not executed here, and why |
 |---|---|
-| `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | **`setup/bootstrap_sources.py` doing a real reconstruction.** It requires a case-sensitive filesystem because RL-ViGen has two files differing only by case, and it refuses on macOS. It has not been run on Linux in this campaign. |
+| `setup/verify_sources.py`, `setup/bootstrap_sources.py --verify-only`, `setup/verify_datasets.py --split train` and `--split val` — all exit 0 **in an already-reconstructed tree** | ~~**`setup/bootstrap_sources.py` doing a real reconstruction.**~~ **Executed 2026-09-17** in a container on the host: bootstrap then `verify_sources.py`, both exit 0 (§11.4 O8). It still refuses on macOS, so it cannot be run here. |
 | `contract.py build-payload --source . --output <tgz> --families <family>`, then `verify-payload --require-evaluator-identity --require-runner-contract 19` and `verify-evaluator-binding --archive … --source . --families <family>` — all exit 0 for **`idaac` (5.26 MB) and, on 2026-09-17, for the four families that have never run: `rlvigen` 284 KB, `dmc_gb` 13 MB, `alda` 37 MB, `ctrl` 312 KB**. (`rlvigen` is small because the payload never carries `RL-ViGen-upstream/`; the cell clones it at run time.) | **A fresh clone taken all the way to a payload.** Blocked by the line above: a clone without reconstructed sources cannot hash the evaluator. What *was* run in a fresh clone: `operator_readiness.py` → exit 0, and `campaign_status.py` → a readable instruction instead of a traceback. |
 | `collect-host-run.sh ibac_sni <run-dir>` on a cleanly completed cell → 910 rows installed. **Needed `BP=<python>` set explicitly**; the script falls back to `python3` otherwise | `collect-host-run.sh` on a **reaped** cell with `NATIVE_ACCEPT_WATCH_STOP=1` was run for `idaac` s101 earlier in the campaign, not in this session |
 | `assemble_reaped_delivery.py` as a dry run on a mid-flight `ibac_sni` copy → 528 rows, correctly marked | |
@@ -928,13 +936,21 @@ reaper on a genuinely hung grid, `self-vram-cap.sh` tripping. *Target:* none; do
 a shared host. *What to do if one fires:* §6b gives the marker and what survives, and §10.1 the order
 of questions. The disk floor came within one 60-second sample of firing on 2026-09-17.
 
-**O8 — A fresh clone reconstructed on Linux, and a host other than `cds2`**
-- *Why not done:* `setup/bootstrap_sources.py` refuses on macOS's case-insensitive filesystem (§11.1),
-  and only one host was available.
-- *Target:* `setup/verify_sources.py` exits 0 in a clone reconstructed on Linux, followed by a
-  `verify-evaluator-binding` pass for one family.
-- *Operation:* run the bootstrap inside a Linux container with network access
-  (`docs/RUN-THIS-PROJECT.md` §1). Not executed.
+**O8 — A fresh clone reconstructed on Linux** — **CLOSED 2026-09-17**
+- *What was done:* the committed tree (`git archive HEAD`, 37 MB — what a clone gives you) was
+  shipped to the host and reconstructed inside a `python:3.11-slim` container with its own network:
+  `setup/bootstrap_sources.py` then `setup/verify_sources.py`, both exit 0, both printing
+  `source reconstruction verified`. 9 min 40 s, about 1.7 GB of disk, removed afterwards. Evidence:
+  [`results/evidence/linux-reconstruction-from-a-fresh-tree`](../results/evidence/linux-reconstruction-from-a-fresh-tree/CLAIM.md),
+  which carries the recipe as `capture.sh` (`RERUN=1` does the whole thing again).
+- *Still open, narrowly:* a fresh clone taken all the way to a **payload** on Linux — the build and
+  binding checks have only ever run on the laptop, against the long-standing tree — and any host
+  other than `cds2`.
+
+**O8b — Any host other than `cds2`**
+- *Why not done:* no other host has been available.
+- *Target and operation:* `docs/RUN-THIS-PROJECT.md` §5a, the portable route for any Linux host with
+  Docker and a GPU. Not executed.
 
 **O9 — A prebuilt Python environment for the torch families**, which would remove the 7–22 minutes
 of in-container `pip` per launch (§6d)

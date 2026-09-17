@@ -26,6 +26,7 @@ answer without re-running anything:
 | [ibac-endpoint-weights-equal-frame-600064](ibac-endpoint-weights-equal-frame-600064/CLAIM.md) | Does ibac_sni's endpoint measure the 600,064-frame policy, when its snapshot matches no frame-named file by hash? | resolved: yes, all 37 parameter tensors are bitwise equal; the 512-byte file difference is CUDA-vs-CPU device tags. The auditor still grades it UNVERIFIABLE, correctly, because it indexes by file hash |
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 | [only-a-training-cell-obeys-the-sentinel](only-a-training-cell-obeys-the-sentinel/CLAIM.md) | Does a cell keep obeying the yield sentinel after its training finishes? | resolved: no. Three cells, one event, three sentinels; only the still-training one stopped |
+| [linux-reconstruction-from-a-fresh-tree](linux-reconstruction-from-a-fresh-tree/CLAIM.md) | Can a new operator reconstruct the pinned sources from a fresh clone, on Linux? | resolved: yes. bootstrap_sources.py then verify_sources.py, both rc=0, in a container on the host; 9m40s and 1.7 GB |
 
 ## Finding something
 

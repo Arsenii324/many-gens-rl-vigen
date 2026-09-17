@@ -1,0 +1,22 @@
+=== free before: 175 GiB ===
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+git version 2.47.3
+=== tree: 0 files (no .git expected), runnable present? runnable ===
+=== bootstrap_sources.py ===
+source reconstruction verified
+bootstrap rc=0
+
+real	9m40.266s
+user	0m25.647s
+sys	0m21.914s
+=== du after ===
+408M	runnable
+912M	RL-ViGen-upstream
+11M	ext
+=== verify_sources.py ===
+source reconstruction verified
+verify rc=0
+=== docker rc=0 ===
+=== free after: 173 GiB | bootstrap-test size: 1.7G ===
+
+[exited with code 0]
