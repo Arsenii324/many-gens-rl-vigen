@@ -54,10 +54,10 @@ the others.
 | B5 | Resources per family (VRAM, disk, CPU, wall time) | DONE 21:10 | see closing report B5 |
 | B6 | Integrations and checks | DONE 21:05 | see closing report B6 |
 | B7 | Golden path fully fleshed, as executed | DONE 21:10 | see closing report B7 |
-| B8 | Off-golden-path model | PARTIAL (§10) | Failure triage extended by B2/B3 facts: what to do after each stop kind. |
+| B8 | Off-golden-path model | DONE 21:30 | see closing report B8 |
 | B9 | Out-of-reach catalogue, each narrowed and labelled (target / state / operation) | DONE 21:15 | see closing report B9 |
-| B10 | Links to project-wide docs instead of duplicating | PARTIAL | docs/RUN-THIS-PROJECT.md already deferred to; check PROJECT-INDEX, EVAL-PROTOCOL, COMPARABILITY_CONTRACT, STATUS-AGAINST-THE-GOAL, compute.md and link where they own the fact. |
-| B11 | Grounding pass: nothing in the guide that I did not execute is stated as working | PARTIAL (§11 boundary) | Re-read the whole guide at the end; every command either executed (and where) or labelled untested. |
+| B10 | Links to project-wide docs instead of duplicating | DONE 21:35 | see closing report B10 |
+| B11 | Grounding pass: nothing in the guide that I did not execute is stated as working | DONE 21:45 | see closing report B11 |
 
 ## C. Housekeeping questions
 
@@ -109,6 +109,25 @@ execution:* the Places365 check was run in the helper container on the host (tra
 val PASS structure-only). *Found while doing it:* the procedure told operators to run
 populate_evaluator_ledger.py on production runs (two places plus HANDOFF) and to run Python on the
 host shell for Places365; the host-scripts README claimed Places365 was in place. All corrected.
+
+**B8 — ~21:30.** §10.4: what you see (the exact printed text), what it means, what to do next, in
+three groups — before the cell starts, during or after training, at collection. Every row labelled
+**seen** or **code**. *Verified:* each string grepped out of the script that prints it; three "seen"
+labels were downgraded when the ledger showed the branch had not actually been hit.
+
+**B10 — ~21:35.** The guide's header now routes what-a-number-means questions to TASK,
+RESEARCH-FRAME, STATUS-AGAINST-THE-GOAL, EVAL-PROTOCOL, COMPARABILITY_CONTRACT,
+PART2-METRIC-INVENTORY, DECISIONS-IF-PRODUCTION-GOES-WRONG and PROJECT-INDEX, rather than
+restating them. *Verified:* every link resolves; each description taken from that document's own
+opening lines.
+
+**B11 — ~21:45.** Read the guide end to end against the artifacts. *Found and fixed:* §5 called
+`wait-and-train-v3.sh` the default and said it enforced the vacancy rule — it counts free memory
+only and would launch beside today's co-tenant, which §5.1 exists to prevent; "both launches that
+ignored the check were stopped" (the second passed the check and was stopped anyway); the yield
+count; two cross-references broken by a renumbering; a dangling sentence about the waiter's lock.
+The procedure's own script inventory line for the waiter was corrected too. *Remaining honestly
+untested:* everything in §11.4, and §11.1/§11.2's right-hand columns.
 
 **Noticed, not acted on:** `production_run_register.py` marks terminal `failed` statuses as
 "likely stale" by age, which is misleading for a status that cannot change.
