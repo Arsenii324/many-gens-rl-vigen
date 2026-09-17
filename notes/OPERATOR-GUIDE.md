@@ -480,6 +480,51 @@ Procedure §9.6 has the commands. Two things that are not obvious:
    un-validated three families before being caught. The script now refuses using the gate's own
    check; do not work around that refusal.
 
+## 8b. The checks: what each proves, when it runs, and whether it has run
+
+A check proves one narrow thing. The column "does **not** prove" is there because most false
+confidence in this project came from reading a check as broader than it is.
+
+**Before a launch (laptop)**
+
+| Check | Proves | Does not prove | Ran in this campaign |
+|---|---|---|---|
+| `setup/verify_sources.py` | the reconstructed trees match their pins | that a fresh reconstruction works (§11.1) | yes, exit 0, in an already-built tree |
+| `setup/verify_datasets.py --split train` | Places365 is complete **where you ran it** | anything about the host | yes, laptop only |
+| `contract.py verify-payload --require-evaluator-identity --require-runner-contract 19 <tgz>` | the payload is complete and carries the evaluator identity the host runner expects | that the evaluator is the attested one | yes, `idaac` |
+| `contract.py verify-evaluator-binding --archive <tgz> --source . --families <family>` | the payload's evaluator hashes equal the live tree's | that the live tree is attested | yes, `idaac` |
+| `scripts/production_gates.py` | 37 mechanical gates; the evaluator is attested 7/7; the tree is committed | the 9 OWNER items, which are decisions | yes, many times. It **FAILs on any uncommitted file**, including a doc edit — commit, then rerun |
+| `scripts/operator_readiness.py` | every path the procedure names exists and every live script's interface is documented | that the procedure is correct (its own output says so) | yes, exit 0, including in a fresh clone |
+
+**At launch (inside the launcher, automatic)**
+
+| Check | Where | Stops the launch when |
+|---|---|---|
+| GPU preflight | `watch_gpu_headroom.py --preflight --need-mib ${NATIVE_NEED_MIB:-4000}` (`launch-card-cell.sh:238`) | the card lacks the stated free memory **now** — a snapshot, not a vacancy; §5.1 |
+| Watch arming | each watch container must start and still be running ten seconds later (`launch-card-cell.sh:254,302,334,456-459`) | a watch refuses its arguments, e.g. a budget that cannot cover the cell |
+| `DOCKER_GPUS` and the VRAM-cap variable are set | `run_on_production_host.sh:123,171` | either is unset |
+| `NATIVE_HOST_DRY_RUN=1` | `run_on_production_host.sh` | — it runs every guard and prints mounts and environment without executing. **Not run before the 16–17 Sep launches**; earlier sessions used it (`production-host/14`) |
+
+**Inside the cell, after training (automatic; a failure is `NATIVE_CELL_FAILED`)**
+
+| Check | Where | Proves |
+|---|---|---|
+| Endpoint marker | `verify_final_evaluation` (`run_probe.sh:305`) requires `NATIVE_FINAL_EVALUATION_COMPLETED frame=<expected>` | training reached exactly the family's own endpoint (`family.py expected-endpoint`) |
+| Retain | `family.py retain` | the declared checkpoints exist and were copied to `native-out` |
+| Finite weights | `family.py check-finite` on the retained terminal checkpoint | no NaN or Inf in the policy that will be evaluated |
+| Strict curve | `CURVE_EVAL_STRICT`, on by default in production | every intermediate stamp produced its rows |
+
+**After collection (laptop)**
+
+| Check | Proves | Ran in this campaign |
+|---|---|---|
+| `collect-host-run.sh` | eight steps: the run succeeded by its own markers, the renderer was real (not `llvmpipe`), the bundle is non-empty, its source matches the log, the row count matches what the runner said it wrote, two audits that need host artifacts; then installs rows in `results/records/` | yes: `ibac_sni` s101 (910 rows), `idaac` s102 (598) |
+| `audit_record_frame_provenance.py <records> --checkpoints <dir>` | each curve row's frame agrees with the checkpoint it names; **MISMATCHED must be 0** | yes, `idaac` s102: 484 corroborated, 0 mismatched (§8 item 4) |
+| `campaign_status.py` | which (baseline, seed) cells are DONE / PARTIAL / MISSING against the schedule | yes |
+| `export_fleet.py` | one flat table of every record, and how many are on the current evaluator closure | yes: 6,193 rows, 2,932 current |
+| `audit_attempt_ledger.py --strict` | no rerun silently replaces an earlier attempt; host attempts come from `results/host-runs.jsonl` | yes, exit 0 on 2026-09-17 |
+| `populate_evaluator_ledger.py` | **attestation jobs only** (§8 item 3) | yes: accepted three `attest-v212` files, refused two production files |
+
 ## 9. What you must not improvise
 
 The grid, the checkpoint cadence and the seed set are fixed, and changing them makes the numbers
