@@ -43,6 +43,7 @@ and the specifics are where the harm is.
 | [`31-state-at-the-pause-2026-09-10.md`](31-state-at-the-pause-2026-09-10.md) | state at the owner's 24h pause |
 | [`32-what-we-actually-have-2026-09-14.md`](32-what-we-actually-have-2026-09-14.md) | **full artifact audit** — what each run left behind, what "collected" means, and the two long runs worth re-measuring |
 | [`33-what-we-actually-have-2026-09-16.md`](33-what-we-actually-have-2026-09-16.md) | **current state.** The re-evaluation landed (732 admissible rows, was 28); the seed discrepancy that makes the campaign count 1 of 36; the co-tenant arithmetic that decides a launch; three wrong VRAM numbers and two retracted claims |
+| [34-first-three-baseline-reading-2026-09-17.md](34-first-three-baseline-reading-2026-09-17.md) | The first time three baselines could be put on the same axes: idaac, ibac_sni and ppg at PRIMARY for raw return. One seed each, so a reading and not a result. |
 
 ## The rule that comes before the others
 
