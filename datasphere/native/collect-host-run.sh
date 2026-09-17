@@ -310,7 +310,23 @@ fi
 out="$("$BP" scripts/populate_evaluator_ledger.py "$FAMILY" "$JOB_ID" 2>&1)"
 status=$?
 printf '%s\n' "$out" | tail -3 | sed 's/^/   /'
-if [[ $status -ne 0 ]] || printf '%s' "$out" | grep -q "Do NOT write this entry"; then
+# [Claude 2026-09-17] Two refusals arrive here and they are NOT the same event.
+#
+#   (a) the record is stale, or otherwise does not describe the current tree -- a real problem, and
+#       the collection must fail so nobody files rows that certify a tree that no longer exists;
+#   (b) the record is a PRODUCTION run, which is never attestation evidence: the gate accepts only a
+#       single-scope endpoint measurement (one frame, one policy pass), and a production delivery has
+#       a multi-frame curve and a two-pass endpoint. populate_evaluator_ledger.py refuses those by
+#       design, using the gate's own check.
+#
+# Case (b) is EXPECTED on every production collection, and treating it as failure is how an operator
+# learns to ignore this script's exit code. Found by collecting idaac s102 at 18:45: 598 rows were
+# installed correctly and the script still exited 1. Same principle as the note in step 8 below --
+# the collection either happened or it did not, and by this point it has.
+if printf '%s' "$out" | grep -qE "production_gates would reject this entry|no endpoint-scope offline-eval rows"; then
+  echo "   NOTE: the evaluator ledger was NOT updated, which is correct -- a production run is not"
+  echo "   attestation evidence. The records above are installed. Attest from an attest-v2xx job."
+elif [[ $status -ne 0 ]] || printf '%s' "$out" | grep -q "Do NOT write this entry"; then
   echo "   REFUSED by the ledger: this record does not describe the current tree." >&2
   exit 1
 fi
