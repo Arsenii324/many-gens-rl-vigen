@@ -91,7 +91,12 @@ forgotten, fired fifteen seconds before a deliberate launch and put two 600k `ib
 `run-volta-probe-when-free.sh` — the ctrl/cuDNN-on-Volta investigation, now resolved.
 `attest-chain.sh`, `attest-retry.sh`, `attest-retry2.sh`, `attest-v212.sh`, `attest-v213-ctrl.sh`,
 `ctrl-retry.sh` — the v212/v213 attestation wave.
-`fetch-places.sh`, `extract-places-once.sh`, `verify-places-folder.sh` — Places365 setup; the
-dataset is already in place, so re-running these is not part of normal operation.
+`fetch-places.sh`, `extract-places-once.sh`, `verify-places-folder.sh` — Places365 setup.
+[Corrected 2026-09-17, checked on the host] Only part of the dataset is in place:
+`~/rlvigen-assets/places365/val/` holds the full 36,500 images, but `train/` holds the 20-class,
+1,000-file attestation **fixture**, and train is the production split (A22). `fetch-places.sh` was
+started for the ~24 GB train tarball and abandoned at ~55 kB/s. `verify-places-folder.sh` checks
+for exactly 1,000 files, so it passes on the fixture and says nothing about the corpus. See
+`notes/RUNNING-ON-PRODUCTION-HOST.md` §2b.
 
 Read any of them before rerunning. Several target a problem that has since been fixed.

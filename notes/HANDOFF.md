@@ -117,8 +117,9 @@ rsync -a --exclude 'native-work' \
 python scripts/record_host_run.py card1-20260916-203537 --update-status --status completed \
   --note "<what actually happened>"
 bash datasphere/native/collect-host-run.sh ibac_sni ./fetched/card1-20260916-203537
-python scripts/populate_evaluator_ledger.py ibac_sni card1-20260916-203537
-python scripts/audit_record_frame_provenance.py \
+# [corrected 2026-09-17] a populate_evaluator_ledger.py line stood here; never run it on a production
+# run (OPERATOR-GUIDE §8 item 3). The provenance audit also needs the records file as its argument.
+python scripts/audit_record_frame_provenance.py results/records/card1-20260916-203537__records.jsonl \
   --checkpoints ./fetched/card1-20260916-203537/native-out/cells/ibac_sni-s101/checkpoints
 python scripts/campaign_status.py
 python scripts/production_gates.py | tail -3

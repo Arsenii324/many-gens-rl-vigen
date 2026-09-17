@@ -174,11 +174,11 @@ on the shared filesystem was about 175 GiB on 2026-09-17 and moves with other us
 
 | baseline | disk need at 600k | host RAM | CPU | 600k training time on this host |
 |---|---|---|---|---|
-| `drqv2`, `drq`, `curl` | 48 GiB, computed | replay capacity 620k ⇒ **36.7 GiB worker-resident per cell, computed**; never measured here | trainer plus 4 replay-loader workers | **never run** |
+| `drqv2`, `drq`, `curl` | 48 GiB, computed | **≈40 GiB per cell**: 36.7 GiB of replay at the v100 cap of 620k (computed) plus a 3.3 GiB fixed peak (measured on DataSphere, for `svea`); never measured here | trainer plus 4 replay-loader workers | **never run** |
 | `svea`, `sgqn` | 95 GiB, computed (47.5 of it Places365) | as above | as above | **never run** |
-| `rad` | 29 GiB, computed | replay buffer uncapped and in memory; not measured here | — | **never run** |
-| `soda` | 77 GiB, computed (includes Places365) | as `rad` | — | **never run** |
-| `alda` | 12 GiB, computed | not measured here | — | **never run** |
+| `rad` | 29 GiB, computed | **≈22 GiB**: 19.3 GiB of replay **preallocated at start** (30,000 B per budgeted frame, computed) plus a 2.6 GiB fixed peak (measured on DataSphere) | — | **never run** |
+| `soda` | 77 GiB, computed (includes Places365) | **≈23 GiB**: 20.4 GiB preallocated replay (computed) plus the fixed peak, which is not measured for `soda` | — | **never run** |
+| `alda` | 12 GiB, computed | **15.3 GiB** fixed working set, independent of budget (`families.json`; not measured here) | — | **never run** |
 | `idaac` | 9 GiB, computed | max RSS 2.8 GiB, **measured** | 1 process, 100% of one core, **measured** | **4 h 50 min** (s101), **7 h 15 min** (s102, sharing the host with another cell's grid), **measured** |
 | `ppg` | 9 GiB, computed | max RSS 4.7 GiB, **measured** | 1 env, ~100% of one core, **measured** | **3 h 34 min** (s1), **measured** |
 | `ibac_sni` | 10 GiB, computed | max RSS of the largest process 2.6 GiB, **measured**; the 16 workers together were not | **16 processes, 626% CPU, measured** — a whole-host job | **31 min 32 s** (s101), **measured** |
@@ -198,6 +198,12 @@ Where each number comes from, so you can re-derive it:
 - **Evaluation time is not in this table** because it barely depends on the family: the in-cell grid
   took about 13.5–14 hours in both complete cells of 16–17 Sep. Budget for it (§6b, reaper row).
 - **Launch to training** is a further 7–22 minutes of bootstrap (§6d).
+- **Host RAM is not checked by the launcher.** Nothing in `launch-card-cell.sh` compares a cell's
+  RAM figure with what the host has free, and the host's other users take an unknown share of its
+  113 GiB. For the five RL-ViGen baselines, `rad`, `soda` and `ctrl`, RAM rather than VRAM is the
+  largest number in the row. Only the three families that have run have a RAM figure measured here.
+  The RAM figures above come from `families.json` (`memory_note`, `tier_reason`, `replay_semantics`,
+  `host_memory_model`).
 
 ## 5. What to launch with, and why there are three layers
 
@@ -725,10 +731,12 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 | **Two and three cells packed on one card** — throughput ratio measured at r = 0.90 | Packing more than three, or two *training* cells at once |
 | **The memory floor stopping a training cell** — seen twice on 2026-09-17, both documented with their sentinels; grid cells ignored the same event | The disk watch actually **firing**: it came within one 60 s sample of doing so and did not |
 | **A mid-training stop leaving checkpoints in `native-work/`** — 7 salvaged from `ibac_sni` s102 attempt 2 and fetched explicitly | |
-| **Offline re-evaluation of stamped checkpoints with `curve-sweep-v3.sh`** — `ibac_sni` s102, launched 15:54 on 2026-09-17 with `MAXCELLS=3`. The first result was checked, not assumed: 44 rows, curve scope, frame 100,352 on every row, 3 episodes, and `checkpoint_sha256` equal to the sha256 of `model_100352.pt` on the host, with the evaluator revision binding to the live tree. It skipped the frame-less `model.pt` and held at 3 cells as configured. (Moved here from the right column once it had worked, as §11.4 says to.) | |
+| **Offline re-evaluation of stamped checkpoints with `curve-sweep-v3.sh`** — `ibac_sni` s102, launched 15:54 on 2026-09-17 with `MAXCELLS=3`. The first result was checked, not assumed: 44 rows, curve scope, frame 100,352 on every row, 3 episodes, and `checkpoint_sha256` equal to the sha256 of `model_100352.pt` on the host, with the evaluator revision binding to the live tree. It skipped the frame-less `model.pt` and held at 3 cells as configured. (Moved here from the right column once it had worked, as §11.5 says to.) | |
 | `watch-cell.sh` in both modes; verified against a really-stopped cell and a healthy one | |
 
 ### 11.3 Never run in this campaign, at all
+
+The short list. §11.4 takes each item apart into what is missing, the target, and the operation.
 
 - **Nine of twelve baselines have never completed a production cell here**: `drqv2`, `svea`, `drq`,
   `sgqn`, `curl`, `rad`, `soda`, `alda`, `ctrl`. Every per-family quirk this guide records comes from
@@ -744,7 +752,97 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
   launcher passes, four have no restore path at all, and every restore loses something.
 - **Any host other than `cds2`.**
 
-### 11.4 How to use this section
+### 11.4 Out of reach so far — each item narrowed to its part, with the state to reach
+
+Each entry names **the part** that is missing, **why** it has not been done, **the target state**,
+**the operation** that reaches it, and **how to tell** it worked. Where an operation has never been
+executed, the entry says so; treat it as a proposal until it has run.
+
+**O1 — Places365 train split on the host** (blocks `svea`, `sgqn`, `soda`)
+- *State now, checked 2026-09-17 in the helper container:* `~/rlvigen-assets/places365/train/` has 20
+  classes and 1,000 files, the attestation fixture. `val/` is complete (36,500 images).
+- *Why not done:* the ~24 GB tarball downloaded at about 55 kB/s inside a container (`fetch-places.sh`)
+  and was abandoned. It needs 47.5 GiB of a shared disk that had about 175 GiB free.
+- *Target:* a train tree with 365 class directories on the host, which the launcher receives either
+  as the fourth positional archive or as a directory through `NATIVE_PLACES365_DIR_HOST`
+  (`run_on_production_host.sh:662-694`). Keep it apart from the fixture, which the attestation
+  check expects to hold exactly 1,000 files.
+- *Operation:* get the tarball onto the host by a faster route. The laptop holds a copy that passes
+  `verify_datasets.py --split train`; copying it across has **not** been tried, and its rate is
+  unknown. Extract inside a container. **Also needed:** `train-production-cell-v5.sh` passes no
+  Places365 argument, so as written it cannot launch these three baselines.
+- *Done when:* the container check in procedure §2b prints `class directories: 365` and
+  `dataset usable: PASS`.
+- *Or, instead:* run against `val` with `NATIVE_PLACES365_ACCEPT_VAL=1`, a recorded deviation from
+  A22. That is an owner decision, not an operator one.
+
+**O2 — Current payloads for the four families that have not run** (`rlvigen`, `dmc_gb`, `alda`, `ctrl`)
+- *State now:* the host has `payload-v214-*` for `idaac`, `ibac_sni` and `ppg` only, and older
+  `v212` payloads for all seven. Whether a `v212` payload binds to today's tree has not been checked.
+- *Target:* each family's payload on the host, built from the committed tree, with the same sha256
+  as on the laptop.
+- *Operation:* on the laptop, `contract.py build-payload --families <family>`, `verify-payload
+  --require-evaluator-identity --require-runner-contract 19`, `verify-evaluator-binding --archive
+  <tgz> --source . --families <family>` (all three executed for `idaac`), then `scp`.
+  **Caveat:** `train-production-cell-v5.sh` reads `payload-v214-$FAMILY.tgz` by that literal name.
+  Naming a newer build `v214` would mislabel it, so the wrapper needs a payload parameter first. That
+  change has not been made or tested.
+- *Done when:* the binding check exits 0 and the host copy's sha256 matches.
+
+**O3 — The first 600k cell of an off-policy baseline** (`drqv2` first: it needs no Places365)
+- *Why not done:* O2, and then capacity. None of `drqv2`, `drq`, `curl`, `rad`, `soda`, `alda` has
+  trained here, so their training time, CPU use and real host RAM are unknown (§4c.1).
+- *Target:* one `drqv2` cell `COMPLETED` and collected.
+- *Operation:* §5.2 with `FAMILY=rlvigen BASELINE=drqv2`, one such cell at a time. RAM is the
+  unmeasured bound (≈40 GiB computed, of a shared 113 GiB), and the launcher does not check it, so
+  look at `free -g` on the host before launching and during the first hour. The upper-bound rule in
+  the project `CLAUDE.md` applies. Its replay buffer cannot be restored (§6c), so a stop means a
+  rerun from zero.
+- *Done when:* `campaign_status.py` shows the cell DONE; record its `time -v` figures in §4c.1.
+
+**O4 — `ctrl` at 600k**
+- *Why not done:* observed peak 32,435 MiB on a 32,494 MiB card leaves no room for the 4,000 MiB
+  floor. Its 64-environment RAM figure (54.3 GiB) is a linear extrapolation.
+- *Target:* one `ctrl` cell completed on an otherwise empty card.
+- *Operation:* needs (a) a card with no co-tenant for the whole run, which has not happened on this
+  host, (b) an owner decision about the memory floor for this one cell, and (c) a RAM measurement.
+- *Done when:* the cell completes with the floor decision written in its record.
+
+**O5 — A stopped cell continued rather than rerun**
+- *Why not done:* §6c. Four families have no restore path, one has a flag no launcher passes, and two
+  load automatically but lose the replay buffer or the optimizer state.
+- *Target:* an owner decision on whether a continued run may stand in for a seed. Only if yes,
+  launcher support for it.
+- *Done when:* the decision is written down. Until then, rerun from zero.
+
+**O6 — Renderer parity between the validation platform and this host** (an OWNER gate)
+- *Target and operation:* procedure §0, item 3. Evaluate one known checkpoint with the current
+  evaluator where it was validated (R_A), then with the same checkpoint, evaluator and container on
+  this host (R_B), and compare returns and rendered-observation witnesses.
+- *State now:* not run as that three-step probe. The complete cells here rendered through EGL on the
+  V100 (`collect-host-run.sh` refuses `llvmpipe`), which is necessary but is not the comparison.
+
+**O7 — Stop paths that have never fired here:** the training wall clock, the disk floor, the
+reaper on a genuinely hung grid, `self-vram-cap.sh` tripping. *Target:* none; do not provoke them on
+a shared host. *What to do if one fires:* §6b gives the marker and what survives, and §10.1 the order
+of questions. The disk floor came within one 60-second sample of firing on 2026-09-17.
+
+**O8 — A fresh clone reconstructed on Linux, and a host other than `cds2`**
+- *Why not done:* `setup/bootstrap_sources.py` refuses on macOS's case-insensitive filesystem (§11.1),
+  and only one host was available.
+- *Target:* `setup/verify_sources.py` exits 0 in a clone reconstructed on Linux, followed by a
+  `verify-evaluator-binding` pass for one family.
+- *Operation:* run the bootstrap inside a Linux container with network access
+  (`docs/RUN-THIS-PROJECT.md` §1). Not executed.
+
+**O9 — A prebuilt Python environment for the torch families**, which would remove the 7–22 minutes
+of in-container `pip` per launch (§6d)
+- *State now:* one exists, built for `idaac` without the editable RL-ViGen installs, so it would be
+  refused for `rlvigen`.
+- *Target and operation:* procedure §3.0b, `build-env.sh` from a payload that carries
+  `RL-ViGen-upstream/`. Not executed. It is an optimisation, not a blocker.
+
+### 11.5 How to use this section
 
 Run a left-column item and it should behave as described; if it does not, something changed and it
 is worth a note. Run a right-column item and **assume nothing** — read its output, check what it

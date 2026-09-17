@@ -373,6 +373,27 @@ bash setup/fetch_overlay_dataset.sh ~/rlvigen-assets/places365-train train    # 
 PLACES365_ROOT=~/rlvigen-assets/places365-train python3 setup/verify_datasets.py --split train
 ```
 
+> **[Corrected 2026-09-17] Neither line above may run on the host shell as written.** Both run Python
+> on the host (`fetch_overlay_dataset.sh` has an inline `python3 -` step), which this host does not
+> permit. What has actually been run:
+>
+> - **The check, in the helper container** — executed 2026-09-17, read-only, no network:
+>
+>   ```bash
+>   docker run --rm --network none --memory 1g \
+>     -v "$HOME/rlvigen-work/repo:/repo:ro" \
+>     -v "$HOME/rlvigen-assets/places365:/data/places365_standard:ro" \
+>     -w /repo python:3.11-slim python3 setup/verify_datasets.py --root /data --split train
+>   ```
+>
+>   `verify_datasets.py` expects `<root>/places365_standard/<split>/`, and the host keeps the
+>   dataset at `~/rlvigen-assets/places365/<split>/`, hence the mount target. It printed
+>   `class directories: 20 -- EXPECTED 365` and `dataset usable: FAIL` (exit 1) for `train`, and
+>   `PASS (structure only)` for `val`, because Pillow is absent in that image.
+> - **The fetch, in a container** — `datasphere/native/host-scripts/fetch-places.sh`, which
+>   downloads with `curl` inside the container into `/work/places365`. Started once and abandoned at
+>   about 55 kB/s. Never completed.
+
 Require `dataset usable: PASS` with `class directories: 365` **before the first svea/sgqn/soda
 cell**, and do it ONCE for the host rather than per cell — a million-image integrity scan on every
 cell is the kind of check people switch off. `setup/verify_datasets.py` hardcodes
@@ -1231,8 +1252,13 @@ apply. Use:
 rsync -a 'HOST:~/rlvigen-runs/reeval-v214/idaac-s101-curve-*-result.tgz' ./fetched/
 python scripts/collect_reeval_sweep.py ./fetched --tag reeval-v214-idaac-curve          # dry run
 python scripts/collect_reeval_sweep.py ./fetched --tag reeval-v214-idaac-curve --write
-python scripts/populate_evaluator_ledger.py idaac reeval-v214-idaac-curve
 ```
+
+[Corrected 2026-09-17] This block used to end with `populate_evaluator_ledger.py idaac
+reeval-v214-idaac-curve`. **Do not run it on a sweep or on any production run.** The ledger records
+a family's evaluator *attestation*, and only single-scope endpoint evidence (an `attest-v2xx` job)
+qualifies. Writing a production entry replaces the family's valid one; before the script learned to
+refuse, that silently un-validated three families. It refuses now; OPERATOR-GUIDE §8 item 3.
 
 It prints every stamp it found, so a missing one is a gap in a printed list rather than an absence
 nobody counted, and it REFUSES rather than warns on: a row whose evaluator revision is not live,
@@ -1248,8 +1274,11 @@ python scripts/production_run_register.py
 bash datasphere/native/collect-host-run.sh <family> ./fetched/<run-id>
 bash datasphere/native/collect-wave.sh --from-submissions <tag>   # a whole wave
 
-# 3. records -> ledger. A record that is not in the ledger is not a result.
-python scripts/populate_evaluator_ledger.py <family> <job>
+# 3. NOT the evaluator ledger. [Corrected 2026-09-17] This step used to run
+#    populate_evaluator_ledger.py <family> <job> here. That ledger holds ATTESTATION jobs only, and a
+#    production run can never qualify: writing one replaces the family's valid entry. The collector
+#    prints a NOTE when the ledger declines a production run; that is correct. OPERATOR-GUIDE §8 item 3.
+#    What makes collected rows count is campaign_status.py below, not the ledger.
 
 # 4. read the campaign, not the run
 python scripts/campaign_status.py
