@@ -44,6 +44,12 @@ Not a second opinion: `campaign_status.state_of` decides, and only its **DONE** 
 a record at the scheduled endpoint, on the current evaluator closure. A cell that is RUNNING,
 PARTIAL or SUPERSEDED contributes nothing, and the footer says how many were skipped for which
 reason, so a silently thin table is impossible.
+
+The footer counts two different things and keeps them apart. **Cells not read** are trained
+policies the schedule wanted and the campaign does not have. **Rows dropped** are measurements
+inside the cells that WERE read: curve rows and the pooled ten-scene row are dropped by design
+(`DROPPED_BY_DESIGN`), and anything else is printed as UNREADABLE, because a row we meant to read
+and could not is a hole in the table rather than a property of it.
 """
 from __future__ import annotations
 
@@ -77,37 +83,79 @@ def _is_pooled(row: dict) -> bool:
     return "," in str(row.get("scene_set", ""))
 
 
-def _by_scene(rows: list[dict], field: str) -> dict[tuple[str, str], dict[str, list[float]]]:
-    """Endpoint values grouped (regime, mode) -> scene -> values.
+#: Reasons a row is dropped on purpose. Every other reason means a row we meant to read and
+#: could not, and those are printed under UNREADABLE rather than folded in with these.
+DROPPED_BY_DESIGN = frozenset({"not an endpoint row", "pooled ten-scene row"})
+
+
+def _by_scene(rows: list[dict],
+              field: str) -> tuple[dict[tuple[str, str], dict[str, list[float]]], dict[str, int]]:
+    """Endpoint values grouped (regime, mode) -> scene -> values, and a tally of what was dropped.
 
     Grouping by SCENE first is not cosmetic. The same checkpoint can be measured twice -- the
     in-cell grid writes one set of rows and an offline re-evaluation sweep can write another for
     the same frame, regime and scene (`idaac` s101 has both). Appending them to one list would
     weight those scenes twice in Ȳ. Averaging within a scene first makes a repeat measurement what
     it actually is: a better estimate of that one scene cell, not an extra scene.
+
+    The tally exists because this function used to drop rows with bare `continue`s. A family whose
+    rows carry no `conventions.eval_policy_mode` then vanished from the headline with nothing said,
+    which is the failure mode this project has hit three times: a check without its comparison
+    count reads as a pass.
     """
     out: dict[tuple[str, str], dict[str, list[float]]] = {}
+    dropped: dict[str, int] = {}
+
+    def drop(reason: str) -> None:
+        dropped[reason] = dropped.get(reason, 0) + 1
+
     for row in rows:
-        if row.get("eval_scope") != "endpoint" or _is_pooled(row):
+        if row.get("eval_scope") != "endpoint":
+            drop("not an endpoint row")
+            continue
+        if _is_pooled(row):
+            drop("pooled ten-scene row")
             continue
         mode = (row.get("conventions") or {}).get("eval_policy_mode")
         regime, value, scene = row.get("regime"), row.get(field), str(row.get("scene_set"))
-        if mode is None or regime is None or value is None:
+        if mode is None:
+            drop("no conventions.eval_policy_mode")
+            continue
+        if regime is None:
+            drop("no regime")
+            continue
+        if value is None:
+            drop(f"no {field}")
             continue
         out.setdefault((regime, mode), {}).setdefault(scene, []).append(float(value))
-    return out
+    return out, dropped
+
+
+def _drop_tally(rows: list[dict]) -> dict[str, int]:
+    """What a cell's rows cost us, counted once.
+
+    The return pass gives the shared reasons; from the success pass only the success-specific
+    reason is taken, or every shared drop would be counted twice for the same row.
+    """
+    _, dropped = _by_scene(rows, "episode_return_mean")
+    _, success_dropped = _by_scene(rows, "success_rate")
+    if success_dropped.get("no success_rate"):
+        dropped["no success_rate"] = success_dropped["no success_rate"]
+    return dropped
 
 
 def per_seed_means(rows: list[dict]) -> dict[tuple[str, str], float]:
     """Ȳ[m,r,g] for one cell: mean over the ten scene cells, per (regime, policy mode)."""
+    grouped, _ = _by_scene(rows, "episode_return_mean")
     return {key: statistics.fmean(statistics.fmean(v) for v in scenes.values())
-            for key, scenes in _by_scene(rows, "episode_return_mean").items()}
+            for key, scenes in grouped.items()}
 
 
 def per_seed_success(rows: list[dict]) -> dict[tuple[str, str], float]:
     """Train-regime success, the other half of the competence gate (EVAL-PROTOCOL §3)."""
+    grouped, _ = _by_scene(rows, "success_rate")
     return {key: statistics.fmean(statistics.fmean(v) for v in scenes.values())
-            for key, scenes in _by_scene(rows, "success_rate").items()}
+            for key, scenes in grouped.items()}
 
 
 def competence(train_mean: float, train_success: float, floor: float) -> tuple[bool, str]:
@@ -128,8 +176,13 @@ def competence(train_mean: float, train_success: float, floor: float) -> tuple[b
     return True, ""
 
 
-def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict]:
-    """Seed points, a tally of skipped cells, the competence gate per cell, and success rates."""
+def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict, dict]:
+    """Seed points, skipped CELLS, the competence gate per cell, success rates, and skipped ROWS.
+
+    Cells and rows are counted separately and never added together: a cell is a trained policy the
+    campaign schedules, a row is one measurement inside one. Merging the two tallies would give a
+    number that means nothing in either unit.
+    """
     schedule = json.loads(schedule_path.read_text())
     live, attested = cs._live_revisions(), cs._attested()
     records = cs._records_index()
@@ -137,6 +190,7 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict]:
 
     points: dict[tuple[str, str, str], list[tuple[int, float]]] = {}
     skipped: dict[str, int] = {}
+    dropped: dict[str, int] = {}
     gate: dict[tuple[str, str, int], tuple[bool, str, float, float]] = {}
     success: dict[tuple[str, str, str], list[tuple[int, float | None]]] = {}
     floor = _door_random_floor()
@@ -153,6 +207,8 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict]:
             rows = [r for r in records.get((baseline, seed), [])
                     if r.get("frame") in (endpoint, str(endpoint))
                     and r.get("evaluator_revision") == live.get(family)]
+            for reason, count in _drop_tally(rows).items():
+                dropped[reason] = dropped.get(reason, 0) + count
             means, successes = per_seed_means(rows), per_seed_success(rows)
             for (regime, mode), value in means.items():
                 points.setdefault((baseline, mode, regime), []).append((seed, value))
@@ -165,10 +221,11 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict]:
                 competent, why = competence(train, successes.get(("train", mode), 0.0), floor)
                 gate[(baseline, mode, seed)] = (competent, why, train,
                                                 successes.get(("train", mode), 0.0))
-    return points, skipped, gate, success
+    return points, skipped, gate, success, dropped
 
 
-def render(points: dict, skipped: dict, markdown: bool, success: dict | None = None) -> tuple[list[str], bool]:
+def render(points: dict, skipped: dict, markdown: bool, success: dict | None = None,
+           dropped: dict | None = None) -> tuple[list[str], bool]:
     out, provisional = [], False
     blocks: dict[tuple[str, str], dict] = {}
     for (baseline, mode, regime), seeds in points.items():
@@ -212,6 +269,16 @@ def render(points: dict, skipped: dict, markdown: bool, success: dict | None = N
     if skipped:
         out.append("")
         out.append("  cells not read: " + ", ".join(f"{k} {v}" for k, v in sorted(skipped.items())))
+    if dropped:
+        by_design = {k: v for k, v in dropped.items() if k in DROPPED_BY_DESIGN}
+        defects = {k: v for k, v in dropped.items() if k not in DROPPED_BY_DESIGN}
+        out.append("  rows dropped by design (inside the cells that WERE read): "
+                   + (", ".join(f"{k} {v}" for k, v in sorted(by_design.items())) or "none"))
+        if defects:
+            out.append("  rows UNREADABLE: "
+                       + ", ".join(f"{k} {v}" for k, v in sorted(defects.items())))
+            out.append("  An unreadable row is a measurement this table does not contain. Find out")
+            out.append("  why before reading the numbers above as coverage.")
     return out, provisional
 
 
@@ -260,14 +327,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="exit 1 if any printed baseline has fewer than three seeds")
     args = ap.parse_args(argv)
 
-    points, skipped, gate, success = collect(pathlib.Path(args.schedule))
+    points, skipped, gate, success, dropped = collect(pathlib.Path(args.schedule))
     if not points:
         print("No DONE cell on the current closure. Nothing to read.")
         print("  cells: " + ", ".join(f"{k} {v}" for k, v in sorted(skipped.items())))
         return 0
 
     print("PRODUCTION READING -- endpoint returns, aggregated per EVAL-PROTOCOL §4c\n")
-    lines, provisional = render(points, skipped, args.markdown, success)
+    lines, provisional = render(points, skipped, args.markdown, success, dropped)
     print("\n".join(lines))
     if args.retention:
         print("\n".join(render_retention(points, gate)))

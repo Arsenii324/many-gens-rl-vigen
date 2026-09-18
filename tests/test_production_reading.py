@@ -84,11 +84,15 @@ def test_the_footer_says_how_many_cells_were_not_read():
 
 def test_it_runs_against_the_real_records_and_agrees_with_the_hand_reading():
     """Ground truth: the two idaac seeds were aggregated by hand on 2026-09-17 before this existed."""
-    points, skipped, _gate, _success = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    points, skipped, _gate, _success, dropped = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
     got = dict(points.get(("idaac", "sample", "train"), []))
     assert got.get(101) == pytest.approx(39.24, abs=0.01), got
     assert got.get(102) == pytest.approx(20.51, abs=0.01), got
     assert skipped.get("MISSING", 0) >= 1, "the skipped tally must be reported, not hidden"
+    assert dropped.get("pooled ten-scene row", 0) >= 1, (
+        "the real records contain pooled rows; the row tally must see them")
+    unreadable = {k: v for k, v in dropped.items() if k not in pr.DROPPED_BY_DESIGN}
+    assert not unreadable, f"a DONE cell has rows this reading cannot parse: {unreadable}"
 
 
 def test_the_competence_gate_refuses_a_ratio_built_on_shaped_reward():
@@ -121,7 +125,7 @@ def test_retention_is_printed_only_for_a_competent_cell():
 
 def test_the_real_records_are_all_refused_a_ratio_today():
     """Ground truth as of 2026-09-18: every 600k production cell sits at ~0 task success."""
-    points, _, gate, _success = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    points, _, gate, _success, _dropped = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
     assert gate, "no cells were gated at all"
     assert all(not competent for competent, *_ in gate.values()), gate
 
@@ -146,3 +150,46 @@ def test_the_headline_table_carries_the_success_rate():
     body = "\n".join(lines)
     assert "0.005" in body, body
     assert "succ" in lines[0], lines[0]
+
+
+def test_a_row_with_no_policy_mode_is_counted_rather_than_silently_dropped():
+    """The defect this closes: a family whose rows lack `conventions.eval_policy_mode` vanished.
+
+    `_by_scene` dropped it with a bare `continue`, so the baseline simply did not appear in the
+    table and nothing said why. A check needs its comparison count: the rows that were read and
+    the rows that were not are both part of the reading.
+    """
+    rows = [_row("train", str(s), 1.0) for s in range(10)]
+    blind = _row("train", "0", 5.0)
+    del blind["conventions"]
+    rows.append(blind)
+    drops = pr._drop_tally(rows)
+    assert drops.get("no conventions.eval_policy_mode") == 1, drops
+    assert pr.per_seed_means(rows)[("train", "sample")] == pytest.approx(1.0), (
+        "the unreadable row must still be excluded from the mean, only not in silence")
+
+
+def test_a_row_with_no_return_is_counted():
+    rows = [_row("train", "0", 1.0), _row("train", "1", None)]
+    assert pr._drop_tally(rows).get("no episode_return_mean") == 1
+
+
+def test_by_design_drops_are_counted_separately_from_defects():
+    """Curve and pooled rows are dropped on purpose; those two must not read as a warning."""
+    rows = [_row("train", "0", 1.0), _row("train", "0", 9.0, scope="curve"),
+            _row("train", "0,1,2,3,4,5,6,7,8,9", 9.0)]
+    for row in rows:
+        row["success_rate"] = 0.0
+    drops = pr._drop_tally(rows)
+    assert drops.get("not an endpoint row") == 1 and drops.get("pooled ten-scene row") == 1
+    assert set(drops) <= pr.DROPPED_BY_DESIGN, "no defect reason should be raised by these rows"
+
+
+def test_the_footer_reports_unreadable_rows_and_marks_them():
+    lines, _ = pr.render({("idaac", "sample", "train"): [(101, 1.0)]}, {},
+                         markdown=False,
+                         dropped={"no conventions.eval_policy_mode": 7, "pooled ten-scene row": 11})
+    body = "\n".join(lines)
+    assert "no conventions.eval_policy_mode 7" in body, body
+    assert "pooled ten-scene row 11" in body, body
+    assert "UNREADABLE" in body, "a defect drop must be distinguishable from a by-design one"
