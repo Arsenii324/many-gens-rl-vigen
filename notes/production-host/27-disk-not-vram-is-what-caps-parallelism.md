@@ -203,3 +203,27 @@ notes — `card0-20260916-010515` is the EGL death, and the three 16 Sep floor s
 for the vacancy rule. Dropping only each one's `native-work/` work tree while keeping `native-out/`
 recovers most of the space and loses no log. **Not done: it is the owner's call, and disk is not
 currently the binding constraint** (142 GiB free).
+
+### Addendum, 2026-09-18 — a tagged candidate list, for a future operator who IS short of space
+
+Nothing below has been deleted. This exists so that if disk ever does become the binding
+constraint, the operator has a pre-reasoned list instead of guessing under time pressure — and so
+that "if we have a slight list of what to delete... but should determine necessity and safety and
+reconcile with the user before deletion" (owner, 2026-09-18) has somewhere concrete to point at.
+
+- **Safe to consider, once genuinely needed:** `native-work/` of a run whose retained checkpoints
+  already live in that run's `native-out/` — i.e. the run completed training normally. That
+  directory is the extracted payload plus reconstructed sources, rebuilt identically by every cell
+  from the same shipped tgz; nothing in it is unique.
+- **Never:** `native-out/` anywhere — it holds `job.log`, the stop sentinels and `resources.json`,
+  several of which are cited by name as the evidence behind claims in these notes (the EGL death,
+  the three 16 Sep floor stops, the vacancy rule). Also never `native-work/` of a run **stopped
+  mid-training** — its only checkpoints live there (§3's asymmetry: `native-out/` receives them
+  only after training completes), and the entire reason to keep such a run is to re-evaluate those
+  checkpoints later.
+- **Prefer compressing over deleting** for any multi-GB tabular leftovers (progress CSVs, raw
+  per-episode dumps) rather than removing them outright — the information survives, the disk cost
+  mostly doesn't.
+- **Before deleting anything from the "safe to consider" category:** confirm the run's
+  `native-out/` really is non-empty and holds what `campaign_status.py` expects for that cell, then
+  reconcile with the owner. This list narrows the search; it does not authorise the deletion.

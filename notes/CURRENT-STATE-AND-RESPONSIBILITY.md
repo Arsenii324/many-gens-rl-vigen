@@ -166,6 +166,30 @@ leaves 21,712, the colleague reclaims 21,298, free drops to 414, under the 4,000
 our cells yield. Declining to launch kept the running cell alive. The second cell's real cost is the
 first cell.
 
+## 7b. Waiting on the owner — three decisions, no default chosen
+
+Each of these has real work behind it already; none has been decided for you.
+
+1. **Budget vs scope, given the competence-gate finding**
+   ([`production-host/36`](production-host/36-no-completed-cell-passes-the-competence-gate.md)).
+   Every completed cell sits far above the random floor on shaped return and opens the door in at
+   most 1/200 episodes — success stays flat at ~0.000 across the whole training curve while shaped
+   return climbs 15.15 → 79.36. Under EVAL-PROTOCOL §3 no retention ratio may be printed for any of
+   them. Three live options: extend the frame budget for a subset (does more training reach
+   competence, or is 600k just not enough for this task/family combination?), narrow scope to
+   report the plateau itself as the finding, or something else. This is a research-direction call,
+   not a mechanical one.
+2. **The vacancy rule on card 0.** Twelve hours of the strict "no foreign holder at all" rule
+   produced nothing, while card 0 has sat at ~9.6 GiB free beside a stable long-lived co-tenant —
+   enough for `idaac`'s 6.6 GiB peak. Relax the rule for a small cell beside a *stable* co-tenant
+   (not one that cycles), or keep it strict everywhere? Relaxing it without the co-tenant's own
+   behaviour being predictable is exactly the OOM risk §5.1 exists to prevent, so this needs a
+   human judgement call about that specific co-tenant, not a blanket policy change.
+3. **`ppg` seed 1 is off-schedule.** It is a complete, real cell, but the schedule names seeds
+   {101, 102, 103} and `campaign_status.py` reads seed 1 as MISSING. Keep the run and record the
+   seed set as {1, 102, 103} for `ppg` specifically, or rerun it at 101 to match the other eleven
+   baselines? Either is defensible; neither has been chosen.
+
 ## 8. What to do first on resume
 
 1. Re-run the five commands in §1. Do not trust the tallies above.
