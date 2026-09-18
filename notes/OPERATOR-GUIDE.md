@@ -883,7 +883,24 @@ Each entry names **the part** that is missing, **why** it has not been done, **t
 **the operation** that reaches it, and **how to tell** it worked. Where an operation has never been
 executed, the entry says so; treat it as a proposal until it has run.
 
-**O1 — Places365 train split on the host** (blocks `svea`, `sgqn`, `soda`)
+**O1 — Places365 train split on the host** (blocks `svea`, `sgqn`, `soda`) — **IN PROGRESS 2026-09-18**
+
+- *The blocker was misdiagnosed, and measuring it changed the answer.* `fetch-places.sh` was
+  abandoned at ~55 kB/s, which read as "this host cannot fetch it". Measured on 2026-09-18 from a
+  container on the host: **GitHub 13.7 MB/s** (116 MB in 8.5 s), **`data.csail.mit.edu` 623 B/s**.
+  The host's link is fine; that one source is dead slow.
+- *What is being done instead:* the laptop already holds the corpus this project validated —
+  26 GB, 1,803,461 files, 365 classes, `verify_datasets --split train` PASS — so it is being
+  shipped as a single `tar` stream into a container that extracts it to
+  `~/rlvigen-assets/places365-train/places365_standard/train`. Measured uplink 2.4 MB/s, so about
+  three hours. Shipping our own validated copy keeps provenance identical to what every attestation
+  used; a third-party mirror would not.
+- *Two things to finish after it lands:* the extraction container writes as **root with tight
+  permissions**, so `chmod -R a+rX` (in a container) is needed before anything else can read it,
+  and `verify_datasets --split train` must be re-run **on the host** against the new root.
+
+*Original entry, kept because the target and the check are unchanged:*
+
 - *State now, checked 2026-09-17 in the helper container:* `~/rlvigen-assets/places365/train/` has 20
   classes and 1,000 files, the attestation fixture. `val/` is complete (36,500 images).
 - *Why not done:* the ~24 GB tarball downloaded at about 55 kB/s inside a container (`fetch-places.sh`)
