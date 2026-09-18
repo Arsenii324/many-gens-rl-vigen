@@ -338,3 +338,23 @@ scientific result, not a defect; the three owner decisions in `CURRENT-STATE-AND
 decision, not a technical one I can complete alone. Calling any of those "closed" would be the
 exact kind of overclaim this session's own corrections (the 96s number, ppg's cadence, twice) exist
 as evidence against.
+
+## C11 — `svea`'s waiter GAVE UP: W1 is now closed as "never got a window," not "still pending"
+
+21:18:49, the Monitor caught it live: `GAVE UP after 36000s without a window` — the waiter's own
+10-hour `MAXWAIT`, armed this morning, exhausted with the card occupied for its entire span.
+Confirmed directly on the host, not just from the log line: `pgrep -af "wait-and-train-v4.sh"`
+finds no process. **Not a launch failure** — no cell ever started, so there is nothing for
+`results/host-runs.jsonl` or the attempt ledger to record.
+
+Every place that had been saying "armed, watching" is now wrong and was corrected: `HANDOFF.md`'s
+top block (rewritten as an evening state), and a genuinely stale line in
+`CURRENT-STATE-AND-RESPONSIBILITY.md` ("svea/sgqn/soda blocked on Places365," which stopped being
+true on the 18th when the corpus landed — fixed with the doc's own established strikethrough
+convention, since it hadn't been updated when Places365 resolved). The now-pointless log-tail
+Monitor (nothing further will ever appear in a dead waiter's log) was stopped; the capacity Monitor
+stays armed.
+
+**Per the standing rule, nothing new has been armed.** The card is still occupied by the same three
+groups it has been all session. This is now, honestly, a fully idle state on our side: no waiter,
+no cell, no pending launch — watching only, until the owner says what to arm next.

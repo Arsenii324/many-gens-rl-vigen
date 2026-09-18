@@ -92,10 +92,15 @@ things that are not compute:
   vacancy rule lowers this risk; it does not remove it.
 - `ctrl` has never run at 600k and, at 32,435 MiB observed, cannot satisfy peak-plus-floor on a
   32,494 MiB card at all. It needs an empty card and an explicit decision about the floor.
-- **`svea`, `sgqn` and `soda` are blocked on Places365**, found 2026-09-16 and not previously
-  recorded. The host holds only the 20-class/1,000-image attestation fixture; the corpus is ~24 GB
-  and has never been fetched. **No gate ties a production run to the production dataset**, so a
-  cell trained against the fixture would look correct — the corpus is a learning-affecting input.
+- ~~`svea`, `sgqn` and `soda` are blocked on Places365~~ — **resolved 2026-09-18**: the full 26 GB
+  corpus (1,803,462 files, 365 classes) is on the host, `verify_datasets` PASS, 200 sampled files
+  sha256-identical to the laptop copy. `svea` s101's waiter was armed against it (`v6` wrapper,
+  mounted read-only via `NATIVE_PLACES365_DIR_HOST`) for the rest of the day and **GAVE UP at 21:19
+  without ever seeing a card window** — the card was occupied continuously, so the Places365 loader
+  itself remains unexercised (§11.4 O6's own framing still holds: nothing has consumed the corpus
+  at run time). **No gate ties a production run to the production dataset**, so a cell trained
+  against the old 20-class fixture would still look correct if one ever ran against it by mistake —
+  the corpus is a learning-affecting input, and that gap was never about availability alone.
 
 Full audit with every number read first-hand:
 [`production-host/33-what-we-actually-have-2026-09-16.md`](production-host/33-what-we-actually-have-2026-09-16.md).

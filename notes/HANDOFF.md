@@ -6,13 +6,30 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-18, ~17:30 MSK**, by Claude. Read this block first; it is what changed since
-the morning block below, which is kept because its reasoning still reads correctly.
+Last updated **2026-09-18, ~21:19 MSK**, by Claude. Read this block first.
 
-## Afternoon state, 2026-09-18 ~17:30 — read this first; everything below is older
+## Evening state, 2026-09-18 ~21:19 — the armed waiter is gone; nothing is armed now
 
-**Still nothing running. The card has now been occupied for 18+ hours.** The morning's approved
-plan (`groovy-crunching-otter.md`) is fully executed; detail is in `notes/ACCOUNTABILITY.md`'s
+**`svea` s101's waiter GAVE UP at 21:18:49**, its 10-hour `MAXWAIT` (36,000s) exhausted without ever
+seeing a ten-minute vacancy. Confirmed directly: the log's own last line reads `GAVE UP after
+36000s without a window`, and no `wait-and-train-v4.sh` process remains on the host. **This is not
+a launch failure — no cell ever started, so there is nothing to collect, nothing to record in
+`results/host-runs.jsonl`.** It is a waiter's own lifecycle ending because the card was occupied
+for its entire arming window (12.5h occupied when it was armed this morning, occupied continuously
+through 21:18 — over 21 hours total this session, unbroken).
+
+**Nothing is armed on the host right now.** Per the standing rule ("only what is armed now may
+launch; do not arm anything new without the owner"), a new waiter has deliberately **not** been
+armed. The card-capacity Monitor keeps watching and will report if a window opens; nothing will act
+on it automatically until the owner says what to arm next. The plan's W1 item is now closed in the
+sense the plan itself anticipated but hoped not to need: "if `svea` dies at minute one... report
+rather than re-arm" — generalised here to "if the whole window closes without a launch, report
+rather than re-arm."
+
+## Afternoon state, 2026-09-18 ~17:30 — everything below is older
+
+**Still nothing running.** The morning's approved plan (`groovy-crunching-otter.md`) is fully
+executed; detail is in `notes/ACCOUNTABILITY.md`'s
 C1-C8, not repeated here. What matters for the next session:
 
 - **`svea` s101 never fired.** The waiter is still armed, still valid, still watching. Nothing about
