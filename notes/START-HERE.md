@@ -27,6 +27,8 @@ remembering it.
 
 **Running the whole thing end to end, as a new operator**:
 [`OPERATOR-GUIDE.md`](OPERATOR-GUIDE.md) — the map. What exists, what produces what, what runs after
+
+[`CAMPAIGN-REPORT-2026-09-18.md`](CAMPAIGN-REPORT-2026-09-18.md) — what ran, what the completed cells say, what failed and why, and what I would run next. Start here for the result rather than the machinery.
 what, the container topology per cell, and which tool belongs to which stage, with a finish line for
 each. Read it before the procedure; it is the file that assumes you have nothing but this repository
 and a host.

@@ -28,6 +28,9 @@ As of the last run (2026-09-17 21:03): gates **36 pass / 1 fail / 9 owner**, and
 later; campaign **36 cells: 32 MISSING, 3 DONE, 1 PARTIAL**; fleet export **6,193 rows, 2,932 on
 the current closure**. Nothing of ours was running on either card at that time.
 
+**The narrative account, with every number's command beside it:**
+[`CAMPAIGN-REPORT-2026-09-18.md`](CAMPAIGN-REPORT-2026-09-18.md).
+
 ## 2. Where the campaign actually is
 
 **Three baselines have production-length rows. Three cells count as DONE and one as PARTIAL.**
