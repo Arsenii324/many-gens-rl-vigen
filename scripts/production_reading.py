@@ -128,8 +128,8 @@ def competence(train_mean: float, train_success: float, floor: float) -> tuple[b
     return True, ""
 
 
-def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict]:
-    """Returns the seed points, a tally of skipped cells, and the competence gate per cell."""
+def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict]:
+    """Seed points, a tally of skipped cells, the competence gate per cell, and success rates."""
     schedule = json.loads(schedule_path.read_text())
     live, attested = cs._live_revisions(), cs._attested()
     records = cs._records_index()
@@ -138,6 +138,7 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict]:
     points: dict[tuple[str, str, str], list[tuple[int, float]]] = {}
     skipped: dict[str, int] = {}
     gate: dict[tuple[str, str, int], tuple[bool, str, float, float]] = {}
+    success: dict[tuple[str, str, str], list[tuple[int, float | None]]] = {}
     floor = _door_random_floor()
     default_seeds = schedule.get("seeds", [])
     for entry in schedule.get("rows", []):
@@ -155,6 +156,8 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict]:
             means, successes = per_seed_means(rows), per_seed_success(rows)
             for (regime, mode), value in means.items():
                 points.setdefault((baseline, mode, regime), []).append((seed, value))
+                success[(baseline, mode, regime)] = success.get((baseline, mode, regime), [])
+                success[(baseline, mode, regime)].append((seed, successes.get((regime, mode))))
             for mode in {m for _, m in means}:
                 train = means.get(("train", mode))
                 if train is None:
@@ -162,20 +165,20 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict]:
                 competent, why = competence(train, successes.get(("train", mode), 0.0), floor)
                 gate[(baseline, mode, seed)] = (competent, why, train,
                                                 successes.get(("train", mode), 0.0))
-    return points, skipped, gate
+    return points, skipped, gate, success
 
 
-def render(points: dict, skipped: dict, markdown: bool) -> tuple[list[str], bool]:
+def render(points: dict, skipped: dict, markdown: bool, success: dict | None = None) -> tuple[list[str], bool]:
     out, provisional = [], False
     blocks: dict[tuple[str, str], dict] = {}
     for (baseline, mode, regime), seeds in points.items():
         blocks.setdefault((baseline, mode), {})[regime] = sorted(seeds)
 
-    head = "| baseline | estimand | regime | seed points (seed: Ȳ) | mean | range | n |"
+    head = "| baseline | estimand | regime | seed points (seed: Ȳ) | mean | range | success | n |"
     out.append(head if markdown else
-               "  baseline   estimand  regime        seed points                     mean    range    n")
+               "  baseline   estimand  regime        seed points                     mean    range       succ    n")
     if markdown:
-        out.append("|---|---|---|---|---|---|---|")
+        out.append("|---|---|---|---|---|---|---|---|")
     for (baseline, mode), regimes in sorted(blocks.items()):
         for regime in REGIMES:
             seeds = regimes.get(regime)
@@ -189,14 +192,21 @@ def render(points: dict, skipped: dict, markdown: bool) -> tuple[list[str], bool
             if n < 3:
                 provisional = True
             flag = "" if n >= 3 else "  PROVISIONAL"
+            # The success column is here because it is what re-read every return in this project:
+            # a policy can sit far above the random floor on shaped reward and never solve the task
+            # (production-host/36). A return without it is not interpretable.
+            rates = [r for _, r in (success or {}).get((baseline, mode, regime), []) if r is not None]
+            succ = f"{statistics.fmean(rates):.3f}" if rates else "-"
             if markdown:
                 out.append(f"| `{baseline}` | {mode} | {regime} | {pts} | {mean:.2f} | {spread} | "
-                           f"{n}{' **provisional**' if n < 3 else ''} |")
+                           f"{succ} | {n}{' **provisional**' if n < 3 else ''} |")
             else:
                 out.append(f"  {baseline:<10} {mode:<9} {regime:<13} {pts:<30} {mean:7.2f}  "
-                           f"{spread:<11} {n}{flag}")
+                           f"{spread:<11} {succ:<7} {n}{flag}")
     out.append("")
-    out.append("Ȳ is the mean over the ten certified scenes for one trained policy; the seeds are the")
+    out.append("Ȳ is the mean over the ten certified scenes for one trained policy; `succ` is the task")
+    out.append("success rate behind it, and a high Ȳ with succ ~0 is shaped reward, not a solved task.")
+    out.append("The seeds are the")
     out.append("replicates (EVAL-PROTOCOL §4c). Sampled and mode rows are different estimands and are")
     out.append("never pooled. Scenes and episodes are not replicates.")
     if skipped:
@@ -250,14 +260,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="exit 1 if any printed baseline has fewer than three seeds")
     args = ap.parse_args(argv)
 
-    points, skipped, gate = collect(pathlib.Path(args.schedule))
+    points, skipped, gate, success = collect(pathlib.Path(args.schedule))
     if not points:
         print("No DONE cell on the current closure. Nothing to read.")
         print("  cells: " + ", ".join(f"{k} {v}" for k, v in sorted(skipped.items())))
         return 0
 
     print("PRODUCTION READING -- endpoint returns, aggregated per EVAL-PROTOCOL §4c\n")
-    lines, provisional = render(points, skipped, args.markdown)
+    lines, provisional = render(points, skipped, args.markdown, success)
     print("\n".join(lines))
     if args.retention:
         print("\n".join(render_retention(points, gate)))

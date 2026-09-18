@@ -84,7 +84,7 @@ def test_the_footer_says_how_many_cells_were_not_read():
 
 def test_it_runs_against_the_real_records_and_agrees_with_the_hand_reading():
     """Ground truth: the two idaac seeds were aggregated by hand on 2026-09-17 before this existed."""
-    points, skipped, _gate = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    points, skipped, _gate, _success = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
     got = dict(points.get(("idaac", "sample", "train"), []))
     assert got.get(101) == pytest.approx(39.24, abs=0.01), got
     assert got.get(102) == pytest.approx(20.51, abs=0.01), got
@@ -121,7 +121,7 @@ def test_retention_is_printed_only_for_a_competent_cell():
 
 def test_the_real_records_are_all_refused_a_ratio_today():
     """Ground truth as of 2026-09-18: every 600k production cell sits at ~0 task success."""
-    points, _, gate = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    points, _, gate, _success = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
     assert gate, "no cells were gated at all"
     assert all(not competent for competent, *_ in gate.values()), gate
 
@@ -136,3 +136,13 @@ def test_a_scene_measured_twice_is_still_one_scene():
             _row("train", "1", 20.0)]                            # scene 1, once
     assert pr.per_seed_means(rows)[("train", "sample")] == pytest.approx(12.5), (
         "expected mean(mean(0,10), 20) = 12.5; a flat list would give 10.0")
+
+
+def test_the_headline_table_carries_the_success_rate():
+    """A return without its success rate is not interpretable: 82 with succ 0.005 is shaped reward."""
+    points = {("m", "sample", "train"): [(1, 82.18)]}
+    success = {("m", "sample", "train"): [(1, 0.005)]}
+    lines, _ = pr.render(points, {}, markdown=False, success=success)
+    body = "\n".join(lines)
+    assert "0.005" in body, body
+    assert "succ" in lines[0], lines[0]
