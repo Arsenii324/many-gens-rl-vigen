@@ -299,3 +299,42 @@ handled — audited honestly rather than assumed closed. Tracked here so none of
 
 Items already closed this session (ppg cadence, the 96s retraction, "offline eval is manual" being
 wrong, the config-hierarchy trace, the disk cleanup) are in C9 above, not repeated here.
+
+## C10 — closing what was closeable: T2/T3 written, T1 checked live, monitor cadence tuned
+
+The owner asked to continue on the open items' own line, in full, rather than leave documented
+gaps as documentation. Three concrete actions:
+
+- **T2/T3 closed for real**: added §6b.1 to `OPERATOR-GUIDE.md` — every auto-stop mechanism from
+  §6b's table, with its env var, default, how to loosen it, whether it can be disabled, and the
+  real cost of disabling it, in one place, positioned to be read before launching rather than
+  discovered after a stop. Includes `self-vram-cap.sh`'s honest status: not arming it changes
+  nothing measurable today, since it can't see EGL memory and its cap never reaches a trainer
+  anyway (§6b's own existing findings). One thing named as still irreducibly a judgement call, not
+  a table lookup: *how much* disk headroom is safe to give up for a specific long run, on this
+  specific host, today — that depends on the shared filesystem's live state at decision time, which
+  no static document can print. Verified: `test_operator_readiness.py` 8/8.
+- **T1 given a live check, not left purely theoretical**: queried the GitHub API for all 7 pinned
+  upstream commits (`setup/source-reconstruction.json`) — **all 7 return HTTP 200 today.** The
+  long-term risk (5 of 7 on personal accounts, no local mirror, confirmed real in C9) is unchanged;
+  what's added is the current fact that it has not materialized yet. Read-only check, no clone, no
+  write — appropriate for a risk assessment, not a fix, and the fix (vendoring ~1.4 GB) remains the
+  owner's call for the same reason stated in C9.
+- **Monitor cadence**: the owner asked whether the recurring "nothing happened" capacity beats
+  could be less frequent. Checked `watch-capacity.sh` first rather than just widening the Monitor
+  tool's own re-arm interval: the periodic `HOST ...` heartbeat line was gated on a hardcoded `15`
+  (minutes), while every real event (`CAPACITY`/`OPENING`/`NEW-GROUP`/`LOGGER`) fires immediately on
+  its own trigger, completely unaffected by that counter. Made it `HEARTBEAT_MIN`, an env var
+  (default 15, so any other caller of this script is unaffected), so this session's own monitor can
+  widen it without losing any real detection.
+
+**Honest final position, since the owner asked directly whether any concerns remain**: no — not
+"none remain." What changed is that every item that could be closed by more of my own work *is*
+closed now (T1 checked, T2/T3 written, cadence tuned). What remains open, irreducibly, is not
+fixable by more documentation or more code from this side: the `svea` configuration has still never
+fired for real (external — needs a card window); the competence-gate finding is the actual
+scientific result, not a defect; the three owner decisions in `CURRENT-STATE-AND-RESPONSIBILITY.md`
+§7b are genuinely the owner's to make; and T1's real fix (an archived mirror) is a resource/policy
+decision, not a technical one I can complete alone. Calling any of those "closed" would be the
+exact kind of overclaim this session's own corrections (the 96s number, ppg's cadence, twice) exist
+as evidence against.

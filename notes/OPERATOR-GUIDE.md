@@ -595,6 +595,31 @@ Three things this table implies for an operator:
   2,199 of 7,421 MiB, so a cap set from the family's observed peak would never trip on it; size the
   cap against the compute part.
 
+### 6b.1 Every auto-stop, with its knob, in one place
+
+Every mechanism in the table above can be loosened, tightened or disabled. This section exists
+because that was previously true but not obvious — an operator would have had to find each knob in
+its own script's comments. **Read this before launching anything**, not after a stop surprises you.
+
+| stop | env var | default | to loosen | to disable | real cost of disabling |
+|---|---|---|---|---|---|
+| Training wall clock | `CELL_TIMEOUT_SECONDS` | 43,200 (v5/v6) | raise it | set larger than any plausible run | a genuinely hung process runs until the reaper or the host itself intervenes |
+| Stall watchdog | `CELL_STALL_SECONDS` | 1,800 | raise it | `0` (`run_probe.sh` checks `[[ "$stall_seconds" != "0" ]]`) | a silently hung cell (no crash, no output) is invisible until the wall clock fires, hours later |
+| Memory floor | `NATIVE_FLOOR_MIB` | 4,000 | lower it | cannot be disabled outright — it is the mechanism that keeps a co-tenant's job alive; lowering it below their actual need defeats its purpose without saying so | the standing rule this whole host runs under ("never CUDA OOM, including other people's jobs") is what this floor exists to satisfy |
+| Disk floor | `NATIVE_DISK_ALLOWANCE_GIB`, `NATIVE_DISK_ABS_FLOOR_GIB` | `2×` the computed need; 50 GiB absolute minimum | raise the allowance (lowers the floor, i.e. lets the cell get closer to the edge before stopping) | not designed to be disabled; can be set arbitrarily low, which is the same hazard as lowering the memory floor | on a shared filesystem, filling it is *someone else's* job dying, not just yours (§5.1, `watch_disk_headroom.py`'s own docstring) |
+| Reaper (post-watch-budget) | the watch budget printed in the launch banner (training + eval allowance + bootstrap + slack) | computed per cell | none exposed directly — the budget is derived, not a flat number | cannot be disabled; it exists to reclaim a card once a booking is over | none of ours; the reaper protects the *next* booking, not this cell |
+| `self-vram-cap.sh` | its own VRAM cap argument, passed at arm time (§5.2) | sized by hand, per family, from the observed compute-process peak | raise the cap | don't arm it (nothing requires it) | **it does not currently protect anything real anyway** — see the two bullets above this section: it cannot see EGL memory, and `NATIVE_VRAM_CAP_MIB` never reaches a trainer. Not arming it changes nothing measurable today. |
+
+**The one gap this table does not close**: nothing here tells you *when* it's actually safe to
+loosen the disk floor for a single long run tracking close to its own predicted need (the scenario
+is real — `family.py disk-requirement`'s estimate can be tight, and a false-positive stop near a
+cell's own endpoint is a full rerun-from-zero given no family has a working resume path, §6c). The
+mechanical answer is the row above (raise `NATIVE_DISK_ALLOWANCE_GIB`); the judgement answer —
+*how much headroom is actually safe to give up, for which family, on this specific host, today* —
+is not something a table can respond with, because it depends on the shared disk's live state at
+the moment of the decision, not on a constant this guide could print. Check `df` on the shared
+filesystem yourself before loosening it, the same way you would before launching at all (§5.2).
+
 ## 6c. Checkpoints, restart and resume, per family
 
 **Where the checkpoints are while a cell trains.** Each family writes under its `artifact_root`

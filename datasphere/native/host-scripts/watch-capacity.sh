@@ -13,6 +13,11 @@
 # MODE=beat also prints a heartbeat and OPENING notices, and keeps going (run as a Monitor).
 H="${HOST:-varaksin_as@100.98.2.11}"
 MODE="${1:-trip}"; NEED="${NEED:-11421}"; TOTAL=32768
+# Minutes between "HOST ..." heartbeat lines in beat mode. Purely a liveness ping -- CAPACITY,
+# OPENING, NEW-GROUP and LOGGER all fire immediately on their own trigger, unaffected by this.
+# Default 15 keeps existing behaviour for any other caller; a Monitor re-arming every 30 min can
+# raise it without losing any real detection.
+HEARTBEAT_MIN="${HEARTBEAT_MIN:-15}"
 KNOWN="sg_sam2 rl4vla_cudagl rlvigen_kalugin_df"
 STATE="$HOME/.prod-monitor-seen"; touch "$STATE"
 fails=0; since=99; lastopen=""
@@ -61,7 +66,7 @@ REMOTE
     fi
   done
   if [ "$MODE" = beat ]; then
-    since=$((since+1)); [ $since -ge 15 ] && { echo "HOST $(date +%H:%M)$line logger ${age}s | groups: ${holders//,/ }"; since=0; }
+    since=$((since+1)); [ $since -ge "$HEARTBEAT_MIN" ] && { echo "HOST $(date +%H:%M)$line logger ${age}s | groups: ${holders//,/ }"; since=0; }
   fi
   sleep 60
 done
