@@ -108,6 +108,49 @@ This is the integration spine. Each arrow is a real producer/consumer relationsh
 completes**. A cell stopped mid-training leaves them in `native-work/`, which the documented rsync
 **excludes**. Fetch them explicitly or you will silently lose the only salvage from a failed run.
 
+## 3b. The stage contract — what each stage leaves, and how to redo only it
+
+The diagram above says what feeds what. This says, per stage: what it leaves **as a file**, who
+reads that file, the one command that proves the stage worked, how to redo only that stage without
+touching the ones around it, and — the column that most often gets assumed rather than checked —
+what it does **not** leave. This table is written from stages that have actually run, not from what
+should be true of them.
+
+| stage | target state | artifact (exact path) | consumer | proves it worked | redo only this stage | does NOT leave |
+|---|---|---|---|---|---|---|
+| reconstruct sources | pinned upstream trees rebuilt | `runnable/<family>/` | `contract.py build-payload` | `setup/verify_sources.py` | re-run `setup/bootstrap_sources.py`; it overwrites `runnable/<family>/` in place | no payload, no verification of a *built* environment — only that the trees match the pin |
+| build payload | one tgz per family, hash-bound | `payload-vNNN-<family>.tgz` | `launch-card-cell.sh` (scp'd to host) | `contract.py verify-payload <tgz>` | `contract.py build-payload <family>`; old tgz is not deleted, so a stale one can be scp'd by mistake — check the version number in the launch banner | no host-side install; the tgz is inert until a cell unpacks it |
+| provision datasets | corpus present **on the host** | `~/rlvigen-assets/...` (host, outside git) | the cell's data loader at run time | `setup/verify_datasets.py --root <dir> --split <s>` **run on the host** | re-run the transfer step in procedure §2b; verifying on the laptop proves nothing about the host | no record on the laptop that this ran — nothing in `results/` reflects dataset presence |
+| launch | one cell container, one watch budget | `docker ps` entry `cell-c<card>-<pid>`; launcher log `prod-v214/<tag>.log` | `watch-cell.sh`; `record_host_run.py` | banner line `container: cell-c<card>-<pid>` + disk floor printed in the log | re-run the launch block in §5.2 (checks for an existing result archive first, so it refuses rather than double-launches) | no entry in `results/host-runs.jsonl` — that is a separate, manual step (§5.2 "record the attempt") |
+| train | checkpoints written as training proceeds | `native-work/<run-id>/...` (root-owned, host-side) | nothing yet — this is live state, not a delivered artifact | `training.log` growing; `free -g` and `docker ps` at the checkpoints in §7 | not redoable in place; a stopped cell is relaunched from zero (§6c: no family's resume path is exercised in this campaign) | no `native-out/` entry until training completes (§3's one asymmetry) — a mid-training stop leaves nothing there |
+| complete / retain | checkpoints promoted, result archived | `native-out/<run-id>/...`; `<tag>-result.tgz` | `collect-host-run.sh` | the result tgz exists and its tag matches the launch | cannot be redone without re-running the whole cell; there is no "just re-package the outputs" | no laptop-side copy until collection runs — `native-out/` alone is not evidence anything was fetched |
+| collect | rows on the laptop, on this closure | `results/records/<run-id>__records.jsonl` | `campaign_status.py`, `export_fleet.py`, `production_reading.py` | `audit_record_frame_provenance.py <records> --checkpoints <dir>` → MISMATCHED 0 | `BP=<interpreter> collect-host-run.sh <family> <run-dir>`; re-running it is safe, it does not mutate the host | no ledger entry — `record_host_run.py --update-status` is separate and easy to skip |
+| ledger / gate | the run has a terminal status, gates see it | `results/host-runs.jsonl`; `production_gates.py` output | `audit_attempt_ledger.py`, the next launch's "does a result already exist" check | `audit_attempt_ledger.py --strict` → exit 0 | `record_host_run.py <run-id> --update-status` | nothing forces this step to happen; a completed cell with no ledger update looks, to the ledger, like it never finished |
+
+And a companion list of **state that lives nowhere in this table**, because every defect found
+during the 2026-09-18 adversarial pass came from state with no file behind it:
+
+- **the pulled Docker image digest and layer cache** — a cell's runtime environment is rebuilt
+  inside the container on every launch from whatever `docker pull` resolves to that day; no file
+  records which digest actually ran a given cell;
+- **the host's own checkout**, `~/rlvigen-work/repo` — at commit `672202d` (9 Sep) with 34 locally
+  changed paths as of this writing. **Its git log is not evidence of what runs.** Compare file
+  hashes against the payload that was actually shipped, never `git log` on the host checkout;
+- **detached processes holding `flock`s** — a killed script's `sleep` child inherits the open file
+  descriptor and keeps a lock held long after the parent is gone (§5.1, hit three times on
+  2026-09-18). Wait for the **lock** to clear, verify with `pgrep`, never assume killing the parent
+  released it;
+- **files written by containers, as root** — the operator's own shell cannot `ls`, `du` or delete
+  them; doing any of that needs another container mounting the same path;
+- **`~/.prod-monitor-seen`** — makes a "new group" notice fire once per group, ever. A group that
+  reappears after being purged from this file re-notifies; one that was already seen does not, even
+  across an unrelated restart of the monitor.
+
+What this table deliberately does not do: add a new checker script that walks it and reports
+PASS/FAIL per stage. Three checkers built during this project passed vacuously before being caught
+by an independent read of the data they were meant to check. A stage-contract table that points at
+commands already run and already trusted is safer than a fresh script on the critical path.
+
 ## 4. The stages, in order, with a finish line for each
 
 | # | Stage | You are done when | Procedure |
