@@ -352,6 +352,10 @@ This is the 11:00 launch of `ibac_sni` s102, verbatim apart from the placeholder
     recent=$(grep "card=1 " ~/rlvigen-runs/gpu-occupancy.log | tail -10 | grep -c rlvigen_kalugin_df)
     f1=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i 1)
     if [ "$recent" -ne 0 ] || [ "$f1" -lt 15000 ]; then echo "VACANCY NOT SUSTAINED -- aborting"; exit 2; fi
+    # Host RAM. Nothing else in the launch chain looks at it (§4c.1), and a hand launch does not
+    # go through the waiter, which is where the only RAM floor lives.
+    ram=$(free -g | awk 'NR==2{print $7}')
+    if [ "$ram" -lt 55 ]; then echo "ONLY ${ram} GiB RAM AVAILABLE -- aborting"; exit 2; fi
     echo "disk: $(df -Pk ~ | awk 'NR==2{printf "%d", $4/1048576}') GiB | load: $(cut -d' ' -f1 /proc/loadavg)"
     # v5 truncates <tag>.log; keep a failed earlier attempt's log under an exact new name
     if [ -f "$A/<baseline>-s<seed>-prod.log" ]; then
@@ -376,6 +380,13 @@ Three things about that block that are easy to get wrong:
 - **The re-check greps for one co-tenant by name**, `rlvigen_kalugin_df`, the only one seen on
   card 1. On another card or another day, check `capacity-check.sh`'s `last holders` and grep for
   whoever is there.
+- **The RAM line is in this template because a hand launch has no other RAM guard.** `MIN_RAM_GIB`
+  lives in `wait-and-train-v4.sh`, and typing the launch yourself goes around it. An RL-ViGen cell
+  is ~40 GiB resident on a 125 GiB host that already had 43 GiB in use on 2026-09-18; starting one
+  at the wrong moment can make the kernel OOM killer pick a co-tenant's process, which is the one
+  outcome the standing rule forbids outright. 55 GiB is the floor armed for `svea`; a smaller
+  family needs less, but *check something* rather than nothing — and note the number checked is
+  `free -g` column 7 (`available`), not `free`.
 
 **Host, within the first minutes: read the banner, then arm the self-cap.** The launcher log
 `prod-v214/<tag>.log` prints, near the top, `container: cell-c1-<pid>`, the watch budget and

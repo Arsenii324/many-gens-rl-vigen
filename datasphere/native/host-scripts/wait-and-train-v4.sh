@@ -57,6 +57,23 @@ WRAPPER="${WRAPPER:-train-production-cell-v5.sh}"
 # Default 0 (off), so the families that have already run keep exactly the behaviour they ran with;
 # pass MIN_RAM_GIB for a family whose resident set is large.
 MIN_RAM_GIB="${MIN_RAM_GIB:-0}"
+# Re-arming after a launch that died in its first minutes. OFF by default, and the default is the
+# behaviour every armed waiter so far has run with: launch once, then exit.
+#
+# Why it is wanted at all: on 2026-09-17 a cell died 24 s in with `EGL_NOT_INITIALIZED`, the card
+# stayed clear for the rest of the night, and nothing used it -- the waiter had already exited. The
+# window is the scarcest thing in this campaign (free once in thirteen hours), so throwing one away
+# over a 24-second failure is the most expensive mistake available.
+#
+# Why it is off by default, and bounded when on: a retry is an unattended relaunch. It is confined
+# to failures inside FAST_FAILURE_SECONDS, because a cell that ran for hours and then failed has a
+# partial run on disk, and relaunching over it from zero without a human looking is not a decision
+# a waiter should make. MAX_RETRIES bounds a crash loop: three identical EGL deaths in a row are a
+# broken configuration, not a bad moment.
+RETRY_FAST_FAILURES="${RETRY_FAST_FAILURES:-0}"
+FAST_FAILURE_SECONDS="${FAST_FAILURE_SECONDS:-600}"
+MAX_RETRIES="${MAX_RETRIES:-2}"
+CELL_WAIT_TRIES="${CELL_WAIT_TRIES:-60}"   # x5s = 300s for the container to appear
 mkdir -p "$A"
 say(){ echo "$(date -Is) $*" >> "$LOG"; }
 
@@ -117,7 +134,7 @@ if [ -n "${PLACES365_DIR:-}" ] && [ ! -d "$PLACES365_DIR" ]; then say "REFUSING:
 say "will launch $TAG via $WRAPPER${PAYLOAD:+ with $(basename "$PAYLOAD")}${PLACES365_DIR:+ + places365}${MIN_RAM_GIB:+, RAM floor ${MIN_RAM_GIB} GiB}"
 
 say "waiting for card $CARD: no foreign holder and >= ${NEED} MiB free for ${HOLD} samples; max ${MAXWAIT}s"
-started=$(date +%s); last=""; polls=0
+started=$(date +%s); last=""; polls=0; retries=0
 # A heartbeat, because this runs unattended for hours: without one the log only moves when the
 # state changes, and "quiet because nothing changed" reads exactly like "dead". Every HEARTBEAT
 # polls it says what it sees, whatever that is.
@@ -163,12 +180,16 @@ while :; do
   if [ "${DRYRUN:-0}" = "1" ]; then say "DRYRUN=1 -- stopping here, nothing launched."; exit 0; fi
 
   [ -f "$A/$TAG-prod.log" ] && cp -p "$A/$TAG-prod.log" "$A/$TAG-prod-previous-$(date +%Y%m%d-%H%M).log"
+  launch_at=$(date +%s)
   env CARD="$CARD" YIELD_PROCS=1 FAMILY="$FAMILY" BASELINE="$BASELINE" SEED="$SEED" \
       EXPECT_OURS="$EXPECT_OURS" VRAM_MIB="$VRAM_MIB" \
       bash "$HOME/rlvigen-work/$WRAPPER" >> "$LOG" 2>&1 9>&- &
   launcher=$!
   say "launcher pid $launcher; waiting for the cell container to arm the self-cap"
-  for _ in $(seq 1 60); do
+  # Reset per attempt. With the retry branch below, a stale `c` from a previous attempt would arm a
+  # second self-cap watcher on a container that is already gone.
+  c=""
+  for _ in $(seq 1 "$CELL_WAIT_TRIES"); do
     c=$(docker ps --format '{{.Names}}' | grep -E "^cell-c${CARD}-[0-9]+\$" | head -1)
     [ -n "$c" ] && break
     sleep 5 9>&-
@@ -178,9 +199,22 @@ while :; do
       "$HOME/rlvigen-runs/self-vram-cap-$BASELINE-s$SEED.log" >/dev/null 2>&1 9>&- &
     say "self-cap armed on $c at ${VRAM_MIB} MiB"
   else
-    say "NO CELL CONTAINER appeared within 300s -- check $A/$TAG-prod.log; no self-cap armed"
+    say "NO CELL CONTAINER appeared within $((CELL_WAIT_TRIES*5))s -- check $A/$TAG-prod.log; no self-cap armed"
   fi
-  wait "$launcher"
-  say "launcher exited rc=$? -- this waiter is done"
+  wait "$launcher"; rc=$?
+  ran=$(( $(date +%s) - launch_at ))
+  say "launcher exited rc=$rc after ${ran}s"
+  if [ "$RETRY_FAST_FAILURES" = "1" ] && [ "$rc" -ne 0 ] \
+     && [ "$ran" -lt "$FAST_FAILURE_SECONDS" ] && [ "$retries" -lt "$MAX_RETRIES" ]; then
+    retries=$((retries+1))
+    say "fast failure (ran ${ran}s < ${FAST_FAILURE_SECONDS}s). RETRY_FAST_FAILURES=1: retry ${retries}/${MAX_RETRIES}."
+    say "  The card may still be clear; the streak rule below decides, exactly as it did the first time."
+    sleep "$POLL" 9>&-
+    continue
+  fi
+  if [ "$RETRY_FAST_FAILURES" = "1" ] && [ "$rc" -ne 0 ] && [ "$ran" -ge "$FAST_FAILURE_SECONDS" ]; then
+    say "  not a fast failure: it ran ${ran}s, so a partial run exists. A human decides what happens to it."
+  fi
+  say "this waiter is done"
   exit 0
 done
