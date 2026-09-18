@@ -186,3 +186,19 @@ discipline exists to catch.
 **C5 — same day.** Removed O8b (any host other than `cds2`) from §11.4 per the owner's ruling: "if
 the operator does it it's their problem." It is no longer carried as an open, unexplained item; its
 history stays in this file's D2/D3 rows as what was actually run.
+
+**C6 — same day, closing the plan.** The full suite failed once mid-pass:
+`test_default_maker_only_resolves_the_real_dependency_lazily` (C4's test) passed alone but failed
+in company with "DID NOT RAISE ImportError" — a sibling test's `sys.modules["wrappers.robo_wrapper"]`
+injection had leaked, the exact "green in isolation, red in company" failure
+`test_eval_loop_measurement.py` already names for these same module names. Fixed by moving the
+check into a subprocess, which starts with none of that state; confirmed against the specific
+239-file subset that reproduced the pollution (now exits 0), and against the file alone (6/6).
+
+**Plan closed.** `production_gates.py`: 37 pass / 0 fail / 9 owner. `pytest tests/ -q`: full run,
+100% collected, no F/E markers, no "short test summary info" section, exit 0 captured directly
+(not through a pipe — see the memory note on why that matters). Tree clean at the commits above.
+W1 did not fire: the card was occupied by other groups for the entire session (a third group,
+`sg_sam2`, joined partway through; noted, not acted on — no launch decision was needed). W2(a)–(d),
+W3 and W4/W5 are done, tested, and committed as listed above. §7b of CURRENT-STATE-AND-
+RESPONSIBILITY.md carries the three decisions that remain the owner's.
