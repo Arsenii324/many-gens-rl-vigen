@@ -6,11 +6,44 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-18, ~01:35 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
+Last updated **2026-09-18, ~11:10 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
 executed, and the section below it is kept because the reasoning still reads correctly — but items
 1-3 have happened. Read this block first; it is what changed overnight.
 
-## Night state, 2026-09-18 ~01:35 — read this first; everything below is older
+## Morning state, 2026-09-18 ~11:10 — read this first; everything below is older
+
+**Nothing of ours is running. A waiter holds `svea` s101. The card has been occupied for 12.5 hours.**
+
+- **Armed on the host:** `wait-and-train-v4.sh` for **`svea` s101** on card 1 — `WRAPPER=v6`,
+  `PAYLOAD=payload-v215-rlvigen.tgz`, `PLACES365_DIR=~/rlvigen-assets/places365-train`,
+  `VRAM_MIB=6000`, `MAXWAIT=36000` (ends ~20:45). Log:
+  `~/rlvigen-runs/prod-v214/svea-s101-prod-waiter-v4.log`, heartbeat every ten polls. The occupancy
+  logger was renewed at 10:11 and runs 40 h.
+- **When it launches, do the two things the waiter does not:** record the attempt
+  (`record_host_run.py` after fetching that run's `effective_config.json`) and arm `watch-cell.sh`.
+  For `svea` specifically, **watch the first minutes of `training.log` for the Places365 loader
+  lines** — no cell has ever consumed the corpus at run time, and that is the untested step.
+- **Why `svea` and not `idaac` s103:** windows are rarer than cells are long — the card was free
+  once in thirteen hours, for twenty minutes. `production-host/35` "Decision 2026-09-18" has the
+  reasoning; `idaac` s103 is next.
+- **Places365 is done:** 26 GB, 1,803,462 files, 365 classes, `verify_datasets` PASS on the host,
+  200 sampled files sha256-identical to the laptop copy. The two-day blocker was the SOURCE
+  (`data.csail.mit.edu` 623 B/s) and not the host (GitHub 13.7 MB/s) — measure the source before
+  believing a link is slow.
+- **The finding that should shape the next conversation:** no completed cell passes the competence
+  gate (`production-host/36`). All six production cells optimise shaped reward and open the door in
+  at most 1 of 200 episodes, success flat across the whole curve, so no retention ratio may be
+  reported. `notes/CAMPAIGN-REPORT-2026-09-18.md` is the account of what ran, what it says and what
+  failed; `production_reading.py [--retention]` regenerates the numbers.
+- **Open for the owner, not acted on:** (a) relaxing the vacancy rule for a small cell beside the
+  stable co-tenant on card 0 (9.6 GiB free, `idaac` needs 6.6) — twelve hours of strict waiting
+  produced nothing; (b) reclaiming disk by dropping `native-work/` everywhere except runs stopped
+  mid-training, keeping every `native-out/` — most of 66 GB, no log or checkpoint lost.
+- **A trap that bit three scripts today:** `flock` descriptors are inherited by children, so a
+  killed script's `sleep` keeps the lock. It left the host with no occupancy logger for three
+  minutes. Wait for the lock, not the process, and verify with `pgrep` afterwards.
+
+## Night state, 2026-09-18 ~01:35 — everything below is older
 
 **Nothing of ours is running. A waiter is armed and will launch `idaac` s103 by itself.**
 
