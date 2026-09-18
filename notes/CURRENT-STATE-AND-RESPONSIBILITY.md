@@ -171,9 +171,12 @@ leaves 21,712, the colleague reclaims 21,298, free drops to 414, under the 4,000
 our cells yield. Declining to launch kept the running cell alive. The second cell's real cost is the
 first cell.
 
-## 7b. Waiting on the owner — three decisions, no default chosen
+## 7b. Waiting on the owner — nine decisions, no default chosen
 
-Each of these has real work behind it already; none has been decided for you.
+Each of these has real work behind it already; none has been decided for you. Items 1-3 are the
+original three; 4-9 were added 2026-09-18 to consolidate everything else raised that session,
+previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GUIDE.md`'s O-items
+— gathered here so nothing needs to be hunted down separately.
 
 1. **Budget vs scope, given the competence-gate finding**
    ([`production-host/36`](production-host/36-no-completed-cell-passes-the-competence-gate.md)).
@@ -194,6 +197,39 @@ Each of these has real work behind it already; none has been decided for you.
    {101, 102, 103} and `campaign_status.py` reads seed 1 as MISSING. Keep the run and record the
    seed set as {1, 102, 103} for `ppg` specifically, or rerun it at 101 to match the other eleven
    baselines? Either is defensible; neither has been chosen.
+4. **The upstream-source archive risk** (`ACCOUNTABILITY.md` C9/T1). 5 of the 7 pinned third-party
+   algorithm repos are on individual researchers' personal GitHub accounts, not orgs; all 7 are
+   currently reachable, checked directly. No local mirror exists. `.gitignore`'s own comment states
+   why: ~200 MB each, reproducible from the pinned commit + a tracked patch — a deliberate
+   space-vs-durability call, already made once. Worth revisiting given the durability side is a
+   permanent, silent risk (if any one disappears, the exact algorithm code becomes unrecoverable
+   from this repo's own history)? Or accept the risk as already decided and move on?
+5. **`ctrl`'s in-loop eval cost.** Steps two fully-vectorized test environments at training's own
+   scale, every training step — roughly 3× the environment-interaction cost of training alone, with
+   no cost-accounting decision behind it (unlike `idaac`'s deliberately-tuned ~20% overhead). Worth
+   reducing the test envs' scale (a real code change to a "specifically crafted" algorithm
+   implementation, not made without being asked), or is the cost simply accepted as ctrl's inherent
+   shape?
+6. **`ctrl` at 600k needs a genuinely empty card** (its 32,435 MiB observed peak leaves no room for
+   the 4,000 MiB floor on a 32,494 MiB card), **plus** an explicit decision to lower or waive the
+   floor for this one family, **plus** a real RAM measurement — none of the three exist yet. All
+   three are prerequisites the owner needs to weigh in on before `ctrl` can run at all.
+7. **Stopped-cell continuation.** No family has a wired resume path; every stop today means rerun
+   from zero. May a continued run ever stand in for a seed (restarting with an empty replay buffer
+   for the off-policy families, or resetting Adam's state for `ibac_sni`)? If yes, the per-family
+   code change is scoped in `OPERATOR-GUIDE.md` §6c; if no, that's the status quo, stated rather than
+   assumed.
+8. **`build-env.sh`'s prebuilt environment for `rlvigen`/`dmc_gb`/`alda`/`ppg`/`ibac_sni`
+   (O9).** A real cache-key gap was found: the script can't tell "built with `RL-ViGen-upstream/`"
+   from "built without," and a directory from 2026-09-08 (built for `idaac` only) permanently
+   occupies the slot a correct build needs. The fix is one command (delete that directory, rebuild
+   at the same hash from a payload that carries the upstream tree) — not done here because that
+   directory is host state from before this session, and deleting pre-existing state someone else
+   created is exactly the line every other decision in this list draws. Delete and rebuild it, or
+   leave the prebuilt-env optimisation unavailable for these five families?
+9. **The repository is public on GitHub with no `LICENSE` file and no CI.** Checked directly via
+   the GitHub API (`private: false`, `visibility: public`). Neither is a technical gap; both are
+   policy calls — add a license (and which one), add CI, or leave both as they are?
 
 ## 8. What to do first on resume
 
