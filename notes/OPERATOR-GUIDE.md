@@ -1162,10 +1162,26 @@ of questions. The disk floor came within one 60-second sample of firing on 2026-
 
 **O9 — A prebuilt Python environment for the torch families**, which would remove the 7–22 minutes
 of in-container `pip` per launch (§6d)
-- *State now:* one exists, built for `idaac` without the editable RL-ViGen installs, so it would be
-  refused for `rlvigen`.
-- *Target and operation:* procedure §3.0b, `build-env.sh` from a payload that carries
-  `RL-ViGen-upstream/`. Not executed. It is an optimisation, not a blocker.
+- *State now, precisely (2026-09-18, attempted for real):* ran `build-env.sh` for `svea:101` with
+  `payload-v215-rlvigen.tgz` (carries `RL-ViGen-upstream/`) — it refused with `already built:
+  torch-02805cc0-94c1577b2cd9`. **The real cause is a cache-key gap, not "never attempted":**
+  `build-env.sh` names its target directory purely `${stack}-${reqhash}-${digest}`, where `reqhash`
+  is `family.py filtered-requirements`'s resolved package list. That hash is identical whether or
+  not the payload used to build it carried `RL-ViGen-upstream/`, because the editable installs are
+  a conditional step the hash never sees. The directory at that exact hash already exists — built
+  2026-09-08 for `idaac`, confirmed via its own `ENVIRONMENT.json`: `"editable": []` — so the script
+  reports "already built" and exits 0 without ever comparing what's actually inside it against what
+  the new payload would add.
+- *Target and operation, corrected:* the fix is not "run `build-env.sh` from a payload that carries
+  `RL-ViGen-upstream/`" — that was tried and silently no-ops. It is: delete
+  `~/rlvigen-env/torch-02805cc0-94c1577b2cd9` and rebuild at the same hash from a payload that does
+  carry it (the new build is a strict superset — same torch/numpy base, plus the two editable
+  installs — so `idaac` keeps working). **Not done here**: that directory is host state from
+  2026-09-08, not something created this session, and deleting it crosses from "additive, zero-risk"
+  into "removing pre-existing state I did not make" — the same line this project's own standing
+  rules draw everywhere else. Payloads for all four remaining families (O2) are shipped and
+  verified against the current tree; this is the one piece of O9 left, and it is a one-command
+  fix once someone accepts that trade.
 
 ### 11.5 How to use this section
 

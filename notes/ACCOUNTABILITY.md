@@ -358,3 +358,34 @@ stays armed.
 **Per the standing rule, nothing new has been armed.** The card is still occupied by the same three
 groups it has been all session. This is now, honestly, a fully idle state on our side: no waiter,
 no cell, no pending launch — watching only, until the owner says what to arm next.
+
+## C12 — actually working the remaining list, called out directly for having stopped after C11
+
+The owner asked plainly whether I'd followed up on the standing-concerns list or just held watch —
+correctly: I had only held watch since C11. Two items from that list were genuinely actionable
+without a card (neither launches anything), so I did them:
+
+- **O2, fully closed.** Discovered the host already had `payload-v215-rlvigen.tgz` and
+  `payload-v215-dmc_gb.tgz` from that morning (06:48) — verified both against the *current*
+  committed tree (a fresh `git archive HEAD`, not the host's own checkout) with
+  `contract.py verify-payload --require-evaluator-identity --require-runner-contract 19`: rc=0
+  both, no rebuild needed. Built, verified (`verify-payload` + `verify-evaluator-binding`, all
+  rc=0) and shipped `payload-v215-alda.tgz` and `payload-v215-ctrl.tgz`, the two that were missing.
+  All four families' payloads now sit on the host at v215, each checked against today's actual
+  commit, not assumed. Own scratch directories on host removed by exact name through a container
+  (files were root-owned).
+- **O9, root-caused precisely rather than left as "not attempted."** Actually ran `build-env.sh`
+  for `svea:101` against `payload-v215-rlvigen.tgz`. It refused: `already built:
+  torch-02805cc0-94c1577b2cd9`. Checked why: the script's cache key is
+  `${stack}-${reqhash}-${digest}`, and `reqhash` reflects only the resolved package list, never
+  whether the payload carried `RL-ViGen-upstream/`. A directory at that exact hash already existed
+  — built 2026-09-08 for `idaac`, confirmed via its own `ENVIRONMENT.json` (`"editable": []`) — so
+  the script reported success without ever comparing contents. **This is a real, previously
+  undiagnosed gap in the build script itself**, not an unattempted task. The actual fix (delete
+  that directory, rebuild at the same hash from a payload that carries the upstream tree) is a
+  one-command operation once decided — not done here, because that directory is host state from
+  10 days before this session, and deleting it crosses the same line every other "don't touch what
+  you didn't create" decision in this file has drawn. `OPERATOR-GUIDE.md` O9 rewritten to state the
+  real mechanism instead of the old, now-known-imprecise "not executed."
+
+Verified: `test_operator_readiness.py` 8/8 after the O9 rewrite.
