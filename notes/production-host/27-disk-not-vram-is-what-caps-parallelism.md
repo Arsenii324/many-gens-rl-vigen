@@ -227,3 +227,33 @@ reconcile with the user before deletion" (owner, 2026-09-18) has somewhere concr
 - **Before deleting anything from the "safe to consider" category:** confirm the run's
   `native-out/` really is non-empty and holds what `campaign_status.py` expects for that cell, then
   reconcile with the owner. This list narrows the search; it does not authorise the deletion.
+
+### Executed, 2026-09-18 ~18:22 — 17 pre-production probe directories removed, individually verified
+
+The owner asked for each of the ~17-19 directories from the `card0-2026090[9-10]-*` batch to be
+checked individually rather than pattern-matched, with one exception kept as a physical sample.
+Every one was inspected before deletion, not assumed from its size or date:
+
+- **Kept, untouched:** `card0-20260909-115331` (the completed 600k `ppg` production run, 3.3G,
+  reeval'd into `reeval-v214-ppg-{curve,endpoint}`, cited throughout these notes) and
+  `card0-20260909-035152` (569 rows already collected into `results/records/`, cited 14 times —
+  the idaac attempt stopped by its watch budget). Neither is a "probe"; both stay.
+- **Kept as the one physical sample of the batch:** `card0-20260910-135658` (1.5G) — the latest
+  timestamp among the disposable set, per the owner's instruction to retain one.
+- **Removed, 17 directories, ~30 GiB:** two (`card0-20260909-013936`, `card0-20260909-005543`)
+  had their measured rows already preserved in `results/superseded-runs/` in the repo, so the host
+  copy was pure duplication; the rest were 10k-frame attestation smoke-tests or zero-row probes
+  whose only host-unique content was a reconstructed vendor source tree (the identical
+  `RL-ViGen-upstream/envs/DMCVGB/data/color_{easy,hard}.pt` files, byte-identical every time) and,
+  in a few cases, an **untrained** ppg construction-save (`model000.jd`, written before any
+  gradient step — see C60 below) — never collected into the repo, and, for the ones that did emit
+  rows, off any evaluator revision that has been live at any point since (checked: no
+  `evaluator_revision` field matching current or superseded closures).
+- **Deletion mechanics:** literal names only, written to a file, shipped to the host, verified to
+  exist exactly once each with `ls -d` before touching anything, then removed inside a container
+  mounting only `~/rlvigen-runs` (`docker run --rm -v ~/rlvigen-runs:/target ... rm -rf --
+  "./$n"`), one exact name per line, no glob. All 17 names are plain alphanumeric-and-hyphen —
+  checked with a regex before shipping the list — so no quoting hazard applied here, but the
+  practice (literal names, verified count, no wildcard) is the one to keep for any future round.
+- **Result:** `rlvigen-runs` 66G → 36G; the three kept directories confirmed present afterward with
+  unchanged sizes; host free disk 125 → 153 GiB.

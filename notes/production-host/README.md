@@ -46,6 +46,7 @@ and the specifics are where the harm is.
 | [34-first-three-baseline-reading-2026-09-17.md](34-first-three-baseline-reading-2026-09-17.md) | The first time three baselines could be put on the same axes: idaac, ibac_sni and ppg at PRIMARY for raw return. One seed each, so a reading and not a result. |
 | [35-what-the-campaign-costs-at-measured-rates.md](35-what-the-campaign-costs-at-measured-rates.md) | What the remaining 32 cells cost at rates measured here, why the full 36-cell campaign cannot finish on this host, and which five cells I would run first. |
 | [36-no-completed-cell-passes-the-competence-gate.md](36-no-completed-cell-passes-the-competence-gate.md) | Every 600k cell clears the random floor on shaped return and opens the door in ~0 of 200 episodes, so the protocol's own gate withholds every retention ratio. What the campaign can and cannot claim at this budget. |
+| [37-what-a-cell-actually-costs-in-wall-clock.md](37-what-a-cell-actually-costs-in-wall-clock.md) | A retracted "96s" claim, and the real numbers from a completed cell: eval (curve + endpoint) costs roughly double the training time. Also the ppg checkpoint-cadence mechanism (`ppo.py:188`, two uncoordinated numbers combining via modular arithmetic) that a keyword search for "save" or "cadence" cannot find. |
 
 ## The rule that comes before the others
 
