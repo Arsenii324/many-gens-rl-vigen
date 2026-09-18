@@ -93,3 +93,37 @@ payload shipped and a first cell that nobody has ever run (O2, O3). A report tha
 generalisation conclusion from the sampled block alone must say that it covers three of twelve
 baselines, all of them on-policy, and none of the augmentation-based methods the benchmark exists
 to compare.
+
+---
+
+## Addendum, 2026-09-18 06:40 — note 36 changes the priority, and I am not certain which way
+
+Note 36 measured what the completed cells actually are: `idaac`, `ppg` and `ibac_sni` never become
+competent **in training** at 600k — they clear the random floor on shaped reward and open the door
+in at most 1 of 200 episodes, with success flat across the whole training curve. Meanwhile the
+reference's own published Door table has SVEA at 268.8 and SGQN at 391.4 in held-out regimes, both
+above the 250 shaping ceiling, i.e. actually solving the task.
+
+That pulls the recommendation above in two directions, and the tension is real:
+
+- **Against finishing the sampled block:** three more seeds of three methods that never solve the
+  task buys a seed spread around a plateau. It answers "how noisy is this measure", not the
+  campaign's question, and note 36 explains why no retention ratio may even be printed for them.
+- **For finishing it anyway:** it is the cheapest evidence we can get (`ibac_sni` trains in 31
+  minutes), it completes a whole primary comparison block, and a plateau reported honestly *is* a
+  finding about these methods on this task at this budget — one the published table does not cover,
+  since RL-ViGen never ran the on-policy family on Door.
+- **The thing that would actually answer the question** is `svea` and `sgqn`, which the reference
+  says solve Door. Both are blocked on the Places365 corpus (§11.4 O1) — a ~24 GB fetch that ran at
+  55 kB/s — and `drqv2` is the third off-policy option, needing no corpus, whose published result
+  is a *generalisation* failure we could reproduce as a positive control for the anchor (A9).
+
+**My recommendation, revised:** keep `idaac` s103 as the armed cell — it is minutes of work, it
+completes idaac at n=3, and the waiter is already holding the card for it. But treat **unblocking
+Places365 as the highest-value non-compute task left**, ahead of more on-policy seeds, and treat
+**`drqv2`** as the most informative single new cell after s103, because it is the one baseline where
+we have a published number to check ourselves against.
+
+This is a judgement about what to spend the remaining window on, and it rests on the published
+table being the right expectation for Door. The owner may reasonably weigh "complete one block" more
+heavily than "chase the methods that work".

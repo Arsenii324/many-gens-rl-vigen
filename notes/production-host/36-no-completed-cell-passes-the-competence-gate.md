@@ -75,13 +75,53 @@ Three explanations, none excluded, in the order I would test them:
 2. **The estimand.** Every one of these is an on-policy method reported at `sample`, and sampled
    actions on a precision task lose more than they do on Procgen. The `mode` columns are also near
    zero, so this cannot be the whole story, but it is measurable per cell.
-3. **The reward and horizon convention.** Our returns (20–96) sit an order of magnitude above
-   RL-ViGen's own published `drqv2` Door numbers (≈3.6, range 1–7, in the anchor note), and our
-   protocol runs `action_repeat=1` where their config ships 2. A shaped per-step reward over a
-   500-step horizon scales with the number of steps taken, so the two are probably not the same
-   axis at all. **This needs resolving before any of our numbers is compared with a published
-   one** — it is exactly the "a scale is not a result" trap, and the anchor gate assumes the two
-   are comparable.
+3. **The reward convention — CHECKED, and my first reading of it was wrong.** I wrote here that
+   our returns sit "an order of magnitude above" RL-ViGen's published Door numbers. That compared
+   against their **worst** method. Reading the whole published table
+   (`notes/rlvigen-published-door-anchor.md`, extracted from their own
+   `results/evaluation_score.xlsx`):
+
+   | published, Door eval-easy | value |
+   |---|---|
+   | DrQ-v2 | 3.6 (seeds 1–7) |
+   | CURL | 6.6 |
+   | DrQ | 14.0 |
+   | **SVEA** | **268.8** |
+   | **SGQN** | **391.4** |
+   | PIEG / SRM | 387.2 / 337.2 |
+
+   So the axis is the same as ours, and the published result is already that the
+   augmentation/saliency family solves Door while the plain-augmentation family does not. Our 20–96
+   sits above their DrQ-v2 and far below SVEA/SGQN. Nothing needs resolving before comparing; the
+   comparison is simply not flattering.
+
+## The reading that follows from putting those two tables side by side
+
+**The shaping ceiling makes this legible.** C62 derives Door's reward analytically from the vendored
+source: a step where the door is open pays exactly 1.0 with no shaping, every other step pays at
+most 0.5, so over `horizon: 500` a policy that **never opens the door** cannot exceed **250**.
+
+- Our three on-policy baselines reach **20–96 in the TRAIN regime**. That is comfortably under the
+  ceiling, which is the same statement as their ~0 success rate, read a second way.
+- Published SVEA (268.8) and SGQN (391.4) are **above** that ceiling **in held-out regimes**. Those
+  policies open the door, and keep doing it under visual shift.
+- Our own archived `drqv2` reached train 480.6 at only 100k frames — plainly competent in training —
+  with eval-easy 1.44, which sits inside the published DrQ-v2 seed range of 1–7. (That 480.6
+  predates three evaluator changes and is indicative, not a like-for-like measurement; the renderer
+  gate says so.)
+
+**So there are two different failures in this project's results, and they should not be conflated.**
+DrQ-v2 is a *generalisation* failure that the reference itself publishes — competent in training,
+at the floor in eval. Our `idaac`, `ppg` and `ibac_sni` cells are something else: they never become
+competent **in training** at 600k, so their eval numbers cannot be a generalisation finding at all.
+The anchor note anticipated exactly this risk: "the competence rule must not quietly classify a
+faithfully-reproduced published failure as an implementation defect" — and the converse holds too,
+that a training failure must not be reported as a generalisation result.
+
+**Where the campaign's answer actually lives, if the published table is right:** with `svea` and
+`sgqn`, the two methods that solve Door in the reference — and both are blocked on the Places365
+corpus (OPERATOR-GUIDE §11.4 O1), not on compute. That reorders what is worth running; see the
+addendum to note 35.
 
 ## One measurement defect found while doing this, and fixed
 
