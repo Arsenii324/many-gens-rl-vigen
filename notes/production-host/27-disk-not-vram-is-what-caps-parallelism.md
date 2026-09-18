@@ -165,3 +165,41 @@ Against the measured `idaac` cell (5 h training + 10 h evaluation ≈ 15 h) the 
 3. **Collect both**, which frees nothing on disk but retires both watches and their floors.
 4. Only then launch `drqv2`, with an allowance sized against the `avail` that actually exists at
    that moment rather than against today's.
+
+---
+
+## Addendum, 2026-09-18 09:45 — where our 94 GB actually is, and the permission wall is not a wall
+
+Measured from a container mounting `$HOME:ro`, because much of it is root-owned and `du` on the host
+shell under-reports it:
+
+| directory | size | what it is |
+|---|---|---|
+| `~/rlvigen-runs` | **66 GB** | 118 run directories from every attempt since 9 Sep |
+| `~/rlvigen-assets` | 20 GB | the Places365 corpus arriving 2026-09-18; the fixture is 563 MB of it |
+| `~/rlvigen-env` | 5.8 GB | the prebuilt `idaac` environment (`"editable": []`, unusable for `rlvigen`) |
+| `~/rlvigen-work` | 2.1 GB | payloads, wrappers, the host's repo checkout |
+
+**The run directories split cleanly**, by whether they hold a non-empty `records.jsonl` or any
+checkpoint:
+
+- **58 directories, 37 GiB** — hold records or checkpoints. Evidence. Keep.
+- **60 directories, 24 GiB** — hold **neither**. Failed attempts and probes whose cell died before
+  writing anything; nearly all of it is the extracted work tree (payload plus reconstructed sources)
+  that each container builds and never uses again.
+
+**The earlier claim that this space cannot be reclaimed needs correcting.** `STOP-MECHANISMS.md`
+records 13.4 GB as stuck because the files are root-owned and `rm` returns `Permission denied` as
+`varaksin_as`, concluding that removing them "would need a root container doing `rm -rf` on a shared
+filesystem, which is a worse risk than the 13 GB is worth". The first half is true; the conclusion
+overstates the risk. A container whose **only** bind mount is the one directory cannot reach
+anything else — the mount is the bound, not the command's carefulness. That is exactly how two
+scratch directories were removed on 2026-09-18 (`~/bootstrap-test`, `~/clone-to-payload`), each by
+exact name, each verified gone afterwards.
+
+**What I would reclaim, and what I would not.** Not the whole 24 GiB: a directory with no records
+still holds `job.log`, the sentinels and `resources.json`, and several are cited by name in these
+notes — `card0-20260916-010515` is the EGL death, and the three 16 Sep floor stops are the evidence
+for the vacancy rule. Dropping only each one's `native-work/` work tree while keeping `native-out/`
+recovers most of the space and loses no log. **Not done: it is the owner's call, and disk is not
+currently the binding constraint** (142 GiB free).

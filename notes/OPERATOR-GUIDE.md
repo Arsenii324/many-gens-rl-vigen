@@ -214,6 +214,11 @@ Where each number comes from, so you can re-derive it:
 - **Evaluation time is not in this table** because it barely depends on the family: the in-cell grid
   took about 13.5–14 hours in both complete cells of 16–17 Sep. Budget for it (§6b, reaper row).
 - **Launch to training** is a further 7–22 minutes of bootstrap (§6d).
+- **Where our own disk goes**, measured 2026-09-18 from a container (much of it is root-owned, so
+  the host shell under-reports): 94 GB total — 66 GB of run directories, of which **24 GiB is in 60
+  directories holding neither records nor checkpoints**. Reclaimable, and the "permission wall" that
+  said otherwise is not one: a container whose only mount is that directory bounds the delete.
+  [`production-host/27`](production-host/27-disk-not-vram-is-what-caps-parallelism.md) addendum.
 - **Host RAM is not checked by the launcher.** Nothing in `launch-card-cell.sh` compares a cell's
   RAM figure with what the host has free, and the host's other users take an unknown share of its
   113 GiB. For the five RL-ViGen baselines, `rad`, `soda` and `ctrl`, RAM rather than VRAM is the
