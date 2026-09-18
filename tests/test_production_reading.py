@@ -84,8 +84,55 @@ def test_the_footer_says_how_many_cells_were_not_read():
 
 def test_it_runs_against_the_real_records_and_agrees_with_the_hand_reading():
     """Ground truth: the two idaac seeds were aggregated by hand on 2026-09-17 before this existed."""
-    points, skipped = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    points, skipped, _gate = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
     got = dict(points.get(("idaac", "sample", "train"), []))
     assert got.get(101) == pytest.approx(39.24, abs=0.01), got
     assert got.get(102) == pytest.approx(20.51, abs=0.01), got
     assert skipped.get("MISSING", 0) >= 1, "the skipped tally must be reported, not hidden"
+
+
+def test_the_competence_gate_refuses_a_ratio_built_on_shaped_reward():
+    """A policy that never opens the door has no skill to retain; its gap would read as robustness."""
+    floor = 1.842
+    ok, why = pr.competence(train_mean=82.18, train_success=0.005, floor=floor)
+    assert not ok and "shaped reward" in why, why
+
+
+def test_the_competence_gate_refuses_a_denominator_at_the_floor():
+    ok, why = pr.competence(train_mean=1.5, train_success=0.9, floor=1.842)
+    assert not ok and "floor" in why, why
+
+
+def test_the_competence_gate_admits_a_policy_that_actually_solves_the_task():
+    ok, why = pr.competence(train_mean=96.21, train_success=0.27, floor=1.842)
+    assert ok and why == ""
+
+
+def test_retention_is_printed_only_for_a_competent_cell():
+    points = {("m", "sample", "train"): [(1, 100.0)], ("m", "sample", "eval-easy"): [(1, 50.0)]}
+    refused = pr.render_retention(points, {("m", "sample", 1): (False, "train success 0.000 below 0.25",
+                                                                100.0, 0.0)})
+    assert any("DID NOT REACH COMPETENCE" in l for l in refused)
+    assert not any("0.500" in l for l in refused), "a refused cell must not also print its ratio"
+
+    allowed = pr.render_retention(points, {("m", "sample", 1): (True, "", 100.0, 0.5)})
+    assert any("eval-easy 0.500" in l for l in allowed), allowed
+
+
+def test_the_real_records_are_all_refused_a_ratio_today():
+    """Ground truth as of 2026-09-18: every 600k production cell sits at ~0 task success."""
+    points, _, gate = pr.collect(pathlib.Path(pr.cs.DEFAULT_SCHEDULE))
+    assert gate, "no cells were gated at all"
+    assert all(not competent for competent, *_ in gate.values()), gate
+
+
+def test_a_scene_measured_twice_is_still_one_scene():
+    """idaac s101 was measured by its in-cell grid AND by an offline re-evaluation sweep.
+
+    Appending both to one list weights those scenes twice. Averaging within the scene first makes a
+    repeat measurement a better estimate of that scene, which is what it is.
+    """
+    rows = [_row("train", "0", 0.0), _row("train", "0", 10.0),   # scene 0, measured twice
+            _row("train", "1", 20.0)]                            # scene 1, once
+    assert pr.per_seed_means(rows)[("train", "sample")] == pytest.approx(12.5), (
+        "expected mean(mean(0,10), 20) = 12.5; a flat list would give 10.0")

@@ -57,8 +57,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import campaign_status as cs  # noqa: E402
+from regime_retention_report import MIN_DENOM_SUCCESS  # noqa: E402
 
 REGIMES = ("train", "eval-easy", "eval-medium", "eval-hard")
+
+
+def _door_random_floor() -> float:
+    """The floor every return reads against (C55). Imported, never restated."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_rlvigen_reference", ROOT / "scripts" / "rlvigen_reference.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return float(module.DOOR_RANDOM_FLOOR)
 
 
 def _is_pooled(row: dict) -> bool:
@@ -66,22 +77,59 @@ def _is_pooled(row: dict) -> bool:
     return "," in str(row.get("scene_set", ""))
 
 
-def per_seed_means(rows: list[dict]) -> dict[tuple[str, str], float]:
-    """Ȳ[m,r,g] for one cell: mean over the ten scene cells, per (regime, policy mode)."""
-    buckets: dict[tuple[str, str], list[float]] = {}
+def _by_scene(rows: list[dict], field: str) -> dict[tuple[str, str], dict[str, list[float]]]:
+    """Endpoint values grouped (regime, mode) -> scene -> values.
+
+    Grouping by SCENE first is not cosmetic. The same checkpoint can be measured twice -- the
+    in-cell grid writes one set of rows and an offline re-evaluation sweep can write another for
+    the same frame, regime and scene (`idaac` s101 has both). Appending them to one list would
+    weight those scenes twice in Ȳ. Averaging within a scene first makes a repeat measurement what
+    it actually is: a better estimate of that one scene cell, not an extra scene.
+    """
+    out: dict[tuple[str, str], dict[str, list[float]]] = {}
     for row in rows:
         if row.get("eval_scope") != "endpoint" or _is_pooled(row):
             continue
         mode = (row.get("conventions") or {}).get("eval_policy_mode")
-        regime, value = row.get("regime"), row.get("episode_return_mean")
+        regime, value, scene = row.get("regime"), row.get(field), str(row.get("scene_set"))
         if mode is None or regime is None or value is None:
             continue
-        buckets.setdefault((regime, mode), []).append(float(value))
-    return {key: statistics.fmean(values) for key, values in buckets.items()}
+        out.setdefault((regime, mode), {}).setdefault(scene, []).append(float(value))
+    return out
 
 
-def collect(schedule_path: pathlib.Path) -> tuple[dict, dict]:
-    """Returns {(baseline, mode, regime): [(seed, Ȳ), ...]} and a tally of skipped cells."""
+def per_seed_means(rows: list[dict]) -> dict[tuple[str, str], float]:
+    """Ȳ[m,r,g] for one cell: mean over the ten scene cells, per (regime, policy mode)."""
+    return {key: statistics.fmean(statistics.fmean(v) for v in scenes.values())
+            for key, scenes in _by_scene(rows, "episode_return_mean").items()}
+
+
+def per_seed_success(rows: list[dict]) -> dict[tuple[str, str], float]:
+    """Train-regime success, the other half of the competence gate (EVAL-PROTOCOL §3)."""
+    return {key: statistics.fmean(statistics.fmean(v) for v in scenes.values())
+            for key, scenes in _by_scene(rows, "success_rate").items()}
+
+
+def competence(train_mean: float, train_success: float, floor: float) -> tuple[bool, str]:
+    """May this cell be given a retention RATIO at all?
+
+    `docs/EVAL-PROTOCOL.md` §3: only if the train-regime denominator clears the floor by a stated
+    margin AND train-regime success is non-zero. The margin used here is the project's existing
+    one, `MIN_DENOM_SUCCESS` from `regime_retention_report.py` (0.25), imported rather than
+    restated -- it was raised from "any success at all" after an adversarial re-check found a
+    policy scoring 1/20 on every scene passing the gate and producing a retention of 0.947 that
+    was really a shaped-reward plateau.
+    """
+    if train_mean <= floor:
+        return False, f"train Ȳ {train_mean:.2f} at or below the {floor:.3f} random floor"
+    if train_success < MIN_DENOM_SUCCESS:
+        return False, (f"train success {train_success:.3f} below {MIN_DENOM_SUCCESS:.2f}: the "
+                       f"denominator is shaped reward, not task success")
+    return True, ""
+
+
+def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict]:
+    """Returns the seed points, a tally of skipped cells, and the competence gate per cell."""
     schedule = json.loads(schedule_path.read_text())
     live, attested = cs._live_revisions(), cs._attested()
     records = cs._records_index()
@@ -89,6 +137,8 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict]:
 
     points: dict[tuple[str, str, str], list[tuple[int, float]]] = {}
     skipped: dict[str, int] = {}
+    gate: dict[tuple[str, str, int], tuple[bool, str, float, float]] = {}
+    floor = _door_random_floor()
     default_seeds = schedule.get("seeds", [])
     for entry in schedule.get("rows", []):
         baseline, family = entry["baseline"], entry["family"]
@@ -102,9 +152,17 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict]:
             rows = [r for r in records.get((baseline, seed), [])
                     if r.get("frame") in (endpoint, str(endpoint))
                     and r.get("evaluator_revision") == live.get(family)]
-            for (regime, mode), value in per_seed_means(rows).items():
+            means, successes = per_seed_means(rows), per_seed_success(rows)
+            for (regime, mode), value in means.items():
                 points.setdefault((baseline, mode, regime), []).append((seed, value))
-    return points, skipped
+            for mode in {m for _, m in means}:
+                train = means.get(("train", mode))
+                if train is None:
+                    continue
+                competent, why = competence(train, successes.get(("train", mode), 0.0), floor)
+                gate[(baseline, mode, seed)] = (competent, why, train,
+                                                successes.get(("train", mode), 0.0))
+    return points, skipped, gate
 
 
 def render(points: dict, skipped: dict, markdown: bool) -> tuple[list[str], bool]:
@@ -147,15 +205,52 @@ def render(points: dict, skipped: dict, markdown: bool) -> tuple[list[str], bool
     return out, provisional
 
 
+def render_retention(points: dict, gate: dict) -> list[str]:
+    """Retention per seed = Ȳ[regime] / Ȳ[train], and a refusal where the gate says so."""
+    out = ["", "RETENTION (eval regime / train regime), per trained policy", ""]
+    per_cell: dict[tuple[str, str], dict[int, dict[str, float]]] = {}
+    for (baseline, mode, regime), seeds in points.items():
+        for seed, value in seeds:
+            per_cell.setdefault((baseline, mode), {}).setdefault(seed, {})[regime] = value
+
+    refused = 0
+    for (baseline, mode), seeds in sorted(per_cell.items()):
+        for seed in sorted(seeds):
+            competent, why, train_mean, train_success = gate.get(
+                (baseline, mode, seed), (False, "no train regime measured", float("nan"), float("nan")))
+            head = f"  {baseline:<10} {mode:<7} seed {seed:<4}"
+            if not competent:
+                refused += 1
+                out.append(f"{head} DID NOT REACH COMPETENCE -- no ratio. {why}")
+                out.append(f"  {'':<10} {'':<7}          (train Ȳ {train_mean:.2f}, "
+                           f"train success {train_success:.3f})")
+                continue
+            parts = []
+            for regime in REGIMES[1:]:
+                value = seeds[seed].get(regime)
+                if value is not None and train_mean:
+                    parts.append(f"{regime} {value / train_mean:.3f}")
+            out.append(f"{head} " + "  ".join(parts))
+    out.append("")
+    if refused:
+        out.append(f"  {refused} cell(s) received no ratio. That is the reporting rule in")
+        out.append("  EVAL-PROTOCOL §3, not a missing measurement: a method that never solves the")
+        out.append("  task has nothing to retain, and its gap would read as perfect generalisation.")
+        out.append("  The returns above are still real and still published.")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--schedule", default=str(cs.DEFAULT_SCHEDULE))
     ap.add_argument("--markdown", action="store_true")
+    ap.add_argument("--retention", action="store_true",
+                    help="also show eval/train ratios, with the competence gate applied")
     ap.add_argument("--strict", action="store_true",
                     help="exit 1 if any printed baseline has fewer than three seeds")
     args = ap.parse_args(argv)
 
-    points, skipped = collect(pathlib.Path(args.schedule))
+    points, skipped, gate = collect(pathlib.Path(args.schedule))
     if not points:
         print("No DONE cell on the current closure. Nothing to read.")
         print("  cells: " + ", ".join(f"{k} {v}" for k, v in sorted(skipped.items())))
@@ -164,6 +259,8 @@ def main(argv: list[str] | None = None) -> int:
     print("PRODUCTION READING -- endpoint returns, aggregated per EVAL-PROTOCOL §4c\n")
     lines, provisional = render(points, skipped, args.markdown)
     print("\n".join(lines))
+    if args.retention:
+        print("\n".join(render_retention(points, gate)))
     if provisional:
         print("\n  PROVISIONAL rows have fewer than three trained policies behind them. The seed")
         print("  spread is the finding at that point, not the mean: on 2026-09-17 idaac's")

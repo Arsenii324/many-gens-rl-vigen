@@ -45,6 +45,7 @@ and the specifics are where the harm is.
 | [`33-what-we-actually-have-2026-09-16.md`](33-what-we-actually-have-2026-09-16.md) | **current state.** The re-evaluation landed (732 admissible rows, was 28); the seed discrepancy that makes the campaign count 1 of 36; the co-tenant arithmetic that decides a launch; three wrong VRAM numbers and two retracted claims |
 | [34-first-three-baseline-reading-2026-09-17.md](34-first-three-baseline-reading-2026-09-17.md) | The first time three baselines could be put on the same axes: idaac, ibac_sni and ppg at PRIMARY for raw return. One seed each, so a reading and not a result. |
 | [35-what-the-campaign-costs-at-measured-rates.md](35-what-the-campaign-costs-at-measured-rates.md) | What the remaining 32 cells cost at rates measured here, why the full 36-cell campaign cannot finish on this host, and which five cells I would run first. |
+| [36-no-completed-cell-passes-the-competence-gate.md](36-no-completed-cell-passes-the-competence-gate.md) | Every 600k cell clears the random floor on shaped return and opens the door in ~0 of 200 episodes, so the protocol's own gate withholds every retention ratio. What the campaign can and cannot claim at this budget. |
 
 ## The rule that comes before the others
 
