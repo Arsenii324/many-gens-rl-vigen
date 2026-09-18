@@ -49,6 +49,14 @@ LOG="${WAITER_LOG:-$A/$TAG-waiter-v4.log}"
 # host went through and idaac s103 should not be the run that tries something new. A Places365
 # baseline needs v6, which adds PAYLOAD and PLACES365_DIR and nothing else; pass WRAPPER for that.
 WRAPPER="${WRAPPER:-train-production-cell-v5.sh}"
+# Host RAM, which NOTHING else checks. launch-card-cell.sh gates VRAM and disk; the co-tenant's
+# RAM is invisible to both. An RL-ViGen cell is ~40 GiB resident (36.7 GiB of replay at the v100
+# cap plus a 3.3 GiB peak) on a 125 GiB host that already had 43 GiB in use on 2026-09-18, so a
+# cell of that family started at the wrong moment can push the kernel OOM killer into choosing a
+# victim -- possibly the co-tenant's. That is the one outcome the standing rule forbids outright.
+# Default 0 (off), so the families that have already run keep exactly the behaviour they ran with;
+# pass MIN_RAM_GIB for a family whose resident set is large.
+MIN_RAM_GIB="${MIN_RAM_GIB:-0}"
 mkdir -p "$A"
 say(){ echo "$(date -Is) $*" >> "$LOG"; }
 
@@ -90,12 +98,23 @@ fi
 # own `sleep` child still held fd 9 and the replacement refused for a minute. Every long-lived child
 # below therefore gets `9>&-`, which closes the descriptor for it. That includes the launcher, so
 # v4's lock is released when v4 exits rather than when the cell's watch budget ends.
-exec 9>"$HOME/rlvigen-runs/.wait-and-train-v4.lock"
+# WAITER_LOCK exists so the guards below can be TESTED while a real waiter is armed: with one
+# hardcoded path, every test run refused at the lock and reached none of the branches it meant to
+# exercise -- a test that cannot fail for the right reason, which is this project's recurring defect.
+exec 9>"${WAITER_LOCK:-$HOME/rlvigen-runs/.wait-and-train-v4.lock}"
 flock -n 9 || { say "REFUSING: another v4 waiter holds the lock. One launcher at a time."; exit 3; }
 for p in $(pgrep -f "train-production-cell-v[56].sh|wait-and-train-v3.sh" 2>/dev/null); do
   say "REFUSING: a launcher is already running (pid $p)."; exit 3
 done
 if [ -f "$A/$TAG-result.tgz" ]; then say "REFUSING: $A/$TAG-result.tgz exists; nothing to launch."; exit 0; fi
+
+# Validate what the launch will need NOW, not in ten hours. Before this, a mistyped WRAPPER or a
+# missing payload waited out the whole window and then failed at the instant of launch -- which
+# costs the scarcest thing here, since the card was free once in thirteen hours.
+[ -f "$HOME/rlvigen-work/$WRAPPER" ] || { say "REFUSING: no wrapper at ~/rlvigen-work/$WRAPPER"; exit 2; }
+if [ -n "${PAYLOAD:-}" ] && [ ! -f "$PAYLOAD" ]; then say "REFUSING: PAYLOAD=$PAYLOAD does not exist"; exit 2; fi
+if [ -n "${PLACES365_DIR:-}" ] && [ ! -d "$PLACES365_DIR" ]; then say "REFUSING: PLACES365_DIR=$PLACES365_DIR is not a directory"; exit 2; fi
+say "will launch $TAG via $WRAPPER${PAYLOAD:+ with $(basename "$PAYLOAD")}${PLACES365_DIR:+ + places365}${MIN_RAM_GIB:+, RAM floor ${MIN_RAM_GIB} GiB}"
 
 say "waiting for card $CARD: no foreign holder and >= ${NEED} MiB free for ${HOLD} samples; max ${MAXWAIT}s"
 started=$(date +%s); last=""; polls=0
@@ -131,8 +150,16 @@ while :; do
   if [ "$free" -lt "$NEED" ]; then say "window evaporated at the last check: ${free} MiB free"; sleep "$POLL" 9>&-; continue; fi
   disk=$(df -Pk "$HOME" | awk 'NR==2{printf "%d", $4/1048576}')
   if [ "$disk" -lt "$MIN_DISK_GIB" ]; then say "REFUSING: ${disk} GiB free, below MIN_DISK_GIB=${MIN_DISK_GIB}"; sleep "$POLL" 9>&-; continue; fi
+  if [ "$MIN_RAM_GIB" -gt 0 ]; then
+    ram=$(free -g | awk 'NR==2{print $7}')
+    if [ "${ram:-0}" -lt "$MIN_RAM_GIB" ]; then
+      say "REFUSING: ${ram} GiB RAM available, below MIN_RAM_GIB=${MIN_RAM_GIB}. Starting a large cell"
+      say "  here risks the kernel OOM killer choosing a co-tenant's process. Waiting instead."
+      sleep "$POLL" 9>&-; continue
+    fi
+  fi
 
-  say "WINDOW HELD: ${n}/${HOLD} clear samples, ${free} MiB free, ${disk} GiB disk. Launching $TAG on card $CARD via $WRAPPER."
+  say "WINDOW HELD: ${n}/${HOLD} clear samples, ${free} MiB free, ${disk} GiB disk, ${ram:-n/a} GiB RAM. Launching $TAG on card $CARD via $WRAPPER."
   if [ "${DRYRUN:-0}" = "1" ]; then say "DRYRUN=1 -- stopping here, nothing launched."; exit 0; fi
 
   [ -f "$A/$TAG-prod.log" ] && cp -p "$A/$TAG-prod.log" "$A/$TAG-prod-previous-$(date +%Y%m%d-%H%M).log"

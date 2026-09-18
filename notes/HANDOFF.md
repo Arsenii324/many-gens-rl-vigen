@@ -14,6 +14,11 @@ executed, and the section below it is kept because the reasoning still reads cor
 
 **Nothing of ours is running. A waiter holds `svea` s101. The card has been occupied for 12.5 hours.**
 
+- **Guards added 11:18, all five branches tested with an isolated lock:** the waiter now validates
+  wrapper, payload and corpus **at arm time** (a typo used to wait ten hours and fail at launch) and
+  refuses below `MIN_RAM_GIB` — armed at 55 GiB, because nothing else on this host checks RAM and an
+  RL-ViGen cell is ~40 GiB against a co-tenant's 43 GiB. `WAITER_LOCK` exists so those branches can
+  be tested while a real waiter is armed.
 - **Armed on the host:** `wait-and-train-v4.sh` for **`svea` s101** on card 1 — `WRAPPER=v6`,
   `PAYLOAD=payload-v215-rlvigen.tgz`, `PLACES365_DIR=~/rlvigen-assets/places365-train`,
   `VRAM_MIB=6000`, `MAXWAIT=36000` (ends ~20:45). Log:

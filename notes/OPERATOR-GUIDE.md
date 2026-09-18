@@ -874,6 +874,11 @@ taken, so you do not re-litigate them at 3 a.m.).
 
 ## 11. What has actually been executed — the boundary
 
+**The adversarial half of this section** — what can still go wrong, which guard actually fires, and
+what a first run will meet — is
+[`OPERATOR-READINESS-ADVERSARIAL-2026-09-18.md`](OPERATOR-READINESS-ADVERSARIAL-2026-09-18.md).
+Read it before the first cell of any family that has not run here.
+
 This section separates **what someone ran and saw work** from **what is written down but was never
 run**. The first kind is evidence. The second is a proposal, however careful, and on 2026-09-17
 running four "documented" commands for the first time found two that exit 2 as written. Treat
