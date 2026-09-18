@@ -211,3 +211,29 @@ that the fix "has not been made or tested." False — `train-production-cell-v6.
 `PAYLOAD=<path>` (confirmed by `diff`: v5 verbatim plus that substitution, identical behaviour when
 `PLACES365_DIR` is unset), and it's the exact mechanism `svea`'s armed waiter uses right now.
 Corrected in the guide; `test_operator_readiness.py` 8/8, gates 37/0/9 after commit.
+
+**C8 — GitHub-readiness audit, prompted by the owner asking "is this ready to take from GitHub?"**
+Found the single largest gap of the whole session: **none of the day's 9 commits had been pushed**
+(local `main` 9 ahead / 0 behind `mygithub/main`). Scanned the diff for secrets first (clean;
+the pre-existing host IP/username already appears in 83 files on the pushed history, not new
+exposure), confirmed fast-forward, pushed to `main` at the real GitHub URL
+(`https://github.com/Arsenii324/many-gens-rl-vigen.git`).
+
+Then validated the GitHub path itself, not just the local one: confirmed the repo is genuinely
+public via the GitHub API; did an actual `git clone` of the literal URL (not `git archive HEAD`,
+which is what the existing `linux-reconstruction-from-a-fresh-tree` bundle used) inside a
+container on the host, ran `bootstrap_sources.py` + `verify_sources.py`, both rc=0 — new evidence
+bundle `results/evidence/github-url-clone-reconstructs/`. Ran `test_operator_readiness.py` against
+the literal cloned directory (not the working copy) — 8/8. Found and fixed a real gap: no
+document anywhere stated the actual `git clone <url>` command; added to
+`docs/RUN-THIS-PROJECT.md`'s first line. Cleaned the host scratch dir through a container
+(root-owned files), disk confirmed restored (125 GiB free before and after). Pushed this second
+round too (`8094d96`).
+
+Surfaced, not decided (policy calls for the owner): the repo is public with no `LICENSE` file, and
+has no CI. Stated plainly in the bundle's "What this does not show" rather than acted on.
+
+*What this changes and does not change:* the distribution mechanism (can a stranger actually get
+this from GitHub and start the cold start) is now verified end to end. It changes nothing about
+the open scientific question, the untested `svea` configuration, or the three owner decisions —
+those stand exactly as before.
