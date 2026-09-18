@@ -237,3 +237,48 @@ has no CI. Stated plainly in the bundle's "What this does not show" rather than 
 this from GitHub and start the cold start) is now verified end to end. It changes nothing about
 the open scientific question, the untested `svea` configuration, or the three owner decisions —
 those stand exactly as before.
+
+**C9 — disk cleanup, and a chain of self-corrections on per-family eval mechanics, prompted by the
+owner's sustained, specific pushback.** Full detail in `production-host/27`'s "Executed" section
+and `production-host/37`; summarized here so the taskset stays traceable in one place.
+
+- **Disk**: 17 pre-production probe directories in `~/rlvigen-runs`, individually verified (not
+  pattern-matched) — checkpoint content, whether rows exist anywhere in the repo (current or
+  superseded), evaluator revision. Two real production attempts and one physical sample kept; 17
+  removed by literal name, no glob, inside a container mounting only that directory. 66G→36G,
+  host free disk 125→153 GiB.
+- **The "96s endpoint eval" claim was wrong**: cited from a 10-episode attestation job, not the
+  800-episode production grid. Real number, from a completed cell's own log:
+  eval (curve+endpoint) ≈13.6h vs training ≈7.46h — eval costs roughly double training, explained
+  fully by episode-count arithmetic (eval runs 2.4× the total environment steps training does, at
+  a faster per-step rate that doesn't make up the difference).
+- **ppg's checkpoint cadence was wrong twice before it was right.** First: "100,000 default, never
+  overridden" — wrong, because `families.json`'s templated options (not the shell launchers I
+  grepped) wires `ic_per_save`, and `families.json`'s own comment already named this exact mistake
+  as a defect fixed 2026-09-04, which I re-asserted as current. Second (the retraction): implied
+  neither 50k nor 100k was the real number — also incomplete; the real executed argv shows
+  `--ic_per_save 50000` explicitly. Reconciled: 50,000 is the configured threshold; ~51,200 (the
+  MPI rollout quantum) is why saves don't land on clean 50k boundaries. `production-host/37`
+  carries the full account, including why three independent files had to agree before this was
+  checkable at all.
+- **ctrl's in-loop eval steps two fully-vectorized test environments at training's own scale**
+  (`num_envs=FLAGS.num_envs` for both), every training step — confirmed by reading `_mk`'s
+  construction, not assumed from the "every step" wording. Unlike idaac's explicitly-budgeted
+  ~20% overhead, no equivalent cost accounting for ctrl's ~3× was found anywhere in `families.json`
+  — real asymmetry, surfaced, not fixed.
+- **The RNG-isolation gap in ctrl** (JAX policy key consumed by eval calls, only NumPy restored)
+  was independently re-derived from code, then checked against `notes/FINDING-online-eval-per-
+  family.md` — already documented, already reviewed, accepted as non-blocking. Correctly not
+  presented as a new finding.
+- **Config-hierarchy question, answered but not written up as a file**: traced from
+  `family.py`'s actual resolution code (`resolved_descriptor`, `host_profile`, `render`) — five
+  layers (`families.json` base → host-profile override, merged per-key → `NATIVE_HOST_PROFILE`
+  selecting which profile → template rendering → a fully separate, parallel shell-env-var
+  hierarchy for operational parameters that never feeds back into the template layer). No existing
+  dedicated doc found for this; owner said it's fine to leave as a verbal answer rather than a new
+  artifact.
+
+**Pattern worth naming plainly**: three of the corrections above share one root cause — checking a
+source file or a shell launcher and concluding "not set" without checking whether a *different*
+layer (a JSON template, a real executed argv) does the actual wiring. The fix that worked every
+time was the same: read the real executed config of a completed run, not the code in isolation.
