@@ -268,6 +268,19 @@ every window until the sleep ends. `wait-and-train-v4.sh` therefore uses its own
 checks what is actually *running* (`train-production-cell-v5.sh`, `wait-and-train-v3.sh`, any
 `cell-c*` container) rather than trusting a descriptor.
 
+**This is a property of every self-locking script here, not a bug in one of them.** It bit three
+different ones on 2026-09-18: `wait-and-train-v3.sh` (lock held 14 hours past its cell by the
+reaper's `sleep`), `wait-and-train-v4.sh` on restart (its own `sleep` child), and
+`gpu-occupancy-log.sh` — where it did real damage. Killing the logger and starting a replacement two
+seconds later left the host with **no logger at all**: the new one printed *"another logger holds
+…; not starting a second"* and exited, because the dead parent's `sleep` still held the lock. A
+waiter with a stale log refuses to launch, correctly, so that would have produced a silent night.
+
+**The rule when restarting any of them: wait for the LOCK to clear, not for the process to die.**
+Retry the start until it actually appears in `pgrep`, and check afterwards rather than assuming —
+`renew-monitoring.sh` in the session scratchpad does both, and prints a loud line if no logger is
+running at the end.
+
 ### 5.1 Why the vacancy rule applies to every family, not only the big ones
 
 The ten-minute rule was first derived for `ibac_sni`, which needs 7,421 MiB plus the 4,000 MiB floor.
