@@ -410,6 +410,36 @@ and a rerun from zero, which is a new attempt with a new run directory. Collect 
 a distinct tag, such as `reeval-v214-<baseline>-s<seed>-attempt<N>-partial-curve`. A later sweep
 of the same seed would otherwise collide with it and silently pool two trajectories.
 
+### 5.3 Launching a Places365 baseline (`svea`, `sgqn`, `soda`) — what differs
+
+Nothing here has run a cell yet; the wrapper path is dry-run proven (§11.2) and the corpus arrives
+2026-09-18. Three things differ from §5.2, and each is a number rather than a preference.
+
+**Use `train-production-cell-v6.sh`, with the corpus mounted rather than copied:**
+
+    PLACES365_DIR=$HOME/rlvigen-assets/places365-train PAYLOAD=$HOME/rlvigen-work/payload-v215-rlvigen.tgz \
+      CARD=1 YIELD_PROCS=1 FAMILY=rlvigen BASELINE=svea SEED=101 EXPECT_OURS=20 VRAM_MIB=5000 \
+      NATIVE_DISK_ALLOWANCE_GIB=95 bash ~/rlvigen-work/train-production-cell-v6.sh
+
+**Why `NATIVE_DISK_ALLOWANCE_GIB` is set by hand here, and only here.** `family.py
+disk-requirement` prices `svea` at **94.95 GiB**, of which **47.5 GiB is Places365** — the archive
+copied in and expanded per cell. With `PLACES365_DIR` the corpus is a read-only mount and that
+47.5 GiB is never spent, so the derived allowance (2 × 95 = 190 GiB) exceeds the whole free disk
+and the floor silently clamps to its 50 GiB absolute minimum. Passing 95 — twice the real ~47.5 —
+restores a floor that means something: free-at-launch minus 95.
+
+**RAM, not VRAM, is this family's binding number, and nothing checks it.** An RL-ViGen cell is
+about **40 GiB resident** (36.7 GiB of replay at the v100 cap of 620k, plus a 3.3 GiB fixed peak).
+Measured on the host 2026-09-18: **125 GiB total, 79 GiB available**, load 6.85 of 16 cores with
+the co-tenant present. One cell fits with room; **two do not**, and the launcher would not stop
+you. Check `free -g` before launching and do not pack two of these.
+
+**What is still untested**, stated so it is not discovered at hour nine: no cell has yet consumed
+the corpus through `/opt/places365`. The dry run proves the mount and the environment, not the
+loader. Watch the first minutes of `training.log` for the Places365 loader lines before trusting
+the run, and expect the bootstrap to be longer than 7–22 minutes for a family whose payload is
+55 MB rather than 5 MB.
+
 ## 6. The containers, per cell
 
 One launch creates **four** containers plus one optional host process. Names carry the card and the
