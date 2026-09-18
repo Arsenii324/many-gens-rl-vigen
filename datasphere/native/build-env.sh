@@ -89,6 +89,25 @@ python3 datasphere/native/family.py filtered-requirements --cells "'"$CELLS"'" \
   --requirements requirements-native.txt > /tmp/reqs.txt
 python3 -m pip install -r /tmp/reqs.txt
 
+# [Claude 2026-09-19] PAYLOADS NEVER CARRY RL-ViGen-upstream/ -- run_probe.sh:1788-1789 already
+# says so directly: it is always cloned live, into the cell own work directory, at launch time.
+# So the `if -d RL-ViGen-upstream` branch below was unreachable for every payload contract.py has
+# ever built, and a prebuilt env for any rlvigen-family cell could never bake the editable
+# installs (found 2026-09-19 trying to fix exactly that: rebuilding from a "carries the upstream
+# tree" payload changed nothing, because no such payload exists). Fixed the same way run_probe.sh
+# gets it: clone the pinned commit, then apply this project own patches -- UNPATCHED code would
+# import cleanly and be silently wrong, which is worse than missing entirely. The commit is read
+# from /repo (mounted separately from the payload) rather than duplicated here, so it cannot drift
+# from what bootstrap_sources.py/contract.py use.
+if [[ ! -d RL-ViGen-upstream ]]; then
+  echo "no RL-ViGen-upstream/ in the payload (payloads never carry it) -- cloning the pinned commit"
+  commit="$(python3 -c "import json; print(json.load(open(\"/repo/setup/source-reconstruction.json\"))[\"families\"][\"rlvigen\"][\"commit\"])")"
+  git clone -q https://github.com/gemcollector/RL-ViGen.git RL-ViGen-upstream
+  git -C RL-ViGen-upstream checkout -q "$commit"
+  python3 setup/apply_patches.py
+  python3 setup/apply_patches.py --check
+fi
+
 # The two editable installs, baked. They write an absolute path into site-packages; that path is
 # /tmp/native-work/... which is a BIND MOUNT at run time, so each cell supplies its own tree behind
 # the same string. The venv holds the pointer, the payload holds the code.
