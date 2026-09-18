@@ -1047,11 +1047,16 @@ executed, the entry says so; treat it as a proposal until it has run.
   <family>`, `verify-payload --require-evaluator-identity --require-runner-contract 19`,
   `verify-evaluator-binding --archive <tgz> --source . --families <family>`, then `scp`.
   **The laptop half is done:** on 2026-09-17 all three steps ran and exited 0 for `rlvigen`,
-  `dmc_gb`, `alda` and `ctrl` against the committed tree. What is left is the naming decision below
-  and the copy to the host.
-  **Caveat:** `train-production-cell-v5.sh` reads `payload-v214-$FAMILY.tgz` by that literal name.
-  Naming a newer build `v214` would mislabel it, so the wrapper needs a payload parameter first. That
-  change has not been made or tested.
+  `dmc_gb`, `alda` and `ctrl` against the committed tree. What is left is the copy to the host.
+  **The payload-naming caveat this used to carry is closed, not open.** `train-production-cell-v5.sh`
+  does read `payload-v214-$FAMILY.tgz` by that literal name — but §5.3's `train-production-cell-v6.sh`
+  already takes `PAYLOAD=<path>` as an override, and is behaviourally identical to v5 for every family
+  that does not set `PLACES365_DIR` (verified 2026-09-18: `v6` is `v5` verbatim plus that one
+  substitution — `diff`'d line by line). It has already been exercised for real: `svea`'s armed
+  waiter passes `WRAPPER=train-production-cell-v6.sh PAYLOAD=$HOME/rlvigen-work/payload-v215-rlvigen.tgz`
+  right now. So for any of these four families, ship the new build under its own honest name and
+  launch with `WRAPPER=train-production-cell-v6.sh PAYLOAD=<that name>` — no naming compromise and
+  no new code needed.
 - *Done when:* the binding check exits 0 and the host copy's sha256 matches.
 
 **O3 — The first 600k cell of an off-policy baseline** (`drqv2` first: it needs no Places365)
