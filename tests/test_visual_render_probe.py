@@ -9,6 +9,7 @@ check.
 from __future__ import annotations
 
 import pathlib
+import subprocess
 import sys
 
 import numpy as np
@@ -89,8 +90,21 @@ def test_different_regimes_produce_different_frames(tmp_path):
 
 def test_default_maker_only_resolves_the_real_dependency_lazily():
     """Importing this module must not require robosuite/mujoco/a renderer; only calling
-    default_maker does. Whatever is missing on THIS machine (mujoco, robosuite, glfw/EGL) surfaces
-    as an ImportError from calling it, not from importing the module -- that is the property under
-    test, not which piece happens to be absent here versus on the host."""
-    with pytest.raises(ImportError):
-        vrp.default_maker(task="Door", seed=0, scene_id=0, mode="train", frame_stack=3)
+    default_maker does.
+
+    Run in a FRESH subprocess rather than checked in-process. `tests/test_eval_loop_measurement.py`
+    documents the exact failure mode this would otherwise hit: a sibling test that stubs or really
+    imports `wrappers`/`wrappers.robo_wrapper` into `sys.modules` (several do, for their own
+    reasons) leaves this test "green in isolation, red in company" depending on suite order and
+    what else happened to import successfully first. A subprocess starts with none of that.
+    """
+    out = subprocess.run(
+        [sys.executable, "-c",
+         "import pathlib, sys; sys.path.insert(0, str(pathlib.Path('scripts').resolve())); "
+         "import visual_render_probe as vrp; "
+         "vrp.default_maker(task='Door', seed=0, scene_id=0, mode='train', frame_stack=3)"],
+        cwd=ROOT, capture_output=True, text=True, timeout=60)
+    assert out.returncode != 0, (
+        "default_maker succeeded with no robosuite/mujoco/EGL installed -- that is only possible "
+        "on the host inside the pinned cell image, not in this subprocess")
+    assert "Error" in out.stderr, out.stderr[-500:]
