@@ -1080,12 +1080,37 @@ executed, the entry says so; treat it as a proposal until it has run.
   launcher support for it.
 - *Done when:* the decision is written down. Until then, rerun from zero.
 
-**O6 — Renderer parity between the validation platform and this host** (an OWNER gate)
-- *Target and operation:* procedure §0, item 3. Evaluate one known checkpoint with the current
-  evaluator where it was validated (R_A), then with the same checkpoint, evaluator and container on
-  this host (R_B), and compare returns and rendered-observation witnesses.
-- *State now:* not run as that three-step probe. The complete cells here rendered through EGL on the
-  V100 (`collect-host-run.sh` refuses `llvmpipe`), which is necessary but is not the comparison.
+**O6 — Renderer parity between the validation platform and this host** (an OWNER gate,
+**substituted 2026-09-18** — see below)
+- *Original target:* procedure §0, item 3. Evaluate one known checkpoint with the current evaluator
+  where it was validated (R_A), then with the same checkpoint, evaluator and container on this host
+  (R_B), and compare returns and rendered-observation witnesses.
+- *Owner's ruling, 2026-09-18:* the full three-step numeric comparison is not needed. This
+  campaign's returns already sit on the published table's axis
+  (`notes/CAMPAIGN-REPORT-2026-09-18.md` §2), so what remains open is not whether the axis matches
+  but whether the rendered pixels look right — a question a human answers by looking, not a new
+  measurement pipeline.
+- *Substitute, built and unit-tested but NOT yet run on the host:* `scripts/visual_render_probe.py`
+  resets the Door environment at each of `train`/`eval-easy`/`eval-medium`/`eval-hard` and saves one
+  PNG per regime, through the same `wrappers.robo_wrapper.robo_make` constructor every cell and
+  evaluation uses. Its frame-extraction and file-writing logic is proven against a fake environment
+  in `tests/test_visual_render_probe.py` (6/6 pass, no robosuite/mujoco/GPU needed for that).
+- *Why it has not been run on the host yet:* it needs `MUJOCO_GL=egl` and robosuite/mujoco, which
+  are pip-installed inside the pinned cell image at container start (§6d) — the same bootstrap cost
+  and risk as launching a real cell, for a script that produces four PNGs. C95 rules out a cheaper
+  local/CPU substitute: the same checkpoint reads train 131.5 under `MUJOCO_GL=egl` and 13.85 under
+  `glfw` on this laptop, so a non-EGL render answers a different question than the one being asked.
+  Spending a card window on this alone, while the card is the scarcest resource in the campaign, is
+  not worth it as a standalone action.
+- *Recommended way to close it:* run it inside the next real cell's container, after its bootstrap
+  has already paid the install cost and before or after training —
+  `python scripts/visual_render_probe.py --out results/evidence/visual-render-probe/frames`, then
+  build the evidence bundle (`CLAIM.md` + `capture.sh` + `manifest.json`, per
+  `results/evidence/README.md`) from the PNGs and the container's own `MUJOCO_GL` setting, with the
+  `CLAIM.md`'s Status stated as a question for the operator: "do these look like robosuite Door
+  under progressively harder visual shift, and does `train` look like the environment the agent
+  trained in?" No bundle exists yet — creating one with no captured evidence would itself be the
+  kind of unverified claim this project's evidence-bundle discipline exists to prevent.
 
 **O7 — Stop paths that have never fired here:** the training wall clock, the disk floor, the
 reaper on a genuinely hung grid, `self-vram-cap.sh` tripping. *Target:* none; do not provoke them on
@@ -1104,11 +1129,6 @@ of questions. The disk floor came within one 60-second sample of firing on 2026-
   `verify-evaluator-binding` were run for **all seven families** — every exit code 0, against a
   `RUNNER_CONTRACT` of 19 read out of that tree. So clone → reconstruct → build → verify holds end
   to end on Linux. The same bundle carries that run as `raw/clone-to-payload.txt`.
-
-**O8b — Any host other than `cds2`**
-- *Why not done:* no other host has been available.
-- *Target and operation:* `docs/RUN-THIS-PROJECT.md` §5a, the portable route for any Linux host with
-  Docker and a GPU. Not executed.
 
 **O9 — A prebuilt Python environment for the torch families**, which would remove the 7–22 minutes
 of in-container `pip` per launch (§6d)

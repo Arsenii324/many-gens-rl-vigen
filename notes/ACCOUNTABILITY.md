@@ -143,3 +143,46 @@ untested:* everything in §11.4, and §11.1/§11.2's right-hand columns.
 
 **Noticed, not acted on:** `production_run_register.py` marks terminal `failed` statuses as
 "likely stale" by age, which is misleading for a status that cannot change.
+
+**C1 — 2026-09-18, W2 of the operator-package plan.** `production_reading.py` counted skipped
+*cells* (MISSING/PARTIAL) but dropped rows inside a DONE cell with six bare `continue`s and no
+tally. Fixed: `_by_scene` now returns a drop reason per row, split into `DROPPED_BY_DESIGN` (curve
+rows, the pooled ten-scene row) versus UNREADABLE (everything else, printed with a warning). Test
+added first, red before the fix; against the real records today, 0 unreadable rows. *Verified:*
+`pytest tests/test_production_reading.py` (20/20), `production_reading.py` printed output read by
+eye.
+
+**C2 — same day.** `wait-and-train-v4.sh` fires once; a fast failure (the 24 s EGL death of
+2026-09-17) wastes whatever remains of a window that was free once in 13 hours. Added
+`RETRY_FAST_FAILURES=1` (default 0, unarmed on the host), bounded by `FAST_FAILURE_SECONDS` and
+`MAX_RETRIES`, refusing to retry a run that had already been going for a while (a partial run on
+disk is a human decision, not a waiter one). *Verified:* `tests/test_wait_and_train_retry.py`
+(4/4) against a fully stubbed PATH — no docker daemon runs here, nothing touches the real host,
+lock or occupancy log. §5.2's manual-launch template also gained the RAM check the waiter already
+enforces, since a hand launch bypasses the waiter and therefore the only RAM guard that exists.
+
+**C3 — same day.** Added §3b to `OPERATOR-GUIDE.md`: a stage-contract table (target state,
+artifact path, consumer, proof command, redo-only-this-stage, what it does NOT leave) plus the
+companion "state that lives nowhere in this table" list from the adversarial review. *Verified:*
+`tests/test_operator_readiness.py` (8/8, unchanged by the addition — the new section does not
+break any documented-interface or clone-completeness check); `production_gates.py` back to
+37 pass / 0 fail / 9 owner once committed.
+
+**C4 — same day.** Built `scripts/visual_render_probe.py` as the substitute for the O6 renderer-
+parity gate (owner's descope: a visual question, not a full R_A/R_B numeric comparison — see
+§11.4). It resets the Door env at each regime through the same `robo_make` constructor every cell
+uses and saves one PNG per regime. **Not yet run on the host**: it needs the same pip-install
+bootstrap as a real cell (robosuite/mujoco are not baked into the pinned image), which is real
+host-launch risk and cost for four PNGs standalone — C95 already rules out a cheaper local/CPU
+render as answering a different question (`MUJOCO_GL=egl` vs `glfw` differ by an order of
+magnitude on the same checkpoint). Recommended path, written into §11.4: run it inside the next
+real cell's container, once that bootstrap is already paid for. *Verified:*
+`tests/test_visual_render_probe.py` (6/6) proves the frame-extraction and file-writing logic
+against a fake environment, with no robosuite/mujoco/GPU required to run that test. **Left
+honestly undone:** the actual host run, and therefore the evidence bundle — creating one now with
+no captured evidence would itself be an unverified claim, which this project's own evidence-bundle
+discipline exists to catch.
+
+**C5 — same day.** Removed O8b (any host other than `cds2`) from §11.4 per the owner's ruling: "if
+the operator does it it's their problem." It is no longer carried as an open, unexplained item; its
+history stays in this file's D2/D3 rows as what was actually run.
