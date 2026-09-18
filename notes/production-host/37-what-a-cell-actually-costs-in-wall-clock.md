@@ -40,21 +40,53 @@ different episode/regime counts per policy mode (`ibac_sni` has no `mode` estima
 `ENDPOINT_EVAL_POLICY_MODES=native` only, per `family.py production-env`), so their eval cost is
 not directly this number — re-derive per family from its own `job.log` before relying on it.
 
-## The ppg checkpoint-cadence correction, same session
+## The ppg checkpoint-cadence correction — retracted and redone twice, now checked against the real argv
 
-Separately corrected after being pushed on the same kind of claim: ppg's real save cadence is
-**not** the `ic_per_save=100_000` default I first cited, and not a clean 50k either. The actual
-mechanism, found at `runnable/ppg/phasic_policy_gradient/ppo.py:188`:
+This section was wrong **twice** before it was right, and both wrong versions are worth naming
+because the failure mode was the same both times: reading code that describes a *default* or a
+*historical* state, instead of reading the actual executed argv.
 
-    ic_per_step = venv.num * comm.size * nstep
+**First claim (wrong): "ppg saves every 100,000 interactions, the code default, never overridden."**
+Sourced from `log_save_helper.py`'s `ic_per_save: ... = 100_000` default and from `grep`ing
+`runnable/_launch/ppg*.sh` for `SAVE_EVERY_FRAMES`/`ic_per_save` and finding nothing. Both facts
+were real; the conclusion was not, because the actual wiring happens somewhere neither of those
+greps could see: `families.json`'s **templated options list** for `ppg`
+(`"--ic_per_save", "{save_every}"`), substituted by `family.py` before `ppg_cell.sh` ever runs.
+`families.json` itself even names this exact mistake as a *historical* fact, not a current one —
+its own `save_every_reason` comment (dated 2026-09-04) reads: *"Previously: C60 records ppg as
+never saving: ic_per_save is never set by any launcher"* — i.e. I re-asserted a defect that this
+project's own commit history had already closed two weeks earlier, because I checked the shell
+launchers and never checked the JSON template layer that actually substitutes into them.
 
-This product (empirically 25 × 2048 = 51,200 in the production run) is what
-`LogSaveHelper.__call__` adds to its running total every logging step; `rcm()` then checks whether
-that step's window crossed a multiple of the **separate** `ic_per_save` threshold (100,000). Two
-uncoordinated numbers combine via modular arithmetic to produce the observed cadence: real saves
-from the actual production `ppg` run land at `IC=0, 51200, 100352, 151552, 200704, 251904...` —
-essentially every rollout, not every 100k and not a configured 50k. **Why a keyword search for
-"save"/"cadence"/`SAVE_EVERY_FRAMES` never finds this:** the controlling line (`ppo.py:188`) is
-about interaction-count bookkeeping, not saving, on its face — it only gates a save two calls
-later, in a different file, via `rcm()`'s boundary check. This is left as-is; the owner asked
-explicitly not to change ppg's rollout quantum.
+**Second claim (also wrong, in the retraction above): "not every 100k and not a configured 50k
+either — it's whatever the rollout quantum happens to produce."** Half right: the rollout quantum
+*is* what produces the observed spacing. But **50,000 is explicitly configured** — confirmed by
+reading the real executed argv from a completed production cell
+(`card0-20260909-115331/native-out/cells/ppg-s1/effective_config.json`), which contains literally
+`"--ic_per_save", "50000"`. It is not left at the code's 100,000 default; `family.py` sets it to
+50,000 on purpose, to match the other families' ~50k cadence.
+
+**The actual mechanism, now fully reconciled, both halves confirmed from the real run:**
+
+    ic_per_step = venv.num * comm.size * nstep     # ppo.py:188 -- the MPI-rollout quantum
+    ic_per_save = 50000                            # families.json's "{save_every}" template, confirmed in the real argv
+
+`ic_per_step` is empirically **51,200** in production (an MPI rollout of `nstep=2048` across
+`comm.size=25` workers — `25` is the `mpirun` worker count, not a Python argv value, which is why
+grepping the JSON config for it found nothing either). Because the rollout quantum (51,200)
+**exceeds** the configured save threshold (50,000), `rcm()`'s boundary check finds at least one
+multiple of 50,000 inside every single logging window — so a save fires on **every rollout**, not
+once every two as the raw ratio might suggest. That is why the real observed saves
+(`IC=0, 51200, 100352, 151552, 200704, 251904...`) look like "every ~51k," even though the
+configured number is 50,000: the configured threshold is real and intentional, and the *reason it
+doesn't produce clean 50k-spaced saves* is that it is smaller than the step size that tests it.
+
+**Why a keyword search for "save"/"cadence"/`SAVE_EVERY_FRAMES` misses all of this:** the value
+lives in a JSON *template string* (`families.json`), not a shell variable; the quantity that
+determines the *spacing* between saves (`ic_per_step`) lives in a completely different file
+(`ppo.py:188`) under a name that has nothing to do with saving on its face; and the number that
+looked authoritative from the source code (`100_000`, the class default) is simply not the value
+in force. Three independent places have to agree before a claim like "ppg saves every N" is
+checkable at all, and the fastest way to get it right is what closed it here: read the **real
+executed argv** of a completed run, not the source, not a shell launcher, not a config template in
+isolation. This is left as-is; the owner asked explicitly not to change ppg's rollout quantum.
