@@ -6,11 +6,43 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-18, ~11:10 MSK**, by Claude. The 15:30 version's ordered plan is now mostly
-executed, and the section below it is kept because the reasoning still reads correctly — but items
-1-3 have happened. Read this block first; it is what changed overnight.
+Last updated **2026-09-18, ~17:30 MSK**, by Claude. Read this block first; it is what changed since
+the morning block below, which is kept because its reasoning still reads correctly.
 
-## Morning state, 2026-09-18 ~11:10 — read this first; everything below is older
+## Afternoon state, 2026-09-18 ~17:30 — read this first; everything below is older
+
+**Still nothing running. The card has now been occupied for 18+ hours.** The morning's approved
+plan (`groovy-crunching-otter.md`) is fully executed; detail is in `notes/ACCOUNTABILITY.md`'s
+C1-C8, not repeated here. What matters for the next session:
+
+- **`svea` s101 never fired.** The waiter is still armed, still valid, still watching. Nothing about
+  it needs redoing — it will launch itself the moment a genuine ten-minute vacancy appears. Do not
+  re-arm it; do not touch it unless it has actually exited.
+- **The waiter now has an opt-in fast-failure retry** (`RETRY_FAST_FAILURES=1`, default off,
+  unarmed everywhere) so a repeat of the 24-second EGL death does not waste the rest of a rare
+  window. Off by design tonight; the owner can arm it later.
+- **`production_reading.py` now tells you what it dropped**, not just what cells it skipped — a row
+  with no `conventions.eval_policy_mode` used to vanish silently. Today's real fleet: zero
+  unreadable rows.
+- **A stale "blocker" in the O-catalogue turned out to be false and cost nothing to fix**: O2 said
+  the payload wrapper needed a code change that "has not been made or tested." It already existed
+  (`train-production-cell-v6.sh` takes `PAYLOAD=<path>`) and is the exact thing `svea`'s waiter
+  already uses. **Worth remembering as a pattern**: before treating a catalogue entry's "not done"
+  as current, check whether a later patch already closed it quietly.
+- **The whole thing is now actually on GitHub.** It was not, until this afternoon — 9 commits of
+  the morning's work had never been pushed. Checked for secrets first, pushed, then verified the
+  *literal* published URL clones and reconstructs (not just the committed tree shipped as an
+  archive) — new evidence bundle `github-url-clone-reconstructs`. Surfaced, not fixed: the repo is
+  public with no `LICENSE` and no CI — an owner call, not a technical one.
+- **Nothing about the competence-gate finding, the untested `svea` configuration, or the three
+  owner decisions in `CURRENT-STATE-AND-RESPONSIBILITY.md` §7b has changed.** They are exactly
+  where the morning block left them.
+- **What I would NOT do again without a card:** keep sweeping the O-catalogue for more stale
+  claims indefinitely. Two real ones (O2, and O9 checked out as accurate) is a reasonable afternoon's
+  worth; past that it starts to look like manufactured busywork rather than genuine verification,
+  and I stopped there deliberately.
+
+## Morning state, 2026-09-18 ~11:10 — everything below is older
 
 **Nothing of ours is running. A waiter holds `svea` s101. The card has been occupied for 12.5 hours.**
 
