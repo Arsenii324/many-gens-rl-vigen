@@ -202,3 +202,12 @@ W1 did not fire: the card was occupied by other groups for the entire session (a
 `sg_sam2`, joined partway through; noted, not acted on — no launch decision was needed). W2(a)–(d),
 W3 and W4/W5 are done, tested, and committed as listed above. §7b of CURRENT-STATE-AND-
 RESPONSIBILITY.md carries the three decisions that remain the owner's.
+
+**C7 — post-close, continuing autonomously while the card stays occupied.** Answering the owner's
+detailed questions about checkpointing, disk, eval scheduling and mounts (verified against actual
+code and the live host rather than recalled) surfaced a real doc staleness: O2 claimed
+`train-production-cell-v5.sh`'s hardcoded payload name blocked `rlvigen`/`dmc_gb`/`alda`/`ctrl` and
+that the fix "has not been made or tested." False — `train-production-cell-v6.sh` already takes
+`PAYLOAD=<path>` (confirmed by `diff`: v5 verbatim plus that substitution, identical behaviour when
+`PLACES365_DIR` is unset), and it's the exact mechanism `svea`'s armed waiter uses right now.
+Corrected in the guide; `test_operator_readiness.py` 8/8, gates 37/0/9 after commit.
