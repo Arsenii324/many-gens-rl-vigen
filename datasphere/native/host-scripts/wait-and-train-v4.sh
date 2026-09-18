@@ -45,6 +45,10 @@ LOG_MAX_AGE="${LOG_MAX_AGE:-180}"
 OCC="${OCC:-$HOME/rlvigen-runs/gpu-occupancy.log}"
 A="$HOME/rlvigen-runs/prod-v214"; TAG="$BASELINE-s$SEED-prod"
 LOG="${WAITER_LOG:-$A/$TAG-waiter-v4.log}"
+# WHICH wrapper it launches. Default v5, because that is the script every completed cell on this
+# host went through and idaac s103 should not be the run that tries something new. A Places365
+# baseline needs v6, which adds PAYLOAD and PLACES365_DIR and nothing else; pass WRAPPER for that.
+WRAPPER="${WRAPPER:-train-production-cell-v5.sh}"
 mkdir -p "$A"
 say(){ echo "$(date -Is) $*" >> "$LOG"; }
 
@@ -88,7 +92,7 @@ fi
 # v4's lock is released when v4 exits rather than when the cell's watch budget ends.
 exec 9>"$HOME/rlvigen-runs/.wait-and-train-v4.lock"
 flock -n 9 || { say "REFUSING: another v4 waiter holds the lock. One launcher at a time."; exit 3; }
-for p in $(pgrep -f "train-production-cell-v5.sh|wait-and-train-v3.sh" 2>/dev/null); do
+for p in $(pgrep -f "train-production-cell-v[56].sh|wait-and-train-v3.sh" 2>/dev/null); do
   say "REFUSING: a launcher is already running (pid $p)."; exit 3
 done
 if [ -f "$A/$TAG-result.tgz" ]; then say "REFUSING: $A/$TAG-result.tgz exists; nothing to launch."; exit 0; fi
@@ -128,13 +132,13 @@ while :; do
   disk=$(df -Pk "$HOME" | awk 'NR==2{printf "%d", $4/1048576}')
   if [ "$disk" -lt "$MIN_DISK_GIB" ]; then say "REFUSING: ${disk} GiB free, below MIN_DISK_GIB=${MIN_DISK_GIB}"; sleep "$POLL" 9>&-; continue; fi
 
-  say "WINDOW HELD: ${n}/${HOLD} clear samples, ${free} MiB free, ${disk} GiB disk. Launching $TAG on card $CARD."
+  say "WINDOW HELD: ${n}/${HOLD} clear samples, ${free} MiB free, ${disk} GiB disk. Launching $TAG on card $CARD via $WRAPPER."
   if [ "${DRYRUN:-0}" = "1" ]; then say "DRYRUN=1 -- stopping here, nothing launched."; exit 0; fi
 
   [ -f "$A/$TAG-prod.log" ] && cp -p "$A/$TAG-prod.log" "$A/$TAG-prod-previous-$(date +%Y%m%d-%H%M).log"
   env CARD="$CARD" YIELD_PROCS=1 FAMILY="$FAMILY" BASELINE="$BASELINE" SEED="$SEED" \
       EXPECT_OURS="$EXPECT_OURS" VRAM_MIB="$VRAM_MIB" \
-      bash "$HOME/rlvigen-work/train-production-cell-v5.sh" >> "$LOG" 2>&1 9>&- &
+      bash "$HOME/rlvigen-work/$WRAPPER" >> "$LOG" 2>&1 9>&- &
   launcher=$!
   say "launcher pid $launcher; waiting for the cell container to arm the self-cap"
   for _ in $(seq 1 60); do

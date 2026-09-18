@@ -932,7 +932,7 @@ Each entry names **the part** that is missing, **why** it has not been done, **t
 **the operation** that reaches it, and **how to tell** it worked. Where an operation has never been
 executed, the entry says so; treat it as a proposal until it has run.
 
-**O1 — Places365 train split on the host** (blocks `svea`, `sgqn`, `soda`) — **IN PROGRESS 2026-09-18**
+**O1 — Places365 train split on the host** (blocked `svea`, `sgqn`, `soda`) — **CLOSED 2026-09-18 10:50**
 
 - *The blocker was misdiagnosed, and measuring it changed the answer.* `fetch-places.sh` was
   abandoned at ~55 kB/s, which read as "this host cannot fetch it". Measured on 2026-09-18 from a
@@ -951,9 +951,14 @@ executed, the entry says so; treat it as a proposal until it has run.
   graphics capability — `rc=0`, nothing executed. `train-production-cell-v6.sh` wires it, and
   `payload-v215-rlvigen.tgz` and `payload-v215-dmc_gb.tgz` are on the host, hash-verified against
   the laptop. What remains untested is the cell's own consumption of the corpus at run time.
-- *Two things to finish after it lands:* the extraction container writes as **root with tight
-  permissions**, so `chmod -R a+rX` (in a container) is needed before anything else can read it,
-  and `verify_datasets --split train` must be re-run **on the host** against the new root.
+- *Accepted, with the checks that make it a corpus rather than a directory:* 26 GB,
+  **1,803,462 files, 365 classes**, at `~/rlvigen-assets/places365-train/places365_standard/train`.
+  `chmod -R a+rX` in a container (the extractor writes as root — even `du` was refused), then
+  `verify_datasets --root /data --split train` on the host: **PASS**. Then **200 randomly sampled
+  files compared by sha256 against the laptop copy: 200 identical, 0 mismatched, 0 missing** — so
+  it is verified byte-for-byte, not merely present. No archive copy was kept; the tar was streamed.
+- *Still untested, and it is the next thing to learn:* no cell has consumed the corpus at run time.
+  The wrapper path is dry-run proven (§11.2); the loader is not.
 
 *Original entry, kept because the target and the check are unchanged:*
 

@@ -127,3 +127,29 @@ we have a published number to check ourselves against.
 This is a judgement about what to spend the remaining window on, and it rests on the published
 table being the right expectation for Door. The owner may reasonably weigh "complete one block" more
 heavily than "chase the methods that work".
+
+## Decision, 2026-09-18 10:40 — the waiter switches to `svea` s101 once the corpus verifies
+
+Made rather than deferred, because the queue has to point at something and the owner is away.
+
+**The fact that decides it: windows are rarer than cells are long.** The card was free exactly once
+in the last thirteen hours, for twenty minutes. At that rate the next cell we get may be the only
+cell we get today, so it should be the most informative one rather than the cheapest.
+
+- `idaac` s103 adds a third seed to a method that, per note 36, never opens the door. It completes a
+  block and tightens the error bars **on a plateau**.
+- `svea` is one of the two methods the reference's own table says *solves* Door (eval-easy 268.8,
+  above the 250 shaping ceiling). Running it tests whether this port reproduces the behaviour that
+  makes the benchmark interesting at all — and it has never run here.
+
+**What makes this affordable rather than reckless:** the wrapper path is dry-run proven, the disk
+allowance is sized for a mounted corpus (§5.3), RAM is checked (~40 GiB needed against 79 GiB
+available), the self-cap and `watch-cell.sh` are armed as usual, and **a first-run failure shows up
+in minutes, not hours** — EGL dies at ~24 s, a missing corpus at the guard, a bad loader in the
+first training lines. If `svea` fails early the window is still there for `idaac` s103.
+
+**What I am accepting:** `svea` has never trained here, its training time is unknown, and no cell
+has yet consumed Places365 at run time. If it runs long and is then stopped by the floor, we lose
+that window and get stamps rather than a cell. That is the risk, taken deliberately.
+
+`idaac` s103 stays next in the queue.
