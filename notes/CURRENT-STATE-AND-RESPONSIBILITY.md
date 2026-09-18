@@ -212,8 +212,16 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    shape?
 6. **`ctrl` at 600k needs a genuinely empty card** (its 32,435 MiB observed peak leaves no room for
    the 4,000 MiB floor on a 32,494 MiB card), **plus** an explicit decision to lower or waive the
-   floor for this one family, **plus** a real RAM measurement — none of the three exist yet. All
-   three are prerequisites the owner needs to weigh in on before `ctrl` can run at all.
+   floor for this one family, **plus** a real RAM measurement, **plus a fourth prerequisite found
+   2026-09-18**: `production-schedule.json` prices `ctrl` at 11.17h/seed with
+   `throughput_source: "converted from gt4i.1 x1.14"` — a generic hardware-tier scaling of a
+   *different* algorithm's measured throughput, not a measurement of `ctrl` at all (`ctrl` has never
+   run at 600k). It cannot reflect `ctrl`'s own cost structure, which includes stepping two fully
+   vectorized test environments at training's own scale every single step (item 5 above) — a real,
+   unaccounted overhead the borrowed number has no way of capturing. **Concretely: the watch budget
+   sized from this number may be wrong, and a first real `ctrl` launch risks the reaper stopping it
+   mid-run for a foreseeable, avoidable reason** unless the budget is re-derived, or at minimum
+   padded generously, before that launch. None of the four exist yet.
 7. **Stopped-cell continuation.** No family has a wired resume path; every stop today means rerun
    from zero. May a continued run ever stand in for a seed (restarting with an empty replay buffer
    for the off-policy families, or resetting Adam's state for `ibac_sni`)? If yes, the per-family
