@@ -854,6 +854,7 @@ Everything in the left column was run between 2026-09-09 and 2026-09-17 on the p
 | **Launch through `train-production-cell-v5.sh` directly** — `idaac` s102 (21:32), `ibac_sni` s102 twice (07:50, 11:00) | |
 | `self-vram-cap.sh` armed on three cells; `gpu-occupancy-log.sh` as the only record of card vacancy | |
 | **Two and three cells packed on one card** — throughput ratio measured at r = 0.90 | Packing more than three, or two *training* cells at once |
+| **The Places365 launch path, dry-run** — `NATIVE_HOST_DRY_RUN=1` for `svea:101` printed the read-only corpus mount, the forwarded split, the pinned image, `rc=0` | A Places365 cell actually running: the corpus reaches the container by a path no cell has yet consumed |
 | **The memory floor stopping a training cell** — seen twice on 2026-09-17, both documented with their sentinels; grid cells ignored the same event | The disk watch actually **firing**: it came within one 60 s sample of doing so and did not |
 | **A mid-training stop leaving checkpoints in `native-work/`** — 7 salvaged from `ibac_sni` s102 attempt 2 and fetched explicitly | |
 | **Offline re-evaluation of stamped checkpoints with `curve-sweep-v3.sh`** — `ibac_sni` s102, launched 15:54 on 2026-09-17 with `MAXCELLS=3`. The first result was checked, not assumed: 44 rows, curve scope, frame 100,352 on every row, 3 episodes, and `checkpoint_sha256` equal to the sha256 of `model_100352.pt` on the host, with the evaluator revision binding to the live tree. It skipped the frame-less `model.pt` and held at 3 cells as configured. (Moved here from the right column once it had worked, as §11.5 says to.) | |
@@ -895,6 +896,13 @@ executed, the entry says so; treat it as a proposal until it has run.
   `~/rlvigen-assets/places365-train/places365_standard/train`. Measured uplink 2.4 MB/s, so about
   three hours. Shipping our own validated copy keeps provenance identical to what every attestation
   used; a third-party mirror would not.
+- *The launch path is now dry-run proven, which it never was.* On 2026-09-18,
+  `NATIVE_HOST_DRY_RUN=1` through `run_on_production_host.sh` for `svea:101` printed the corpus
+  mounted `-v …/places365-train:/opt/places365:ro`, `NATIVE_PLACES365_DIR=/opt/places365` and
+  `NATIVE_PLACES365_SPLIT=train` in the cell's environment, the digest-pinned image and the
+  graphics capability — `rc=0`, nothing executed. `train-production-cell-v6.sh` wires it, and
+  `payload-v215-rlvigen.tgz` and `payload-v215-dmc_gb.tgz` are on the host, hash-verified against
+  the laptop. What remains untested is the cell's own consumption of the corpus at run time.
 - *Two things to finish after it lands:* the extraction container writes as **root with tight
   permissions**, so `chmod -R a+rX` (in a container) is needed before anything else can read it,
   and `verify_datasets --split train` must be re-run **on the host** against the new root.
