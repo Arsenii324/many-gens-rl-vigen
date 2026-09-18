@@ -1,6 +1,8 @@
 # Run this project
 
-From `git clone` to a submitted production run, in order. Each step says what proves it worked.
+    git clone https://github.com/Arsenii324/many-gens-rl-vigen.git
+
+From there to a submitted production run, in order. Each step says what proves it worked.
 
 This replaces knowing which of ~30 documents in `notes/` to read. Where a step has a caveat that
 would otherwise look like a failure, it is stated at that step rather than left to be discovered.

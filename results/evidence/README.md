@@ -27,6 +27,7 @@ answer without re-running anything:
 | [ppg-aux-phase-8-minibatches-per-epoch](ppg-aux-phase-8-minibatches-per-epoch/CLAIM.md) | What auxiliary-phase geometry does production PPG execute, against Table A.1 and both release configurations? | resolved (geometry); consequence traced |
 | [only-a-training-cell-obeys-the-sentinel](only-a-training-cell-obeys-the-sentinel/CLAIM.md) | Does a cell keep obeying the yield sentinel after its training finishes? | resolved: no. Three cells, one event, three sentinels; only the still-training one stopped |
 | [linux-reconstruction-from-a-fresh-tree](linux-reconstruction-from-a-fresh-tree/CLAIM.md) | Can a new operator reconstruct the pinned sources from a fresh clone, on Linux? | resolved: yes. bootstrap_sources.py then verify_sources.py, both rc=0, in a container on the host; 9m40s and 1.7 GB |
+| [github-url-clone-reconstructs](github-url-clone-reconstructs/CLAIM.md) | Does the literal published GitHub URL clone and reconstruct — not just the committed tree shipped as a tarball? | resolved: yes. `git clone` the public URL, bootstrap and verify both rc=0, on the production host |
 
 ## Finding something
 

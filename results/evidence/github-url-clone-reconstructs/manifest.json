@@ -1,0 +1,49 @@
+{
+  "slug": "github-url-clone-reconstructs",
+  "excerpts": {
+    "container-run": {
+      "file": "raw/container-run.txt",
+      "sha256": "a588327c9f56cfd759b728c38c9edb86e4c864adf5019bc5010f92f73c28d6c4",
+      "source": {
+        "kind": "local-command",
+        "command": "cat results/evidence/github-url-clone-reconstructs/container-run.log",
+        "repo_head": "c507b5ec1ce74be89909869f269857b6084f9632",
+        "inputs": {
+          "results/evidence/github-url-clone-reconstructs/container-run.log": "e9daaaf19d48ecd1f478ab9e01d395c9a22a03b4542a5cbb6bed36d3bed64c77"
+        }
+      },
+      "extraction": "( cat results/evidence/github-url-clone-reconstructs/container-run.log ) | grep -n -E 'git version|cloning the REAL|real|HEAD:|tree:|bootstrap_sources|bootstrap rc|runnable|RL-ViGen-upstream|verify_sources|verify rc|docker rc|free' | head -n 25",
+      "tar_member": null,
+      "matched_lines": 15,
+      "shown_lines": 15,
+      "captured_at": "2026-09-18T14:19:10+00:00",
+      "note": "python:3.11-slim on the production host, cloning the LITERAL published GitHub URL (not a shipped tree) and reconstructing inside the container."
+    }
+  },
+  "facts": [
+    {
+      "key": "clone_head",
+      "value": "c507b5e",
+      "excerpt": "container-run",
+      "anchor": "HEAD: c507b5e"
+    },
+    {
+      "key": "bootstrap_rc",
+      "value": "0",
+      "excerpt": "container-run",
+      "anchor": "bootstrap rc=0"
+    },
+    {
+      "key": "verify_rc",
+      "value": "0",
+      "excerpt": "container-run",
+      "anchor": "verify rc=0"
+    },
+    {
+      "key": "tracked_files",
+      "value": "1566",
+      "excerpt": "container-run",
+      "anchor": "tree: 1566 tracked files"
+    }
+  ]
+}

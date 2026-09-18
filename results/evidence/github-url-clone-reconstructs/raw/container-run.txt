@@ -1,0 +1,26 @@
+# evidence-slug: github-url-clone-reconstructs
+# excerpt: container-run
+# note: python:3.11-slim on the production host, cloning the LITERAL published GitHub URL (not a shipped tree) and reconstructing inside the container.
+# source-kind: local-command
+# source: cat results/evidence/github-url-clone-reconstructs/container-run.log
+# repo-head: c507b5ec1ce74be89909869f269857b6084f9632
+# inputs: results/evidence/github-url-clone-reconstructs/container-run.log=e9daaaf19d48ecd1
+# extraction: ( cat results/evidence/github-url-clone-reconstructs/container-run.log ) | grep -n -E 'git version|cloning the REAL|real|HEAD:|tree:|bootstrap_sources|bootstrap rc|runnable|RL-ViGen-upstream|verify_sources|verify rc|docker rc|free' | head -n 25
+# matched-lines: 15  shown-lines: 15
+# captured-at: 2026-09-18T14:19:10+00:00
+#---------------------------------------------------------------------------------------------------
+1:=== free before: 125 GiB ===
+3:git version 2.47.3
+4:=== cloning the REAL github url (not a shipped archive) ===
+6:real	0m4.000s
+9:=== HEAD: c507b5e docs(accountability): log the O2 correction found while continuing autonomously on branch main ===
+10:=== tree: 1566 tracked files, runnable present pre-bootstrap? runnable ===
+11:=== bootstrap_sources.py ===
+13:bootstrap rc=0
+16:real	0m56.253s
+19:408M	runnable
+20:912M	RL-ViGen-upstream
+22:=== verify_sources.py ===
+24:verify rc=0
+25:=== docker rc=0 ===
+26:=== free after: 124 GiB | github-clone-test size: 1.7G ===

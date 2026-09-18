@@ -1,0 +1,27 @@
+=== free before: 125 GiB ===
+WARNING: Your kernel does not support swap limit capabilities or the cgroup is not mounted. Memory limited without swap.
+git version 2.47.3
+=== cloning the REAL github url (not a shipped archive) ===
+
+real	0m4.000s
+user	0m3.337s
+sys	0m0.993s
+=== HEAD: c507b5e docs(accountability): log the O2 correction found while continuing autonomously on branch main ===
+=== tree: 1566 tracked files, runnable present pre-bootstrap? runnable ===
+=== bootstrap_sources.py ===
+source reconstruction verified
+bootstrap rc=0
+=== du after ===
+
+real	0m56.253s
+user	0m22.216s
+sys	0m17.441s
+408M	runnable
+912M	RL-ViGen-upstream
+11M	ext
+=== verify_sources.py ===
+source reconstruction verified
+verify rc=0
+=== docker rc=0 ===
+=== free after: 124 GiB | github-clone-test size: 1.7G ===
+EXIT=0
