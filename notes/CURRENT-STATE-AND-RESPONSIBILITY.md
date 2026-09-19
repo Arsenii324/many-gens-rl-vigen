@@ -141,8 +141,37 @@ set in §2 is a live example of this being applied.
 3. **Never delete a container, image or directory without proof you created it** and that it did not
    exist before.
 4. **Do not inspect other users' processes or directories.** `ps aux` is itself a hazard here.
-5. **"No room" is answered by waiting for room, never by lowering a floor.**
+5. **"No room" is answered by waiting for room, never by lowering a floor.** One stated exception,
+   owner 2026-09-19, for `ctrl` only, whose peak cannot fit beside the floor on any card here — §7b
+   item 6. It is an exception for a family that cannot otherwise run, not a precedent.
 6. **A blocked action is a stop, not a puzzle.** It may encode context nobody wrote down.
+
+Added 2026-09-19 from a sweep of the owner's own messages of 16–19 Sep against these docs
+([`inventory-2026-09-19/owner-statement-sweep.md`](inventory-2026-09-19/owner-statement-sweep.md)).
+Each was said in chat, acted on at the time, and written down nowhere as a rule. Quoted, not
+paraphrased:
+
+7. **`ppg`'s rollout quantum is not to be changed.** *"the ppg rollout quantum is different and
+   shouldn't be changed unless I explicitly say later."* (18 Sep). It is why `ppg` checkpoints land
+   near 51,200-frame spacing instead of 50,000 (`production-host/37`); that is accepted, not a bug
+   to fix.
+8. **Do not stop a healthy cell.** *"Yeah, don't be stopping health cells."* (17 Sep). A quiet log
+   or a loaded host is not a reason; `OPERATOR-GUIDE.md` §10.1 is the check to run first.
+9. **Some yield stays armed.** *"Cuda oom wouldn't be good regardless of ours or theirs so
+   'no-yield' isn't a right policy I think"* (16 Sep). A cell may run with the *process* yield off
+   on a card shared by choice; the memory-floor yield and the disk watch are never turned off.
+10. **On the host, our scope is the `varaksin_as` home directory and nothing else.** *"'not just
+    home' I meant only the varaksin_as user folder of course!"* (18 Sep).
+11. **Use the compute there is, inside items 2 and 5.** *"If any card is free for one of our runs,
+    please try take."* and *"Due to limited compute, really use the most out of it."* (16 Sep),
+    bounded three days later by *"trying to run it in a way that'd over-contend the machine for
+    OOM"* being named as not acceptable (19 Sep). Read together: take every window the upper-bound
+    rule permits, and none it does not. `production-host/33` records why "the card looks free" was
+    the wrong trigger and a sustained vacancy is the right one.
+12. **Autonomy has an upper edge.** Careful, proven deletions and ordinary runs need no sign-off
+    (*"I'm not against deletion/rm as a thing if it's very careful … I expect you're not blocked on
+    'decisions' that are actually non-decisions"*), but *"the heavy-results decisions … like big
+    deletes, big runs that could have real super-unintended consequence"* stay the owner's (19 Sep).
 
 Governing detail: [`production-host/README.md`](production-host/README.md) and the 33 numbered notes
 it indexes. Read the directory, not just its index.
