@@ -271,9 +271,18 @@ Where each number comes from, so you can re-derive it:
 
 ## 5. What to launch with, and why there are three layers
 
-    wait-and-train-v3.sh   waits for enough free memory, then calls ↓   (optional; see below)
-    train-production-cell-v5.sh   sets the production environment, calls ↓
-    launch-card-cell.sh    sizes the watches, starts the containers
+    wait-and-train-v4.sh   waits for a sustained vacancy, then calls ↓   (optional; see below)
+    train-production-cell-v5.sh / -v6.sh   sets the production environment, calls ↓
+    launch-card-cell.sh    sizes the watches, starts the watcher containers, calls ↓
+    run_on_production_host.sh   guards, mounts, forwards an ALLOWLIST of env vars, `docker run`
+
+[Corrected 2026-09-19, each line read in the scripts.] **`wait-and-train-v4.sh` defaults to the v5
+wrapper** (`WRAPPER="${WRAPPER:-train-production-cell-v5.sh}"`, its line 51). v5 has no `PAYLOAD` or
+`PLACES365_DIR`, so a waiter armed for `svea`, `sgqn` or `soda` without
+`WRAPPER=train-production-cell-v6.sh` launches the wrong wrapper with the default payload and no
+corpus. Everything above runs from the host's checkout (`~/rlvigen-work/`); `run_probe.sh` and
+everything after it runs from the **payload**, inside the container. A fix therefore ships by a
+different route depending on which side of `docker run` it is on — compare hashes, not `git log`.
 
 **The launch rule is a ten-minute sustained vacancy**: no foreign holder on the card, and enough
 free memory, for ten consecutive one-minute samples. That number is measured, not chosen: over
