@@ -23,9 +23,10 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run (2026-09-19 ~21:14 MSK): gates **37 pass / 0 fail / 9 owner**; campaign **36 cells:
-31 MISSING, 3 DONE, 1 RUNNING, 1 PARTIAL**; all five commands exit 0. One cell of ours is running
-(§2). No waiter is armed on the host.
+As of the last run (2026-09-20 01:23 MSK, `campaign_status.py` and the strict ledger audit only):
+campaign **36 cells: 31 MISSING, 3 DONE, 1 RUNNING, 1 PARTIAL**; audit exit 0. Gates were **37 pass /
+0 fail / 9 owner** at 21:14 on 19 Sep. One cell of ours is running (§2). No waiter is armed on the
+host — the one that launched it has exited.
 
 **The narrative account, with every number's command beside it:**
 [`CAMPAIGN-REPORT-2026-09-18.md`](CAMPAIGN-REPORT-2026-09-18.md).
@@ -42,7 +43,16 @@ As of the last run (2026-09-19 ~21:14 MSK): gates **37 pass / 0 fail / 9 owner**
 | `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**NOTHING OF OURS IS RUNNING (as of 2026-09-19 22:07 MSK, read from the host).** The host crashed
+**RUNNING (as of 2026-09-20 01:23 MSK, read from the host): `idaac` s103**, run `card1-20260920-011652`,
+container `cell-c1-119658`, card 1, launched 01:16 by `wait-and-train-v4.sh` after 12 genuine
+post-restart clear samples; recorded in `results/host-runs.jsonl`; watched by `watch-cell.sh trip`
+(disk floor 65 GiB). Both cards had sat empty for three hours after the reboot. It is the second
+launch: the first, two minutes earlier, was stopped by me during its apt bootstrap because the
+derived disk floor was 307 GiB of 325 free — the reboot had cleared other tenants' data, so their
+ordinary return would have tripped it; relaunched with `NATIVE_DISK_ALLOWANCE_GIB=260`. The
+occupancy logger was restarted at 01:02 for 40 h.
+
+**What happened before that (19 Sep 22:07 MSK, read from the host): nothing of ours was running.** The host crashed
 at ~21:25 MSK and booted again at 22:05 — `last -x` shows no `shutdown` record, so it was not an
 orderly reboot; every tenant's containers were lost and both cards read 0 MiB. **It was not us:** our
 cell's last resource sample (21:25) shows ~8.6 GiB of RAM in total (trainer 3.05 GiB, four loader
