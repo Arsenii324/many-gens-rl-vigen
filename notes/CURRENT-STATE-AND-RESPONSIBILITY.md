@@ -148,8 +148,11 @@ set in §2 is a live example of this being applied.
 
 Added 2026-09-19 from a sweep of the owner's own messages of 16–19 Sep against these docs
 ([`inventory-2026-09-19/owner-statement-sweep.md`](inventory-2026-09-19/owner-statement-sweep.md)).
-Each was said in chat, acted on at the time, and written down nowhere as a rule. Quoted, not
-paraphrased:
+Each was said in chat at a particular stage and acted on then. **They are dated context, not
+permanent law** — the owner, same evening: *"Each was for its respective stage … Maybe I changed my
+opinion over time."* Items 7 and 12 were stated as standing ("unless I explicitly say later"; a
+boundary on autonomy). Items 8–11 answered one situation each: weigh them, prefer the owner's most
+recent word, and ask before letting one decide something today. Quoted, not paraphrased:
 
 7. **`ppg`'s rollout quantum is not to be changed.** *"the ppg rollout quantum is different and
    shouldn't be changed unless I explicitly say later."* (18 Sep). It is why `ppg` checkpoints land

@@ -126,11 +126,14 @@ Considerations to weigh against the request in front of you, not a procedure. (O
   this project; take what helps — for example `verification-before-completion`'s "name the
   command that proves the claim, run it, read the output, then claim" — or skip them.
 
-## How the owner wants this project worked
+## Working considerations the owner has raised — dated, each said at its own stage
 
-The owner's own words, collected 2026-09-19 by sweeping four days of their messages against these
-docs: each had been said, acted on once, and written down nowhere — and two of them had to be said
-again. They are considerations to weigh, quoted so they cannot drift.
+**Not a canon, and not standing orders.** The owner, 2026-09-19, on seeing this list: *"I've given
+ones and then given the others. Maybe I changed my opinion over time. Each was for its respective
+stage; I don't assume one can really hold all in ours head."* So: each line below was an answer to
+a particular situation on the date beside it. Read it as context for judgement, prefer what the
+owner said most recently, and where one seems to bind a decision today, ask rather than cite it.
+The last two bullets (arrangement, executors) are the current working arrangement, not quotes.
 
 - **Understand before acting; step back unprompted.** *"Discovery, planning and multi-step research
   and understanding are to be before."* — *"don't treat the 'gaps' narrowly or just to it what we've
