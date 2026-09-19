@@ -229,6 +229,12 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    space-vs-durability call, already made once. Worth revisiting given the durability side is a
    permanent, silent risk (if any one disappears, the exact algorithm code becomes unrecoverable
    from this repo's own history)? Or accept the risk as already decided and move on?
+   **Owner's answer, 2026-09-19: a local copy as backup is enough for the submit.** State of that
+   backup, checked 2026-09-19, not more: `ext/` holds file copies (no `.git`, so the commit is NOT
+   verifiable) of `dmcontrol-generalization-benchmark`, `ALDA_Official`, `idaac`, `IBAC-SNI`,
+   `ctrl_public`, `phasic-policy-gradient`; `ext/rl_vigen` holds 2 files and is not a copy of
+   RL-ViGen. The pinned-commit clones live only in the gitignored reconstruction trees on this
+   laptop. Nobody has diffed the `ext/` copies against the pinned commits.
 5. **`ctrl`'s in-loop eval cost — recommendation: leave the algorithm code untouched; fix the
    schedule instead, 2026-09-19.** Analysed the "reduce it" option specifically for hidden risk
    before recommending against it: `succ_id = [False] * FLAGS.num_envs` and the `for i, info in
@@ -254,22 +260,29 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    sized from this number may be wrong, and a first real `ctrl` launch risks the reaper stopping it
    mid-run for a foreseeable, avoidable reason** unless the budget is re-derived, or at minimum
    padded generously, before that launch. None of the four exist yet.
+   **Owner's answer, 2026-09-19: no such card exists, so the floor has to be lowered for `ctrl`.**
+   Direction decided; the value is not. Pick it from a real `ctrl` peak measurement, and keep the
+   never-CUDA-OOM rule above it: a lowered floor only makes sense on a card with no co-tenant.
 7. **Stopped-cell continuation.** No family has a wired resume path; every stop today means rerun
    from zero. May a continued run ever stand in for a seed (restarting with an empty replay buffer
    for the off-policy families, or resetting Adam's state for `ibac_sni`)? If yes, the per-family
    code change is scoped in `OPERATOR-GUIDE.md` §6c; if no, that's the status quo, stated rather than
    assumed.
-8. **`build-env.sh`'s prebuilt environment for `rlvigen`/`dmc_gb`/`alda`/`ppg`/`ibac_sni`
-   (O9).** A real cache-key gap was found: the script can't tell "built with `RL-ViGen-upstream/`"
-   from "built without," and a directory from 2026-09-08 (built for `idaac` only) permanently
-   occupies the slot a correct build needs. The fix is one command (delete that directory, rebuild
-   at the same hash from a payload that carries the upstream tree) — not done here because that
-   directory is host state from before this session, and deleting pre-existing state someone else
-   created is exactly the line every other decision in this list draws. Delete and rebuild it, or
-   leave the prebuilt-env optimisation unavailable for these five families?
+8. ~~**`build-env.sh`'s prebuilt environment (O9).**~~ **CLOSED 2026-09-19, no decision needed.**
+   The "delete and rebuild from a payload that carries the upstream tree" fix that stood here was
+   wrong: no payload ever carries `RL-ViGen-upstream/` (`run_probe.sh:1788-1789`). Real fix,
+   commit `d25905b`: `build-env.sh` clones the pinned commit and applies the patches itself.
+   Verified on the host: `ENVIRONMENT.json` lists `"editable": ["robosuite","robosuitevgb"]`.
+   Still unverified: that the one env's requirement hash matches for `dmc_gb`, `alda`, `ppg`,
+   `ibac_sni` (only `svea:101` was checked). History: `OPERATOR-GUIDE.md` §11.4 O9.
 9. **The repository is public on GitHub with no `LICENSE` file and no CI.** Checked directly via
    the GitHub API (`private: false`, `visibility: public`). Neither is a technical gap; both are
    policy calls — add a license (and which one), add CI, or leave both as they are?
+
+**Owner's standing ruling on external/blocked items, 2026-09-19:** prepare for them as far as
+review and verification reach, give the operator a full package, and past that point they are the
+operator's problem, not open work here. Item 7's question about replay buffers was answered
+verbally (no family restores one; `OPERATOR-GUIDE.md` §6c has the per-family table).
 
 ## 8. What to do first on resume
 
