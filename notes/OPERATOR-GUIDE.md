@@ -493,6 +493,15 @@ of the same seed would otherwise collide with it and silently pool two trajector
 
 ### 5.3 Launching a Places365 baseline (`svea`, `sgqn`, `soda`) — what differs
 
+> **STOP before launching `svea`, `sgqn` or `soda` — two open defects, found 2026-09-20.**
+> (1) Their scheduled training times (16.7 h, 25.6 h, 51.3 h) were measured with 8 overlay-loader
+> workers, a configuration since banned for heap corruption; at the current default of 0 workers
+> the only sample is `svea` at ~2.4 frames/s on this host — about 69 h per seed. (2) The wrappers
+> default `TIMEOUT_S` to 43,200 s (12 h), so a cell launched without an explicit `TIMEOUT_S` is
+> reaped long before 600k frames; the same applies to `rad`, `curl` and `drq`, whose scheduled
+> training also exceeds 12 h. Detail: `CURRENT-STATE-AND-RESPONSIBILITY.md` §2, `ACCOUNTABILITY.md` G10.
+
+
 Nothing here has run a cell yet; the wrapper path is dry-run proven (§11.2) and the corpus arrives
 2026-09-18. Three things differ from §5.2, and each is a number rather than a preference.
 

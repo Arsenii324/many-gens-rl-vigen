@@ -57,6 +57,19 @@ the Places365 overlay loader running with `RLVIGEN_PLACES_WORKERS=0`, the silent
 calls `svea`'s throughput "measured" — on DataSphere, not on this host with this corpus mount.
 What the paragraph below says about that launch is history.
 
+**Established 2026-09-20 01:05 MSK, from the code history and the schedule file:**
+`run_probe.sh` has defaulted `RLVIGEN_PLACES_WORKERS` to 0 since 2026-09-08 (`a2c38bc`) because
+more than zero overlay-loader workers corrupted the heap intermittently on DataSphere
+(`malloc_consolidate(): unaligned fastbin chunk detected`; the comment block above
+`run_probe.sh:2206` has the job ids). `production-schedule.json`'s throughput for the three
+Places365 baselines — `svea` 9.99, `sgqn` 6.5, `soda` 3.25 frames/s, marked "measured" — was in the
+file by 2026-09-04, i.e. measured under the 8-worker loader that was then banned, and never
+re-measured. The only figure at 0 workers is this cell's: **~2.4 frames/s**, one 35-minute sample
+on a shared host with a cold file cache, which is ~69 h of training per seed against the schedule's
+16.7 h. Separately, **the launch used the wrapper's default `TIMEOUT_S` of 43,200 s (12 h)**, below
+even the schedule's own 16.7 h for `svea` (and 25.6 h `sgqn`, 27.1 h `rad`, 51.3 h `soda`): the
+training timeout must be set per baseline from the schedule, and nothing enforces that.
+
 **[history, 19 Sep 20:42–21:25] `svea` s101, the first cell of the RL-ViGen five and the first Places365 cell.**
 Run `card1-20260919-204235`, container `cell-c1-1272142`, card 1, launched 20:42 MSK on 19 Sep with
 the owner present, recorded in `results/host-runs.jsonl`, watched by `watch-cell.sh trip` (disk
