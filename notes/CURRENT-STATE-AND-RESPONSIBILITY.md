@@ -267,7 +267,10 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    **Read `DECISION-SHEET.md` A46 (2026-09-08) first — it already tabulates what 600,000 frames is
    to each of the twelve, and the paragraph below, written 2026-09-19 without having found it, is
    narrower and in one respect misleading.** A46's horizons: `rad`/`soda`/`alda`/`sgqn` 500k (600k
-   is 120%); the RL-ViGen four 1.1M from `cfgs/task/easy.yaml`, Door being `easy` (55%);
+   is 120%); the RL-ViGen four 1.1M from `cfgs/task/easy.yaml` (55%) — **which is wrong as a source horizon, found
+   2026-09-20: the RL-ViGen paper's own Table 6 (p.17) sets Robosuite Door at `int(6e5)` training
+   frames, so for the five natives 600k is exactly the published budget** (A46 now carries the
+   correction);
    `idaac`/`ppg` **1M, from IDAAC's DMC appendix** — continuous control from pixels, a closer
    analogue to Door than the 25M-step Procgen table cited below (60%, and their learning rate,
    annealed over a literal 1M steps, stops at 40% of its initial value); `ctrl` 8M (7.5%);

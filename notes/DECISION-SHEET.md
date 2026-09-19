@@ -2784,6 +2784,17 @@ inferred from a review.
 
 ## A46 — What 600,000 frames means to each of the twelve (2026-09-08)
 
+> **Corrected 2026-09-20, read from the PDF.** The row below that gives `drqv2`, `svea`, `curl`, `drq`
+> a source horizon of 1,100,000 cites `cfgs/task/easy.yaml`, which is the shipped code's default for
+> the `easy` tier. The RL-ViGen PAPER's own hyper-parameter table for this task — Table 6,
+> "Robosuite hyper-parameters in RL-ViGen", p.17 of `ext/baseline_resources/benchmarks/rl-vigen_v3_2307.10224.pdf`
+> — reads **Training Frames, Door: int(6e5)**, with action repeat 1 for Robosuite (Table 2). So for
+> the five RL-ViGen natives 600,000 frames is **100% of the published budget for this exact task**,
+> not 55%. The spread stated below changes accordingly. Also unsettled in this table: `idaac`/`ppg`'s
+> "1,000,000" is a learning-rate decay length from IDAAC's DMC appendix; their main-result budgets
+> are 25M (`idaac`, Procgen) and 100M (`ppg`, Procgen). Detail:
+> `notes/inventory-2026-09-19/budget-research.md` Part C.
+
 Review 18 raised, in a single voice and without follow-up, that ALDA's source horizon is 500k
 against the fleet's common 600k, and suggested predeclaring both. Checking it turned a one-baseline
 note into a fleet-wide one that nobody has enumerated. `docs/CONSTRUCTION.md` discusses RL-ViGen's
