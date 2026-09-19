@@ -36,6 +36,10 @@
 #     NATIVE_PLACES365_DIR_HOST=$HOME/rlvigen-assets/places365-train NATIVE_PLACES365_SPLIT=train \
 #     bash datasphere/native/run_on_production_host.sh $PAYLOAD /tmp/dryrun-result.tgz \
 #       $HOME/rlvigen-assets/rlvigen-door2-90d8b8c4.tgz
+#
+# [Claude 2026-09-20] REFUSES before launching anything if TIMEOUT_S is unset and BASELINE is not
+# one of the three with a measured sub-12h V100 time (idaac, ppg, ibac_sni) -- the 12h default cut
+# svea near 430k/600k frames on 2026-09-19 with no warning. See _scheduled_train_seconds() below.
 set -uo pipefail
 A="$HOME/rlvigen-runs/prod-v214"; R="$HOME/rlvigen-work"
 mkdir -p "$A"; cd "$R/repo"
@@ -44,6 +48,56 @@ FRAMES="${FRAMES:-600000}"; TAG="$BASELINE-s$SEED-prod"
 PAYLOAD="${PAYLOAD:-$R/payload-v214-$FAMILY.tgz}"
 [[ -f "$A/$TAG-result.tgz" ]] && { echo "SKIP $TAG (result present)"; exit 0; }
 [[ -f "$PAYLOAD" ]] || { echo "REFUSING: no payload at $PAYLOAD"; exit 2; }
+
+# Training-timeout floor (2026-09-20). TIMEOUT_S below defaults CELL_TIMEOUT_SECONDS to 43200 (12h),
+# and seven of the twelve baselines are scheduled to train longer than that on the DataSphere T4
+# tier (production-schedule.json's solo_hours_per_seed_gt4_1) -- V100 throughput is UNMEASURED for
+# all of them, so a T4-tier hour is the best number available, not a promise. svea launched
+# 2026-09-19 with the 12h default and would have been cut near 430k/600k frames with no warning.
+# Only idaac, ppg and ibac_sni have a MEASURED sub-12h V100 training time (OPERATOR-GUIDE.md
+# §4c.1); every other baseline -- known to this table or not -- must pass TIMEOUT_S explicitly.
+#
+# Kept in sync with production-schedule.json by tests/test_train_production_cell_timeout.py, which
+# fails if this table drifts from the JSON -- the host shell has no python and cannot read it.
+_scheduled_train_seconds() {
+  case "$1" in
+    drqv2)    echo 23040 ;;   # 6.40 h
+    svea)     echo 60048 ;;   # 16.68 h
+    drq)      echo 48060 ;;   # 13.35 h
+    sgqn)     echo 92304 ;;   # 25.64 h
+    curl)     echo 45756 ;;   # 12.71 h
+    rad)      echo 97704 ;;   # 27.14 h
+    soda)     echo 184608 ;;  # 51.28 h
+    alda)     echo 68580 ;;   # 19.05 h
+    idaac)    echo 17244 ;;   # 4.79 h
+    ppg)      echo 28152 ;;   # 7.82 h
+    ibac_sni) echo 22536 ;;   # 6.26 h
+    ctrl)     echo 40212 ;;   # 11.17 h
+    *)        return 1 ;;
+  esac
+}
+if [[ -z "${TIMEOUT_S:-}" ]]; then
+  case "$BASELINE" in
+    idaac|ppg|ibac_sni) : ;;   # measured sub-12h on THIS host; the 43200s default is safe as-is
+    *)
+      if _sched=$(_scheduled_train_seconds "$BASELINE"); then
+        echo "REFUSING: $BASELINE has no measured sub-12h V100 training time and TIMEOUT_S is unset." >&2
+        echo "  The 12h default (CELL_TIMEOUT_SECONDS=43200) would cut it before it finishes:" >&2
+        echo "  scheduled training is $(( _sched / 3600 ))h $(( (_sched % 3600) / 60 ))m on the" >&2
+        echo "  DataSphere T4 tier (production-schedule.json); V100 is unmeasured for it. Pass" >&2
+        echo "  TIMEOUT_S explicitly (seconds) once you know how long this baseline actually needs." >&2
+      else
+        echo "REFUSING: $BASELINE is not in the scheduled-training-time table and TIMEOUT_S is" >&2
+        echo "  unset -- the 12h default is unverified for it. Pass TIMEOUT_S explicitly." >&2
+      fi
+      exit 2
+      ;;
+  esac
+elif _sched=$(_scheduled_train_seconds "$BASELINE") && [[ "$TIMEOUT_S" -lt "$_sched" ]]; then
+  echo "WARNING: TIMEOUT_S=$TIMEOUT_S is below $BASELINE's scheduled training time" >&2
+  echo "  ($(( _sched / 3600 ))h $(( (_sched % 3600) / 60 ))m = ${_sched}s on the DataSphere T4" >&2
+  echo "  tier; V100 is unmeasured for it). Continuing on the operator's word." >&2
+fi
 
 places_env=()
 if [[ -n "${PLACES365_DIR:-}" ]]; then

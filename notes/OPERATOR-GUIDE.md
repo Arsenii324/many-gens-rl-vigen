@@ -440,6 +440,32 @@ Three things about that block that are easy to get wrong:
   family needs less, but *check something* rather than nothing — and note the number checked is
   `free -g` column 7 (`available`), not `free`.
 
+**[Claude 2026-09-20] `TIMEOUT_S` is not automatic for most baselines.** The template above omits
+it because `ibac_sni` is one of the three baselines (with `idaac`, `ppg`) that have a MEASURED
+sub-12h V100 training time — for those three, and only those three, the wrappers' 12h default
+(`CELL_TIMEOUT_SECONDS=43200`) is left alone. `train-production-cell-v5.sh`/`-v6.sh` now REFUSE to
+launch (exit 2, before anything reaches the card) if `TIMEOUT_S` is unset for any other baseline,
+known or not — the 12h default cut `svea` near 430k/600k frames on 2026-09-19 with no warning. Pass
+`TIMEOUT_S` explicitly for the rest; V100 throughput is unmeasured for every row below, so the
+suggested value is 1.5× the DataSphere T4-tier scheduled training time
+(`production-schedule.json`), rounded up to the hour, not a promise a V100 will actually need it:
+
+  | baseline | scheduled hours (T4) | suggested `TIMEOUT_S` |
+  |---|---|---|
+  | `drqv2` | 6.40 | 36000 (10 h) |
+  | `ctrl` | 11.17 | 61200 (17 h) |
+  | `curl` | 12.71 | 72000 (20 h) |
+  | `drq` | 13.35 | 75600 (21 h) |
+  | `svea` | 16.68 | 93600 (26 h) |
+  | `alda` | 19.05 | 104400 (29 h) |
+  | `sgqn` | 25.64 | 140400 (39 h) |
+  | `rad` | 27.14 | 147600 (41 h) |
+  | `soda` | 51.28 | 277200 (77 h) |
+
+  `svea`, `sgqn` and `soda` are additionally blocked by G10 (`notes/ACCOUNTABILITY.md`) — their own
+  scheduled hours above are from a since-banned loader configuration, not just an unmeasured V100 —
+  see §5.3 before launching any of the three.
+
 **Host, within the first minutes: read the banner, then arm the self-cap.** The launcher log
 `prod-v214/<tag>.log` prints, near the top, `container: cell-c1-<pid>`, the watch budget and
 `disk: <free> GiB free, floor <N> GiB`. Write down the container name and the floor. Then:
@@ -498,8 +524,10 @@ of the same seed would otherwise collide with it and silently pool two trajector
 > workers, a configuration since banned for heap corruption; at the current default of 0 workers
 > the only sample is `svea` at ~2.4 frames/s on this host — about 69 h per seed. (2) The wrappers
 > default `TIMEOUT_S` to 43,200 s (12 h), so a cell launched without an explicit `TIMEOUT_S` is
-> reaped long before 600k frames; the same applies to `rad`, `curl` and `drq`, whose scheduled
-> training also exceeds 12 h. Detail: `CURRENT-STATE-AND-RESPONSIBILITY.md` §2, `ACCOUNTABILITY.md` G10.
+> reaped long before 600k frames; the same applies to `rad`, `alda`, `curl` and `drq`, whose scheduled
+> training also exceeds 12 h (seven baselines in all). Since 2026-09-20 the wrappers REFUSE such a
+> launch when `TIMEOUT_S` is unset (§5.2 has the table) — on the laptop copies; the host's copies are
+> swapped in only when no cell is running. Detail: `CURRENT-STATE-AND-RESPONSIBILITY.md` §2, `ACCOUNTABILITY.md` G10.
 
 
 Nothing here has run a cell yet; the wrapper path is dry-run proven (§11.2) and the corpus arrives
