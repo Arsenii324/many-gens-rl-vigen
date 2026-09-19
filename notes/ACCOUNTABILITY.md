@@ -410,3 +410,43 @@ duplicate**, since the handoff already carries the verified/uncommitted/plan dis
   **uncommitted** right now — real content, not yet re-verified against the test suite. Six local
   commits are unpushed. Neither is a "problem," both are simply not finished — named here so they
   aren't silently assumed done.
+
+## Open taskset, 2026-09-19 ~22:00 — supersedes the 2026-09-18 list above as the working list
+
+An item is closed only by what its last column names. A narrower step being done is written in the
+status, never as DONE. Order of work: E1 → E2/E3 (as inventories return) → E4 → E5 → E6; F runs in
+parallel on the host's clock; G items are picked up inside E5/E6 or last.
+
+**E. Understand first, then restructure** (owner, 2026-09-19: step back, take the whole frame, do not
+dive implementation-first; note understanding once instead of re-deriving it each session)
+
+| id | item | status | what closes it |
+|---|---|---|---|
+| E1 | Sweep of EVERYTHING the owner said this session against the primary docs | PARTIAL — only §7b items 1–9 and the external/blocked ruling checked and recorded (`f2d3757`). The owner's original numbered list (up to ~19–20), the eval-cost ×3/×2 question and the replay-buffer question were answered in chat and never swept | every owner statement in the session transcript listed with the file:line that carries it, or added |
+| E2 | Code liveness inventory | RETURNED, 5 claims re-checked, stored in `notes/inventory-2026-09-19/code.md` | the claims the restructure relies on re-checked one by one at the time they are used |
+| E3 | Docs surface inventory | RUNNING | returned, known-answer probes checked, "not checked" list read, stored beside E2 |
+| E4 | My own reading of the core, not delegated | PARTIAL — `RESEARCH-FRAME.md`, the launch chain to the `docker run`, `production-host/36`, the schedule. Not yet: `family.py` argument resolution, the eval → records → `production_reading.py` path, `EVAL-PROTOCOL.md`, `SYSTEM.md` | each read, and what it changes written into E5's map |
+| E5 | One structure map, rewritten in place, every statement tagged executed / read-in-code / doc-claims-only. Must carry what was found 2026-09-19 and lives nowhere else: two code sources (host checkout before `docker run`, payload after), the env allowlist at `run_on_production_host.sh:811-831`, `wait-and-train-v4.sh` defaulting to the **v5** wrapper, the double defaults (`SEED`, `FRAMES`, `EVAL_EVERY_FRAMES`, `NATIVE_EXPECT_OURS`), `RESUME_SNAPSHOT` never reaching the container | NOT STARTED — waits on E2–E4 by design | the map exists at a location chosen per `docs/SYSTEM.md`, and `OPERATOR-GUIDE.md` §5's stale v3/v5 diagram is corrected against it |
+| E6 | Doc roles settled: which file is state, which is reference, which are frozen snapshots; standing working rules (arrangement, executor-trust requirements, recording the owner's words) into the project `CLAUDE.md` — today they sit only in Claude Code auto-memory, which no other agent reads | NOT STARTED | roles written in one place; `HANDOFF.md`/this file stop growing by append or the reason they still do is stated |
+
+**F. The campaign**
+
+| id | item | status | what closes it |
+|---|---|---|---|
+| F1 | `svea` s101 (`card1-20260919-204235`) | RUNNING, recorded, watched | collected; `audit_record_frame_provenance.py` MISMATCHED 0; status updated; strict ledger audit exit 0; **measured RAM and wall time of a native cell extracted** into OPERATOR-GUIDE §4c.1 |
+| F2 | Queue order: the RL-ViGen five first? They are the only identified across-method contrast (`RESEARCH-FRAME.md`) and had zero production cells | TO BRING TO THE OWNER with measured cost per native cell (needs F1's numbers) | owner's answer recorded in CURRENT-STATE §7b |
+| F3 | Is P-C76 (what retention is measured over) ratified? `RESEARCH-FRAME.md` says NOT MADE, `EVAL-PROTOCOL.md` holds a proposed decision | OPEN | the ratification found and cited, or the item added to §7b |
+| F4 | Budget vs scope (§7b item 1) | OWNER'S | — |
+
+**G. Carried loose ends — none urgent, none to be lost**
+
+| id | item | status |
+|---|---|---|
+| G1 | O9: does the one prebuilt env's requirement hash hold for `dmc_gb`, `alda`, `ppg`, `ibac_sni`? Only `svea:101` checked | OPEN |
+| G2 | `EVAL-PROTOCOL.md` says nine off-policy baselines; a direct count gives eight | OPEN |
+| G3 | `ext/` copies of six upstream repos have no `.git`; never diffed against the pinned commits, so the "local backup" of §7b item 4 is unverified; `ext/rl_vigen` is not a copy at all | OPEN |
+| G4 | Host checkout's `run_on_production_host.sh` is one commit behind the laptop (`8d735a4` vs `1178978`); the diff is comment-only, checked | NOTED, no action |
+| G5 | Attempt 1 of `svea` s101 (`card1-20260919-203001`) has no ledger row of its own: it died before writing a config and the recorder refuses such a run. Its failure is in attempt 2's note | NOTED |
+| G6 | Two empty, untracked, oddly named directories in the project root (a space-only name; a python one-liner as a name), dated 7–8 Sep | NOTED, left alone |
+| G7 | `ppg` seed 1 operator note | LAST, per owner |
+| G8 | Commits since the last push | see `git rev-list` before each push |
