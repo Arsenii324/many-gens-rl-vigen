@@ -289,6 +289,10 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    patch modifies. So six of seven have a verified local copy. **RL-ViGen itself does not**:
    `ext/rl_vigen` is two PDFs and `RL-ViGen-upstream/` has no `.git`, so its commit cannot be
    checked locally — and it is the family the most cells depend on.
+   **Owner, 2026-09-19 (later the same evening): risk accepted, item closed.** *"I don't expect any
+   of these get deleted and I have the local copy; if it's a reproduction I can't take the others'
+   works directly in, maybe."* So: no mirror, no vendoring of upstream code into this repository.
+   The RL-ViGen gap above stays a stated fact, not open work.
 5. **`ctrl`'s in-loop eval cost — recommendation: leave the algorithm code untouched; fix the
    schedule instead, 2026-09-19.** Analysed the "reduce it" option specifically for hidden risk
    before recommending against it: `succ_id = [False] * FLAGS.num_envs` and the `for i, info in
