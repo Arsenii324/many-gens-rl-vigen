@@ -21,6 +21,8 @@
 #   * launch when any cell container of ours is up, or another launcher is running (double-launch);
 #   * launch when the result archive for this tag already exists (it would be skipped anyway);
 #   * launch with less than MIN_DISK_GIB free — a new cell's bootstrap eats into live cells' floors;
+#   * count a streak across a logger outage — samples more than MAX_SAMPLE_GAP apart are a
+#     different window, however clear each one looks on its own (found 2026-09-20);
 #   * hold the lock silently: everything it decides goes to its log with a timestamp.
 #
 # It never stops, kills or deletes anything. The only thing it starts is train-production-cell-v5.sh,
@@ -37,6 +39,12 @@ FAMILY="${FAMILY:?set FAMILY}"; BASELINE="${BASELINE:?set BASELINE}"; SEED="${SE
 NEED="${NEED:-11421}"        # ibac_sni's 7,421 peak + the 4,000 MiB floor: the largest cell we run
 HOLD="${HOLD:-10}"           # ten one-minute samples; ten of twelve past absences were restarts
 POLL="${POLL:-60}"
+# How far apart two counted samples may be before they no longer count as one streak. Default is
+# three LOGGER intervals (gpu-occupancy-log.sh writes every 60 s) -- generous enough for an occasional
+# missed write, not for a real outage. Deliberately NOT derived from POLL: POLL is how often this
+# waiter looks, not how often the log is written, and POLL=10 would make every sample a "gap".
+# See clear_streak() for why this exists.
+MAX_SAMPLE_GAP="${MAX_SAMPLE_GAP:-180}"
 MAXWAIT="${MAXWAIT:-43200}"
 MIN_DISK_GIB="${MIN_DISK_GIB:-60}"
 VRAM_MIB="${VRAM_MIB:-5000}"
@@ -79,6 +87,23 @@ say(){ echo "$(date -Is) $*" >> "$LOG"; }
 
 # How many of the last HOLD samples for this card were CLEAR: no foreign holder, and NEED free.
 # Identical rule to host-scripts/capacity-check.sh, which was validated against two known moments.
+#
+# [Claude 2026-09-20] A STREAK is samples close together in TIME, not just individually clear.
+# Found live: the host crashed at 21:25 on 2026-09-19, the logger restarted at 01:02 on 2026-09-20,
+# and three minutes later a DRYRUN replay printed "streak 10/10" built from seven pre-crash lines
+# (21:16-21:22) plus three fresh ones -- the "ten CONSECUTIVE one-minute samples" rule had silently
+# become a "any ten samples, however far apart" rule. The only staleness guard, LOG_MAX_AGE, looks
+# only at the age of the LAST line, which a fresh restart always satisfies; it says nothing about
+# what came before that line. Fixed here by walking the tail forward and keeping only the trailing
+# run whose consecutive gaps are all <= MAX_SAMPLE_GAP -- everything before the first wider gap
+# belongs to a different window and does not count, exactly as if it had never been logged.
+#
+# [Claude 2026-09-20, same day] A sample `date -d` cannot parse is NOT a free pass. The first cut
+# of this fix let an unparsable timestamp fall through with epoch="", which simply skipped the gap
+# comparison -- so a logger whose format ever changed (or a host whose `date` behaves differently)
+# would silently go back to counting individually-clear samples with no regard for time at all, the
+# exact defect above. A timestamp that cannot be placed in time cannot prove its sample belongs to
+# the current window, so it is treated the same as a hard gap: nothing at or before it counts.
 clear_streak(){
   local as_of="${1:-}"
   local lines
@@ -87,7 +112,26 @@ clear_streak(){
   else
     lines=$(grep "card=$CARD " "$OCC" | tail -"$HOLD")
   fi
-  printf '%s\n' "$lines" | awk -v need="$NEED" -v total="${TOTAL:-32768}" '
+  local -a arr=()
+  while IFS= read -r line; do [ -n "$line" ] && arr+=("$line"); done <<< "$lines"
+  local start=0 i epoch prev_epoch="" reset_msg=""
+  for (( i=0; i<${#arr[@]}; i++ )); do
+    epoch=$(date -d "${arr[i]%% *}" +%s 2>/dev/null)
+    if [ -z "$epoch" ]; then
+      start=$(( i + 1 ))
+      reset_msg="cannot parse the timestamp of sample $i ('${arr[i]%% *}'); samples up to it do not count"
+    elif [ -n "$prev_epoch" ] && [ $(( epoch - prev_epoch )) -gt "$MAX_SAMPLE_GAP" ]; then
+      start=$i
+      reset_msg="a gap > ${MAX_SAMPLE_GAP}s separates sample $start from sample $((start - 1)) of ${#arr[@]}; only the trailing $(( ${#arr[@]} - start )) sample(s) count"
+    fi
+    prev_epoch="$epoch"
+  done
+  if [ "$start" -gt 0 ]; then
+    say "streak reset: $reset_msg"
+  fi
+  local trimmed="" j
+  for (( j=start; j<${#arr[@]}; j++ )); do trimmed="$trimmed${arr[j]}"$'\n'; done
+  printf '%s' "$trimmed" | awk -v need="$NEED" -v total="${TOTAL:-32768}" '
     /card=/ { m=$0; sub(/.*mem=/,"",m); sub(/ .*/,"",m);
               h=$0; sub(/.*holders=/,"",h); gsub(/cell-c[0-9]+-[0-9]+/,"",h); gsub(/[,-]/,"",h);
               if (h=="" && (total-m) >= need) c++ }

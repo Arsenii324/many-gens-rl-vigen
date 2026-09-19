@@ -24,8 +24,29 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 WAITER = ROOT / "datasphere" / "native" / "host-scripts" / "wait-and-train-v4.sh"
 
 STUBS = {
-    # `date -Is` is GNU; BSD date wants the long form. Everything else passes through.
-    "date": '#!/bin/sh\n[ "$1" = "-Is" ] && exec /bin/date -Iseconds\nexec /bin/date "$@"\n',
+    # `date -Is` is GNU; BSD date wants the long form. `date -d <ISO-8601> +%s` is what
+    # clear_streak() (2026-09-20) uses to detect a gap between samples, on or off this Mac -- GNU
+    # date on the real host parses that natively, with or without a UTC offset, so both shapes are
+    # mirrored here via BSD's `-j -f` rather than letting an unsupported `-d` fail outright, which
+    # would make every sample in this file's un-offset fixtures "unparsable" and turn the
+    # gap-contiguity fix's fail-closed behaviour into an infinite wait for streaks that used to
+    # form immediately.
+    "date": r"""#!/bin/sh
+if [ "$1" = "-Is" ]; then exec /bin/date -Iseconds; fi
+if [ "$1" = "-d" ]; then
+  ts="$2"; shift 2
+  case "$ts" in
+    *[+-][0-9][0-9]:[0-9][0-9])
+      norm=$(printf '%s' "$ts" | sed -E 's/([+-][0-9]{2}):([0-9]{2})$/\1\2/')
+      exec /bin/date -j -f "%Y-%m-%dT%H:%M:%S%z" "$norm" "$@"
+      ;;
+    *)
+      exec /bin/date -j -f "%Y-%m-%dT%H:%M:%S" "$ts" "$@"
+      ;;
+  esac
+fi
+exec /bin/date "$@"
+""",
     "flock": "#!/bin/sh\nexit 0\n",
     "pgrep": "#!/bin/sh\nexit 1\n",
     "docker": "#!/bin/sh\nexit 0\n",          # `docker ps` prints nothing: no cell of ours is up
@@ -63,6 +84,12 @@ def _sandbox(tmp_path: pathlib.Path, wrapper_body: str) -> tuple[dict, pathlib.P
         "HOME": str(tmp_path),
         "CARD": "1", "FAMILY": "idaac", "BASELINE": "stub", "SEED": "999",
         "POLL": "1", "MAXWAIT": "45", "HOLD": "10", "HEARTBEAT": "1000",
+        # MAX_SAMPLE_GAP (2026-09-20) defaults to POLL*3, which is right when POLL tracks the
+        # log's own write cadence -- it does not here: POLL=1 above is a TEST speed knob for the
+        # waiter's own re-poll loop, unrelated to this fixture's log, which is one 60-second-apart
+        # sample per line regardless. Left at the default, every real 60s gap between this file's
+        # own samples would exceed a 3s tolerance and reset the streak on every single sample.
+        "MAX_SAMPLE_GAP": "120",
         "WRAPPER": "stub-wrapper.sh",
         # The real wait for a cell container is 60 x 5 s. No container ever appears here, so
         # without this every test would idle for five minutes per launch attempt.
