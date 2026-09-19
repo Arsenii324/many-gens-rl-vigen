@@ -411,7 +411,7 @@ duplicate**, since the handoff already carries the verified/uncommitted/plan dis
   commits are unpushed. Neither is a "problem," both are simply not finished — named here so they
   aren't silently assumed done.
 
-## Open taskset, 2026-09-19 ~22:00 — supersedes the 2026-09-18 list above as the working list
+## Open taskset, 2026-09-19 21:15 MSK — supersedes the 2026-09-18 list above as the working list
 
 An item is closed only by what its last column names. A narrower step being done is written in the
 status, never as DONE. Order of work: E1 → E2/E3 (as inventories return) → E4 → E5 → E6; F runs in

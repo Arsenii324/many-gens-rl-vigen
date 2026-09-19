@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-19, ~21:50 MSK, by Claude** (header, §1 tallies, §2's live-cell paragraph and §7b; the rest of §2–§7 was last reviewed 2026-09-18). This file says what is *true right now*. It is
+**Last updated: 2026-09-19, 21:14 MSK, by Claude** (header, §1 tallies, §2's live-cell paragraph and §7b; the rest of §2–§7 was last reviewed 2026-09-18). This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -23,7 +23,7 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run (2026-09-19 21:45 MSK): gates **37 pass / 0 fail / 9 owner**; campaign **36 cells:
+As of the last run (2026-09-19 ~21:14 MSK): gates **37 pass / 0 fail / 9 owner**; campaign **36 cells:
 31 MISSING, 3 DONE, 1 RUNNING, 1 PARTIAL**; all five commands exit 0. One cell of ours is running
 (§2). No waiter is armed on the host.
 
