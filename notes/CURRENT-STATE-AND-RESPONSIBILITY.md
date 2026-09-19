@@ -42,7 +42,7 @@ As of the last run (2026-09-19 ~21:14 MSK): gates **37 pass / 0 fail / 9 owner**
 | `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**NOTHING OF OURS IS RUNNING (as of 2026-09-19 22:10 MSK, read from the host).** The host crashed
+**NOTHING OF OURS IS RUNNING (as of 2026-09-19 22:07 MSK, read from the host).** The host crashed
 at ~21:25 MSK and booted again at 22:05 — `last -x` shows no `shutdown` record, so it was not an
 orderly reboot; every tenant's containers were lost and both cards read 0 MiB. **It was not us:** our
 cell's last resource sample (21:25) shows ~8.6 GiB of RAM in total (trainer 3.05 GiB, four loader
