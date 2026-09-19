@@ -1,10 +1,9 @@
 # What the harness does, end to end — a model you can check
 
-Written 2026-09-16 from tracing the code, not from memory, and extended 2026-09-19 with the launch
-chain before the container (§0) and the value-resolution trace inside it (§1b). Every claim here
-names the file that establishes it, so a reader can disagree with the source rather than with me.
-New statements tag how they're known: `[read in code 2026-09-19]`, `[executed]` (an actual host
-run), or `[doc claims, not re-verified]`.
+Written 2026-09-16 from tracing the code, extended 2026-09-19 with the launch chain before the
+container (§0) and the value-resolution trace inside it (§1b). Every claim names the file that
+establishes it. New statements tag how they're known: `[read in code 2026-09-19]`, `[executed]`
+(an actual host run), or `[doc claims, not re-verified]`.
 
 Scope: one production cell, from a payload archive to a row in the evaluator ledger — including the
 paths that are not the golden one, because those are where this project has lost runs.
@@ -28,7 +27,8 @@ forwards `CARD FAMILY BASELINE SEED EXPECT_OURS VRAM_MIB` to whichever wrapper `
 (`:51`). v5 hardcodes its payload path (`"$R/payload-v214-$FAMILY.tgz"`, v5 `:65`) and has no
 Places365 handling; a Places365 baseline (svea, sgqn, soda) needs
 `WRAPPER=train-production-cell-v6.sh` explicitly, or the waiter launches the wrong wrapper with the
-wrong payload and no corpus. [read in code 2026-09-19]
+wrong payload and no corpus — **(1) the wrapper trap**: v5 cannot take `PAYLOAD` or `PLACES365_DIR`
+at all, the two knobs v6 adds. [read in code 2026-09-19]
 
 **v5/v6** map operator names onto the `NATIVE_*`/`CELLS` names the rest of the chain reads (both
 `env CARD=... NATIVE_YIELD_ON_PROCESSES=... NATIVE_EXPECT_OURS=...` at `:58`):
@@ -46,16 +46,11 @@ wrong payload and no corpus. [read in code 2026-09-19]
 
 [read in code 2026-09-19]. Both hardcode `NATIVE_ALLOW_SHARED_CARD=1 NATIVE_HOST_PROFILE=v100
 NATIVE_PRODUCTION=1 NATIVE_ACCEPT_SAME_DEVICE=1 ENDPOINT_EVAL=1` (v5/v6 `:59-64`) — a stance, not a
-knob.
-
-**`launch-card-cell.sh`** sizes the watch budget from `CELL_TIMEOUT_SECONDS` plus a bootstrap
+knob. **`launch-card-cell.sh`** sizes the watch budget from `CELL_TIMEOUT_SECONDS` plus a bootstrap
 allowance plus an eval allowance read from `family.py production-env` (`:140-155`), arms the three
 watcher containers (§5, §6), then calls `run_on_production_host.sh` (`:475`), which reads the
 pinned image from `source-lock.json` (`:285`) and runs `docker run` (`:880-893`). [read in code
 2026-09-19]
-
-**(1) The wrapper trap** is the WRAPPER default above: v5 cannot take `PAYLOAD` or `PLACES365_DIR`
-at all — the two knobs v6 adds.
 
 **(2) Two code sources.** Everything above runs from the host's own checkout under
 `~/rlvigen-work/` — flattened copies of the wrapper scripts (`wait-and-train-v4.sh:131,186`
@@ -136,11 +131,10 @@ the executed argv (`run_probe.sh:508`), and is recorded TWICE in `effective_conf
 `"argv"` (`run_probe.sh:491`) and again under `"extra_overrides"` (`:492`), so its provenance
 survives without diffing two argv lists. **[executed]** the real `svea` s101 cell run on 2026-09-19
 (`runs/card1-20260919-204235/native-out/cells/svea-s101/effective_config.json`) carries
-`"replay_buffer_size=620000"` in both fields.
-
-**The rule this implies**: a cell's own `effective_config.json` is the authority on what actually
-ran — above `families.json`, above a wrapper's default, above this document — written once, when
-the argv is known (`run_probe.sh:424-501`), never re-derived downstream. [read in code 2026-09-19]
+`"replay_buffer_size=620000"` in both fields. **The rule this implies**: a cell's own
+`effective_config.json` is the authority on what actually ran — above `families.json`, above a
+wrapper's default, above this document — written once, when the argv is known
+(`run_probe.sh:424-501`), never re-derived downstream. [read in code 2026-09-19]
 
 **Double defaults, re-confirmed**:
 
@@ -262,20 +256,16 @@ uncollected; the bytes are already durable.
   pinned by hand.
 - **Throughput under packing.** 11.65 s/episode was measured on a card shared with one colleague.
   It is used for budgets and has not been re-measured under heavier packing.
-- **The evaluator's per-family branches.** `scripts/eval_grid.py`'s `run_scene_dmc_gb`,
-  `run_scene_idaac`, `run_scene_ppg`, `run_scene_ibac_sni`, `run_scene_alda`, `run_scene_ctrl`
-  (`:379,480,647,749,884,1036`) and the bare `run_scene` it imports for rlvigen
-  (`scripts/eval_grid.py:82`, from `scripts/eval_across_scenes.py`) are not traced here, nor are
-  `datasphere/native/normalize_curves.py`'s seven per-family curve-log parsers — `read_rlvigen`,
-  `read_dmc_gb`, `read_idaac`, `read_alda`, `read_ppg`, `read_ibac_sni`, `read_ctrl`
-  (`:260,291,316,340,402,468,498`). Each is called; none is read past its signature and return
-  shape. [read in code 2026-09-19]
-- **A seam class found and fixed today.** A consumer read a field a producer writes differently per
-  family: `scripts/record_host_run.py` took the seed only from an argv `--seed VALUE` token, which
-  the on-policy families' launchers use, but rlvigen's own hydra-style template renders `seed=101`
-  and never matches that pattern — every rlvigen host-run entry would have recorded seed `None` and
-  been bucketed under seed `0` (`scripts/campaign_status.py:151,178`,
-  `key = (row.get("baseline"), int(row.get("seed") or 0))`). Fixed in commit `415687c`
-  (2026-09-19) by reading the cell's own `effective_config.json["seed"]` first
-  (`scripts/record_host_run.py:63-67`) and falling back to argv-scanning, both spellings, only if
-  that is absent. [read in code 2026-09-19]
+- **The evaluator's per-family branches.** `scripts/eval_grid.py`'s `run_scene_dmc_gb/idaac/ppg/
+  ibac_sni/alda/ctrl` (`:379,480,647,749,884,1036`) and the bare `run_scene` it imports for rlvigen
+  (`:82`, from `scripts/eval_across_scenes.py`) are not traced here, nor are
+  `datasphere/native/normalize_curves.py`'s seven per-family curve-log parsers (`read_rlvigen`,
+  `read_dmc_gb`, `read_idaac`, `read_alda`, `read_ppg`, `read_ibac_sni`, `read_ctrl`,
+  `:260,291,316,340,402,468,498`) — each is called, none read past its signature. [read in code
+  2026-09-19]
+- **A seam found and fixed today.** `scripts/record_host_run.py` took the seed only from an argv
+  `--seed VALUE` token; rlvigen's own hydra template renders `seed=101` and never matches, so every
+  rlvigen host-run entry would have recorded seed `None` and been bucketed under seed `0`
+  (`scripts/campaign_status.py:151,178`). Fixed in commit `415687c` (2026-09-19) by reading
+  `effective_config.json["seed"]` first (`scripts/record_host_run.py:63-67`), falling back to argv
+  only if absent. [read in code 2026-09-19]
