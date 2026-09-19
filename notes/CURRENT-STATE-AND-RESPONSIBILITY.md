@@ -334,8 +334,16 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    Verified 2026-09-19 on the laptop with `build-env.sh`'s own recipe: eleven baselines — the
    RL-ViGen five, `rad`, `soda`, `alda`, `ppg`, `ibac_sni` **and `idaac`** — resolve to the same 42
    requirement lines, hash `10d2004a`; `ctrl` alone differs (`2466d111`, 37 lines, the five
-   torch/cu121 lines its `excluded_base_requirements` drops). Not re-run inside the
-   `python:3.11-slim` container the script uses. History: `OPERATOR-GUIDE.md` §11.4 O9.
+   torch/cu121 lines its `excluded_base_requirements` drops). **The literal hash is only valid on
+   the machine that computed it**, found the same evening: the recipe pipes through `sort`, and
+   the same 42 lines hash to `10d2004a` under an en_US locale and `e26959bf` under `LC_ALL=C`; the
+   env directory built on the host on 19 Sep is keyed `02805cc0`, which is neither. `build-env.sh`
+   hashes on the host shell from the host checkout's `family.py`; `run_probe.sh:1552-1558` re-hashes
+   inside the container from the payload's and exits 3 on `NATIVE_VENV_REQUIREMENTS_MISMATCH`. So
+   "eleven baselines share one requirement set" is verified; "a cell will accept the prebuilt env"
+   is NOT. It has not bitten because `train-production-cell-v5/v6.sh` do not pass
+   `NATIVE_VENV_HOST` — tonight's `svea` cell ran the full apt+pip bootstrap. Check on the host
+   when it is reachable: what a container computes vs the manifest's `requirements_sha256_8`. History: `OPERATOR-GUIDE.md` §11.4 O9.
 9. **The repository is public on GitHub with no `LICENSE` file and no CI.** Checked directly via
    the GitHub API (`private: false`, `visibility: public`). Neither is a technical gap; both are
    policy calls — add a license (and which one), add CI, or leave both as they are?
