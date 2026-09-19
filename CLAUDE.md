@@ -126,41 +126,30 @@ Considerations to weigh against the request in front of you, not a procedure. (O
   this project; take what helps — for example `verification-before-completion`'s "name the
   command that proves the claim, run it, read the output, then claim" — or skip them.
 
-## Working considerations the owner has raised — dated, each said at its own stage
+## Things the owner has said about how to work here — dated, each at its own stage
 
-**Not a canon, and not standing orders.** The owner, 2026-09-19, on seeing this list: *"I've given
-ones and then given the others. Maybe I changed my opinion over time. Each was for its respective
-stage; I don't assume one can really hold all in ours head."* So: each line below was an answer to
-a particular situation on the date beside it. Read it as context for judgement, prefer what the
-owner said most recently, and where one seems to bind a decision today, ask rather than cite it.
-The last two bullets (arrangement, executors) are the current working arrangement, not quotes.
+**Context, not orders.** The owner, 2026-09-19, on seeing an earlier version of this list written as
+rules: *"I've given ones and then given the others. Maybe I changed my opinion over time. Each was
+for its respective stage; I don't assume one can really hold all in ours head."* Each line is what
+they said in one situation. Weigh it; prefer their most recent word; if one of these would be the
+deciding reason for something today, ask.
 
-- **Understand before acting; step back unprompted.** *"Discovery, planning and multi-step research
-  and understanding are to be before."* — *"don't treat the 'gaps' narrowly or just to it what we've
-  found most recently"* (16 Sep). *"I actually want you to be more foundational and careful … not
-  diving implementation-first"* (19 Sep). This tree is entangled — control flow, argument passing
-  and documents at several levels — and the cost of a locally-correct edit is paid elsewhere.
-- **A system already exists; find it first.** *"Some system already exists. Neither 'reuse' or
-  'integrate' by default, nor duplicate randomly."* (16 Sep). On 19 Sep a launch-chain section was
-  one step from being written while `notes/model/HARNESS-MODEL.md` already held that map.
-  [`docs/SYSTEM.md`](docs/SYSTEM.md) says what is recorded where; `scripts/where_is_this_decided.py`
-  and a grep come before a new file or a new finding.
-- **Result, not process.** *"you wrote something in the '37' but I don't read it as the answer … it
-  feels process-oriented not result-oriented."* (18 Sep). Answer the question asked, in the reply;
-  a note filed somewhere is storage, not an answer.
-- **A guide is a draft until a system of checks says otherwise.** *"You're too early to 'write
-  authoritatively' … don't 'just write the guide'; build a system of all considerations and your
-  own work that, once fulfilled, would make you very sure"* (16 Sep).
-- **Prove an instrument before relying on it.** *"Make sure the monitor command actually works …
-  try test it with setting different margins … before setting on it as the long running one."*
-  (16 Sep). Three of this project's own checkers were defective in one day; on 19 Sep a wait
-  watched the wrong path and a message extractor missed two thirds of its input, and both were
-  caught only by comparing against a known answer.
-- **Record what the owner says, when they say it.** Findings get recorded here by reflex; the
-  owner's rulings and answers did not, because they feel known while they are in context. After a
-  message from the owner, its statements that outlive the turn each get a home before work
-  resumes: constraints in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` §4, decisions in §7b, ways of
-  working here.
+- *16 Sep, about the operator guide then being drafted:* "You're
+  too early to 'write authoritatively' … don't 'just write the guide'; build a system of all
+  considerations and your own work that, once fulfilled, would make you very sure". Same day:
+  "Discovery, planning and multi-step research and understanding are to be before", and "Some
+  system already exists. Neither 'reuse' or 'integrate' by default, nor duplicate randomly."
+- *16 Sep, about a monitor command:* "Make sure the monitor command actually
+  works … try test it with setting different margins … before setting on it as the long running
+  one."
+- *18 Sep, about an answer given as a filed note (`production-host/37`):* "you wrote something in the '37' but I
+  don't read it as the answer … it feels process-oriented not result-oriented."
+- *19 Sep, when a launch-chain section was about to be written from a ten-minute trace:* "I
+  actually want you to be more foundational and careful … not diving implementation-first."
+  (`notes/model/HARNESS-MODEL.md` already held that map; nobody had looked.)
+
+### The current working arrangement (2026-09-19; the agent's to change, noted when it does)
+
 - **The arrangement of the work is part of the work.** Which model does what, when to step back,
   what to monitor, what to raise — decided by the agent, noted in a line, not proposed and waited
   on. Still the owner's, flag only: research scope, budget and endpoint decisions; big deletes;
@@ -175,6 +164,10 @@ The last two bullets (arrangement, executors) are the current working arrangemen
   answers seeded in the brief, the claims that will be acted on re-run by the lead, and no agent
   checking its own earlier claim. Reports are stored marked as executor output
   (`notes/inventory-2026-09-19/` is the pattern), never as findings of record.
+- **Recording.** After a message from the owner, a ruling or answer that outlives the turn gets a
+  home before work resumes, WITH its date and the situation it answered — constraints the owner
+  states as standing in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` §4, decisions in §7b. "What I
+  brought up" means the recent discussion, not everything ever said.
 
 ## Nulls
 
