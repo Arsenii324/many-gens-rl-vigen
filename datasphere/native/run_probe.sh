@@ -2140,7 +2140,7 @@ if cells_need_places365 "$cells"; then
   else
     asset_images="$places_link_source"
   fi
-  if [[ "$places365_skip_asset_check" = 1 ]]; then
+  if [[ "${places365_skip_asset_check:-0}" = 1 ]]; then
     echo "=== NATIVE_PLACES365_ASSET_CHECK_SKIPPED $asset_images (pre-verified mount, not an archive) ===" >&2
   else
     python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"

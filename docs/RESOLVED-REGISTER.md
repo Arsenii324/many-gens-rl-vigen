@@ -174,7 +174,7 @@ register exists to prevent.
 
 **Why.** Shape at 1 episode on a task whose per-episode SD is comparable to its mean is noise, not a cheaper curve. Endpoint depth is what every reported interval rests on. [2026-09-14] Citation corrected: this row previously cited ONLY notes/retention-and-eval-depth.md, whose section 1 recommends FIVE episodes and predates A20. The shipped value is three and the authority is EVAL-PROTOCOL.md plus each family's curve_eval_episodes_reason. The note now carries a supersession stamp at its head; before this it read as current to anyone opening it directly, which is the exact failure EVAL-PROTOCOL.md:490 warns about.
 
-**Evidence.** `docs/EVAL-PROTOCOL.md:490`, `datasphere/native/families.json:166`, `notes/retention-and-eval-depth.md:1`
+**Evidence.** `docs/EVAL-PROTOCOL.md:492`, `datasphere/native/families.json:166`, `notes/retention-and-eval-depth.md:1`
 
 **Falsified by.** If checkpoints stop being retained, curve depth stops being reversible and the trade changes completely.
 
