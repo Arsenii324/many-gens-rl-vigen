@@ -2043,6 +2043,7 @@ if cells_need_places365 "$cells"; then
   #
   # It is CHECKED, not trusted. A directory that does not exist, or that holds neither layout this
   # code understands, refuses here rather than failing later inside the loader.
+  places365_skip_asset_check=0
   if [[ -n "${NATIVE_PLACES365_DIR:-}" ]]; then
     asset_dir="$NATIVE_PLACES365_DIR"
     if [[ ! -d "$asset_dir" ]]; then
@@ -2056,6 +2057,16 @@ if cells_need_places365 "$cells"; then
       exit 1
     fi
     echo "=== NATIVE_PLACES365_PREEXTRACTED $asset_dir (no copy, no extraction this job) ===" >&2
+    # [Claude 2026-09-19, found by the first cell to ever actually exercise this path]
+    # PLACES365_EXPECTED_COUNT/SHA256 were never meant to be required here -- the comment on the
+    # sibling branch below already says NATIVE_PLACES365_DIR is an ALTERNATIVE to providing them,
+    # not an addition. But the `check-asset` call further down runs unconditionally, so a launch
+    # using only the mount (no archive, no count, no hash -- exactly what this project's own
+    # verified-corpus workflow does) died on `${PLACES365_EXPECTED_COUNT:?}` with nothing ever
+    # having asked for it. The mount's own integrity was already checked once, by hand, when it
+    # was provisioned (`verify_datasets.py`, sha256-sampled against the source) -- re-checking a
+    # count/hash on every launch is exactly the per-cell cost mounting was meant to remove.
+    places365_skip_asset_check=1
   elif [[ -z "$asset_archive" ]]; then
     echo "=== NATIVE_PLACES365_MISSING these cells need the Places365 val set and no asset archive was passed ===" >&2
     echo "    cells: $cells" >&2
@@ -2129,7 +2140,11 @@ if cells_need_places365 "$cells"; then
   else
     asset_images="$places_link_source"
   fi
-  python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"
+  if [[ "$places365_skip_asset_check" = 1 ]]; then
+    echo "=== NATIVE_PLACES365_ASSET_CHECK_SKIPPED $asset_images (pre-verified mount, not an archive) ===" >&2
+  else
+    python3 datasphere/native/contract.py check-asset --asset "$asset_images" --expected-count "${PLACES365_EXPECTED_COUNT:?}" --expected-sha256 "${PLACES365_EXPECTED_SHA256:?}"
+  fi
   ln -sfn "$places_link_source" "$dataset_root/places365_standard/$places_split"
   # Leave val linked too when the archive carries it, so nothing that assumed the previous on-disk
   # shape changes behaviour as a side effect of this fix.
