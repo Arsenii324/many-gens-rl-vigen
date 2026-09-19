@@ -247,7 +247,12 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    verifiable) of `dmcontrol-generalization-benchmark`, `ALDA_Official`, `idaac`, `IBAC-SNI`,
    `ctrl_public`, `phasic-policy-gradient`; `ext/rl_vigen` holds 2 files and is not a copy of
    RL-ViGen. The pinned-commit clones live only in the gitignored reconstruction trees on this
-   laptop. Nobody has diffed the `ext/` copies against the pinned commits.
+   laptop. **Diffed 2026-09-19:** the six `runnable/<family>` checkouts each have a HEAD tree equal
+   to the pinned `tree` in `setup/source-reconstruction.json` (spot-checked for `idaac`:
+   `1b00786c…`), and each `ext/` copy differs from its checkout only in the files this project's
+   patch modifies. So six of seven have a verified local copy. **RL-ViGen itself does not**:
+   `ext/rl_vigen` is two PDFs and `RL-ViGen-upstream/` has no `.git`, so its commit cannot be
+   checked locally — and it is the family the most cells depend on.
 5. **`ctrl`'s in-loop eval cost — recommendation: leave the algorithm code untouched; fix the
    schedule instead, 2026-09-19.** Analysed the "reduce it" option specifically for hidden risk
    before recommending against it: `succ_id = [False] * FLAGS.num_envs` and the `for i, info in
@@ -286,8 +291,11 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    wrong: no payload ever carries `RL-ViGen-upstream/` (`run_probe.sh:1788-1789`). Real fix,
    commit `d25905b`: `build-env.sh` clones the pinned commit and applies the patches itself.
    Verified on the host: `ENVIRONMENT.json` lists `"editable": ["robosuite","robosuitevgb"]`.
-   Still unverified: that the one env's requirement hash matches for `dmc_gb`, `alda`, `ppg`,
-   `ibac_sni` (only `svea:101` was checked). History: `OPERATOR-GUIDE.md` §11.4 O9.
+   Verified 2026-09-19 on the laptop with `build-env.sh`'s own recipe: eleven baselines — the
+   RL-ViGen five, `rad`, `soda`, `alda`, `ppg`, `ibac_sni` **and `idaac`** — resolve to the same 42
+   requirement lines, hash `10d2004a`; `ctrl` alone differs (`2466d111`, 37 lines, the five
+   torch/cu121 lines its `excluded_base_requirements` drops). Not re-run inside the
+   `python:3.11-slim` container the script uses. History: `OPERATOR-GUIDE.md` §11.4 O9.
 9. **The repository is public on GitHub with no `LICENSE` file and no CI.** Checked directly via
    the GitHub API (`private: false`, `visibility: public`). Neither is a technical gap; both are
    policy calls — add a license (and which one), add CI, or leave both as they are?

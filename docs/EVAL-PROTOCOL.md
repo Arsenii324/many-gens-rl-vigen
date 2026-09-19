@@ -398,8 +398,10 @@ Pre-registration of the primary comparison set and the missing-run policy are al
 
 **The operational consequence of A24, stated here because A24 states the policy and not what to do
 at 3am** (external recommendation 22, item 3). A crashed production cell is **rerun from frame 0
-under the same seed**, not resumed from its last checkpoint — for the nine OFF-POLICY baselines
-this is not a preference but a correctness requirement:
+under the same seed**, not resumed from its last checkpoint — for the eight OFF-POLICY baselines
+(`drqv2`, `svea`, `drq`, `sgqn`, `curl`, `rad`, `soda`, `alda` — the ones with a replay buffer; this
+said "nine" until 2026-09-19, which is the size of the *mode-estimand* group, a different partition
+that includes on-policy `ctrl`) this is not a preference but a correctness requirement:
 
 - No baseline persists its replay buffer. RL-ViGen hardcodes `_save_snapshot = False`
   (`replay_buffer.py:94`) and saves `['agent', 'timer', '_global_step', '_global_episode']`;
