@@ -417,6 +417,20 @@ An item is closed only by what its last column names. A narrower step being done
 status, never as DONE. Order of work: E1 → E2/E3 (as inventories return) → E4 → E5 → E6; F runs in
 parallel on the host's clock; G items are picked up inside E5/E6 or last.
 
+**QUOTA HOLD, owner's instruction 2026-09-19 21:53 MSK.** The owner's AI quota was ~82%; its 5-hour
+window resets at 01:00 MSK on 20 Sep. I cannot see the quota. Plan: no new work until the reset;
+wake about every 55 minutes only to keep caches warm (mine, and a one-word ping to each persistent
+executor); the single exception is the host coming back, which gets the short F1 forensics because
+it concerns the running cell. Stopped for the hold, to RESUME AFTER 01:00 with the brief it already
+has: the budget-research executor (the code executor; it had only confirmed `pdftotext` exists).
+Left to finish: the hands executor (extending `notes/model/HARNESS-MODEL.md`, uncommitted, the lead
+reviews the diff) and the docs executor (mapping `open_decisions.py` against CURRENT-STATE §7b).
+**Owed to the owner after the reset, in this order:** (8) a queue-order proposal, natives first or
+not; (9) budget vs scope "handled in full", starting from the earlier agent research on budgets
+that the owner remembers and the repository should hold; (10) best proposals with context for
+P-C76 and the other nine owner gates, stopped-cell continuation, LICENSE/CI, and the value of
+`ctrl`'s lowered floor. The owner decides; the proposals are mine to make.
+
 **E. Understand first, then restructure** (owner, 2026-09-19: step back, take the whole frame, do not
 dive implementation-first; note understanding once instead of re-deriving it each session)
 
