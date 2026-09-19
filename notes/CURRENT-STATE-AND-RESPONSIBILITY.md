@@ -264,6 +264,15 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    competence, or is 600k just not enough for this task/family combination?), narrow scope to
    report the plateau itself as the finding, or something else. This is a research-direction call,
    not a mechanical one.
+   **Read `DECISION-SHEET.md` A46 (2026-09-08) first — it already tabulates what 600,000 frames is
+   to each of the twelve, and the paragraph below, written 2026-09-19 without having found it, is
+   narrower and in one respect misleading.** A46's horizons: `rad`/`soda`/`alda`/`sgqn` 500k (600k
+   is 120%); the RL-ViGen four 1.1M from `cfgs/task/easy.yaml`, Door being `easy` (55%);
+   `idaac`/`ppg` **1M, from IDAAC's DMC appendix** — continuous control from pixels, a closer
+   analogue to Door than the 25M-step Procgen table cited below (60%, and their learning rate,
+   annealed over a literal 1M steps, stops at 40% of its initial value); `ctrl` 8M (7.5%);
+   `ibac_sni` 160M on CoinRun (0.375%). Both sourcings are true of different experiments by the
+   same authors; A46's is the one to reason from. A46's status is "operational, not ratified".
    **Not idle speculation — checked against the primary sources, 2026-09-19.** `action_repeat=1`
    is universal and paper-verified across all 12 baselines (`docs/FAITHFULNESS.md:208`), so 600k
    frames means the same 600,000 real environment steps for every baseline; no hidden multiplier
