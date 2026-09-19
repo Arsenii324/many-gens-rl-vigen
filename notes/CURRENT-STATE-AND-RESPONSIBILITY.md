@@ -25,8 +25,11 @@ python scripts/open_decisions.py | tail -3      # what awaits a person
 
 As of the last run (2026-09-20 01:23 MSK, `campaign_status.py` and the strict ledger audit only):
 campaign **36 cells: 31 MISSING, 3 DONE, 1 RUNNING, 1 PARTIAL**; audit exit 0. Gates were **37 pass /
-0 fail / 9 owner** at 21:14 on 19 Sep. One cell of ours is running (§2). No waiter is armed on the
-host — the one that launched it has exited.
+0 fail / 9 owner** at 21:14 on 19 Sep. One cell of ours is running (§2). **The waiter that launched it is STILL RUNNING on the
+host (pid 119610) and stays alive for the life of the cell** — it supervises the VRAM self-cap.
+[Corrected 01:42 MSK 20 Sep: this said it had exited. It had not, and a pre-deploy check refusing
+to overwrite `wait-and-train-v4.sh` is what showed it. Do not overwrite that file, or arm a second
+waiter, until `idaac` s103 ends.]
 
 **The narrative account, with every number's command beside it:**
 [`CAMPAIGN-REPORT-2026-09-18.md`](CAMPAIGN-REPORT-2026-09-18.md).
