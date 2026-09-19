@@ -21,15 +21,29 @@ shape of every defect this project has had to find twice.
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import subprocess
+import tarfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PROBE = ROOT / "datasphere" / "native" / "run_probe.sh"
 
 BEGIN = '  places_link_source=""'
 END = '  ln -sfn "$places_link_source" "$dataset_root/places365_standard/$places_split"'
+
+# [Claude 2026-09-20] A second shipped block, lifted separately rather than widening BEGIN/END
+# above: it decides `asset_dir` and `places365_skip_asset_check` from `NATIVE_PLACES365_DIR` /
+# `asset_archive`, and sits ABOVE the first block, which only CONSUMES those two variables. Real
+# failure this pins: 2026-09-19, a cell using a pre-verified `NATIVE_PLACES365_DIR` mount died on
+# `${PLACES365_EXPECTED_COUNT:?}` inside the first block, because nothing upstream had ever told it
+# the mount is not an archive (fixed in commit 6458c05, `places365_skip_asset_check` renamed to its
+# current spelling the same day). Executing both blocks in sequence, in this order, is what proves
+# the fix rather than restating it.
+BEGIN2 = '  places365_skip_asset_check=0'
+END2 = ('    tar --no-same-owner -xf "$asset_archive" -C "$asset_dir"\n'
+        '  fi')
 
 
 def _shipped_block() -> str:
@@ -40,6 +54,13 @@ def _shipped_block() -> str:
     # The check-asset call needs a python3 and the repo on the path; the resolution above it is
     # what this test exercises, so the call itself is stubbed out by the harness, not removed here.
     return block
+
+
+def _shipped_resolution_block() -> str:
+    text = PROBE.read_text()
+    start = text.index(BEGIN2)
+    end = text.index(END2, start) + len(END2)
+    return text[start:end]
 
 
 def _run(tmp_path: pathlib.Path, layout: str, split: str) -> tuple[int, str]:
@@ -113,3 +134,83 @@ def test_the_unconditional_val_path_is_gone():
     text = PROBE.read_text()
     assert 'asset_images="$asset_dir/val/images"' not in text, (
         "check-asset is hardcoded to val again; it must follow $places_split")
+
+
+def _make_layout(base: pathlib.Path, split: str) -> None:
+    (base / "places365_standard" / split / "airfield").mkdir(parents=True)
+    (base / "places365_standard" / split / "airfield" / "a.jpg").write_bytes(b"x")
+
+
+def _make_archive(tmp_path: pathlib.Path, split: str) -> pathlib.Path:
+    src = tmp_path / "archive-src"
+    _make_layout(src, split)
+    archive = tmp_path / "places365.tar"
+    with tarfile.open(archive, "w") as tar:
+        tar.add(src / "places365_standard", arcname="places365_standard")
+    return archive
+
+
+def _run_resolution(tmp_path: pathlib.Path, *, mount: bool, split: str,
+                    set_expected: bool) -> tuple[int, str]:
+    """Executes BOTH shipped blocks in sequence, exactly as run_probe.sh does: the resolution
+    block decides `asset_dir`/`places365_skip_asset_check` from a mount or an archive, and the
+    (already-tested) consumption block acts on them."""
+    dataset_root = tmp_path / "places365-root"
+    (dataset_root / "places365_standard").mkdir(parents=True)
+    work = tmp_path / "work"
+    work.mkdir()
+
+    lines = [
+        "set -euo pipefail",
+        f'dataset_root="{dataset_root}"',
+        f'places_split="{split}"',
+        f'work="{work}"',
+        'cells="stub:1"',
+    ]
+    if mount:
+        mount_dir = tmp_path / "mount"
+        _make_layout(mount_dir, split)
+        lines.append(f'export NATIVE_PLACES365_DIR="{mount_dir}"')
+    else:
+        archive = _make_archive(tmp_path, split)
+        lines.append("unset NATIVE_PLACES365_DIR || true")
+        lines.append(f'asset_archive="{archive}"')
+    if set_expected:
+        lines.append("export PLACES365_EXPECTED_COUNT=1 PLACES365_EXPECTED_SHA256=deadbeef")
+    else:
+        lines.append("unset PLACES365_EXPECTED_COUNT PLACES365_EXPECTED_SHA256 || true")
+    # Same stub as _run(): measures WHICH path check-asset would run against, not the digest.
+    lines.append('python3() { echo "CHECKED $4"; }')
+
+    harness = "\n".join(lines) + "\n" + _shipped_resolution_block() + "\n" + _shipped_block() + "\n"
+    env = dict(os.environ)
+    env.update({"LC_ALL": "C", "LANG": "C"})   # a stable message for the ${VAR:?} assertion below
+    done = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, env=env)
+    return done.returncode, done.stdout + done.stderr
+
+
+def test_a_preverified_mount_skips_check_asset_with_no_expected_vars_set(tmp_path):
+    """The regression itself: NATIVE_PLACES365_DIR is pre-verified at provisioning time, so it must
+    not need PLACES365_EXPECTED_COUNT/SHA256 at all. Real failure 2026-09-19, fixed in 6458c05."""
+    code, out = _run_resolution(tmp_path, mount=True, split="train", set_expected=False)
+    assert code == 0, out
+    assert "NATIVE_PLACES365_ASSET_CHECK_SKIPPED" in out, out
+    assert "CHECKED" not in out, out
+
+
+def test_the_archive_path_still_requires_both_expected_vars(tmp_path):
+    """The guard this fix must not weaken: no mount means check-asset still runs, and a missing
+    variable must fail loudly and NAME itself, not just exit nonzero."""
+    code, out = _run_resolution(tmp_path, mount=False, split="train", set_expected=False)
+    assert code != 0, out
+    assert "PLACES365_EXPECTED_COUNT" in out, out
+    assert "NATIVE_PLACES365_ASSET_CHECK_SKIPPED" not in out, out
+
+
+def test_the_archive_path_invokes_check_asset_with_the_consumed_split(tmp_path):
+    code, out = _run_resolution(tmp_path, mount=False, split="train", set_expected=True)
+    assert code == 0, out
+    checked = re.search(r"CHECKED (\S+)", out)
+    assert checked, out
+    assert checked.group(1).endswith("places365_standard/train"), out
+    assert "NATIVE_PLACES365_ASSET_CHECK_SKIPPED" not in out, out
