@@ -1,13 +1,86 @@
 # What the harness does, end to end — a model you can check
 
-Written 2026-09-16 from tracing the code, not from memory. Every claim here names the file that
-establishes it, so a reader can disagree with the source rather than with me. Where a thing is
-NOT established, it says so.
+Written 2026-09-16 from tracing the code, not from memory, and extended 2026-09-19 with the launch
+chain before the container (§0) and the value-resolution trace inside it (§1b). Every claim here
+names the file that establishes it, so a reader can disagree with the source rather than with me.
+New statements tag how they're known: `[read in code 2026-09-19]`, `[executed]` (an actual host
+run), or `[doc claims, not re-verified]`.
 
 Scope: one production cell, from a payload archive to a row in the evaluator ledger — including the
 paths that are not the golden one, because those are where this project has lost runs.
 
 ---
+
+## 0. Before the container
+
+```
+wait-and-train-v4.sh (host, optional)
+  └─ train-production-cell-v5.sh / -v6.sh (host)
+       └─ launch-card-cell.sh (host)
+            └─ run_on_production_host.sh (host)
+                 └─ docker run → run_probe.sh, §1
+```
+
+**`wait-and-train-v4.sh`**, optional, launches only after `HOLD` (10) one-minute samples with no
+foreign holder and `NEED` (11421) MiB free (`host-scripts/wait-and-train-v4.sh:37-38`), then
+forwards `CARD FAMILY BASELINE SEED EXPECT_OURS VRAM_MIB` to whichever wrapper `WRAPPER` names
+(`:184-186`). **`WRAPPER` defaults to v5**: `WRAPPER="${WRAPPER:-train-production-cell-v5.sh}"`
+(`:51`). v5 hardcodes its payload path (`"$R/payload-v214-$FAMILY.tgz"`, v5 `:65`) and has no
+Places365 handling; a Places365 baseline (svea, sgqn, soda) needs
+`WRAPPER=train-production-cell-v6.sh` explicitly, or the waiter launches the wrong wrapper with the
+wrong payload and no corpus. [read in code 2026-09-19]
+
+**v5/v6** map operator names onto the `NATIVE_*`/`CELLS` names the rest of the chain reads (both
+`env CARD=... NATIVE_YIELD_ON_PROCESSES=... NATIVE_EXPECT_OURS=...` at `:58`):
+
+| operator name | becomes | default | file:line |
+|---|---|---|---|
+| `CARD` | `CARD` | `0` | v5/v6 `:58` |
+| `YIELD_PROCS` | `NATIVE_YIELD_ON_PROCESSES` | `0` | v5/v6 `:58` |
+| `EXPECT_OURS` | `NATIVE_EXPECT_OURS` | `8` | v5/v6 `:58` |
+| `VRAM_MIB` | `NATIVE_VRAM_CAP_MIB` | `4096` | v5/v6 `:62` |
+| `TIMEOUT_S` | `CELL_TIMEOUT_SECONDS` | `43200` | v5/v6 `:61` |
+| `FAMILY`,`BASELINE`,`SEED` | `CELLS="$BASELINE:$SEED"`, `SEED` | `ibac_sni`,`ibac_sni`,`101` | v5 `:53,60`, v6 `:42,60` |
+| `PLACES365_DIR` (v6 only) | `NATIVE_PLACES365_DIR_HOST` + `NATIVE_PLACES365_SPLIT=train` | unset | v6 `:49-52` |
+| — (v6 only) | `PAYLOAD` overridable, default `$R/payload-v214-$FAMILY.tgz` | v5's hardcode | v6 `:44` |
+
+[read in code 2026-09-19]. Both hardcode `NATIVE_ALLOW_SHARED_CARD=1 NATIVE_HOST_PROFILE=v100
+NATIVE_PRODUCTION=1 NATIVE_ACCEPT_SAME_DEVICE=1 ENDPOINT_EVAL=1` (v5/v6 `:59-64`) — a stance, not a
+knob.
+
+**`launch-card-cell.sh`** sizes the watch budget from `CELL_TIMEOUT_SECONDS` plus a bootstrap
+allowance plus an eval allowance read from `family.py production-env` (`:140-155`), arms the three
+watcher containers (§5, §6), then calls `run_on_production_host.sh` (`:475`), which reads the
+pinned image from `source-lock.json` (`:285`) and runs `docker run` (`:880-893`). [read in code
+2026-09-19]
+
+**(1) The wrapper trap** is the WRAPPER default above: v5 cannot take `PAYLOAD` or `PLACES365_DIR`
+at all — the two knobs v6 adds.
+
+**(2) Two code sources.** Everything above runs from the host's own checkout under
+`~/rlvigen-work/` — flattened copies of the wrapper scripts (`wait-and-train-v4.sh:131,186`
+`"$HOME/rlvigen-work/$WRAPPER"`; v5/v6 `cd "$R/repo"`, v5 `:52`, v6 `:41`). `run_probe.sh`,
+`family.py`, `families.json` and everything after `docker run` execute from the **payload** archive
+extracted inside the container (`run_on_production_host.sh:886-892`: `tar xzf code.tgz -C code; cd
+code; bash datasphere/native/run_probe.sh ...`). A fix ships by a different route depending on
+which side of `docker run` it is on; the host checkout's `git log` is not evidence of what runs
+there — compare file hashes. [read in code 2026-09-19; same correction in
+`notes/OPERATOR-GUIDE.md:283-285`, written 2026-09-19]
+
+**(3) The allow-list is the only crossing point.** `run_on_production_host.sh:811-829` is the
+`for name in CELLS FRAMES TASK SEED ...; do ... -e "$name=$value"; done` loop (plus a few explicit
+`-e` statements, e.g. `RLVIGEN_ARCHIVE` at `:602`); a variable off it is dropped silently.
+`RESUME_SNAPSHOT` (`run_probe.sh:361-371`) is **not on this list**. [read in code 2026-09-19] It
+DOES reach a cell via the separate DataSphere `job.sh`/`cfg-*.yaml` path —
+`cfg-drqv2-resume-v43.yaml:22` sets `RESUME_SNAPSHOT=${RESUME}` in a `cmd:` block that path forwards
+whole — so the gap is specific to this five-script host chain, not the repository. [read in code
+2026-09-19; corrects `notes/inventory-2026-09-19/code.md:237`'s "absent from every… `cfg-*.yaml`"]
+
+**(4) The dry run stops before the container.** `NATIVE_HOST_DRY_RUN=1` returns at
+`run_on_production_host.sh:865-877`, before the real `docker run` at `:880` — it exercises none of
+the in-container logic. On 2026-09-19 `svea` s101 died on a `run_probe.sh` Places365 path no dry run
+could have reached (`PLACES365_EXPECTED_COUNT` required even for a mounted corpus); fixed in commit
+`6458c05`. [read in code 2026-09-19; commit verified in `git log`/`git show`]
 
 ## 1. The shape of a cell
 
@@ -27,6 +100,58 @@ launch-card-cell.sh   (host; arms watches, refuses bad conditions)
 
 **All evaluation is post-training and sequential** (`run_probe.sh:506-538`). There is no parallel
 evaluator and no rolling eval from our harness.
+
+## 1b. How a value reaches the training process
+
+Lowest to highest precedence (`datasphere/native/family.py`, read in full 2026-09-19):
+
+1. **families.json base descriptor** — `family.py:34` `json.loads((path or
+   DESCRIPTORS).read_text())`.
+2. **`host_profiles.<profile>` override** (`NATIVE_HOST_PROFILE`, default `"datasphere"`), merged
+   per SECTION not deeply — `family.py:64` `override = entry.get("host_profiles",
+   {}).get(host_profile(path, profile), {})`. Only `rlvigen`, `ibac_sni`, `ctrl` declare a `v100`
+   block (`families.json:48,768,929`); `dmc_gb`, `idaac`, `alda` have no `host_profiles` key, and
+   `ppg`'s is `{}` (`:607`) — for those four, `NATIVE_HOST_PROFILE=v100` changes nothing, a fact
+   about the descriptors, not a defect. [read in code 2026-09-19]
+3. **Caller `fields` over descriptor `constants`** — `family.py:150` `{**entry.get("constants",
+   {}), **fields}`; `run_probe.sh` always passes `--frames/--seed/...` explicitly, so `family.py`'s
+   own argparse defaults never fire here.
+4. **Derived fields, filled only if absent** — `family.py:139` `merged.setdefault("save_every",
+   merged.get("frames", ""))`.
+5. **Production-scale overlay, one shell layer up** — `run_probe.sh:829` `if [[ -z "$current" ]];
+   then` exports a `production_env()` value only if unset; strict mode refuses a disagreement
+   instead, automatic at `FRAMES>=600000` (`:819-821`).
+6. **`NATIVE_EXTRA_OVERRIDES`, appended as extra argv tokens** — highest precedence, outside
+   `family.py` entirely: `run_probe.sh:508` `bash "${argv[@]}"
+   ${extra_overrides[@]+"${extra_overrides[@]}"}`.
+7. **`render()`** — `family.py:118` `template.format(**fields)`, raising via `fail()` on an
+   unresolved key rather than defaulting.
+
+[read in code 2026-09-19]
+
+`NATIVE_EXTRA_OVERRIDES` is produced from a descriptor's `replay_capacity`/`replay_capacity_option`
+pair, to cap an off-policy replay buffer at production scale (`family.py:730,734`:
+`out["NATIVE_EXTRA_OVERRIDES"] = render(option, {"replay_capacity": str(capacity)})`), lands last in
+the executed argv (`run_probe.sh:508`), and is recorded TWICE in `effective_config.json`: under
+`"argv"` (`run_probe.sh:491`) and again under `"extra_overrides"` (`:492`), so its provenance
+survives without diffing two argv lists. **[executed]** the real `svea` s101 cell run on 2026-09-19
+(`runs/card1-20260919-204235/native-out/cells/svea-s101/effective_config.json`) carries
+`"replay_buffer_size=620000"` in both fields.
+
+**The rule this implies**: a cell's own `effective_config.json` is the authority on what actually
+ran — above `families.json`, above a wrapper's default, above this document — written once, when
+the argv is known (`run_probe.sh:424-501`), never re-derived downstream. [read in code 2026-09-19]
+
+**Double defaults, re-confirmed**:
+
+| variable | production-wrapper default | `run_probe.sh` / `family.py` default |
+|---|---|---|
+| `SEED` | `101` (v5 `:53`, v6 `:42`) | `1` (`run_probe.sh:854,1437`; `family.py:1335`) |
+| `FRAMES` | `600000` (v5 `:54`, v6 `:43`) | `10000` (`run_probe.sh:738` +8 sites; `family.py:1331`) |
+| `EVAL_EVERY_FRAMES` | not set — rlvigen's online eval is disabled at production scale (§4) | `$frames` (`run_probe.sh:878`) vs `50000` in `launch-card-cell.sh:165`'s stamp estimate |
+| `NATIVE_EXPECT_OURS` | `8` (v5/v6 `:58`) | `$_cell_count` = `1` for a serial run (`launch-card-cell.sh:90`) |
+
+[read in code 2026-09-19]
 
 ## 2. Where bytes live, and what survives a kill
 
@@ -101,6 +226,16 @@ Every one of these fired at least once today, which is the only evidence that a 
 someone else's run, and our per-process VRAM cap does NOT bind — `PYTHONPATH` is overwritten by all
 nine family launchers, and ppg once reached 26,653 MiB under a 10,240 MiB cap.
 
+**What no guard bounds: host RAM.** `notes/OPERATOR-GUIDE.md:265`: "Host RAM is not checked by the
+launcher... a cell's RAM figure with what the host has free." The only RAM check in this chain is
+`wait-and-train-v4.sh`'s `MIN_RAM_GIB` (`:59`, default `0` = off; checked at `:170-177`), and a hand
+launch or a direct v5/v6 launch bypasses it — it lives only in the optional waiter. [read in code
+2026-09-19] **No native (RL-ViGen) cell's host RAM has been measured on this host** —
+`OPERATOR-GUIDE.md`'s resource table (§4c.1) marks `drqv2`, `drq`, `curl`, `svea`, `sgqn`, `soda`
+"never measured here"; the ~40 GiB quoted there is 36.7 GiB computed replay plus a 3.3 GiB peak
+measured on DataSphere for `svea` — a different baseline, a different host, not this one. [doc
+claims, not re-verified beyond the cited table]
+
 ## 6. Collection, which is not compute
 
 `collect_record_delivery` writes `records_delivery.jsonl` to the mounted volume as the cell ends.
@@ -127,3 +262,20 @@ uncollected; the bytes are already durable.
   pinned by hand.
 - **Throughput under packing.** 11.65 s/episode was measured on a card shared with one colleague.
   It is used for budgets and has not been re-measured under heavier packing.
+- **The evaluator's per-family branches.** `scripts/eval_grid.py`'s `run_scene_dmc_gb`,
+  `run_scene_idaac`, `run_scene_ppg`, `run_scene_ibac_sni`, `run_scene_alda`, `run_scene_ctrl`
+  (`:379,480,647,749,884,1036`) and the bare `run_scene` it imports for rlvigen
+  (`scripts/eval_grid.py:82`, from `scripts/eval_across_scenes.py`) are not traced here, nor are
+  `datasphere/native/normalize_curves.py`'s seven per-family curve-log parsers — `read_rlvigen`,
+  `read_dmc_gb`, `read_idaac`, `read_alda`, `read_ppg`, `read_ibac_sni`, `read_ctrl`
+  (`:260,291,316,340,402,468,498`). Each is called; none is read past its signature and return
+  shape. [read in code 2026-09-19]
+- **A seam class found and fixed today.** A consumer read a field a producer writes differently per
+  family: `scripts/record_host_run.py` took the seed only from an argv `--seed VALUE` token, which
+  the on-policy families' launchers use, but rlvigen's own hydra-style template renders `seed=101`
+  and never matches that pattern — every rlvigen host-run entry would have recorded seed `None` and
+  been bucketed under seed `0` (`scripts/campaign_status.py:151,178`,
+  `key = (row.get("baseline"), int(row.get("seed") or 0))`). Fixed in commit `415687c`
+  (2026-09-19) by reading the cell's own `effective_config.json["seed"]` first
+  (`scripts/record_host_run.py:63-67`) and falling back to argv-scanning, both spellings, only if
+  that is absent. [read in code 2026-09-19]

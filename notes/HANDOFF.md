@@ -6,7 +6,7 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-19, 22:55 MSK**, by Claude.
+Last updated **2026-09-19, 21:51 MSK**, by Claude.
 
 **Where current state lives now — not here.** What is running, what is open and in what order:
 [`CURRENT-STATE-AND-RESPONSIBILITY.md`](CURRENT-STATE-AND-RESPONSIBILITY.md) §2 and §7b, and the
@@ -30,7 +30,7 @@ hour it names and expires after it.** Blocks are no longer added for routine sta
   healthy). Whether the cell is alive is unknown. The forensic order for the moment it returns is
   in `ACCOUNTABILITY.md` F1 — run that first.
 
-What I was thinking at 22:55, not fact: the evening's real lesson was structural. Three separate
+What I was thinking at 21:51, not fact: the evening's real lesson was structural. Three separate
 things I was about to write already existed (`notes/model/HARNESS-MODEL.md`, `open_decisions.py`,
 `docs/SYSTEM.md`'s layer rules), and three of my own instruments were wrong until checked against a
 known answer. The project does not need more documents; it needs the production-stage files under
