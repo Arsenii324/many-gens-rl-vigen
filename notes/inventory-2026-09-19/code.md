@@ -1,4 +1,4 @@
-> **Executor output, not a finding of record.** Produced 2026-09-19 by a read-only Sonnet executor. Re-checked by the lead: the v4 waiter defaulting to the v5 wrapper, `RESUME_SNAPSHOT` missing from the env allowlist, 219 `cfg-*.yaml`, the two empty oddly named root directories, the allowlist location. Everything else is unverified until someone re-runs the command beside it. Its own "not covered" list is at the top.
+> **Executor output, not a finding of record.** Produced 2026-09-19 by a read-only Sonnet executor. Re-checked by the lead: the v4 waiter defaulting to the v5 wrapper, `RESUME_SNAPSHOT` missing from the env allowlist, 219 `cfg-*.yaml`, the two empty oddly named root directories, the allowlist location. Everything else is unverified until someone re-runs the command beside it. Its own "not covered" list is at the top. **Corrected since:** its claim that no `cfg-*.yaml` sets `RESUME_SNAPSHOT` is false — `cfg-drqv2-resume-v43/v44/v45.yaml` do; the variable is missing only from the host chain's env allow-list (`notes/model/HARNESS-MODEL.md` §0 point 3).
 
 # Code inventory: live vs superseded — many-gens-rl-vigen
 
