@@ -105,8 +105,13 @@ nine family launchers, and ppg once reached 26,653 MiB under a 10,240 MiB cap.
 
 `collect_record_delivery` writes `records_delivery.jsonl` to the mounted volume as the cell ends.
 "Collection" is the separate, MANUAL step of copying that into `results/records/<job>__records.jsonl`
-and running `populate_evaluator_ledger.py`, which refuses a stale closure. It runs on the operator's
-machine because the host rule is docker and trivial shell only. Nothing is at risk while
+with `datasphere/native/collect-host-run.sh`. It runs on the operator's machine because the host
+rule is docker and trivial shell only.
+
+[Corrected 2026-09-19. This paragraph told the reader to run `populate_evaluator_ledger.py`.]
+**Never run `populate_evaluator_ledger.py` by hand on a production run**: it records a family's
+*attestation*, and `OPERATOR-GUIDE.md` §8 item 4 is the rule. The collector calls it itself
+(`collect-host-run.sh:310`) and a production run being declined there is the correct outcome. Nothing is at risk while
 uncollected; the bytes are already durable.
 
 ## 7. What this model does NOT cover
