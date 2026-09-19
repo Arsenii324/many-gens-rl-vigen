@@ -6,13 +6,42 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-19, ~20:33 MSK**, by Claude. Read this block first — it is deliberately
-long, because the owner asked directly for everything unfinished, vague, or asserted-but-unverified
-to be named rather than assumed fine. **Marked throughout: VERIFIED (checked directly, on disk or
-on the host) vs WRITTEN-NOT-COMMITTED (real content exists in a file, not yet in git) vs
-PLAN/ASSUMPTION (my own reasoning or intention, not a fact — do not treat as settled).**
+Last updated **2026-09-19, 22:55 MSK**, by Claude.
 
-## Morning state, 2026-09-19 ~20:33 — a real cell is running; two files are uncommitted; one fix
+**Where current state lives now — not here.** What is running, what is open and in what order:
+[`CURRENT-STATE-AND-RESPONSIBILITY.md`](CURRENT-STATE-AND-RESPONSIBILITY.md) §2 and §7b, and the
+open taskset at the end of [`ACCOUNTABILITY.md`](ACCOUNTABILITY.md). This file keeps what those do
+not: what I was thinking, and the dated blocks below as snapshots. **A block here is valid for the
+hour it names and expires after it.** Blocks are no longer added for routine state.
+
+**The 20:33 block below EXPIRED the same evening. What it says that is no longer true:**
+
+- "`svea` s101 is training right now" describes attempt 1 (`card1-20260919-203001`). It died before
+  training, on `PLACES365_EXPECTED_COUNT: parameter null or not set` — `run_probe.sh` ran the
+  archive check on a *mounted* corpus. Fixed in `6458c05`, shipped as `payload-v216-rlvigen.tgz`;
+  attempt 2 (`card1-20260919-204235`, with `NATIVE_DISK_ALLOWANCE_GIB=95`, floor 55 GiB) reached
+  training and was recorded and watched.
+- "two files are uncommitted" and "6 commits unpushed": everything is committed and pushed.
+- Its O9 paragraph's "cheap to check, not done": done — eleven baselines share one requirement set.
+  But its hash `02805cc0` and the laptop's `10d2004a` differ, and that turned out to be a real seam
+  (`ACCOUNTABILITY.md` G9): the hash depends on the machine's sort locale and tree.
+- Its loose end about "nine OFF-POLICY baselines": resolved, eight; `EVAL-PROTOCOL.md` corrected.
+- **Since 21:33 the host is unreachable from the laptop** (its NetBird peer does not answer; ours is
+  healthy). Whether the cell is alive is unknown. The forensic order for the moment it returns is
+  in `ACCOUNTABILITY.md` F1 — run that first.
+
+What I was thinking at 22:55, not fact: the evening's real lesson was structural. Three separate
+things I was about to write already existed (`notes/model/HARNESS-MODEL.md`, `open_decisions.py`,
+`docs/SYSTEM.md`'s layer rules), and three of my own instruments were wrong until checked against a
+known answer. The project does not need more documents; it needs the production-stage files under
+`notes/` brought under the document system it already has. And scientifically: every completed
+cell is on-policy and fails the competence gate, while the only identified across-method contrast
+(`docs/RESEARCH-FRAME.md`) is inside the RL-ViGen five, which had no production cell until tonight.
+I expect to recommend natives-first to the owner once a native cell's cost is measured. Suspicion,
+unproven: the host outage is not ours (the cell was ~40 minutes old with a near-empty replay
+buffer), but host RAM is the one resource nothing of ours bounds, so it cannot be excluded.
+
+## [EXPIRED — see the banner above] State at 2026-09-19 ~20:33 — a real cell is running; two files are uncommitted; one fix
 ## was wrong twice before it was right
 
 ### 1. VERIFIED — `svea` s101 is training right now, launched with the owner physically present
