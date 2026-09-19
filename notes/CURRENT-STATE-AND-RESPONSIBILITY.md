@@ -187,16 +187,41 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    competence, or is 600k just not enough for this task/family combination?), narrow scope to
    report the plateau itself as the finding, or something else. This is a research-direction call,
    not a mechanical one.
+   **Not idle speculation — checked against the primary sources, 2026-09-19.** `action_repeat=1`
+   is universal and paper-verified across all 12 baselines (`docs/FAITHFULNESS.md:208`), so 600k
+   frames means the same 600,000 real environment steps for every baseline; no hidden multiplier
+   asymmetry. But the four on-policy families' *native* training length, read directly from their
+   own papers, is far larger: `idaac`/`ibac_sni`/`ppg` are compared in IDAAC's own Table 1 at
+   **25,000,000** Procgen steps (`ext/idaac/raileanu21a.pdf`, p.6); `ctrl`'s own paper reports its
+   primary results at **8,000,000** steps (`ext/ctrl_rl/2106.02193v2.pdf`, p.9, Table 1 caption).
+   600k is **2.4%–7.5% of what these four are shown, in their own papers, to need** on a task
+   that's also easier to represent (Procgen's fixed discrete 15-action space vs. Door's continuous
+   control). This does not prove more frames would reach competence here — Door and Procgen are
+   different tasks — but it is a concrete, sourced reason to suspect under-training rather than a
+   broken port, and it argues for extending the budget for *just the on-policy subfamily* as the
+   best-motivated of the three options, rather than a blind guess between them. `EVAL-PROTOCOL.md`
+   §5 already rules that harmonising the two subfamilies' budgets is explicitly not the goal
+   ("report it, let the audience see" — owner-ratified) — this finding is about whether *600k
+   itself* is enough for either subfamily, a different and still-open question.
 2. **The vacancy rule on card 0.** Twelve hours of the strict "no foreign holder at all" rule
    produced nothing, while card 0 has sat at ~9.6 GiB free beside a stable long-lived co-tenant —
    enough for `idaac`'s 6.6 GiB peak. Relax the rule for a small cell beside a *stable* co-tenant
    (not one that cycles), or keep it strict everywhere? Relaxing it without the co-tenant's own
    behaviour being predictable is exactly the OOM risk §5.1 exists to prevent, so this needs a
    human judgement call about that specific co-tenant, not a blanket policy change.
+   **Owner's clarification, 2026-09-19: this is future-operator guidance only.** Nothing this
+   session has changed, or will change, the *current* automated waiter's behaviour to push a
+   launch onto a card while `rl4vla_cudagl` or any other current co-tenant is running — relaxing
+   this rule is not something to operationalise now, only something to write down for whoever
+   configures the next waiter with a specific, known co-tenant in front of them.
 3. **`ppg` seed 1 is off-schedule.** It is a complete, real cell, but the schedule names seeds
    {101, 102, 103} and `campaign_status.py` reads seed 1 as MISSING. Keep the run and record the
    seed set as {1, 102, 103} for `ppg` specifically, or rerun it at 101 to match the other eleven
-   baselines? Either is defensible; neither has been chosen.
+   baselines? Either is defensible; neither has been chosen. **Owner's ruling, 2026-09-19:
+   lowest priority — handle last, after everything else.** A light operator note is enough for now
+   (whoever reads `campaign_status.py`'s output should know seed 1 is a real, complete cell reading
+   as MISSING, and why) rather than resolving the choice itself. It's a minor reproducibility
+   footnote, not a blocker.
 4. **The upstream-source archive risk** (`ACCOUNTABILITY.md` C9/T1). 5 of the 7 pinned third-party
    algorithm repos are on individual researchers' personal GitHub accounts, not orgs; all 7 are
    currently reachable, checked directly. No local mirror exists. `.gitignore`'s own comment states
@@ -204,12 +229,19 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    space-vs-durability call, already made once. Worth revisiting given the durability side is a
    permanent, silent risk (if any one disappears, the exact algorithm code becomes unrecoverable
    from this repo's own history)? Or accept the risk as already decided and move on?
-5. **`ctrl`'s in-loop eval cost.** Steps two fully-vectorized test environments at training's own
-   scale, every training step — roughly 3× the environment-interaction cost of training alone, with
-   no cost-accounting decision behind it (unlike `idaac`'s deliberately-tuned ~20% overhead). Worth
-   reducing the test envs' scale (a real code change to a "specifically crafted" algorithm
-   implementation, not made without being asked), or is the cost simply accepted as ctrl's inherent
-   shape?
+5. **`ctrl`'s in-loop eval cost — recommendation: leave the algorithm code untouched; fix the
+   schedule instead, 2026-09-19.** Analysed the "reduce it" option specifically for hidden risk
+   before recommending against it: `succ_id = [False] * FLAGS.num_envs` and the `for i, info in
+   enumerate(infos_id)` loop both assume `env_test_ID`'s vectorised width equals `FLAGS.num_envs`
+   exactly. Shrinking just the test envs (the natural way to cut the ×3) breaks that pairing —
+   either an index error or a silent truncation of tracked success/return stats, in code that is
+   upstream's own scaffolding, not ours, so its edge cases haven't been stress-tested by this
+   project. That is exactly the "specifically crafted implementation, don't touch without being
+   asked" class. **The lower-risk fix lives entirely on our side instead**: the ×3 cost is already
+   folded into whatever a real `ctrl` run's "training time" measures, so once a real cell runs, its
+   watch budget and `production-schedule.json`'s throughput entry should be *re-derived from that
+   measurement* rather than the current cross-algorithm hardware conversion (item 6 below) — that
+   closes the actual risk (a foreseeable reap) without touching a single line of `ctrl`'s own code.
 6. **`ctrl` at 600k needs a genuinely empty card** (its 32,435 MiB observed peak leaves no room for
    the 4,000 MiB floor on a 32,494 MiB card), **plus** an explicit decision to lower or waive the
    floor for this one family, **plus** a real RAM measurement, **plus a fourth prerequisite found

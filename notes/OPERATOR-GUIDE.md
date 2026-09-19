@@ -1160,28 +1160,28 @@ of questions. The disk floor came within one 60-second sample of firing on 2026-
   `RUNNER_CONTRACT` of 19 read out of that tree. So clone → reconstruct → build → verify holds end
   to end on Linux. The same bundle carries that run as `raw/clone-to-payload.txt`.
 
-**O9 — A prebuilt Python environment for the torch families**, which would remove the 7–22 minutes
-of in-container `pip` per launch (§6d)
-- *State now, precisely (2026-09-18, attempted for real):* ran `build-env.sh` for `svea:101` with
-  `payload-v215-rlvigen.tgz` (carries `RL-ViGen-upstream/`) — it refused with `already built:
-  torch-02805cc0-94c1577b2cd9`. **The real cause is a cache-key gap, not "never attempted":**
-  `build-env.sh` names its target directory purely `${stack}-${reqhash}-${digest}`, where `reqhash`
-  is `family.py filtered-requirements`'s resolved package list. That hash is identical whether or
-  not the payload used to build it carried `RL-ViGen-upstream/`, because the editable installs are
-  a conditional step the hash never sees. The directory at that exact hash already exists — built
-  2026-09-08 for `idaac`, confirmed via its own `ENVIRONMENT.json`: `"editable": []` — so the script
-  reports "already built" and exits 0 without ever comparing what's actually inside it against what
-  the new payload would add.
-- *Target and operation, corrected:* the fix is not "run `build-env.sh` from a payload that carries
-  `RL-ViGen-upstream/`" — that was tried and silently no-ops. It is: delete
-  `~/rlvigen-env/torch-02805cc0-94c1577b2cd9` and rebuild at the same hash from a payload that does
-  carry it (the new build is a strict superset — same torch/numpy base, plus the two editable
-  installs — so `idaac` keeps working). **Not done here**: that directory is host state from
-  2026-09-08, not something created this session, and deleting it crosses from "additive, zero-risk"
-  into "removing pre-existing state I did not make" — the same line this project's own standing
-  rules draw everywhere else. Payloads for all four remaining families (O2) are shipped and
-  verified against the current tree; this is the one piece of O9 left, and it is a one-command
-  fix once someone accepts that trade.
+**O9 — A prebuilt Python environment for the torch families** — **CLOSED 2026-09-19**, which would
+remove the 7–22 minutes of in-container `pip` per launch (§6d)
+- *What was wrong, found across three attempts:* first, `build-env.sh`'s cache key
+  (`${stack}-${reqhash}-${digest}`) can't distinguish "built with `RL-ViGen-upstream/`" from "built
+  without," so a 2026-09-08 `idaac`-only build permanently occupied the slot any torch-stack rebuild
+  needed. Deleting and rebuilding from a payload believed to carry `RL-ViGen-upstream/` (2026-09-18)
+  changed nothing — `editable: []` both times — because **no payload contract.py has ever built
+  carries that tree**; `run_probe.sh:1788-1789` already said so directly: it is always cloned live,
+  into the cell's own work directory, at launch time.
+- *The real fix:* `build-env.sh` now clones the pinned commit and applies this project's own
+  patches itself when the payload lacks `RL-ViGen-upstream/` (which is always), mirroring exactly
+  what `run_probe.sh` does for a real cell — cloning without patching would have been worse than
+  doing nothing, since unpatched upstream imports cleanly and is silently wrong.
+- *Verified, not assumed:* ran it for real against `svea:101` — `Successfully installed
+  robosuite-1.4.0` and `robosuitevgb-1.0.0`, `ENVIRONMENT.json` now reads
+  `"editable": ["robosuite", "robosuitevgb"]`. The patch step's own `--check` sits before those
+  installs under `set -euo pipefail`; since the installs succeeded, the check necessarily passed
+  first — the script's own control flow rules out a false "imports fine but unpatched" pass, which
+  is the failure class the rest of this codebase has been bitten by before.
+- One env now serves `idaac` and the four other torch-stack families
+  (`rlvigen`, `dmc_gb`, `alda`, `ppg`, `ibac_sni` — all resolve to the same package hash). `ctrl`
+  (the JAX stack) is untouched by this and still builds its own environment separately.
 
 ### 11.5 How to use this section
 

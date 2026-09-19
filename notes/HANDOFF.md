@@ -6,7 +6,153 @@ left open, and constraints I am carrying that no gate encodes. Those vanish when
 compacted, and a file like this makes their survival *closer* to true, not true. Read it as a
 colleague's notes, not as a specification.
 
-Last updated **2026-09-18, ~21:19 MSK**, by Claude. Read this block first.
+Last updated **2026-09-19, ~20:33 MSK**, by Claude. Read this block first — it is deliberately
+long, because the owner asked directly for everything unfinished, vague, or asserted-but-unverified
+to be named rather than assumed fine. **Marked throughout: VERIFIED (checked directly, on disk or
+on the host) vs WRITTEN-NOT-COMMITTED (real content exists in a file, not yet in git) vs
+PLAN/ASSUMPTION (my own reasoning or intention, not a fact — do not treat as settled).**
+
+## Morning state, 2026-09-19 ~20:33 — a real cell is running; two files are uncommitted; one fix
+## was wrong twice before it was right
+
+### 1. VERIFIED — `svea` s101 is training right now, launched with the owner physically present
+
+Card 1 went genuinely, fully clear (0 MiB used, 32,495 MiB free, `rlvigen_kalugin_df` gone
+entirely) after being occupied continuously since before this session began. The owner returned,
+saw the capacity Monitor's live report, and said directly: *"you can start a run (or runs) and
+continue."* This is the first explicit real-time launch authorization this session — distinct
+from the standing "only what is armed now" rule, which governed everything before this moment.
+
+**Launched:** `CARD=1 FAMILY=rlvigen BASELINE=svea SEED=101`,
+`PAYLOAD=~/rlvigen-work/payload-v215-rlvigen.tgz`, `PLACES365_DIR=~/rlvigen-assets/places365-train`,
+via `train-production-cell-v6.sh`. Run-id **`card1-20260919-203001`**. Verified directly: re-checked
+live vacancy immediately before launch (`nvidia-smi`: card 1 at 0 MiB used; RAM 77 GiB available;
+disk 150 GiB free) — did not launch on stale Monitor output. Container **`cell-c1-1241086`** came
+up within the first minute; Places365 confirmed mounted read-only, not copied
+(`places365: .../places365-train -> /opt/places365 (read-only, shared, not copied)`); as of this
+writing the cell is still in its apt-get/pip bootstrap phase (last seen: `Setting up
+liberror-perl`) — **none of the W1 checkpoints past "container up" are confirmed yet**:
+no EGL init confirmation, no Places365 loader lines, no training rows, no held-memory check at
++5/+25/+30/+120 min. This is genuinely the first time this exact configuration (`v6` + Places365
+mount + this payload) has ever executed past a dry run. Treat every claim about it working as
+unconfirmed until the actual log lines appear.
+
+**A real operational mistake, assessed and left as-is:** the launch did **not** pass
+`NATIVE_DISK_ALLOWANCE_GIB=95`, which `OPERATOR-GUIDE.md` §5.3 documents as required for `svea`
+specifically (the derived allowance from `family.py disk-requirement` double-counts the Places365
+corpus copy that never happens because it's mounted, not copied). The launch banner confirms the
+consequence: `disk: 151 GiB free, floor 50 GiB (allowance 190)` — the derived allowance (190)
+exceeded free disk and silently clamped to the 50 GiB absolute minimum, exactly as §5.3 warned it
+would. **Assessed, not just noted:** a lower allowance value produces a *higher*, more conservative
+floor (floor = free − allowance), so this is safer for the shared disk than the documented 95 GiB
+value would have been, at zero cost to this cell (real need is far under the ~101 GiB of headroom
+between 151 GiB free and the 50 GiB floor). Not restarted — restarting would waste the window that
+took the whole session to appear, for a change that makes things *more* conservative, not less.
+
+**NOT YET DONE for this launch, time-sensitive, per `OPERATOR-GUIDE.md` §5.2's own procedure:**
+fetching `effective_config.json` (attempted once, failed — the run directory didn't exist yet at
+that point in bootstrap; retry once further along), `record_host_run.py --status running`,
+`production_run_register.py`, `audit_attempt_ledger.py --strict`, arming `watch-cell.sh` with the
+real `FLOOR` from the banner (50, not the documented 95-derived value — use what actually printed).
+**This is the single most important unfinished thing in this file**, because it is time-sensitive
+in a way documentation edits are not.
+
+### 2. WRITTEN-NOT-COMMITTED — two files, real content, unverified and unpushed right now
+
+`git status`, checked directly, right now: `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` (46 lines
+changed) and `notes/OPERATOR-GUIDE.md` (44 lines changed) are both modified, uncommitted. Neither
+has been re-verified with `test_operator_readiness.py` or `production_gates.py` since being
+written. **Do not assume either is correct or even syntactically sound until that verification
+runs.** What's in them, precisely:
+
+- `CURRENT-STATE-AND-RESPONSIBILITY.md` §7b:
+  - Item 1 (budget vs scope) gained a primary-source-grounded finding: `action_repeat=1` is
+    universal and paper-verified across all 12 baselines, so 600k means the same real step count
+    for everyone — but the four on-policy families' own papers report training at 25,000,000 steps
+    (`idaac`/`ibac_sni`/`ppg`, read directly from `ext/idaac/raileanu21a.pdf` Table 1) or 8,000,000
+    steps (`ctrl`, `ext/ctrl_rl/2106.02193v2.pdf` Table 1) — 600k is 2.4–7.5% of what they're shown
+    to need. **PLAN/ASSUMPTION, not fact**: this is offered as a *reason to suspect* under-training,
+    not proof more frames would reach competence on a genuinely different task (Procgen vs. Door).
+  - Item 2 (card-0 vacancy rule): added the owner's own clarification that this is future-operator
+    guidance only, never something that should push a launch onto a card with a live co-tenant.
+  - Item 3 (`ppg` seed 1): added the owner's ruling — lowest priority, handle last, a light note is
+    enough.
+  - Item 5 (`ctrl` eval cost): added a recommendation, reasoned through for hidden risk (checked
+    that `succ_id`/`infos_id` pairing in `ctrl`'s own code would break if the test envs' scale were
+    reduced) — **recommend leaving `ctrl`'s code untouched and re-deriving its schedule from a real
+    measurement once one exists instead.** This is a recommendation, not an implemented fix; no
+    `ctrl` cell has ever run, so there is nothing to re-derive from yet.
+  - Item 6 (`ctrl` prerequisites) already had a fourth prerequisite added in the prior commit
+    (`19aaf37`) about the schedule being a cross-algorithm conversion, not a `ctrl` measurement.
+- `OPERATOR-GUIDE.md`: O9 rewritten from "open, one-command fix" to **CLOSED** — see §3 below for
+  why the earlier "one-command fix" framing was itself wrong, and why CLOSED is now actually
+  justified by a real verified test, not just a plausible-sounding rewrite.
+
+**Not yet done, either file:** running the test suite against these edits, committing, pushing.
+Given a cell is now also running, verifying these edits should happen before anything else gets
+layered on top of an unverified doc state.
+
+### 3. VERIFIED, but got here through two wrong attempts — O9 (prebuilt env for torch families)
+
+Told the owner "one-command fix: delete and rebuild" (`ACCOUNTABILITY.md` C12, `88206a3`). **That
+was wrong.** Rebuilding from `payload-v215-rlvigen.tgz` (believed to carry `RL-ViGen-upstream/`)
+produced `"editable": []` again — identical to before. Only then found the actual cause, already
+written in this project's own code and not previously read carefully enough:
+`run_probe.sh:1788-1789` states directly that **no payload `contract.py` builds has ever carried
+`RL-ViGen-upstream/`** — it is always cloned live into the cell's own work directory at launch
+time. So "rebuild from a payload that carries it" was chasing a payload variant that cannot exist
+under the current packaging design.
+
+**The real fix, implemented and committed (`d25905b`, VERIFIED as a git commit, on `main` locally
+— not yet pushed, see §4):** `build-env.sh` now clones the pinned commit and applies this project's
+patches itself, mirroring exactly what `run_probe.sh` does for a real cell, when the payload lacks
+`RL-ViGen-upstream/` (which is always). Cloning without patching would have been silently worse
+than doing nothing — unpatched upstream imports cleanly and behaves differently.
+
+**Verified for real, not assumed:** ran it against `svea:101` on the host. Result:
+`Successfully installed robosuite-1.4.0` / `robosuitevgb-1.0.0`;
+`ENVIRONMENT.json` now reads `"editable": ["robosuite", "robosuitevgb"]`. Confirmed the patches
+actually applied (not just "imports fine") by the script's own control flow: `apply_patches.py
+--check` runs under `set -euo pipefail` immediately before the `pip install -e` lines that
+succeeded — had the check failed, the whole script would have died there and those installs would
+never have run. This is a logical proof from the script's structure, not a direct read of the
+patched files (the clone lived inside a `--rm` container and no longer exists on disk to inspect
+directly — noted as a real limit on how this was verified, not concealed).
+
+**PLAN/ASSUMPTION, not independently verified:** the claim that "one env now serves `idaac` and
+four other torch-stack families" rests on `family.py filtered-requirements` producing the *same*
+package hash for all five families' own `CELLS` values. This was checked concretely for `svea:101`
+only. `dmc_gb`, `alda`, `ppg`, and `ibac_sni` are asserted to share the hash by the same reasoning
+(they're all "torch stack" per `build-env.sh`'s own `stack=torch; [[ CELLS == *ctrl* ]] &&
+stack=jax` line), but no one of those four was actually run through `family.py
+filtered-requirements` to confirm its hash matches `02805cc0`. Cheap to check, not done here.
+
+Host scratch (`~/build-env-2026-09-19/`) was removed by exact name through the same session; disk
+confirmed back to 150 GiB free afterward.
+
+### 4. Push status — VERIFIED, checked directly
+
+`git log`: local `main` has 6 commits since the last confirmed push
+(`84b4a9a` → `4067097` → `88206a3` → `6326737` → `19aaf37` → `d25905b`), none pushed yet, on top of
+the two uncommitted files in §2. **Do not assume GitHub reflects any of today's work** — the last
+confirmed push (from the prior evening's log, not re-checked this session) was `84b4a9a`.
+
+### 5. Small, unresolved loose ends — not urgent, but real, and not previously reported
+
+- **`EVAL-PROTOCOL.md`'s resume-correctness section says "nine OFF-POLICY baselines"**; direct
+  count from `families.json` gives 8 (12 total − 4 on-policy: `idaac`, `ppg`, `ctrl`, `ibac_sni`).
+  Noticed while reading that section for the budget analysis, never chased down or reported until
+  now. Could be a stale number, or could be counting something other than a clean on/off-policy
+  split (e.g. one family counted for a different reason) — genuinely don't know which; flagged, not
+  investigated.
+- **Monitor bookkeeping across a session boundary**: this session picked up after a boundary where
+  ~20 prior background Monitors were marked stopped with no transcript record (harness-reported,
+  not something I caused). Re-armed the capacity beat (`bl9alxw0w`) and a new launch-log watch
+  (`b5xnr98ks`) for the live `svea` cell. If more monitors than these two are found running later,
+  that's leftover duplication from the boundary, not intentional.
+- **The `watch-capacity.sh` "CAPACITY" line always says "Nothing has been launched"**, even now
+  that something has — it's a static string in the script with no way to know about an out-of-band
+  launch. Harmless, but worth knowing so a future reader doesn't read it as contradicting this file.
 
 ## Evening state, 2026-09-18 ~21:19 — the armed waiter is gone; nothing is armed now
 

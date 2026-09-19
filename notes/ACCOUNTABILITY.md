@@ -389,3 +389,24 @@ without a card (neither launches anything), so I did them:
   real mechanism instead of the old, now-known-imprecise "not executed."
 
 Verified: `test_operator_readiness.py` 8/8 after the O9 rewrite.
+
+## C13 — a real launch, and O9's "one-command fix" (C12) was itself wrong
+
+**Full detail in `HANDOFF.md`'s top block (2026-09-19 ~20:33) — this is a pointer, not a
+duplicate**, since the handoff already carries the verified/uncommitted/plan distinctions in full.
+
+- Card 1 went genuinely clear; the owner returned and authorized launching directly. `svea` s101
+  is now running (`card1-20260919-203001`, container `cell-c1-1241086`). Still in bootstrap as of
+  this entry — no W1 checkpoint past "container up" is confirmed yet. Post-launch recording
+  (`record_host_run.py`, `production_run_register.py`, `audit_attempt_ledger.py --strict`,
+  `watch-cell.sh`) is **not done yet** — time-sensitive, see the handoff.
+- **C12's "delete and rebuild is a one-command fix" was wrong.** Rebuilding from a payload
+  "believed to carry `RL-ViGen-upstream/`" reproduced the identical failure, because no payload
+  ever carries it (`run_probe.sh:1788-1789` already said so). The real fix needed `build-env.sh` to
+  clone and patch the tree itself — implemented, committed (`d25905b`), verified for real on the
+  host (`"editable": ["robosuite", "robosuitevgb"]`, confirmed logically via the script's own
+  `set -e` ordering that the patch check passed before the successful installs could run).
+- Two files (`CURRENT-STATE-AND-RESPONSIBILITY.md`, `OPERATOR-GUIDE.md`) are written but
+  **uncommitted** right now — real content, not yet re-verified against the test suite. Six local
+  commits are unpushed. Neither is a "problem," both are simply not finished — named here so they
+  aren't silently assumed done.
