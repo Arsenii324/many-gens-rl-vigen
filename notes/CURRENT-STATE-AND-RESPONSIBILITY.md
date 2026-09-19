@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-18, ~01:20 MSK, by Claude.** This file says what is *true right now*. It is
+**Last updated: 2026-09-19, ~21:50 MSK, by Claude** (header, §1 tallies, §2's live-cell paragraph and §7b; the rest of §2–§7 was last reviewed 2026-09-18). This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -23,10 +23,9 @@ python scripts/operator_readiness.py | tail -3  # can an operator get from zero 
 python scripts/open_decisions.py | tail -3      # what awaits a person
 ```
 
-As of the last run (2026-09-17 21:03): gates **36 pass / 1 fail / 9 owner**, and the one FAIL is
-`source tree frozen` counting three uncommitted documentation edits that were committed minutes
-later; campaign **36 cells: 32 MISSING, 3 DONE, 1 PARTIAL**; fleet export **6,193 rows, 2,932 on
-the current closure**. Nothing of ours was running on either card at that time.
+As of the last run (2026-09-19 21:45 MSK): gates **37 pass / 0 fail / 9 owner**; campaign **36 cells:
+31 MISSING, 3 DONE, 1 RUNNING, 1 PARTIAL**; all five commands exit 0. One cell of ours is running
+(§2). No waiter is armed on the host.
 
 **The narrative account, with every number's command beside it:**
 [`CAMPAIGN-REPORT-2026-09-18.md`](CAMPAIGN-REPORT-2026-09-18.md).
@@ -43,13 +42,27 @@ the current closure**. Nothing of ours was running on either card at that time.
 | `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**`idaac` s103 no longer waits for a person.** `wait-and-train-v4.sh` is armed on the host and will
-launch it when the card is genuinely vacant — no foreign holder and ≥ 11,421 MiB free for ten
-consecutive samples. It was written after 21:39 on 17 Sep, when the card was free for twenty minutes
-for the first time in the campaign and nothing launched because nobody was at the keyboard. When it
-fires, the attempt still has to be recorded and `watch-cell.sh` armed from the laptop; see
-[`HANDOFF.md`](HANDOFF.md). After s103: `ibac_sni` s102 from zero, `ibac_sni` s103, and `ppg`'s two
-remaining seeds. **Why those five and not the other
+**Running now: `svea` s101, the first cell of the RL-ViGen five and the first Places365 cell.**
+Run `card1-20260919-204235`, container `cell-c1-1272142`, card 1, launched 20:42 MSK on 19 Sep with
+the owner present, recorded in `results/host-runs.jsonl`, watched by `watch-cell.sh trip` (disk
+floor 55 GiB). It is the second attempt. The first (`card1-20260919-203001`) died before training:
+`run_probe.sh` ran `check-asset` on a *mounted* Places365 corpus and tripped on
+`PLACES365_EXPECTED_COUNT: parameter null or not set` — a path no cell had ever exercised. Fixed in
+`6458c05`, shipped as `payload-v216-rlvigen.tgz`; the live log shows
+`NATIVE_PLACES365_ASSET_CHECK_SKIPPED` and the loader reading the full train split. It also exposed
+`record_host_run.py` writing `seed: None` for a hydra-style cell (fixed, `415687c`).
+**Why this cell matters more than its one-in-36 share:** `docs/RESEARCH-FRAME.md` identifies the
+across-method contrast only *inside* the RL-ViGen five, and until now that subgroup had no
+production cell at all — every completed cell is on-policy, and every one fails the competence gate
+(`production-host/36`). This run also yields the first RAM and wall-time measurement of a native
+cell on this host, which is what decides whether two can ever share it.
+**No second cell beside it, by the numbers:** one `rlvigen` cell (4,549 MiB peak) survives the
+co-tenant returning at its observed 21,298 MiB with 6,647 MiB free; two leave 2,098, under the
+4,000 floor, and both yield. No waiter is armed: the `idaac` s103 waiter described here until
+2026-09-19 ended on the evening of 18 Sep (`HANDOFF.md`). The on-policy queue that paragraph named
+(`idaac` s103, `ibac_sni` s102 from zero and s103, `ppg`'s two seeds) is still unrun; whether it or
+the native five should get the next free card is an open ordering question for the owner.
+**Why those five and not the other
 27:** [`production-host/35-what-the-campaign-costs-at-measured-rates.md`](production-host/35-what-the-campaign-costs-at-measured-rates.md)
 puts the measured 15–21 hours per cell against 32 missing cells. The full campaign cannot finish on
 this host; the sampled-estimand block can.
