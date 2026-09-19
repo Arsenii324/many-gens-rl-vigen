@@ -33,6 +33,21 @@ working thing an expiry.**
 | **Assurance** | `ASSURANCE.md` | claims keyed by the MECHANISM that assures them | Recomputed against the register and the instruments. A row moves between mechanisms as evidence arrives — e.g. between-seed variance moved from "known gap" to "in progress" when a second seed was launched. |
 | **Working** | `HANDOFF.md`, `STEP-ZERO.md`'s handoff block, plan files | scoped snapshot | **Carries its scope and expires with it.** See below. |
 
+**The production-stage files under `notes/`, placed in these layers 2026-09-20.** They grew after this
+table was written and none was named in it; their roles are the ones `notes/OPERATOR-GUIDE.md`'s own
+header gives, stated here so the rules above apply to them.
+
+| File under `notes/` | Layer | What that means for it |
+|---|---|---|
+| `OPERATOR-GUIDE.md` (the map), `RUNNING-ON-PRODUCTION-HOST.md` (the procedure), `model/HARNESS-MODEL.md`, `model/STOP-MECHANISMS.md` | Reference | Corrected at source, in place, dated. A command in the map that disagrees with the procedure is a defect in one of them |
+| `production-host/NN-*.md` | Log | One numbered note per incident or measurement; never rewritten, a later note corrects an earlier one; `production-host/README.md` indexes them |
+| `CURRENT-STATE-AND-RESPONSIBILITY.md` | Working, rewritten in place | The one file that says what is true now. Never appended to. Cites measurements (`campaign_status.py`, `production_gates.py`, `open_decisions.py`) rather than restating them where it can |
+| `ACCOUNTABILITY.md` | Working | Tasksets with what closes each item. The newest "Open taskset" is the live one; older ones are history |
+| `HANDOFF.md` | Working | What someone was thinking. Dated blocks expire and say so; it does not hold current state |
+| `inventory-2026-09-19/*` | Executor reports | Output of delegated read-only work, each headed with what the lead re-checked. Never a finding of record and never a to-do list |
+| `START-HERE.md` | Index | Routes to surfaces. Its dated "Added …" blocks are log entries that accreted in an index; nothing new goes there |
+| `DECISION-SHEET.md` | Log that a Measurement reads | `scripts/open_decisions.py` parses its A-items; an owner decision recorded only elsewhere is invisible to that tool |
+
 ## Working state, specifically
 
 The layer that keeps rotting, so it gets the most rules:

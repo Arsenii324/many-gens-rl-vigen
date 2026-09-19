@@ -16,8 +16,12 @@ procedure with this page open beside it.
   design; re-run the commands it names rather than trusting its numbers.
 - **Why things are the way they are**, and every incident behind a rule:
   [`production-host/README.md`](production-host/README.md), 35 numbered notes.
+- **How the harness works inside, traced from the code with file:line** — the chain before the
+  container, the two code sources, how a value reaches training, the guards, every stop mechanism:
+  [`model/HARNESS-MODEL.md`](model/HARNESS-MODEL.md) and
+  [`model/STOP-MECHANISMS.md`](model/STOP-MECHANISMS.md). Look there before tracing a script yourself.
 - **What someone was thinking mid-flight**, including unproven suspicions:
-  [`HANDOFF.md`](HANDOFF.md).
+  [`HANDOFF.md`](HANDOFF.md). Dated blocks there expire; current state is not kept in it.
 - **Index of every surface**: [`START-HERE.md`](START-HERE.md).
 - **Getting from `git clone` to a submitted run, on any Docker host**:
   [`../docs/RUN-THIS-PROJECT.md`](../docs/RUN-THIS-PROJECT.md). That is the canonical cold start and

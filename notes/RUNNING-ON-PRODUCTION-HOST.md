@@ -1,6 +1,10 @@
 # Running a cell on the production host
 
-> **This is the operator's guide. Read §0 first; it is the arrival sequence.**
+> **This is the operator's PROCEDURE: the executable steps, with their reasoning. Read §0 first; it
+> is the arrival sequence.** The MAP of the whole path — what exists, what produces what, which tool
+> belongs to which stage — is [`OPERATOR-GUIDE.md`](OPERATOR-GUIDE.md); read that once before this.
+> [Relabelled 2026-09-20: this banner called itself "the operator's guide" while `OPERATOR-GUIDE.md`
+> is the file of that name, and three files claimed the role.]
 >
 > §0-§8 are the mechanism and were written before the host was reachable. **§9 is the campaign
 > layer** added 2026-09-16: who else is on the cards, the convenience wrappers above
