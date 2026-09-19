@@ -45,6 +45,24 @@ def test_the_entry_is_derived_from_the_cells_own_config(tmp_path):
     assert "effective_config.json" in e["recorded_by"]
 
 
+def test_a_hydra_style_cell_still_gets_its_seed(tmp_path):
+    """The rlvigen family passes `seed=101`, not `--seed 101`. Found on the first rlvigen cell ever
+    recorded (svea s101, 2026-09-19): the row was written with seed None, and the attempt ledger
+    and campaign_status both key on (baseline, seed)."""
+    d = tmp_path / "card1-20260101-010203" / "native-out" / "cells" / "svea-s101"
+    d.mkdir(parents=True)
+    (d / "effective_config.json").write_text(json.dumps({
+        "family": "rlvigen", "baseline": "svea", "cell": "svea-s101", "seed": "101",
+        "frames_requested": "600000", "host_profile": "v100",
+        "argv": ["python", "train.py", "seed=101"],
+        "runner_environment": {"CELLS": "svea:101"},
+    }))
+    code, out = _run(str(tmp_path / "card1-20260101-010203"), "--dry-run")
+    assert code == 0, out
+    e = json.loads(out.strip().splitlines()[-1])
+    assert e["seed"] == 101
+
+
 def test_dry_run_writes_nothing(tmp_path):
     ledger = ROOT / "results" / "host-runs.jsonl"
     before = ledger.read_text() if ledger.is_file() else None

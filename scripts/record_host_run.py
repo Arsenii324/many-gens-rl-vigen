@@ -60,11 +60,17 @@ def entry_from(run_dir: pathlib.Path, host: str, status: str, note: str | None) 
     cfg = json.loads(cells[0].read_text())
     env = cfg.get("runner_environment", {}) or {}
     argv = cfg.get("argv", []) or []
-    seed = None
+    # The cell's own top-level `seed` first: argv spelling differs per family (`--seed 101` for the
+    # on-policy families, hydra's `seed=101` for rlvigen), and a None seed mis-keys the attempt
+    # ledger, which groups on (baseline, seed).
+    seed = str(cfg["seed"]) if cfg.get("seed") is not None else None
     for i, a in enumerate(argv):
+        if seed is not None:
+            break
         if a == "--seed" and i + 1 < len(argv):
             seed = argv[i + 1]
-            break
+        elif isinstance(a, str) and a.startswith("seed="):
+            seed = a.split("=", 1)[1]
     return {
         "run_id": run_dir.name,
         "host": host,
