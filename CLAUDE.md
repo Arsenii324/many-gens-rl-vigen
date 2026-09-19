@@ -126,6 +126,53 @@ Considerations to weigh against the request in front of you, not a procedure. (O
   this project; take what helps — for example `verification-before-completion`'s "name the
   command that proves the claim, run it, read the output, then claim" — or skip them.
 
+## How the owner wants this project worked
+
+The owner's own words, collected 2026-09-19 by sweeping four days of their messages against these
+docs: each had been said, acted on once, and written down nowhere — and two of them had to be said
+again. They are considerations to weigh, quoted so they cannot drift.
+
+- **Understand before acting; step back unprompted.** *"Discovery, planning and multi-step research
+  and understanding are to be before."* — *"don't treat the 'gaps' narrowly or just to it what we've
+  found most recently"* (16 Sep). *"I actually want you to be more foundational and careful … not
+  diving implementation-first"* (19 Sep). This tree is entangled — control flow, argument passing
+  and documents at several levels — and the cost of a locally-correct edit is paid elsewhere.
+- **A system already exists; find it first.** *"Some system already exists. Neither 'reuse' or
+  'integrate' by default, nor duplicate randomly."* (16 Sep). On 19 Sep a launch-chain section was
+  one step from being written while `notes/model/HARNESS-MODEL.md` already held that map.
+  [`docs/SYSTEM.md`](docs/SYSTEM.md) says what is recorded where; `scripts/where_is_this_decided.py`
+  and a grep come before a new file or a new finding.
+- **Result, not process.** *"you wrote something in the '37' but I don't read it as the answer … it
+  feels process-oriented not result-oriented."* (18 Sep). Answer the question asked, in the reply;
+  a note filed somewhere is storage, not an answer.
+- **A guide is a draft until a system of checks says otherwise.** *"You're too early to 'write
+  authoritatively' … don't 'just write the guide'; build a system of all considerations and your
+  own work that, once fulfilled, would make you very sure"* (16 Sep).
+- **Prove an instrument before relying on it.** *"Make sure the monitor command actually works …
+  try test it with setting different margins … before setting on it as the long running one."*
+  (16 Sep). Three of this project's own checkers were defective in one day; on 19 Sep a wait
+  watched the wrong path and a message extractor missed two thirds of its input, and both were
+  caught only by comparing against a known answer.
+- **Record what the owner says, when they say it.** Findings get recorded here by reflex; the
+  owner's rulings and answers did not, because they feel known while they are in context. After a
+  message from the owner, its statements that outlive the turn each get a home before work
+  resumes: constraints in `notes/CURRENT-STATE-AND-RESPONSIBILITY.md` §4, decisions in §7b, ways of
+  working here.
+- **The arrangement of the work is part of the work.** Which model does what, when to step back,
+  what to monitor, what to raise — decided by the agent, noted in a line, not proposed and waited
+  on. Still the owner's, flag only: research scope, budget and endpoint decisions; big deletes;
+  a run without a known resource upper bound; anything public; other people's state.
+- **Executors.** The lead holds the frame, the repo state, the research decisions and the wording
+  of claims, reads raw data itself wherever it decides an interpretation, and reviews diffs to core
+  code. Sonnet executors are capable and do real implementation-layer work, not only inventories.
+  Keep them persistent and reuse them — a cold start re-reads this tree — and keep one free for
+  short tasks so a long investigation never forces the lead to do small work itself. An executor's
+  report is trusted for how the task was set, never for its confidence: each claim with its command
+  and a verbatim excerpt, a count beside every "none found", a concrete "not checked" list, known
+  answers seeded in the brief, the claims that will be acted on re-run by the lead, and no agent
+  checking its own earlier claim. Reports are stored marked as executor output
+  (`notes/inventory-2026-09-19/` is the pattern), never as findings of record.
+
 ## Nulls
 
 These hold by default. Each names where the conditions for relaxing it live, and that link is the
