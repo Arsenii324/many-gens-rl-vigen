@@ -64,6 +64,13 @@ def _run(tmp_path, modes, fail_on, stamps=("model_51200.pt", "model_102400.pt"))
         f"ENDPOINT_EVAL_POLICY_MODES={modes}\n"
         "CURVE_EVAL_REGIMES=train\nCURVE_EVAL_SCENES=0\nCURVE_EVAL_EPISODES=1\n"
         "CURVE_EVAL_DEVICE=cpu\n"
+        # [Claude 2026-09-20] run_curve_eval now runs each stamp through run_watched_eval (items 1
+        # and 2 of the stop-mechanisms fix: a cell-wide yield poller and a stall watchdog that also
+        # covers evaluation), which it no longer inlines -- extracted alongside it, same reasoning
+        # as test_curve_eval_shell.py's and test_supplementary_eval_does_not_fail_the_cell.py's
+        # identical additions. cell_yield_requested is the one-line check it uses to stop early.
+        'cell_yield_requested() { [ -e "$1/.native_yielded" ]; }\n'
+        + _extract_function("run_watched_eval") + "\n"
         + _extract_function("run_curve_eval")
         + f'\nrc=0\nrun_curve_eval "{cell}" idaac idaac 1 1000 || rc=$?\necho "RETURNED=$rc"\n'
     )

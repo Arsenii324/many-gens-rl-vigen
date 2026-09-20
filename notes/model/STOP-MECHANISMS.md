@@ -4,21 +4,33 @@ Written 2026-09-16 after one production training cell was killed ten minutes in 
 The failure was not that a guard fired; it was that **nobody had enumerated which guards could fire,
 on which cells, and with what warning.** This is that enumeration.
 
-Two facts shape the whole table:
+**[Claude 2026-09-20] FIXED ON THE LAPTOP, not yet on the shared machine — deployment is the
+lead's step.** Points 2 and 3 below described the actual defect (`notes/production-host/38-...md`
+has the observation that forced the fix: a cell kept evaluating for 50 minutes under the memory
+floor because the poller had already died with `$training_pid`). As of this fix, one poller
+(`start_cell_yield_watch`, armed once per cell) covers training AND curve/endpoint evaluation and
+every gap between them, printing `phase=<training|curve-eval|endpoint-eval|other>` in the marker so
+which phase yielded is no longer a guess. The stall watchdog (row 8 below is the wrong number now —
+see the table) got the same extension, on its own mechanism (`run_watched_eval`), for the same
+reason. Points 2 and 3 are kept below UNCHANGED as the historical record of what was wrong and why
+it stayed invisible; do not read them as the current behaviour.
+
+Two facts shaped the table as first written (2026-09-16), before the 2026-09-20 fix above:
 
 1. **The sentinel is one file, written by three different watchers.** `/work/yield.sentinel` is
    shared by the GPU co-tenancy watch, the disk watch and the host-side neighbour yield. Reading
-   "a sentinel appeared" does not tell you which fired; only its CONTENTS do.
-2. **Only a TRAINING cell obeys it.** The poller lives inside `run_measured`, keyed to
-   `$training_pid` (`run_probe.sh:194-212`). A cell that runs `run_offline_eval` instead never
-   starts that poller, so an eval cell ignores a sentinel entirely. **This asymmetry is why the
-   defect stayed invisible: every eval cell survived it, and the first training cell died.**
-3. **A training cell STOPS obeying it partway through, and that is not the same statement as 2.**
-   [Claude 2026-09-17] The poller's loop is `while kill -0 "$training_pid"` (`run_probe.sh:197`).
-   The training process exits when training finishes, so from the moment a cell enters its in-cell
-   curve/endpoint grid the poller is gone and the cell is, for sentinel purposes, an eval cell. The
-   distinction is not "eval cells vs training cells" but "before vs after the training PID exits",
-   **inside one cell**.
+   "a sentinel appeared" does not tell you which fired; only its CONTENTS do. Still true.
+2. **[2026-09-16 through 2026-09-20] Only a TRAINING cell obeyed it.** The poller lived inside
+   `run_measured`, keyed to `$training_pid` (`run_probe.sh:194-212` at the time). A cell that runs
+   `run_offline_eval` instead never started that poller, so an eval cell ignored a sentinel
+   entirely. **This asymmetry is why the defect stayed invisible: every eval cell survived it, and
+   the first training cell died.**
+3. **[2026-09-16 through 2026-09-20] A training cell STOPPED obeying it partway through, and that
+   was not the same statement as 2.** [Claude 2026-09-17] The poller's loop was `while kill -0
+   "$training_pid"` (`run_probe.sh:197`). The training process exits when training finishes, so
+   from the moment a cell entered its in-cell curve/endpoint grid the poller was gone and the cell
+   was, for sentinel purposes, an eval cell. The distinction was not "eval cells vs training cells"
+   but "before vs after the training PID exits", **inside one cell**.
 
    This has two consequences, observed live on card 1 on 2026-09-17 with `ibac_sni` s101 in its
    grid and `idaac` s102 still training:
@@ -42,15 +54,16 @@ Two facts shape the whole table:
 
 | # | mechanism | fires on | writes | who obeys | silent? | state now |
 |---|---|---|---|---|---|---|
-| 1 | `yield_gpu_to_neighbour.py` memory floor | free VRAM < `--floor-mib` (4000) | sentinel | training only | **yes** | **DISARMED** (both cards ours); **this is what stopped ibac_sni-s1, twice** (attempts 1 and 3 on 16 Sep) |
-| 2 | same, `--yield-on-processes` | compute procs > `--expect-ours` | sentinel | training only | **yes** | **DISARMED**; ~~it killed ibac_sni-s1~~ **[CORRECTED 2026-09-16: it did not; see below]** |
-| 3 | `watch_disk_headroom.py` | free disk < `--floor-gib` (101-105) | **same sentinel** | training only | **yes** | **ARMED** -- the live risk |
+| 1 | `yield_gpu_to_neighbour.py` memory floor | free VRAM < `--floor-mib` (4000) | sentinel | **[2026-09-20] the whole cell** — training, curve-eval, endpoint-eval, and the gaps between (was training only) | **yes** | **DISARMED** (both cards ours); **this is what stopped ibac_sni-s1, twice** (attempts 1 and 3 on 16 Sep, both during training — coverage during evaluation is fixed on the laptop but not yet exercised live) |
+| 2 | same, `--yield-on-processes` | compute procs > `--expect-ours` | sentinel | **[2026-09-20] the whole cell** (was training only) | **yes** | **DISARMED**; ~~it killed ibac_sni-s1~~ **[CORRECTED 2026-09-16: it did not; see below]** |
+| 3 | `watch_disk_headroom.py` | free disk < `--floor-gib` (101-105) | **same sentinel** | **[2026-09-20] the whole cell** (was training only) | **yes** | **ARMED** -- the live risk |
 | 4 | `neighbour-yield.sh` (host) | a GPU pid not in our containers | sentinel + optional `docker stop` | anything | **yes** | **DISARMED** |
-| 5 | `CELL_TIMEOUT_SECONDS` | wall clock on TRAINING only | SIGTERM to the trainer | training | no, it is the budget | 43200 s for ibac_sni |
+| 5 | `CELL_TIMEOUT_SECONDS` | wall clock on TRAINING only (unchanged scope) | SIGTERM to the trainer; **[2026-09-20]** a plain 124 exit now also prints `NATIVE_CELL_TIMEOUT phase=training limit=<s> last_frame_hint=<n\|unknown>` before falling through to the ordinary failure path (was silent, indistinguishable from a crash) | training | no, it is the budget | 43200 s for idaac/ppg/ibac_sni; **[2026-09-20]** derived per baseline for every other scheduled one at the v5/v6 wrapper, `max(3× scheduled seconds, 86400)` (`notes/DECISION-SHEET.md` A69) |
 | 6 | watch `--max-seconds` | wall clock | nothing -- the watch exits | nobody | no | 115668 s, covers the cell |
 | 7 | the reaper (`launch-card-cell.sh:353+`) | cell silent past `_stall_window`, grace to `NATIVE_REAP_MAX_GRACE_SECONDS` (10800) | `docker stop` | the cell | partly | ARMED, progress-aware |
 | 8 | `watch_policy_health.py` | divergence in the log | nothing | nobody | no | ARMED; *"It warns and never kills"* |
 | 9 | `watch_card_exclusivity.py` | a co-tenant | nothing | nobody | no | ARMED; prints a positive line every check |
+| 10 | **[2026-09-20]** stall watchdog, evaluation phase (`run_watched_eval`, used by curve and endpoint eval) | combined size of `training.log` + that phase's own `offline_eval_*.jsonl` unchanged for `CELL_STALL_SECONDS` (1800s, same default as training's) | `NATIVE_CELL_STALLED phase=<curve-eval\|endpoint-eval>`, then that phase's own `*_FAILED` marker | that phase | no, it is loud | **new; not yet exercised on a live cell** — the training-side stall watchdog (row not listed separately above; see `run_probe.sh:127-159`) already existed and is unchanged |
 
 > **Correction, 2026-09-16, from the host artifacts:**
 > [`results/evidence/ibac-sni-16sep-three-stops`](../../results/evidence/ibac-sni-16sep-three-stops/CLAIM.md).

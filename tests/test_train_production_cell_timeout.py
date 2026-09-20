@@ -8,10 +8,15 @@ a promise. Only `idaac`, `ppg` and `ibac_sni` have a MEASURED sub-12h V100 train
 (`notes/OPERATOR-GUIDE.md` §4c.1). `svea` was launched with the bare 12h default on 2026-09-19 and
 would have been cut near 430k/600k frames with no warning.
 
-Both wrappers now refuse (exit 2, before `launch-card-cell.sh` is ever invoked) when `TIMEOUT_S` is
-unset and the baseline is not one of the three measured-fast ones -- including a baseline the
-embedded schedule table does not know at all. When `TIMEOUT_S` IS set, any value is accepted, but
-one below the baseline's scheduled seconds prints a loud warning and continues.
+[2026-09-20, item 4 of the stop-mechanisms fix] Refusing a baseline the schedule DOES know was
+never the point -- the ceiling should come from the schedule, not from a bare number. Both wrappers
+now DEFAULT `TIMEOUT_S` to `max(3 x scheduled_seconds, 86400)` for any baseline the embedded table
+knows (other than idaac/ppg/ibac_sni, which keep today's bare 43200 byte-for-byte), print one line
+saying what the default was derived from, and proceed. They still REFUSE (exit 2, before
+`launch-card-cell.sh` is ever invoked) only when `TIMEOUT_S` is unset AND the baseline is not in the
+table at all -- there is nothing to derive a ceiling from. When `TIMEOUT_S` IS set explicitly, any
+value is accepted, but one below the baseline's scheduled seconds prints a loud warning and
+continues, unchanged from before.
 
 These tests stub out `datasphere/native/launch-card-cell.sh` itself -- a path the wrapper `cd`s to
 `~/rlvigen-work/repo` and then calls directly (not something on PATH) -- so nothing here launches a
@@ -70,15 +75,37 @@ def _run(wrapper: pathlib.Path, env: dict) -> subprocess.CompletedProcess:
 
 @pytest.mark.skipif(not (V5.exists() and V6.exists()), reason="wrapper script(s) missing")
 @pytest.mark.parametrize("wrapper", WRAPPERS, ids=["v5", "v6"])
-def test_a_slow_unmeasured_baseline_refuses_without_timeout_s(wrapper, tmp_path):
-    """svea has no measured sub-12h V100 time: refuse, and never reach launch-card-cell.sh."""
+def test_a_slow_unmeasured_baseline_defaults_its_ceiling_from_the_schedule(wrapper, tmp_path):
+    """svea has no measured sub-12h V100 time, but IS in the schedule table: derive, don't refuse.
+
+    svea's scheduled training time is 60048s; 3x that is 180144s, above the 86400s floor, so the
+    derived ceiling is 180144.
+    """
     env, record = _sandbox(tmp_path)
     env["BASELINE"] = "svea"
     result = _run(wrapper, env)
     combined = result.stdout + result.stderr
-    assert result.returncode == 2, combined
-    assert "REFUSING" in combined, combined
-    assert not record.exists(), "launch-card-cell.sh must never be invoked"
+    assert result.returncode == 0, combined
+    assert "REFUSING" not in combined, combined
+    assert record.exists(), "launch-card-cell.sh must still be invoked once a ceiling is derived"
+    body = record.read_text()
+    assert "CELL_TIMEOUT_SECONDS=180144" in body, body
+    assert "TIMEOUT_S defaulted to 180144" in combined, combined
+    assert "60048" in combined, "the line must say what it was derived FROM: " + combined
+
+
+@pytest.mark.skipif(not (V5.exists() and V6.exists()), reason="wrapper script(s) missing")
+@pytest.mark.parametrize("wrapper", WRAPPERS, ids=["v5", "v6"])
+def test_the_86400_floor_binds_for_a_fast_scheduled_baseline(wrapper, tmp_path):
+    """drqv2 is scheduled at 23040s; 3x that is 69120s, BELOW the 86400s floor -- the floor wins."""
+    env, record = _sandbox(tmp_path)
+    env["BASELINE"] = "drqv2"
+    result = _run(wrapper, env)
+    combined = result.stdout + result.stderr
+    assert result.returncode == 0, combined
+    body = record.read_text()
+    assert "CELL_TIMEOUT_SECONDS=86400" in body, body
+    assert "TIMEOUT_S defaulted to 86400" in combined, combined
 
 
 @pytest.mark.skipif(not (V5.exists() and V6.exists()), reason="wrapper script(s) missing")

@@ -81,6 +81,14 @@ def _run(tmp_path: Path, family: str, filenames: list[str], save_every: int = 20
         '  if [[ "$append" == 1 ]]; then echo "{\\"frame\\":$frame}" >> "$out";'
         ' else echo "{\\"frame\\":$frame}" > "$out"; fi\n'
         "}\n"
+        # [Claude 2026-09-20] run_curve_eval now runs each stamp through run_watched_eval (items 1
+        # and 2 of the stop-mechanisms fix: a cell-wide yield poller and a stall watchdog that also
+        # covers evaluation), which it no longer inlines -- extracted alongside it for the same
+        # reason ppg_checkpoint_frame already is: a helper it calls must be defined in this sandbox
+        # too. cell_yield_requested is the one-line existence check run_curve_eval uses to stop the
+        # whole curve after a yield.
+        'cell_yield_requested() { [ -e "$1/.native_yielded" ]; }\n'
+        + _extract("run_watched_eval") + "\n"
         + _extract("ppg_checkpoint_frame") + "\n"
         + _extract("run_curve_eval") + "\n"
         'run_curve_eval "$1" "$2" "$2" 1 "$3"\n')

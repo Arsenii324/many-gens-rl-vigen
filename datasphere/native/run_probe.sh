@@ -64,6 +64,33 @@ normalize_eval_sentinel() {
   export NATIVE_DISABLE_ONLINE_EVAL=1
 }
 
+# [Claude 2026-09-20, item 3] Best-effort, family-agnostic frame-count hint from a training log's
+# tail, for the NATIVE_CELL_TIMEOUT marker below. Not a parser: `datasphere/native/
+# normalize_curves.py`'s seven per-family `read_*` functions are the actual, maintained map of what
+# each family writes, and this must not duplicate or drift from them -- it only tries a few
+# patterns already known to appear verbatim in various families' console output (RL-ViGen-upstream/
+# dmc_gb's `F:`/`S:` dump, ibac_sni's `F <int>`, idaac's and alda's `step <int>`, ppg's `IC=<int>`,
+# ctrl's leading `[<int>]`) against the last 200 lines, ANSI stripped, and says so when none match
+# rather than guessing a number. ctrl and ppg checkpoint saves are the two callers most likely to
+# hit "unknown" (ppg only stamps IC= at a save, not every iteration; ctrl's bracketed count is
+# num_envs*step, a close but not exact proxy for frames).
+_last_frame_hint() {
+  local log="$1" tail_lines="${2:-200}"
+  [[ -r "$log" ]] || return 1
+  local text
+  text="$(tail -n "$tail_lines" "$log" 2>/dev/null | sed -E 's/\x1b\[[0-9;]*m//g')"
+  local pattern hint
+  for pattern in 'F:[[:space:]]*[0-9]+' 'F[[:space:]]+[0-9]+' 'S:[[:space:]]*[0-9]+' \
+                 'step[:=[:space:]]+[0-9]+' 'IC=[0-9]+' '^\[[0-9]+\]'; do
+    hint="$(printf '%s\n' "$text" | grep -oE "$pattern" | tail -1 | grep -oE '[0-9]+' | tail -1)"
+    if [[ -n "$hint" ]]; then
+      printf '%s' "$hint"
+      return 0
+    fi
+  done
+  return 1
+}
+
 run_measured() {
   local output_dir="$1"
   shift
@@ -177,51 +204,22 @@ run_measured() {
   # the "an instrument that cannot run must never read as one that ran" failure this watcher was
   # built to catch, rebuilt inside it. The member is declared and RUNNER_CONTRACT is bumped to 14,
   # so a payload without it is refused at the contract boundary rather than here.
-  # [Claude 2026-09-08] YIELD WATCH. The other half of scripts/yield_gpu_to_neighbour.py, which
-  # observes the card from a separate container and writes a sentinel when a co-tenant appears.
+  # [Claude 2026-09-20] YIELD WATCH now covers the WHOLE CELL, not just training -- item 1 of the
+  # 2026-09-20 stop-mechanisms fix; see notes/production-host/38. The poller itself is armed ONCE,
+  # in run_one_cell (start_cell_yield_watch), before this function is ever called, and it outlives
+  # run_measured on purpose: curve and endpoint evaluation run afterwards, on `cuda`, for 2.04x the
+  # training time (measured, idaac 600k), and the OLD poller here died with training_pid, leaving
+  # evaluation completely unwatched. Observed 2026-09-20: free memory fell to 1,905 MiB under the
+  # 4,000 MiB floor during drqv2's endpoint grid; the sentinel was written; the cell kept
+  # evaluating for 50 minutes because nothing was polling for it.
   #
-  # Why a sentinel and not a signal. Stopping this container from outside would need
-  # /var/run/docker.sock mounted into the observer -- root-equivalent access to the host, a far
-  # worse hazard on a shared machine than the one being solved. So the observer writes a file and
-  # THIS process decides to stop. The cell keeps sole authority over the cell.
-  #
-  # It kills the training process group, exactly as the stall watchdog does, and for the same
-  # reason: checkpoints are already durable on the /tmp/native-out and /tmp/native-work bind
-  # mounts, so a yielded cell loses the remainder of its training and none of its artifacts.
-  #
-  # NATIVE_YIELD_SENTINEL is unset by default, so this costs nothing on a machine we own.
-  local yield_pid=""
+  # This function's only remaining job for the yield mechanism is to tell that already-running
+  # poller WHAT to stop and WHICH phase to report if it fires while training runs -- two files next
+  # to the cell's own output, because a background subshell forked before training_pid existed has
+  # no other channel back to this function's state.
   if [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]]; then
-    rm -f "$NATIVE_YIELD_SENTINEL"
-    (
-      while kill -0 "$training_pid" 2>/dev/null; do
-        if [[ -e "$NATIVE_YIELD_SENTINEL" ]]; then
-          # [Claude 2026-09-09] Do not name the cause here. The sentinel carries the real reason,
-          # and it is not always a co-tenant: a 600k packed run stopped itself because OUR OWN six
-          # processes had taken 29910 MiB of 32494 and free memory fell under the floor. The log
-          # then said "a co-tenant needs the card" while no co-tenant existed, which sent the first
-          # reader looking for a neighbour who was never there.
-          echo "=== NATIVE_CELL_YIELDED stopping this cell; reason follows from the sentinel ===" >&2
-          cat "$NATIVE_YIELD_SENTINEL" >&2 2>/dev/null || true
-          echo "    Artifacts written so far are durable on the bind mounts." >&2
-          kill -TERM -- "-$training_pid" 2>/dev/null || kill -TERM "$training_pid" 2>/dev/null
-          sleep 30
-          kill -KILL -- "-$training_pid" 2>/dev/null || kill -KILL "$training_pid" 2>/dev/null
-          exit 0
-        fi
-        sleep 15
-      done
-    ) &
-    yield_pid="$!"
-    # [Claude 2026-09-08] Announce that a cell is now on the card, into the same shared directory
-    # the sentinel uses. Closes a real blind spot: the observers count compute processes against a
-    # baseline, and during the ~10 minute apt/pip bootstrap OUR count is zero -- so the FIRST
-    # process to appear was credited to us, and a stranger arriving in that window was silently
-    # absorbed as our own. With this marker they expect ZERO processes until the cell says
-    # otherwise, and any process before it is unambiguously somebody else.
-    : > "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
-    echo "=== NATIVE_YIELD_WATCH_ARMED sentinel=$NATIVE_YIELD_SENTINEL ===" >&2
-    echo "=== NATIVE_CELL_ACTIVE_MARKER $(dirname "$NATIVE_YIELD_SENTINEL")/cell-active ===" >&2
+    echo "training" > "$output_dir/.native_yield_phase" 2>/dev/null || true
+    echo "$training_pid" > "$output_dir/.native_yield_pgid" 2>/dev/null || true
   fi
 
   local health_pid=""
@@ -236,24 +234,14 @@ run_measured() {
   local training_status="$?"
   if [[ -n "$stall_pid" ]]; then kill "$stall_pid" 2>/dev/null; wait "$stall_pid" 2>/dev/null; fi
   if [[ -n "$health_pid" ]]; then kill "$health_pid" 2>/dev/null; wait "$health_pid" 2>/dev/null; fi
-  # [Claude 2026-09-10] THE YIELD POLLER OUTLIVES TRAINING, because the card does.
-  # Killing it here left the ENTIRE evaluation phase unable to see a yield request -- and evaluation
-  # is 2.04x the training it follows (measured: 4.95 h train, 10.12 h eval, idaac 600k). Handed to
-  # run_one_cell, which retracts it once the cell is genuinely off the card.
-  _yield_poller_pid="$yield_pid"
-  # [Claude 2026-09-08] Retract the marker. Creating it closed the bootstrap blind spot; never
-  # removing it opened a symmetric one at the other end. After the cell exits, our count returns to
-  # zero but the observers go on expecting one process of ours -- so a neighbour who takes the card
-  # we have just VACATED reads as a breach. That is a false alarm raised at exactly the moment the
-  # card is legitimately theirs, and an instrument that cries wolf once it has stopped mattering is
-  # one an operator learns to ignore. Marker present means a cell is on the card, and now that is
-  # true in both directions.
-  # [Claude 2026-09-10] The marker is NOT retracted here. Its own comment above says "Marker
-  # present means a cell is on the card" -- and during evaluation a cell IS on the card, on `cuda`,
-  # for twice as long as it just trained. Retracting it at the end of TRAINING stood the host-side
-  # exclusivity and yield watches down (`--stop-when-inactive`) for two thirds of the cell's GPU
-  # life. `run_one_cell` retracts it after evaluation instead, which is what the comment already
-  # described and the placement did not do.
+  # [Claude 2026-09-20] Training is over. If the whole-cell poller (start_cell_yield_watch) is
+  # still armed when curve or endpoint evaluation starts, it must not go on aiming at a training
+  # process that no longer exists, and it must report "other" -- not a stale "training" -- for the
+  # gap between here and whichever evaluation phase runs next (retain, check-finite,
+  # verify_final_evaluation). The poller itself is stopped only in retract_cell_from_card, which
+  # `run_one_cell` reaches after evaluation, not here.
+  echo "other" > "$output_dir/.native_yield_phase" 2>/dev/null || true
+  : > "$output_dir/.native_yield_pgid" 2>/dev/null || true
   wait "$tee_pid"
   local tee_status="$?"
   wait "$sampler_pid"
@@ -283,6 +271,27 @@ run_measured() {
     echo "=== NATIVE_CELL_SIGNALLED $signal_line ===" >&2
     echo '    time -v also prints an Exit status line after this; it does not mean anything here.' >&2
     return 1
+  fi
+  # [Claude 2026-09-20, item 3] A TIMEOUT MUST SAY IT WAS A TIMEOUT.
+  #
+  # `timeout --foreground ${CELL_TIMEOUT_SECONDS}s` (run_one_cell, below) makes the measured
+  # command exit 124 with no diagnostic anywhere: `time -v`'s direct child is `timeout` itself,
+  # which exits normally (not by a signal) once its own deadline passes, so neither of the two
+  # checks just above ever fires for a plain timeout, and it fell through to a bare `return 124`
+  # here -- indistinguishable from an OOM, a crash, or any other failure. `CELL_TIMEOUT_SECONDS`
+  # being set is what tells us a ceiling was actually armed for this cell, so the check is scoped
+  # to exactly the case that produced this exit code (a stall- or signal-kill exits 143/137/etc,
+  # never 124, so this never fires for either of the two checks above).
+  #
+  # `retain()`/`check-finite`/curve/endpoint evaluation are only reached if this function returns 0
+  # (run_one_cell, `run_measured ... || return 1`) -- a timeout returns 124 like any other failure,
+  # so a cell cut off here still SKIPS retention even though checkpoints up to the cut are already
+  # durable on the /tmp/native-work bind mount. That is unchanged here; it is reported, not
+  # redesigned, under NOTICED.
+  if [[ "$training_status" -eq 124 && -n "${CELL_TIMEOUT_SECONDS:-}" ]]; then
+    local _frame_hint
+    _frame_hint="$(_last_frame_hint "$measured_log" 2>/dev/null || true)"
+    echo "=== NATIVE_CELL_TIMEOUT phase=training limit=${CELL_TIMEOUT_SECONDS}s last_frame_hint=${_frame_hint:-unknown} ===" >&2
   fi
   if [[ "$training_status" -ne 0 ]]; then return "$training_status"; fi
   if [[ "$tee_status" -ne 0 ]]; then return "$tee_status"; fi
@@ -331,6 +340,81 @@ cell_id() { printf '%s-s%s' "$(cell_baseline "$1")" "$(cell_seed "$1")"; }
 FAMILY_TOOL="${FAMILY_TOOL:-datasphere/native/family.py}"
 cells_need_places365() { python3 "$FAMILY_TOOL" needs-places365 --cells "$1"; }
 
+# [Claude 2026-09-20, item 1] ONE POLLER COVERS THE WHOLE CELL, from here to retract_cell_from_card.
+#
+# Before this, the sentinel poller lived inside run_measured() and died with the training process
+# (`while kill -0 "$training_pid"`) -- during curve and endpoint evaluation nothing read
+# NATIVE_YIELD_SENTINEL at all. Measured 2026-09-20 (notes/production-host/38): free memory fell to
+# 1,905 MiB under the 4,000 MiB floor during drqv2's endpoint grid; the sentinel was written; the
+# cell kept evaluating for 50 minutes because nothing was polling for it.
+#
+# Called once, at the very start of run_one_cell. It does not know what the cell is doing at any
+# given moment -- training, curve-eval, endpoint-eval, or a synchronous gap between them (retain,
+# check-finite, verify_final_evaluation) -- because it is a background subshell forked before any
+# of that runs. Two small files under cell_out are the only channel back to it:
+#   .native_yield_phase  the phase to name in the marker if it fires right now
+#   .native_yield_pgid   what to signal if it fires right now (a pid or pgid; empty means nothing
+#                         is currently running that a kill would help, e.g. the "other" gaps)
+# run_measured and run_watched_eval (below) update both as they start and finish their own phase.
+# When the sentinel appears, this poller prints the phase-tagged marker, stops whatever is running
+# (TERM, 30s grace, then KILL -- as the original training-only version did), and touches
+# .native_yielded so every caller checking it treats the cell as done rather than continuing into
+# the next phase. The cell then exits through its normal `|| return 1` failure path, so artifacts
+# already on the bind mounts stay (notes/model/HARNESS-MODEL.md section 2).
+start_cell_yield_watch() {
+  local cell_out="$1"
+  local phase_file="$cell_out/.native_yield_phase"
+  local pgid_file="$cell_out/.native_yield_pgid"
+  local flag_file="$cell_out/.native_yielded"
+  _yield_poller_pid=""
+  rm -f "$phase_file" "$pgid_file" "$flag_file"
+  echo "other" > "$phase_file"
+  : > "$pgid_file"
+  [[ -n "${NATIVE_YIELD_SENTINEL:-}" ]] || return 0
+  rm -f "$NATIVE_YIELD_SENTINEL"
+  (
+    while [[ ! -e "$flag_file" ]]; do
+      if [[ -e "$NATIVE_YIELD_SENTINEL" ]]; then
+        phase="$(cat "$phase_file" 2>/dev/null)"
+        [[ -n "$phase" ]] || phase="other"
+        # [Claude 2026-09-09, carried over] Do not name the cause here. The sentinel carries the
+        # real reason, and it is not always a co-tenant: a 600k packed run stopped itself because
+        # OUR OWN six processes had taken 29910 MiB of 32494 and free memory fell under the floor.
+        echo "=== NATIVE_CELL_YIELDED phase=$phase stopping this cell; reason follows from the sentinel ===" >&2
+        cat "$NATIVE_YIELD_SENTINEL" >&2 2>/dev/null || true
+        echo "    Artifacts written so far are durable on the bind mounts." >&2
+        # [Claude 2026-09-20] The flag is written HERE -- the decision to yield -- not after the
+        # kill sequence below finishes. A caller polling `cell_yield_requested` (run_one_cell's
+        # gaps between phases, run_curve_eval's/run_endpoint_eval's own loops) checks it as soon as
+        # the killed command's own wait returns, which TERM alone usually satisfies well inside the
+        # 30s grace period; the flag arriving only after that grace period would make every such
+        # caller see "not yielded" and take the ordinary failure path instead of the yield one.
+        : > "$flag_file"
+        target="$(cat "$pgid_file" 2>/dev/null)"
+        if [[ -n "$target" ]]; then
+          kill -TERM -- "-$target" 2>/dev/null || kill -TERM "$target" 2>/dev/null || true
+          sleep 30
+          kill -KILL -- "-$target" 2>/dev/null || kill -KILL "$target" 2>/dev/null || true
+        fi
+        exit 0
+      fi
+      sleep "${NATIVE_YIELD_POLL_SECONDS:-15}"
+    done
+  ) &
+  _yield_poller_pid="$!"
+  # [Claude 2026-09-08, carried over] Announce that a cell is now on the card. Closes the bootstrap
+  # blind spot: during the ~10 minute apt/pip bootstrap our own compute-process count is zero, so
+  # the FIRST process to appear was credited to us, and a stranger arriving in that window was
+  # silently absorbed as our own.
+  : > "$(dirname "$NATIVE_YIELD_SENTINEL")/cell-active"
+  echo "=== NATIVE_YIELD_WATCH_ARMED sentinel=$NATIVE_YIELD_SENTINEL ===" >&2
+  echo "=== NATIVE_CELL_ACTIVE_MARKER $(dirname "$NATIVE_YIELD_SENTINEL")/cell-active ===" >&2
+}
+
+# A yield mid-cell must stop the cell, not just the phase it interrupted: skip straight to the
+# normal failure path rather than starting the next phase against a card we were told to leave.
+cell_yield_requested() { [[ -e "$1/.native_yielded" ]]; }
+
 run_one_cell() {
   local spec="$1" task="$2" frames="$3" eval_every="$4" eval_episodes="$5"
   local out_root="$6" work_root="$7"
@@ -358,6 +442,9 @@ run_one_cell() {
   local cell_out="$out_root/cells/$identifier"
   local run_dir="$work_root/runs/$identifier"
   mkdir -p "$cell_out" "$run_dir"
+  # [Claude 2026-09-20, item 1] Arm the whole-cell yield poller before anything else runs, so it
+  # covers bootstrap-adjacent work too, not only training. See start_cell_yield_watch's own comment.
+  start_cell_yield_watch "$cell_out"
   # [Claude 2026-09-03] RESUME_SNAPSHOT places a checkpoint where RL-ViGen's train.py will find it
   # (train.py:380 auto-resumes from `snapshot.pt` in the run directory). It exists for one
   # experiment: the checkpoint-reproduction defect. A stamped checkpoint evaluates far below what
@@ -521,6 +608,14 @@ json.dump({
   # burns GPU time and can create misleading partial records.
   "${CELL_PYTHON:-python3}" "$FAMILY_TOOL" check-finite --family "$family" --root "$work_root" \
     --checkpoint "$cell_out/snapshot.pt" || return 1
+  # [Claude 2026-09-20, item 1] A yield that arrived during training (already handled above via
+  # run_measured's nonzero return) or during one of the quick synchronous steps just above (retain,
+  # check-finite, verify_final_evaluation -- phase "other", nothing to kill) must still stop the
+  # cell here rather than starting curve evaluation against a card we were told to leave.
+  if cell_yield_requested "$cell_out"; then
+    echo "=== NATIVE_CELL_YIELD_ABORT remaining phases skipped after a yield ===" >&2
+    return 1
+  fi
   if [[ "${CURVE_EVAL:-0}" == "1" ]]; then
     # A PRODUCTION trajectory must be complete or the cell fails: a curve with holes cannot be
     # distinguished later from one that was never asked for, and the checkpoints have already been
@@ -529,6 +624,10 @@ json.dump({
     # ENDPOINT_EVAL=1), so a cheap exploratory probe keeps its non-fatal behaviour and production
     # cannot mistake a partial curve for a complete one.
     run_curve_eval_with_policy "$cell_out" "$family" "$baseline" "$seed" "$cell_save_every" || return 1
+  fi
+  if cell_yield_requested "$cell_out"; then
+    echo "=== NATIVE_CELL_YIELD_ABORT remaining phases skipped after a yield ===" >&2
+    return 1
   fi
   if [[ "${ENDPOINT_EVAL:-0}" == "1" ]]; then
     run_endpoint_eval "$cell_out" "$family" "$baseline" "$seed" "$expected_endpoint" || return 1
@@ -1044,6 +1143,121 @@ ppg_checkpoint_frame() {
 # Opt-in like CURVE_EVAL, because a probe that only wants training must not silently start paying
 # for an 800-episode grid. When a training job finishes WITHOUT one, that is announced rather than
 # passed over in silence -- an absent endpoint must not look like a completed one.
+# [Claude 2026-09-20, items 1 and 2] Run one eval_grid.py invocation watched for BOTH a yield
+# request and a stall -- the same two things run_measured watches training for (see
+# notes/production-host/38 for the yield gap and eval-cost-and-timeout-trace.md Part 2, 2b for the
+# stall gap: "Not active during evaluation ... hence no stall watchdog during evaluation").
+# Shared by run_curve_eval and run_endpoint_eval so the mechanism is written once, not twice
+# slightly differently and drifting; both are extracted standalone by
+# tests/test_curve_eval_shell.py and tests/test_supplementary_eval_does_not_fail_the_cell.py, which
+# now extract this function alongside them.
+#
+# eval_grid.py has no worker pool (eval-cost-and-timeout-trace.md Part 2, 1c: "No multiprocessing/
+# worker-pool inside eval_grid.py"), so a plain pid is enough to stop it -- no setsid/process-group
+# needed the way training needs one for its DataLoader/vec-env children.
+#
+# $1 = phase name for the marker ("curve-eval" / "endpoint-eval")
+# $2 = cell_out (state files and training.log live here)
+# $3 = the file THIS invocation writes rows to -- watched for growth alongside training.log,
+#      because during evaluation THAT is what actually grows (the training-only watchdog measures
+#      training.log alone, which the endpoint/curve grid also writes to via the tee below, but a
+#      slow evaluator can go quiet on stdout between episodes while its jsonl still grows, or vice
+#      versa, so both are watched).
+# $4.. = the command to run (env ... python3 scripts/eval_grid.py ...)
+#
+# Returns the command's real exit status.
+run_watched_eval() {
+  local phase="$1" cell_out="$2" progress_file="$3"
+  shift 3
+  local phase_file="$cell_out/.native_yield_phase"
+  local pgid_file="$cell_out/.native_yield_pgid"
+  local log="$cell_out/training.log"
+  echo "$phase" > "$phase_file" 2>/dev/null || true
+  : > "$pgid_file" 2>/dev/null || true
+  local pipe_dir pipe
+  pipe_dir="$(mktemp -d)"
+  pipe="$pipe_dir/eval.pipe"
+  mkfifo "$pipe"
+  # setsid, when available, gives the command its own process group so a TERM/KILL by the poller
+  # (which already tries "-$target" -- the group -- before falling back to the bare pid) reaches
+  # any child it spawns too, not just itself. eval_grid.py has no worker pool today (see this
+  # function's own comment above), so there is normally nothing to leave behind either way, but an
+  # orphaned child inheriting this fifo's write end would otherwise hold `tee` open long after the
+  # command it belonged to was killed -- exactly the failure mode a bare pid-kill risks.
+  if command -v setsid >/dev/null; then
+    setsid "$@" > "$pipe" 2>&1 &
+  else
+    "$@" > "$pipe" 2>&1 &
+  fi
+  local cmd_pid=$!
+  tee -a "$log" < "$pipe" &
+  local tee_pid=$!
+  echo "$cmd_pid" > "$pgid_file" 2>/dev/null || true
+  # STALL WATCHDOG FOR THIS PHASE (item 2). Same default threshold as training's
+  # (CELL_STALL_SECONDS, 1800s) -- not shortened or lengthened here. The 30s CHECK interval below
+  # matches training's own hardcoded cadence; NATIVE_STALL_CHECK_SECONDS overrides only the
+  # granularity (for a test to observe a stall without a 30-minute wait), never the threshold
+  # itself, and defaults to exactly today's 30.
+  local stall_pid="" stall_seconds="${CELL_STALL_SECONDS:-1800}"
+  local stall_check_seconds="${NATIVE_STALL_CHECK_SECONDS:-30}"
+  if [[ "$stall_seconds" != "0" ]]; then
+    (
+      last_size=-1
+      quiet=0
+      while kill -0 "$cmd_pid" 2>/dev/null; do
+        sleep "$stall_check_seconds"
+        size=$(( $(wc -c < "$log" 2>/dev/null || echo 0) + \
+                  $(wc -c < "$progress_file" 2>/dev/null || echo 0) ))
+        if [[ "$size" == "$last_size" ]]; then
+          quiet=$((quiet + stall_check_seconds))
+        else
+          quiet=0
+          last_size="$size"
+        fi
+        if [[ "$quiet" -ge "$stall_seconds" ]]; then
+          echo "=== NATIVE_CELL_STALLED phase=$phase no output for ${quiet}s (limit ${stall_seconds}s) ===" >&2
+          kill -TERM "$cmd_pid" 2>/dev/null
+          sleep 20
+          kill -KILL "$cmd_pid" 2>/dev/null
+          exit 0
+        fi
+      done
+    ) &
+    stall_pid=$!
+  fi
+  # [Claude 2026-09-20] `set +e` stays off for the REST of this function, deliberately -- not
+  # re-enabled here the way a single inline `set +e ... set -e` block would. `errexit` is a GLOBAL
+  # shell flag, not scoped to this function: re-enabling it here, before `return "$status"` below,
+  # made the CALLER's own `set +e; run_watched_eval ...; rc=$?; set -e` bracket (which wraps the
+  # whole call) ineffective -- bash evaluates errexit against whatever `-e` state is active at the
+  # instant a command COMPLETES, and this function's own `return "$status"` with a non-zero status
+  # completed under `-e` ON (re-enabled by this line, previously), aborting the entire script right
+  # here, before the caller's `rc=$?` line ever ran. The caller's own `set -e`, right after it reads
+  # `$?`, is what correctly restores it -- this function must leave that decision alone.
+  set +e
+  wait "$cmd_pid"
+  local status=$?
+  # [Claude 2026-09-20] BOUNDED reap, not a blocking `wait`. Observed on this laptop: with the
+  # eval command's own job (cmd_pid) and the tee job (tee_pid) both outstanding, `kill "$stall_pid";
+  # wait "$stall_pid"` can hang indefinitely even though the kill is delivered and the process
+  # exits -- a bash/job-table interaction under load, not anything this watchdog's own exit status
+  # depends on (nobody reads it). A short poll gets the same practical effect -- the watchdog is
+  # stopped or already gone -- without ever blocking the cell on it.
+  if [[ -n "$stall_pid" ]]; then
+    kill "$stall_pid" 2>/dev/null
+    local _reap_tries=0
+    while [[ "$_reap_tries" -lt 15 ]] && kill -0 "$stall_pid" 2>/dev/null; do
+      sleep 0.2
+      _reap_tries=$((_reap_tries + 1))
+    done
+  fi
+  wait "$tee_pid" 2>/dev/null
+  rm -rf "$pipe_dir"
+  echo "other" > "$phase_file" 2>/dev/null || true
+  : > "$pgid_file" 2>/dev/null || true
+  return "$status"
+}
+
 run_endpoint_eval() {
   local cell_out="$1" family="$2" baseline="$3" seed="$4" frame="$5"
   local snapshot="$cell_out/snapshot.pt"
@@ -1125,11 +1339,12 @@ run_endpoint_eval() {
     # only an extra mode gets a suffix.
     out_suffix=""
     [[ "$policy_mode" == "native" ]] || out_suffix="_$policy_mode"
-  local started
+  local started out_file="$cell_out/offline_eval_endpoint${out_suffix}.jsonl"
   started="$(date +%s)"
   echo "=== NATIVE_ENDPOINT_EVAL_BEGIN $baseline frame=$frame policy_mode=$policy_mode epoch=$started ==="
   set +e
-  env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
+  run_watched_eval endpoint-eval "$cell_out" "$out_file" \
+    env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
     --family "$family" \
     --baseline "$baseline" \
     --task "${TASK:-Door}" \
@@ -1144,11 +1359,18 @@ run_endpoint_eval() {
     --policy-mode "$policy_mode" \
     --eval-scope endpoint \
     --append \
-    --out "$cell_out/offline_eval_endpoint${out_suffix}.jsonl" 2>&1 | tee -a "$cell_out/training.log"
-  rc=${PIPESTATUS[0]}
+    --out "$out_file"
+  rc=$?
     set -e
     echo "=== NATIVE_ENDPOINT_EVAL_SECONDS $(( $(date +%s) - started )) policy_mode=$policy_mode ==="
     if [[ "$rc" -ne 0 ]]; then
+      # [Claude 2026-09-20, item 1] A yield always ends the cell -- even for the "mode" pass, which
+      # is otherwise deliberately non-fatal (see NATIVE_ENDPOINT_SUPPLEMENTARY_FAILED below): being
+      # told to leave the card is not a comparison the cell can afford to keep chasing.
+      if cell_yield_requested "$cell_out"; then
+        echo "=== NATIVE_ENDPOINT_EVAL_ABORTED_ON_YIELD $baseline policy_mode=$policy_mode ===" >&2
+        return 1
+      fi
       if [[ "$policy_mode" == "native" ]]; then
         # The reported estimand. Without it the cell has no endpoint result at all.
         echo "=== NATIVE_ENDPOINT_EVAL_FAILED $baseline policy_mode=$policy_mode rc=$rc ===" >&2
@@ -1201,7 +1423,8 @@ run_curve_eval() {
     fi
     echo "=== NATIVE_CURVE_EVAL_BEGIN $baseline frame=$frame file=$base ==="
     set +e
-    env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
+    run_watched_eval curve-eval "$cell_out" "$cell_out/offline_eval_curve.jsonl" \
+      env ${image_size_env[@]+"${image_size_env[@]}"} python3 scripts/eval_grid.py \
       --snapshot "$item" \
       --family "$family" \
       --baseline "$baseline" \
@@ -1214,12 +1437,19 @@ run_curve_eval() {
       --device "${CURVE_EVAL_DEVICE:-cuda}" \
       --eval-scope curve \
       --append \
-      --out "$cell_out/offline_eval_curve.jsonl" 2>&1 | tee -a "$cell_out/training.log"
-    local rc=${PIPESTATUS[0]}
+      --out "$cell_out/offline_eval_curve.jsonl"
+    local rc=$?
     set -e
     if [[ "$rc" -ne 0 ]]; then
       echo "=== NATIVE_CURVE_EVAL_FAILED $baseline frame=$frame rc=$rc ===" >&2
       failed=$(( failed + 1 ))
+      # [Claude 2026-09-20, item 1] A yield stops the WHOLE curve, not just this stamp: evaluating
+      # the next checkpoint after being told to leave the card is exactly what item 1 exists to
+      # prevent.
+      if cell_yield_requested "$cell_out"; then
+        echo "=== NATIVE_CURVE_EVAL_ABORTED_ON_YIELD $baseline (remaining stamps skipped) ===" >&2
+        break
+      fi
     else
       count=$((count + 1))
       # [Claude 2026-09-10] EXERCISE THE SUPPLEMENTARY POLICY MODE ONCE, EARLY.

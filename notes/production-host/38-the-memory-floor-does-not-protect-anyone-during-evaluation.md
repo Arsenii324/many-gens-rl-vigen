@@ -1,7 +1,14 @@
 # 38 — The memory floor does not protect anyone during evaluation
 
 Written 2026-09-20 by Claude, the evening it was observed. Status: **OBSERVED on the host and
-CONFIRMED in the code; NOT FIXED.**
+CONFIRMED in the code; FIXED ON THE LAPTOP, not yet deployed.** [Claude, later 2026-09-20] The fix
+described in "The fix" section below is implemented and tested against canned/stubbed evaluation
+phases on this laptop (`datasphere/native/run_probe.sh`'s `start_cell_yield_watch` +
+`run_watched_eval`, plus the same mechanism's stall-watchdog extension) — see
+`notes/model/STOP-MECHANISMS.md` row 1 and `tests/test_yield_covers_the_whole_cell.py`. Getting the
+fixed payload onto `cds2` (rebuilding and shipping `native-payload-v*.tgz`, or however the lead
+chooses to deploy it) is a separate step, not done here, and no cell on the host has run under this
+fix yet. The incident account below is unchanged.
 
 ## What happened
 

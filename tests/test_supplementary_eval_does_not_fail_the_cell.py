@@ -63,6 +63,11 @@ def _harness(tmp_path, modes, fail_on):
         f"ENDPOINT_EVAL_POLICY_MODES={modes}\n"
         "ENDPOINT_EVAL_REGIMES=train\nENDPOINT_EVAL_SCENES=0\nENDPOINT_EVAL_EPISODES=1\n"
         "ENDPOINT_EVAL_DEVICE=cpu\n"
+        # [Claude 2026-09-20] run_endpoint_eval now runs each policy-mode pass through
+        # run_watched_eval (items 1 and 2 of the stop-mechanisms fix), which it no longer inlines --
+        # extracted alongside it, same reasoning as test_curve_eval_shell.py's identical addition.
+        'cell_yield_requested() { [ -e "$1/.native_yielded" ]; }\n'
+        + _extract_function("run_watched_eval") + "\n"
         + _extract_function("run_endpoint_eval")
         # `run_endpoint_eval` re-enables `set -e` internally, so a bare call would abort this
         # harness before the echo. run_probe.sh:528 invokes it as `... || return 1`; the `|| rc=$?`

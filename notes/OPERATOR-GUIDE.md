@@ -497,7 +497,10 @@ processes only, so for `ibac_sni` 8,000 is far above the 2,199 MiB it can see (�
     rsync -a --exclude 'native-work' <host>:'~/rlvigen-runs/<run-id>' ./fetched/
     BP=<interpreter from procedure §0c> bash datasphere/native/collect-host-run.sh <family> ./fetched/<run-id>
     python scripts/audit_record_frame_provenance.py results/records/<run-id>__records.jsonl \
-      --checkpoints ./fetched/<run-id>/native-out/cells/<baseline>-s<seed>/checkpoints   # MISMATCHED 0
+      --checkpoints ./fetched/<run-id>/native-out/cells/<baseline>-s<seed>   # the CELL dir, not
+      # its checkpoints/ subfolder -- MISMATCHED 0. See the note at item 3 below: pointing at
+      # checkpoints/ instead leaves every endpoint row unverifiable, because the endpoint's
+      # frame-stamped snapshot (snapshot_<frame>.pt) lives one level up, beside it.
     python scripts/record_host_run.py <run-id> --update-status --status "complete: <rows>"
     python scripts/production_run_register.py
     python scripts/audit_attempt_ledger.py --strict
@@ -591,20 +594,29 @@ pinned by digest in `datasphere/native/source-lock.json`
 (`nvidia/cuda:12.2.2-runtime-ubuntu22.04@sha256:94c1577b…`). The cell installs its own apt and pip
 dependencies inside that image; you never prepare it.
 
-**Who obeys a stop signal is not uniform, and this decides what dies first.** The sentinel poller
-lives only as long as the *training* process (`run_probe.sh:197`). A cell that has finished training
-and moved into its evaluation grid **ignores the sentinel**. So when the card fills, the
-still-training cell is stopped and the evaluating ones continue. That ordering follows from process
-lifetime, not from policy.
+**[Claude 2026-09-20] FIXED ON THE LAPTOP, not yet deployed to `cds2`.** The two paragraphs below
+describe the defect exactly as it stood through `notes/production-host/38-...md`'s 2026-09-20
+observation (a cell evaluated for 50 minutes under the memory floor because nothing was polling).
+As of this fix, `start_cell_yield_watch` (armed once per cell, in `run_probe.sh`'s `run_one_cell`)
+and `run_watched_eval`'s own stall check cover the WHOLE cell — training, the evaluation grid, and
+the gaps between — so "who obeys" is now "the whole cell, always" rather than "whichever part of it
+is still training". §6b's table has the current rows. Kept below unchanged as the historical
+record of why the reaper and the watch budget had to carry this on their own.
 
-The **stall watchdog shares that lifetime**: `run_probe.sh:135` runs the same
+**Who obeyed a stop signal was not uniform [2026-09-16 through 2026-09-20], and this decided what
+died first.** The sentinel poller lived only as long as the *training* process (`run_probe.sh:197`
+at the time). A cell that had finished training and moved into its evaluation grid **ignored the
+sentinel**. So when the card filled, the still-training cell stopped and the evaluating ones
+continued. That ordering followed from process lifetime, not from policy.
+
+The **stall watchdog shared that lifetime**: `run_probe.sh:135` ran the same
 `while kill -0 "$training_pid"` loop. So during the evaluation grid — which is the *longer* half of
 a cell: about 13.5–14 hours in both complete cells of 16–17 Sep, against 31 minutes of training for
 `ibac_sni` and 7.3 hours for `idaac` (`time -v` in each `training.log`) — neither the sentinel
-poller nor the stall watchdog is active. A grid that hangs will not be killed by the cell itself.
-That is what the reaper in `launch-card-cell.sh` and your own monitor are for; it is also why the
-watch budget must cover training **plus** evaluation, and why §3b treats the wall-clock ceiling as
-required rather than advisory.
+poller nor the stall watchdog was active. A grid that hung would not have been killed by the cell
+itself. That is what the reaper in `launch-card-cell.sh` and your own monitor are for, still, as a
+second line of defense; it is also why the watch budget must cover training **plus** evaluation, and
+why §3b treats the wall-clock ceiling as required rather than advisory.
 
 Evidence:
 [`results/evidence/only-a-training-cell-obeys-the-sentinel`](../results/evidence/only-a-training-cell-obeys-the-sentinel/CLAIM.md).
@@ -619,10 +631,10 @@ history behind each; its "state now" column dates from 2026-09-16.
 
 | Mechanism | Fires when | Active during | Launcher-log marker | What survives |
 |---|---|---|---|---|
-| **Training wall clock** — `timeout --foreground ${CELL_TIMEOUT_SECONDS}s` (`run_probe.sh:400-402`); v5 sets 43,200 s | training runs past it | training only | expected `NATIVE_CELL_FAILED` (exit 124); **never observed here** | stamps so far, in `native-work/` |
-| **Stall watchdog** (`run_probe.sh:127-159`) | `training.log` unchanged for `CELL_STALL_SECONDS` (default 1,800 s) | training PID lifetime only | `NATIVE_CELL_STALLED`, then `NATIVE_CELL_FAILED_STALLED` | stamps so far |
-| **Memory floor** — the `-yield-` container, `yield_gpu_to_neighbour.py --floor-mib ${NATIVE_FLOOR_MIB:-4000} --interval 20`, one-shot | card free memory below the floor | obeyed only while the training PID lives (`run_probe.sh:197`) | `NATIVE_CELL_YIELDED`, **then** `NATIVE_CELL_FAILED`; the reason is only in `native-work/yield.sentinel` | stamps so far — **observed five times on 2026-09-16 and twice on 2026-09-17** |
-| **Disk floor** — the `-disk-` container, `watch_disk_headroom.py --interval 60` | free space under `/work` below this cell's floor: free at launch minus 2 × the family's disk need, never below 50 GiB (`launch-card-cell.sh:425-453`) | same sentinel, same training-only obedience | as the memory floor; the sentinel says `free_gib=` | stamps so far; **never fired here** |
+| **Training wall clock** — `timeout --foreground ${CELL_TIMEOUT_SECONDS}s` (`run_probe.sh:400-402`); v5/v6 default 43,200 s, now DERIVED as `max(3× the baseline's scheduled training seconds, 86400)` for any baseline the schedule table knows other than idaac/ppg/ibac_sni, which keep 43,200 (`notes/DECISION-SHEET.md` A69, 2026-09-20) | training runs past it | training only (unchanged scope) | **[2026-09-20]** `NATIVE_CELL_TIMEOUT phase=training limit=<s> last_frame_hint=<n|unknown>`, printed exactly when the exit status is 124, then `NATIVE_CELL_FAILED`; previously a bare 124 with no marker at all | stamps so far, in `native-work/`; `retain()` does not run for a timed-out cell (unchanged — see the note in `run_measured`) |
+| **Stall watchdog** (`run_probe.sh:127-159` for training; `run_watched_eval`, used by curve and endpoint evaluation, since 2026-09-20) | `training.log` unchanged for `CELL_STALL_SECONDS` (default 1,800 s, unchanged) — for evaluation, the combined size of `training.log` and that phase's own `offline_eval_*.jsonl` | **training AND curve/endpoint evaluation** (2026-09-20; was training-PID-lifetime only) | `NATIVE_CELL_STALLED phase=<training\|curve-eval\|endpoint-eval>`, then `NATIVE_CELL_FAILED_STALLED` (training) or the phase's own `*_FAILED` marker (evaluation) | stamps/rows already written |
+| **Memory floor** — the `-yield-` container, `yield_gpu_to_neighbour.py --floor-mib ${NATIVE_FLOOR_MIB:-4000} --interval 20`, one-shot | card free memory below the floor | **the whole cell — training through curve and endpoint evaluation** (2026-09-20; was training-PID-lifetime only, see `notes/production-host/38`) | `NATIVE_CELL_YIELDED phase=<training\|curve-eval\|endpoint-eval\|other>`, **then** `NATIVE_CELL_FAILED`; the reason is only in `native-work/yield.sentinel` | stamps so far — **observed five times on 2026-09-16 and twice on 2026-09-17, all during training; not yet observed firing during evaluation** |
+| **Disk floor** — the `-disk-` container, `watch_disk_headroom.py --interval 60` | free space under `/work` below this cell's floor: free at launch minus 2 × the family's disk need, never below 50 GiB (`launch-card-cell.sh:425-453`) | same sentinel, **same whole-cell obedience as the memory floor since 2026-09-20** | as the memory floor; the sentinel says `free_gib=` | stamps so far; **never fired here** |
 | **Reaper** (`launch-card-cell.sh:370-399`) | once the watch budget (training + eval allowance + bootstrap + slack, printed in the banner) is spent: stops the container if it emitted nothing for 900 s (`NATIVE_REAP_STALL_SECONDS`), otherwise grants 900 s at a time up to 10,800 s (`NATIVE_REAP_MAX_GRACE_SECONDS`) | the whole container, grid included | `!! REAPING <cell>` on the launcher's stderr; no `result.tgz` | every row already written; collect as in §8 item 2 |
 | **`self-vram-cap.sh`** (host, optional) | the summed **compute-app** memory of our container's PIDs exceeds the cap, sampled every 20 s | the whole container | its own log: `NATIVE_SELF_VRAM_CAP_TRIPPED`; `docker stop -t 30` | as a reap |
 | **Post-training checks** (`run_probe.sh:508-535`) | the executed endpoint is not the family's expected one; `retain` fails; the terminal checkpoint is non-finite; a strict curve is incomplete; the endpoint grid fails | after training | `NATIVE_CELL_FAILED` | checkpoints, if `retain` ran before the failing step |
@@ -653,8 +665,9 @@ its own script's comments. **Read this before launching anything**, not after a 
 
 | stop | env var | default | to loosen | to disable | real cost of disabling |
 |---|---|---|---|---|---|
-| Training wall clock | `CELL_TIMEOUT_SECONDS` | 43,200 (v5/v6) | raise it | set larger than any plausible run | a genuinely hung process runs until the reaper or the host itself intervenes |
-| Stall watchdog | `CELL_STALL_SECONDS` | 1,800 | raise it | `0` (`run_probe.sh` checks `[[ "$stall_seconds" != "0" ]]`) | a silently hung cell (no crash, no output) is invisible until the wall clock fires, hours later |
+| Training wall clock | `CELL_TIMEOUT_SECONDS`, or `TIMEOUT_S` at the v5/v6 wrapper (which derives `CELL_TIMEOUT_SECONDS` per baseline — see the row above) | 43,200 for idaac/ppg/ibac_sni; derived for every other scheduled baseline; refuses to launch for a baseline the table does not know at all | raise it | set larger than any plausible run | a genuinely hung process runs until the reaper or the host itself intervenes |
+| Stall watchdog (training) | `CELL_STALL_SECONDS` | 1,800 | raise it | `0` (`run_probe.sh` checks `[[ "$stall_seconds" != "0" ]]`) | a silently hung cell (no crash, no output) is invisible until the wall clock fires, hours later |
+| Stall watchdog (curve/endpoint evaluation, since 2026-09-20) | `CELL_STALL_SECONDS` (same variable, same 1,800 s default); the internal check cadence is `NATIVE_STALL_CHECK_SECONDS` (default 30s, matching training's) | 1,800 | raise `CELL_STALL_SECONDS` | `0` | before this fix a hung evaluation had no watchdog at all and ran until `CELL_TIMEOUT_SECONDS`, sized for a 45-hour training run, not an evaluation hang |
 | Memory floor | `NATIVE_FLOOR_MIB` | 4,000 | lower it | cannot be disabled outright — it is the mechanism that keeps a co-tenant's job alive; lowering it below their actual need defeats its purpose without saying so | the standing rule this whole host runs under ("never CUDA OOM, including other people's jobs") is what this floor exists to satisfy |
 | Disk floor | `NATIVE_DISK_ALLOWANCE_GIB`, `NATIVE_DISK_ABS_FLOOR_GIB` | `2×` the computed need; 50 GiB absolute minimum | raise the allowance (lowers the floor, i.e. lets the cell get closer to the edge before stopping) | not designed to be disabled; can be set arbitrarily low, which is the same hazard as lowering the memory floor | on a shared filesystem, filling it is *someone else's* job dying, not just yours (§5.1, `watch_disk_headroom.py`'s own docstring) |
 | Reaper (post-watch-budget) | the watch budget printed in the launch banner (training + eval allowance + bootstrap + slack) | computed per cell | none exposed directly — the budget is derived, not a flat number | cannot be disabled; it exists to reclaim a card once a booking is over | none of ours; the reaper protects the *next* booking, not this cell |
@@ -826,14 +839,22 @@ Procedure §9.6 has the commands. Two things that are not obvious:
    recipe in its own refusal message; read the stderr rather than guessing.
 3. **Expect a large "unverifiable" count, and know what it is made of.** Run
    `audit_record_frame_provenance.py <records> --checkpoints <dir>` — without `--checkpoints` it has
-   nothing to match and calls *everything* unverifiable. With it, a complete cell decomposes
-   predictably. Measured on `idaac` s102's 598 rows (2026-09-17):
+   nothing to match and calls *everything* unverifiable. **[2026-09-20] `<dir>` is the CELL
+   directory** (`native-out/cells/<cell>`), **not its `checkpoints/` subfolder** — the endpoint's
+   frame-stamped snapshot, `snapshot_<frame>.pt`, is written beside `checkpoints/`, one level up
+   (`run_probe.sh`'s `run_endpoint_eval`, `NATIVE_ENDPOINT_STAMPED_SNAPSHOT`), so pointing at the
+   subfolder finds every curve checkpoint but misses every endpoint one, and every endpoint row
+   comes back unverifiable for a reason that has nothing to do with the run. Hit live 2026-09-20:
+   pointing at `checkpoints/` left 88 endpoint rows unverifiable on a cell where pointing at the
+   cell directory instead read 572 corroborated, 0 MISMATCHED. With the cell directory, a
+   complete cell decomposes predictably. Measured on `idaac` s102's 598 rows (2026-09-17, directory
+   used for that measurement not re-confirmed against this correction):
 
    | count | what | why |
    |---|---|---|
    | 484 | curve rows | **corroborated** — frame in the checkpoint's name, frame in the record, hashes agree |
    | 0 | — | **mismatched**: this is the number that must stay zero |
-   | 88 | endpoint rows | unverifiable: the terminal checkpoint has no frame in its name (same for `ppg` and `ibac_sni`) |
+   | 88 | endpoint rows | unverifiable here: the terminal checkpoint has no frame in its name (same for `ppg` and `ibac_sni`) — check first whether `--checkpoints` pointed at the cell directory per the correction above before trusting this as a property of the run itself |
    | 26 | `phase: "eval"` rows | unverifiable: in-training evaluation, logged during the run, carries no `checkpoint_sha256` at all |
 
    The tool prints "UNVERIFIABLE IS NOT OK" over the total, which is right as a default and

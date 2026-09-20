@@ -81,16 +81,25 @@ if [[ -z "${TIMEOUT_S:-}" ]]; then
     idaac|ppg|ibac_sni) : ;;   # measured sub-12h on THIS host; the 43200s default is safe as-is
     *)
       if _sched=$(_scheduled_train_seconds "$BASELINE"); then
-        echo "REFUSING: $BASELINE has no measured sub-12h V100 training time and TIMEOUT_S is unset." >&2
-        echo "  The 12h default (CELL_TIMEOUT_SECONDS=43200) would cut it before it finishes:" >&2
-        echo "  scheduled training is $(( _sched / 3600 ))h $(( (_sched % 3600) / 60 ))m on the" >&2
-        echo "  DataSphere T4 tier (production-schedule.json); V100 is unmeasured for it. Pass" >&2
-        echo "  TIMEOUT_S explicitly (seconds) once you know how long this baseline actually needs." >&2
+        # [Claude 2026-09-20, item 4] THE CEILING COMES FROM THE SCHEDULE, NOT FROM A BARE NUMBER.
+        # Refusing here punished every baseline the table DOES know, for no reason beyond the
+        # ceiling not yet existing -- the table already says how long training is scheduled to
+        # take, which is exactly what a ceiling needs. 3x is headroom over an unmeasured T4->V100
+        # transfer (V100 could be slower, not just faster); 86400 (24h) is an absolute floor so a
+        # fast-scheduled baseline (e.g. drqv2 at 23040s x 3 = 69120s) still gets a day, not an
+        # afternoon, against an estimate that has never been checked on this host.
+        _derived=$(( _sched * 3 ))
+        [[ "$_derived" -lt 86400 ]] && _derived=86400
+        TIMEOUT_S="$_derived"
+        echo "TIMEOUT_S defaulted to ${TIMEOUT_S}s = max(3 x ${_sched}s scheduled train time, 86400s)" >&2
+        echo "  for $BASELINE (production-schedule.json's solo_hours_per_seed_gt4_1; V100 is" >&2
+        echo "  unmeasured for it, so this is a ceiling, not a promise). Pass TIMEOUT_S explicitly" >&2
+        echo "  to override." >&2
       else
         echo "REFUSING: $BASELINE is not in the scheduled-training-time table and TIMEOUT_S is" >&2
-        echo "  unset -- the 12h default is unverified for it. Pass TIMEOUT_S explicitly." >&2
+        echo "  unset -- there is nothing to derive a ceiling from. Pass TIMEOUT_S explicitly." >&2
+        exit 2
       fi
-      exit 2
       ;;
   esac
 elif _sched=$(_scheduled_train_seconds "$BASELINE") && [[ "$TIMEOUT_S" -lt "$_sched" ]]; then
