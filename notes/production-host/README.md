@@ -49,6 +49,7 @@ and the specifics are where the harm is.
 | [37-what-a-cell-actually-costs-in-wall-clock.md](37-what-a-cell-actually-costs-in-wall-clock.md) | A retracted "96s" claim, and the real numbers from a completed cell: eval (curve + endpoint) costs roughly double the training time. Also the ppg checkpoint-cadence mechanism (`ppo.py:188`, two uncoordinated numbers combining via modular arithmetic) that a keyword search for "save" or "cadence" cannot find. |
 | [38-the-memory-floor-does-not-protect-anyone-during-evaluation.md](38-the-memory-floor-does-not-protect-anyone-during-evaluation.md) | 2026-09-20: a labmate took a card to 1.9 GiB free, the observer wrote the yield sentinel, and our evaluating cell ignored it for 50 minutes — the poller exists only while TRAINING runs. Not fixed |
 | [39-idaac-at-three-seeds.md](39-idaac-at-three-seeds.md) | 2026-09-20: the first baseline complete at n=3. No seed reaches competence; train vs eval-easy shows no gap at three seeds; seed 103 reverses the earlier "eval-medium < eval-hard" reading |
+| [40-19-20-september-as-it-happened.md](40-19-20-september-as-it-happened.md) | The hour-by-hour of 19–20 Sep, moved verbatim out of the state document: svea's two failed attempts, the host crash, idaac s103, the first native cell, the labmate on card 0 and why a 3-minute vacancy there was a restart |
 
 ## The rule that comes before the others
 
