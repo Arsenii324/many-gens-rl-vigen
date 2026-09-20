@@ -5,12 +5,12 @@
 
 Every run whose records this repository holds, with the circumstances each record carries and the files that back it. **Generated from `results/records/`**; `scripts/production_run_register.py --check` fails when it drifts.
 
-**90 job(s), 6193 record row(s), 12 baseline(s).**
+**91 job(s), 6791 record row(s), 12 baseline(s).**
 
 | baseline | rows |
 |---|---:|
+| `idaac` | 2645 |
 | `ibac_sni` | 2615 |
-| `idaac` | 2047 |
 | `ppg` | 715 |
 | `drqv2` | 323 |
 | `rad` | 147 |
@@ -1236,6 +1236,29 @@ Every run whose records this repository holds, with the circumstances each recor
   | `sample` | eval-medium | 10.36 | ± 0.77 | 0.000 | 200 | 10 | not paired ⚠ |
   | `sample` | train | 20.51 | ± 1.44 | 0.005 | 200 | 10 | **paired** |
 
+### `card1-20260920-011652` — idaac
+
+- **cells** `idaac-s103` · **seeds** `103` · **rows** 598
+- **frames** 2,048 → 598,016 (35 distinct)
+- **phases** {'eval': 26, 'offline-eval': 572}
+- **policy mode(s)** `mode`, `sample`
+- **evaluator revision(s)** `1b092f978fdc` **CURRENT**
+- **records** [`results/records/card1-20260920-011652__records.jsonl`](results/records/card1-20260920-011652__records.jsonl)
+- **logs** none installed in `results/logs/`. For a host run the curve is at `native-out/cells/<cell>/progress-*.csv` **in its run directory**, not here.
+- **curve** (train regime, 11 stamp(s)): first 1.33 @51,200 · **peak 47.54 @501,760** · last 45.05 @550,912 · **SE ≈ 2.4 per point**
+  <br/>*A move smaller than about 4.8 between stamps is inside 2 SE and is not a trend.*
+
+  | policy mode | regime | return | **SE** | success rate | episodes | scenes | paired? |
+  |---|---|---:|---:|---:|---:|---:|---|
+  | `mode` | eval-easy | 43.84 | ± 2.36 | 0.000 | 200 | 10 | **paired** |
+  | `mode` | eval-hard | 16.68 | ± 0.86 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `mode` | eval-medium | 33.39 | ± 1.45 | 0.010 | 200 | 10 | not paired ⚠ |
+  | `mode` | train | 41.61 | ± 1.91 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-easy | 37.61 | ± 2.20 | 0.000 | 200 | 10 | **paired** |
+  | `sample` | eval-hard | 12.97 | ± 0.72 | 0.000 | 200 | 10 | not paired ⚠ |
+  | `sample` | eval-medium | 27.72 | ± 1.56 | 0.005 | 200 | 10 | not paired ⚠ |
+  | `sample` | train | 36.25 | ± 1.60 | 0.000 | 200 | 10 | **paired** |
+
 ### `reeval-v214-ibac_sni-s102-attempt2-partial-curve` — ibac_sni
 
 - **cells** `ibac_sni-s102` · **seeds** `102` · **rows** 308
@@ -1398,7 +1421,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s101` · **seed** 101 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-16T20:35 MSK · **run dir** `~/rlvigen-runs/card1-20260916-203537` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** complete: CELL EXIT=0, NATIVE_CELL_COMPLETED 11:16 on 2026-09-17; 910 rows delivered and collected to results/records/card1-20260916-203537__records.jsonl (curve 528, endpoint 44 native + 44 mode, plus training-curve rows) — **status recorded 78h ago**
+- **status** complete: CELL EXIT=0, NATIVE_CELL_COMPLETED 11:16 on 2026-09-17; 910 rows delivered and collected to results/records/card1-20260916-203537__records.jsonl (curve 528, endpoint 44 native + 44 mode, plus training-curve rows) — **status recorded 79h ago**
 - ⚠ attempt 7, launched 20:35 by wait-and-train-v3.sh after card 1 held >=15000 MiB free for ten polls. TRAINING COMPLETE 21:19 MSK at F 600064 -- 44 minutes of wall clock, and the first ibac cell ever to finish its 600k. Held 7,421 MiB at procs=16 (2,199 compute + 5,222 EGL). On entering NATIVE_CURVE_EVAL_BEGIN the card delta fell to 839 MiB, matching the 841 MiB eval-cell figure measured separately, so the EGL contexts really do go away at num_envs=1 -- checked against the card rather than assumed. Learning through training: return 7 -> 91, entropy 9.90 -> 7.88, sigma 0.996 -> 0.746 read from its own lns field, SR 0.000 throughout, which is what Door's shaped reward gives. Now in the in-cell grid. Watch budget 115,668s from 20:35 expires 04:43 on 09-18 against an estimated finish of ~14:50 on 09-17, so there is about 14 hours of slack.
 
 ### `card1-20260916-213222` — idaac — **COLLECTED**
@@ -1414,7 +1437,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **cell** `ibac_sni-s102` · **seed** 102 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-17T07:50 MSK · **run dir** `~/rlvigen-runs/card1-20260917-075047` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** failed — **status recorded 81h ago**
+- **status** failed — **status recorded 82h ago**
 - ⚠ ibac_sni seed 102, launched 07:50 on 2026-09-17 onto a card 1 that rlvigen_kalugin_df had released two minutes earlier. STOOD DOWN BY THE MEMORY FLOOR at 08:01, eleven minutes in, at frame 28,672 of 600,000: 'yielded at 1789621293: free memory 75 MiB is below the 4000 MiB floor, free_mib=75 procs=7 util=99'. The co-tenant returned with 22,176 MiB while this cell's 16 EGL contexts were still ramping toward its measured 7,421 MiB, and the floor correctly sacrificed OUR cell rather than theirs. NOTHING WAS SALVAGED: ibac stamps checkpoints on a 50k cadence and this run stopped at 28,672, so it never wrote a single model_<frame>.pt -- only the overwritten model.pt. This repeats a trap recorded in notes/HANDOFF.md by me earlier the same night: 'ibac_sni, but only into a card that has been free for a while ... launching into a fresh vacancy is what failed'. Four of ibac's five earlier failures were this same floor-versus-colleague pattern. The two in-cell grids on the same card were UNAFFECTED, because run_probe.sh:196 polls the sentinel only while a training PID lives and both of them are past training.
 
 ### `card1-20260917-110044` — ibac_sni — **not yet collected**
@@ -1433,12 +1456,12 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **status** failed: host crashed ~21:25 MSK (unclean, rebooted 22:05; all tenants' containers lost). Cell had reached frame 9000 in 35 min at ~2.4 FPS with GPU util 0 -- far below the ~14 FPS its 12 h training budget needs. No checkpoint (first save at 50k). — **status recorded 20h ago**
 - ⚠ svea s101 attempt 2 on card 1 (30+ min sustained vacancy, 32.5 GiB free at launch); payload v216 carries the run_probe.sh Places365-mount fix 6458c05; attempt 1 (card1-20260919-203001) died before training on PLACES365_EXPECTED_COUNT unset
 
-### `card1-20260920-011652` — idaac — **not yet collected**
+### `card1-20260920-011652` — idaac — **COLLECTED**
 
 - **cell** `idaac-s103` · **seed** 103 · **frames** 600,000 · **card** 1 · **profile** `v100`
 - **launched** 2026-09-20T01:16 MSK · **run dir** `~/rlvigen-runs/card1-20260920-011652` on `100.98.2.11`
 - **eval** curve 3 ep/scene, endpoint 20 ep/scene, policy modes `native,mode`
-- **status** running — **status recorded 16h ago**
+- **status** complete: NATIVE_CELL_COMPLETED, 598 records collected 2026-09-20; trained 4.8 h, evaluated beside a co-tenant's 21.5 GiB on card 1 without incident — status recorded under an hour ago
 - ⚠ idaac s103 on card 1 via wait-and-train-v4 (host v4 5f5b38c, v5 c2d99a2), 12 genuine post-restart clear samples, both cards empty 3 h after the host's 22:05 reboot. Second launch: the first (card1-20260920-011411) was stopped by me after 2 min of apt bootstrap because its disk floor was 307 GiB of 325 free (allowance 18) and other tenants refilling the disk would have stopped it; relaunched with NATIVE_DISK_ALLOWANCE_GIB=260, floor 65 GiB.
 
 ### `card0-20260920-094616` — drqv2 — **not yet collected**
@@ -1449,7 +1472,7 @@ Recorded when launched, from each cell's own `effective_config.json`, so a run's
 - **status** trained to 600k (5.2 h at ~32 FPS, 38.5 GiB RAM peak measured); EVALUATION DEFERRED: stopped by the operator at 17:46 MSK 20 Sep during curve evaluation (7 of 13 stamps begun) because a labmate's 26 GiB job arrived on card 0 leaving 5.4 GiB free and our floor-yield watcher was no longer running; 12 checkpoints 50k-600k plus snapshot.pt retained in native-out; evaluate later from them — status recorded under an hour ago
 - ⚠ drqv2 s101: FIRST NATIVE production cell, on card 0 (both cards booked for our group 20-23 Sep under a colleague's name; owner said use with consideration; card 0 empty for 11 h, last 12 samples clear). By hand via train-production-cell-v6.sh (host copy, pre-refusal version) with TIMEOUT_S=86400 explicit, NATIVE_DISK_ALLOWANCE_GIB=240 (floor 77 GiB), payload v216. Dry run passed first. Runs beside idaac s103 on card 1.
 
-**12 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
+**11 run(s) above have produced no record file here.** Until they are collected their numbers exist only on the host, and nothing in this repository can be used to check them.
 
 ## Caveats — what this register cannot see
 

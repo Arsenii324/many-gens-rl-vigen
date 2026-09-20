@@ -48,6 +48,7 @@ and the specifics are where the harm is.
 | [36-no-completed-cell-passes-the-competence-gate.md](36-no-completed-cell-passes-the-competence-gate.md) | Every 600k cell clears the random floor on shaped return and opens the door in ~0 of 200 episodes, so the protocol's own gate withholds every retention ratio. What the campaign can and cannot claim at this budget. |
 | [37-what-a-cell-actually-costs-in-wall-clock.md](37-what-a-cell-actually-costs-in-wall-clock.md) | A retracted "96s" claim, and the real numbers from a completed cell: eval (curve + endpoint) costs roughly double the training time. Also the ppg checkpoint-cadence mechanism (`ppo.py:188`, two uncoordinated numbers combining via modular arithmetic) that a keyword search for "save" or "cadence" cannot find. |
 | [38-the-memory-floor-does-not-protect-anyone-during-evaluation.md](38-the-memory-floor-does-not-protect-anyone-during-evaluation.md) | 2026-09-20: a labmate took a card to 1.9 GiB free, the observer wrote the yield sentinel, and our evaluating cell ignored it for 50 minutes — the poller exists only while TRAINING runs. Not fixed |
+| [39-idaac-at-three-seeds.md](39-idaac-at-three-seeds.md) | 2026-09-20: the first baseline complete at n=3. No seed reaches competence; train vs eval-easy shows no gap at three seeds; seed 103 reverses the earlier "eval-medium < eval-hard" reading |
 
 ## The rule that comes before the others
 
