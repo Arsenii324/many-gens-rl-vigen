@@ -46,7 +46,25 @@ waiter, until `idaac` s103 ends.]
 | `ibac_sni` | 101 | complete (DONE) | 910: 528 curve + 88 endpoint + training-curve rows | trained 31.5 min at 16 processes, grid about 14 h; finished 11:16 on 2026-09-17 |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**TWO CELLS RUNNING (as of 2026-09-20 09:53 MSK, read from the host).** (1) **`drqv2` s101 — the first
+**NOTHING OF OURS IS RUNNING (as of 2026-09-20 17:49 MSK, read from the host) except the read-only
+occupancy logger. No waiter is armed. The owner asked for NO further runs for now** (wrap up; defer
+what can be done separately in a few days).
+- **`idaac` s103 COMPLETED** at 17:45 (`card1-20260920-011652`, `CELL EXIT=0`, 598 records) — it ran
+  its last hours beside `rlvigen_kalugin_df`'s 21.5 GiB on card 1 without incident. Collection is
+  the next step; its outputs are being copied to `fetched/`.
+- **`drqv2` s101 TRAINED to 600k, EVALUATION DEFERRED** (`card0-20260920-094616`). First native
+  cell: ~32 FPS on the V100 (DataSphere T4: 26.05), 5.2 h of training, **38.5 GiB RAM at full
+  replay, measured** (computed: ~40). I stopped it at 17:46 during its curve evaluation (7 of 13
+  stamps begun) because a labmate's bare-host job took 26 GiB of card 0, leaving 5.4 GiB free, and
+  our floor-yield watcher for that cell was no longer running. 12 checkpoints (50k–600k) plus
+  `snapshot.pt` are retained in `native-out` and being copied to the laptop; the evaluation can be
+  run any day from them with `host-scripts/reeval-cell*.sh`. Why the yield watcher had exited is
+  NOT yet known.
+- Deployed to the host at 17:49, with the previous copies kept as `*.before-20260920-swap`: the
+  fixed `wait-and-train-v4.sh` (contiguous vacancy samples) and both wrappers (refuse a slow
+  baseline without `TIMEOUT_S`); hashes equal the laptop's; the refusal was exercised on the host.
+
+**Earlier the same day — two cells were running (as of 2026-09-20 09:53 MSK, read from the host).** (1) **`drqv2` s101 — the first
 native production cell** — run `card0-20260920-094616`, container `cell-c0-605720`, **card 0**,
 launched 09:46 by hand through `train-production-cell-v6.sh` after a passing dry run, with
 `TIMEOUT_S=86400` explicit and a 77 GiB disk floor; recorded; watched by its own `watch-cell.sh
