@@ -233,7 +233,10 @@ Every one of these fired at least once today, which is the only evidence that a 
 | `check-finite` | a NaN'd checkpoint, before any grid | not seen tonight |
 | ledger `populate` | a record whose closure is not live | ctrl, repeatedly, until its cuDNN pin landed |
 
-**The memory floor is never waived.** Utilisation contention costs time; memory exhaustion costs
+[Corrected 2026-09-20, `production-host/38`: the floor's yield is INERT during evaluation — the
+sentinel poller lives inside `run_measured()` and dies with the training process, so for the curve
+and endpoint grids nothing reads it. Observed: free memory at 1,905 MiB, sentinel written, cell ran
+on for 50 minutes.] **The memory floor is never waived.** Utilisation contention costs time; memory exhaustion costs
 someone else's run, and our per-process VRAM cap does NOT bind — `PYTHONPATH` is overwritten by all
 nine family launchers, and ppg once reached 26,653 MiB under a 10,240 MiB cap.
 

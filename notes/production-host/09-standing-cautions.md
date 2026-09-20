@@ -68,6 +68,11 @@ Each of these shipped, looked fine, and was found later. They are the shape to w
   ever run, while the VRAM column of every planning table said "unmeasured". Before concluding a
   quantity is unknown, check whether something is already recording it.
 
+- **A cell in its EVALUATION phase has no automatic yield** (2026-09-20, note 38). The free-memory
+  floor's sentinel is polled only while the training process lives; during the curve and endpoint
+  grids — most of a cell's life — nothing reads it, and the observer writes it once and exits. If a
+  co-tenant appears beside an evaluating cell, stop the cell by hand, by exact name. Not fixed yet.
+
 ## Judgement, when nothing above applies
 
 - **Verify by reading, not by running.** Especially for opaque pipelines, unknown download sizes,
