@@ -52,6 +52,15 @@ BASE_ALLOWED = (
     "datasphere/native/rlvigen-source.json",
     "datasphere/native/run_probe.sh",
     "datasphere/native/source-lock.json",
+    # [Claude 2026-09-20] `run_probe.sh`'s own `resource_summary()` imports this at manifest-write
+    # time (`from summarize_result import summarize_resources`) and was never on this list, so
+    # every real cell hit `ModuleNotFoundError: No module named 'summarize_result'` and recorded
+    # `summary_unavailable` instead of a resource summary -- confirmed on both idaac-s102
+    # (card1-20260916-213222) and ibac_sni-s101 (card1-20260916-203537). Not a RUNNER_CONTRACT bump:
+    # the import is already wrapped in a bare `except Exception`, so an old payload under a new
+    # runner still degrades to the same `summary_unavailable` it produces today, silently in the
+    # same way as before -- not a new failure mode a mismatch could hide.
+    "datasphere/native/summarize_result.py",
     # [Claude 2026-09-08] `run_probe.sh` copies this to `$work/.vram-cap/sitecustomize.py` and puts
     # it on PYTHONPATH when NATIVE_VRAM_CAP_MIB is set, so the runner REQUIRES a member it did not
     # before -- which is exactly what RUNNER_CONTRACT exists to catch, bumped to 15 below. Omitting

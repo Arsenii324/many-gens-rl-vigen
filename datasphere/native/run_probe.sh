@@ -1817,6 +1817,21 @@ import json
 
 print(json.dumps({dist.metadata["Name"]: dist.version for dist in importlib.metadata.distributions() if dist.metadata.get("Name")}, sort_keys=True))
 PY
+# [Claude 2026-09-20] Debian package versions, never captured before now: the owner's own question
+# was "don't we have each run associated with the concrete apt and pip version inside?" and the
+# answer was pip-only. Captured HERE, after the cell's own apt-get installs (run_on_production_host
+# .sh's bootstrap, which runs before this script starts) and before setup/apply_patches.py, the same
+# point in the sequence as resolved_packages.json above.
+#
+# Kept OUT of run_manifest.json's own top level on purpose: that whole dict is stamped onto every
+# delivered row (`row.setdefault("_run_provenance", manifest)`, further down this file) exactly the
+# way `resolved_packages` already is -- confirmed empirically on a real delivered bundle,
+# results/records/card1-20260916-213222__records.jsonl carries its 87-package `resolved_packages`
+# dict on 572 of 598 rows, at ~23.6 MB total for the file. A few hundred dpkg packages on every row
+# would be the same mistake at a larger multiplier. So the full list lives once, in its own file;
+# only a hash and a count travel into the manifest (and therefore onto every row).
+dpkg-query -W -f='${Package} ${Version}\n' > "$out/dpkg_packages.txt" 2>/dev/null \
+  || echo "=== NATIVE_DPKG_QUERY_UNAVAILABLE (no dpkg-query on this image) ===" >&2
 python3 setup/apply_patches.py
 python3 setup/apply_patches.py --check
 # The payload's runner contract and allowlist are not the evaluator identity. After the separately
@@ -2407,6 +2422,49 @@ def final_marker(path):
     return f"NATIVE_FINAL_EVALUATION_COMPLETED frame={hits[-1]}" if hits else None
 
 
+def family_of_baseline(baseline, families_json):
+    """The family owning this baseline, per families.json -- the same descriptor family.py's own
+    retain() reads, not a second table."""
+    for name, entry in families_json.items():
+        if isinstance(entry, dict) and baseline in entry.get("baselines", []):
+            return name
+    return None
+
+
+def curve_row_counts(baseline, seed, families_json, directory):
+    """(train_curve_rows, eval_curve_rows), from whatever files THIS family's own descriptor names.
+
+    [Claude 2026-09-20] Replaces a hardcoded `rows(directory / "train.csv")` /
+    `rows(directory / "eval.csv")` that silently read 0 for every family but rlvigen: idaac's real
+    curve is `progress-robosuite:{task}-{baseline}-s{seed}.csv`, ibac_sni's is `log.csv`, ppg's is
+    `progress.csv` -- confirmed on real delivered bundles (card1-20260916-213222,
+    card1-20260916-203537) that the manifest said 0 while normalize_curves.py's own family-aware
+    readers found 26 and 293 rows respectively in those exact files. families.json's
+    `required_curves`/`optional_curves` are the existing single source of truth for these filenames
+    (already used by family.py's own `retain()`); reused here rather than adding a second table.
+    `required_curves` maps to `train_curve_rows` and `optional_curves` to `eval_curve_rows`, the
+    same role split rlvigen's own train.csv/eval.csv pair already has.
+    """
+    family = family_of_baseline(baseline, families_json)
+    if family is None:
+        return 0, 0
+    entry = families_json.get(family, {})
+    fields = {"baseline": baseline, "seed": seed, "task": os.environ.get("TASK", "Door")}
+
+    def total(templates):
+        count = 0
+        for template in templates:
+            try:
+                name = template.format(**fields)
+            except (KeyError, IndexError):
+                continue
+            count += rows(directory / name)
+        return count
+
+    return (total(entry.get("required_curves") or []),
+           total(entry.get("optional_curves") or []))
+
+
 def cell_failure_marker(path):
     """The line explaining why a FAILED cell failed, from its own log.
 
@@ -2466,6 +2524,12 @@ def resource_summary(path):
 
 
 frames_requested = int(os.environ.get("FRAMES", "10000"))
+# Loaded once, ahead of the per-cell loop, and reused below for `_cell_launchers` too -- one read,
+# fail-soft, rather than two copies that could disagree about whether it succeeded.
+try:
+    _FAMILIES = json.loads(Path("datasphere/native/families.json").read_text())
+except Exception:
+    _FAMILIES = {}
 cells = {}
 for spec in requested:
     baseline, seed = identify(spec)
@@ -2475,6 +2539,7 @@ for spec in requested:
     snapshot = directory / "snapshot.pt"
     cell_failed = identifier in failed
     marker = final_marker(log)
+    train_rows, eval_rows = curve_row_counts(baseline, seed, _FAMILIES, directory)
     cells[identifier] = {
         "baseline": baseline,
         "seed": seed,
@@ -2487,8 +2552,8 @@ for spec in requested:
         "failure_marker": None,
         "snapshot_retained": snapshot.exists() and snapshot.stat().st_size > 0,
         "snapshot_bytes": snapshot.stat().st_size if snapshot.exists() else 0,
-        "train_curve_rows": rows(directory / "train.csv"),
-        "eval_curve_rows": rows(directory / "eval.csv"),
+        "train_curve_rows": train_rows,
+        "eval_curve_rows": eval_rows,
         "resource_summary": resource_summary(directory / "resources.json"),
     }
     # A cell can emit a real completion marker and still be in `failed` -- training saved, then
@@ -2511,9 +2576,8 @@ for spec in requested:
 # point and the per-cell family launcher as separate fields, each true of what it names.
 # Fail-soft: this block writes the manifest AFTER the cells have run, so an exception here would
 # destroy a completed job's evidence over a provenance nicety. An unreadable descriptor yields
-# "unknown", which is honest, rather than a traceback.
+# "unknown", which is honest, rather than a traceback. Reuses `_FAMILIES`, loaded once above.
 try:
-    _FAMILIES = json.loads(Path("datasphere/native/families.json").read_text())
     _LAUNCHER_OF_BASELINE = {
         baseline: entry.get("launcher")
         for name, entry in _FAMILIES.items()
@@ -2528,9 +2592,40 @@ for _spec in requested:
     _cell_launchers[identify(_spec)[0] + "-s" + identify(_spec)[1]] = _LAUNCHER_OF_BASELINE.get(
         _baseline, "unknown")
 
+# [Claude 2026-09-20] The payload's OWN manifest already carries the source commit and a dirty
+# flag -- contract.py's `write_payload()` has stamped `payload_manifest.json` with them since
+# 2026-09-08 -- but nothing downstream ever read it back out, so no run_manifest.json or record
+# ever carried it. `payload_manifest.json` is a top-level payload member (contract.py:328), and
+# this script's own CWD is the extracted payload root throughout (every other relative read in this
+# file, e.g. "requirements-native.txt" a few lines below, already assumes that). Best-effort: a
+# payload built before this existed, or a test fixture with no git identity, reads "unknown" here
+# exactly as contract.py itself already reports for a source tree with no git -- not a new failure
+# mode.
+try:
+    _payload_manifest = json.loads(Path("payload_manifest.json").read_text())
+    _source_commit = _payload_manifest.get("source_commit", "unknown")
+    _source_dirty = _payload_manifest.get("source_dirty", "unknown")
+except Exception:
+    _source_commit, _source_dirty = "unknown", "unknown"
+
+# Debian package versions (see the dpkg-query capture above): full list on disk once, only a
+# fingerprint travels into the manifest -- and therefore onto every row, per the size note there.
+_dpkg_file = OUT / "dpkg_packages.txt"
+if _dpkg_file.is_file():
+    _dpkg_text = _dpkg_file.read_text(errors="replace")
+    _dpkg_sha256 = hashlib.sha256(_dpkg_file.read_bytes()).hexdigest()
+    _dpkg_count = sum(1 for line in _dpkg_text.splitlines() if line.strip())
+else:
+    _dpkg_sha256, _dpkg_count = None, 0
+
 json.dump({
     # The outer entry point, which is true for every family. The family launcher is per cell.
     "command": "datasphere/native/run_probe.sh",
+    "source_commit": _source_commit,
+    "source_dirty": _source_dirty,
+    "dpkg_packages_file": "dpkg_packages.txt",
+    "dpkg_packages_sha256": _dpkg_sha256,
+    "dpkg_packages_count": _dpkg_count,
     "cell_launchers": _cell_launchers,
     "cells_requested": requested,
     "cells_failed": failed,

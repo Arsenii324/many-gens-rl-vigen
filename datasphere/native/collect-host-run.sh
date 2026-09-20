@@ -343,4 +343,67 @@ else
   echo "   NOTE: production_gates.py printed no 'shared evaluator validated' line. The collection" >&2
   echo "   SUCCEEDED -- this is about the summary, not the result. Check the gate separately." >&2
 fi
+
+# 9. CHECKPOINTS AND resources.json, opt-in and explicit -- the DEFAULT above is unchanged.
+#
+# [Claude 2026-09-20] Neither ever reaches a durable location today. `family.py`'s own `retain()`
+# writes both under native-out/cells/<cell>/ (checkpoints/, snapshot.pt, resources.json) -- not
+# native-work, so the standard fetch this file's header recommends
+# (`rsync -a --exclude 'native-work' ...`) DOES bring them to the laptop. But this script has only
+# ever installed records_delivery.jsonl into $RECORDS_DIR; once the scratch `$RUN_DIR` those came in
+# on is cleaned up -- large, untracked, nothing here says otherwise -- they are gone. Confirmed
+# empirically 2026-09-20: idaac-s102 (card1-20260916-213222) and ibac_sni-s101
+# (card1-20260916-203537) both have a host-runs.jsonl note saying native-out was banked to the
+# laptop, and neither has a single .pt or resources.json anywhere in this repository today. The
+# 2026-09-19 host crash is why "fetch it again later" is no longer an acceptable plan.
+#
+# Off by default: this can be tens to hundreds of MB per cell, and nobody asked for that to happen
+# on every collection. NATIVE_ACCEPT_FAT_DELIVERY and NATIVE_ACCEPT_WATCH_STOP above are the
+# precedent for an explicit flag rather than a changed default. Does not touch $RUN_DIR or make any
+# network call -- it copies from the already-fetched local directory, same as every other step here.
+_sha256() { sha256sum "$1" 2>/dev/null | awk '{print $1}' || shasum -a 256 "$1" | awk '{print $1}'; }
+if [[ "${COLLECT_CHECKPOINTS:-0}" == "1" ]]; then
+  echo "   -- checkpoints and resources.json (COLLECT_CHECKPOINTS=1)"
+  CKPT_DEST="results/checkpoints/$JOB_ID"
+  fetched_any=0
+  for cell_dir in "$RUN_DIR"/native-out/cells/*/; do
+    [[ -d "$cell_dir" ]] || continue
+    cell_name="$(basename "$cell_dir")"
+    dest_cell="$CKPT_DEST/cells/$cell_name"
+    for rel in snapshot.pt resources.json; do
+      src_file="${cell_dir}${rel}"
+      [[ -f "$src_file" ]] || continue
+      mkdir -p "$dest_cell"
+      cp -p "$src_file" "$dest_cell/$rel"
+      src_hash="$(_sha256 "$src_file")"; dst_hash="$(_sha256 "$dest_cell/$rel")"
+      if [[ "$src_hash" != "$dst_hash" ]]; then
+        echo "   REFUSING: $cell_name/$rel does not hash-match its source after copy." >&2
+        exit 1
+      fi
+      echo "      $cell_name/$rel: $(wc -c < "$src_file" | tr -d ' ') bytes, sha256 $src_hash, verified"
+      fetched_any=1
+    done
+    if [[ -d "${cell_dir}checkpoints" ]]; then
+      mkdir -p "$dest_cell/checkpoints"
+      for ckpt in "${cell_dir}checkpoints"/*; do
+        [[ -f "$ckpt" ]] || continue
+        name="$(basename "$ckpt")"
+        cp -p "$ckpt" "$dest_cell/checkpoints/$name"
+        src_hash="$(_sha256 "$ckpt")"; dst_hash="$(_sha256 "$dest_cell/checkpoints/$name")"
+        if [[ "$src_hash" != "$dst_hash" ]]; then
+          echo "   REFUSING: $cell_name/checkpoints/$name does not hash-match its source after copy." >&2
+          exit 1
+        fi
+        echo "      $cell_name/checkpoints/$name: $(wc -c < "$ckpt" | tr -d ' ') bytes, sha256 $src_hash, verified"
+        fetched_any=1
+      done
+    fi
+  done
+  if [[ "$fetched_any" == "1" ]]; then
+    echo "   installed under $CKPT_DEST, every file verified by hash after copy"
+  else
+    echo "   NOTE: COLLECT_CHECKPOINTS=1 but no checkpoints/resources.json/snapshot.pt found under" >&2
+    echo "   $RUN_DIR/native-out/cells/*/ -- nothing to copy." >&2
+  fi
+fi
 exit 0

@@ -878,7 +878,8 @@ def test_run_manifest_reads_the_actual_per_cell_endpoint_marker():
     assert 'marker if (log.exists()' not in runner
 
 
-def _run_manifest_builder(tmp_path, *, cells, failed=(), failure_marker=""):
+def _run_manifest_builder(tmp_path, *, cells, failed=(), failure_marker="",
+                          extra_cell_files=None, dpkg_lines=None, payload_manifest=None):
     """Execute the manifest heredoc from the real runner against a synthetic cell tree."""
     source = RUNNER.read_text()
     start = source.index("python3 - <<'PY' > \"$out/run_manifest.json\"")
@@ -890,6 +891,11 @@ def _run_manifest_builder(tmp_path, *, cells, failed=(), failure_marker=""):
         cell = out / "cells" / identifier
         cell.mkdir(parents=True)
         (cell / "training.log").write_text(log_text)
+        for name, content in (extra_cell_files or {}).get(identifier, {}).items():
+            (cell / name).write_text(content)
+    if dpkg_lines is not None:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "dpkg_packages.txt").write_text("\n".join(dpkg_lines) + ("\n" if dpkg_lines else ""))
     environment = {
         **os.environ,
         "NATIVE_CELLS": ",".join(cells),
@@ -900,12 +906,95 @@ def _run_manifest_builder(tmp_path, *, cells, failed=(), failure_marker=""):
         "ASSET_SHA256": "asset",
     }
     script = script.replace('OUT = Path("/tmp/native-out")', f"OUT = Path({str(out)!r})")
+    if payload_manifest is not None:
+        manifest_fixture = tmp_path / "payload_manifest.json"
+        manifest_fixture.write_text(json.dumps(payload_manifest))
+        script = script.replace('Path("payload_manifest.json")',
+                                f"Path({str(manifest_fixture)!r})")
     result = subprocess.run(
         [sys.executable, "-c", script], cwd=ROOT, env=environment,
         text=True, capture_output=True,
     )
     assert result.returncode == 0, result.stderr
     return json.loads((out / "run_manifest.json").read_text())
+
+
+def test_manifest_carries_a_dpkg_summary_not_the_full_list(tmp_path):
+    """Full list on disk once (dpkg_packages.txt); only a hash+count travel into the manifest --
+    the same bloat `resolved_packages` (87 entries, embedded on every delivered row) already
+    causes must not be repeated for a few hundred dpkg packages."""
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+        dpkg_lines=["adduser 3.118ubuntu5", "apt 2.4.13", "base-files 12ubuntu4.7"],
+    )
+    assert manifest["dpkg_packages_count"] == 3
+    assert manifest["dpkg_packages_file"] == "dpkg_packages.txt"
+    assert manifest["dpkg_packages_sha256"] is not None
+    assert "dpkg_packages" not in manifest
+    dpkg_file = tmp_path / "native-out" / "dpkg_packages.txt"
+    import hashlib
+    assert manifest["dpkg_packages_sha256"] == hashlib.sha256(dpkg_file.read_bytes()).hexdigest()
+
+
+def test_manifest_dpkg_summary_is_absent_without_a_capture(tmp_path):
+    manifest = _run_manifest_builder(
+        tmp_path, cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+    )
+    assert manifest["dpkg_packages_sha256"] is None
+    assert manifest["dpkg_packages_count"] == 0
+
+
+def test_manifest_surfaces_the_payloads_git_identity_when_present(tmp_path):
+    """contract.py's write_payload() has stamped payload_manifest.json with these since
+    2026-09-08; nothing downstream read them back out until now."""
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+        payload_manifest={"source_commit": "deadbeefcafe0", "source_dirty": False},
+    )
+    assert manifest["source_commit"] == "deadbeefcafe0"
+    assert manifest["source_dirty"] is False
+
+
+def test_manifest_git_identity_defaults_to_unknown_without_a_payload_manifest(tmp_path):
+    """Same fallback contract.py's own _git_identity() uses for a source tree with no git --
+    not a new failure mode for an old payload or a source-only test fixture."""
+    manifest = _run_manifest_builder(
+        tmp_path, cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+    )
+    assert manifest["source_commit"] == "unknown"
+    assert manifest["source_dirty"] == "unknown"
+
+
+def test_manifest_curve_row_counts_use_each_familys_own_curve_filename(tmp_path):
+    """The regression: idaac's real curve is progress-robosuite:{task}-{baseline}-s{seed}.csv, not
+    train.csv, so the old hardcoded check always read 0 for it -- confirmed on a real delivered
+    bundle (card1-20260916-213222) where the manifest said 0 and normalize_curves.py's own reader
+    found 26 rows in that exact file."""
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"idaac-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+        extra_cell_files={"idaac-s101": {
+            "progress-robosuite:Door-idaac-s101.csv": "train/total_num_steps\n1\n2\n3\n",
+        }},
+    )
+    assert manifest["cells"]["idaac-s101"]["train_curve_rows"] == 3
+    assert manifest["cells"]["idaac-s101"]["eval_curve_rows"] == 0
+
+
+def test_manifest_curve_row_counts_still_work_for_rlvigens_train_and_eval_csv(tmp_path):
+    """The control: rlvigen's own train.csv/eval.csv pair must not regress."""
+    manifest = _run_manifest_builder(
+        tmp_path,
+        cells={"svea-s101": "NATIVE_FINAL_EVALUATION_COMPLETED frame=600000\n"},
+        extra_cell_files={"svea-s101": {
+            "train.csv": "frame,episode_reward\n1,1\n2,2\n",
+            "eval.csv": "frame,episode_reward\n1,1\n",
+        }},
+    )
+    assert manifest["cells"]["svea-s101"]["train_curve_rows"] == 2
+    assert manifest["cells"]["svea-s101"]["eval_curve_rows"] == 1
 
 
 def _extract_runner_function(name):
