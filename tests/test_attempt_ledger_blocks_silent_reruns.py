@@ -144,3 +144,32 @@ def test_it_agrees_with_the_ledger_populator_about_what_is_current():
             assert live[family] == evaluator_family_revision(ROOT, family), (
                 f"the audit's live revision for {family} differs from evaluator_identity's, so it "
                 "and populate_evaluator_ledger.py cannot agree about any record")
+
+
+def test_a_host_ledger_row_with_no_seed_is_never_merged_with_another(tmp_path):
+    """[2026-09-20] `_host_attempts()` used to key a row with no parseable seed as
+    `(baseline, None)` -- which does not collide with a real seed, but silently merges every such
+    row for one baseline as if they were repeated attempts of one attempt sequence. Two unrelated
+    broken rows for the same baseline must not appear to be two attempts of the same (fictional)
+    cell, and must be counted and reported instead."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_attempt_ledger_seed_test", ROOT / "scripts" / "audit_attempt_ledger.py")
+    audit = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audit)
+
+    ledger = tmp_path / "host-runs.jsonl"
+    ledger.write_text(
+        json.dumps({"baseline": "svea", "run_id": "card1-broken-a", "status": "stopped"}) + "\n"
+        + json.dumps({"baseline": "svea", "run_id": "card1-broken-b", "status": "running"}) + "\n"
+    )
+    audit.HOST_LEDGER = ledger
+
+    attempts = audit._host_attempts()
+    assert ("svea", None) not in attempts, "a missing seed must not fabricate a shared key"
+    assert not attempts, "no (baseline, seed) key should exist when every row is unkeyable"
+
+    unkeyable = audit._host_attempts_unkeyable()
+    assert len(unkeyable) == 2, "both malformed rows must be counted, not silently dropped"
+    assert {r["run_id"] for r in unkeyable} == {"card1-broken-a", "card1-broken-b"}

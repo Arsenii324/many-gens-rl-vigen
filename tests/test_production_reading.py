@@ -8,6 +8,7 @@ had to be partly retracted the next day.
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 import sys
 
@@ -193,3 +194,26 @@ def test_the_footer_reports_unreadable_rows_and_marks_them():
     assert "no conventions.eval_policy_mode 7" in body, body
     assert "pooled ten-scene row 11" in body, body
     assert "UNREADABLE" in body, "a defect drop must be distinguishable from a by-design one"
+
+
+def test_a_missing_executed_endpoint_is_derived_and_reported_not_silently_wrong(tmp_path):
+    """[2026-09-20] `entry.get("executed_endpoint", schedule.get("frames"))` used to fall back to
+    the REQUESTED frame count when a schedule row declared no `executed_endpoint` at all. idaac's
+    own checkpoints land at 598,016 for a requested 600,000 (it floors to a whole rollout), so a
+    row filtered on `frame in (600000, "600000")` matched nothing and a complete cell read
+    MISSING/PARTIAL with no explanation. Uses the real `idaac` s101 records already in
+    `results/records/` -- the same data the campaign actually holds -- rather than a synthetic
+    stand-in, so this is also a live check that the derivation matches what really shipped."""
+    idaac_records = list((ROOT / "results" / "records").glob("*idaac*"))
+    if not idaac_records:
+        pytest.skip("no idaac records in the tree to exercise this against")
+    schedule = {"frames": 600000, "seeds": [101],
+                "rows": [{"baseline": "idaac", "family": "idaac"}]}  # no executed_endpoint key
+    schedule_path = tmp_path / "schedule.json"
+    schedule_path.write_text(json.dumps(schedule))
+    points, skipped, gate, success, dropped = pr.collect(schedule_path)
+    assert ("idaac", "sample", "train") in points, (
+        f"idaac s101 must resolve DONE via the derived endpoint (598016), not fall back to the "
+        f"requested 600000 and match nothing; skipped={skipped}")
+    assert any("quantises 600000 to 598016" in reason for reason in dropped), (
+        f"the derivation must be reported, not silent; dropped={dropped}")

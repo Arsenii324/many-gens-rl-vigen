@@ -99,3 +99,25 @@ def test_a_recorded_running_host_attempt_with_no_records_reads_running_not_missi
     state2, _ = cs.state_of("ibac_sni", "ibac_sni", 101, 600064, {}, set(), {"ibac_sni"},
                             {"ibac_sni": "x"})
     assert state2 == "MISSING", "without the ledger entry it must stay MISSING, not be guessed"
+
+
+def test_a_host_ledger_row_with_no_seed_is_never_merged_into_seed_zero(tmp_path):
+    """[2026-09-20] `int(row.get("seed") or 0)` folded a missing/unparseable seed into a real
+    (baseline, 0) key. record_host_run.py wrote exactly such a row on 2026-09-19 (a hydra-style
+    seed the recorder failed to read, fixed in commit 415687c) -- this must never be
+    indistinguishable from a genuine seed-0 attempt, and must be reported, not silently dropped."""
+    cs = _load_cs()
+    (tmp_path / "results").mkdir()
+    cs.ROOT = tmp_path
+    ledger = tmp_path / "results" / "host-runs.jsonl"
+    ledger.write_text(
+        json.dumps({"baseline": "svea", "run_id": "card1-broken", "status": "stopped"}) + "\n"
+        + json.dumps({"baseline": "svea", "seed": 5, "run_id": "card1-real",
+                      "status": "stopped"}) + "\n"
+    )
+    ended = cs._host_ended()
+    assert ("svea", 5) in ended, "the real seed-5 attempt must still be found"
+    assert ("svea", 0) not in ended, "a malformed seed must never fabricate a (baseline, 0) key"
+    unkeyable = cs._host_ledger_unkeyable()
+    assert len(unkeyable) == 1 and unkeyable[0]["run_id"] == "card1-broken", (
+        "the malformed row must be counted and reported, not silently discarded")

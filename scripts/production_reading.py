@@ -64,6 +64,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import campaign_status as cs  # noqa: E402
 from regime_retention_report import MIN_DENOM_SUCCESS  # noqa: E402
+# `campaign_status`'s own import already put datasphere/native on sys.path. Aliased because the
+# `collect()` loop below already uses `family` as its own per-row variable name.
+import family as native_family  # noqa: E402
 
 REGIMES = ("train", "eval-easy", "eval-medium", "eval-hard")
 
@@ -197,7 +200,32 @@ def collect(schedule_path: pathlib.Path) -> tuple[dict, dict, dict, dict, dict]:
     default_seeds = schedule.get("seeds", [])
     for entry in schedule.get("rows", []):
         baseline, family = entry["baseline"], entry["family"]
-        endpoint = entry.get("executed_endpoint", schedule.get("frames"))
+        if "executed_endpoint" in entry:
+            endpoint = entry["executed_endpoint"]
+        else:
+            # [Claude 2026-09-20] `entry.get("executed_endpoint", schedule.get("frames"))` used
+            # to fall back to the REQUESTED frame count silently. That is wrong for any family
+            # whose own rollout does not land exactly there -- idaac floors to a whole rollout
+            # (598,016 of a requested 600,000), ibac_sni/ppg overshoot to their own segment
+            # boundary (600,064) -- and a row filtered on `frame in (endpoint, str(endpoint))`
+            # then matches NOTHING, so a complete cell reads MISSING/RUNNING/PARTIAL with no
+            # explanation. `native_family.expected_endpoint` is not a guess: it is the exact
+            # function `plan_production.py` already calls to WRITE `executed_endpoint` into
+            # `production-schedule-v100.json` in the first place (see its own call site), so
+            # deriving it here recomputes the authoritative value rather than inventing one.
+            requested = schedule.get("frames")
+            endpoint = requested
+            derived = None
+            if requested is not None:
+                try:
+                    derived = native_family.expected_endpoint(family, int(requested))
+                except Exception:
+                    derived = None
+            if derived is not None and derived != requested:
+                reason = (f"{baseline}: schedule row declares no executed_endpoint; {family} "
+                          f"quantises {requested} to {derived} -- derived, not requested-frames")
+                dropped[reason] = dropped.get(reason, 0) + len(entry.get("seeds", default_seeds))
+                endpoint = derived
         for seed in entry.get("seeds", default_seeds):
             state, _ = cs.state_of(baseline, family, seed, endpoint, records, submitted,
                                    attested, live, ended, running)

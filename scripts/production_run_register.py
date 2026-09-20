@@ -225,6 +225,12 @@ def build() -> str:
             continue
         cells = sorted({str(r.get("cell")) for r in rows if r.get("cell")})
         seeds = sorted({str(r.get("seed")) for r in rows if r.get("seed") is not None})
+        # [Claude 2026-09-20] A row with no `seed` key is filtered out of `seeds` above rather
+        # than fabricating one -- correct -- but the filtered count was never surfaced, so a job
+        # whose recorder dropped a seed (a hydra-style spelling `record_host_run.py` mis-read
+        # until commit 415687c) looked identical to one where every row simply agreed. Counted
+        # and named here instead.
+        no_seed = sum(1 for r in rows if r.get("seed") is None)
         bl = sorted({str(r.get("baseline")) for r in rows if r.get("baseline")})
         frames = sorted({int(float(r["frame"])) for r in rows if r.get("frame") is not None})
         revs = sorted({str(r.get("evaluator_revision"))[:12] for r in rows
@@ -235,8 +241,9 @@ def build() -> str:
 
         add(f"### `{job}` — {', '.join(bl) or '?'}")
         add("")
-        add(f"- **cells** `{', '.join(cells) or '?'}` · **seeds** `{', '.join(seeds) or '?'}` · "
-            f"**rows** {len(rows)}")
+        seed_note = f" (+{no_seed} row(s) with no seed, not counted above)" if no_seed else ""
+        add(f"- **cells** `{', '.join(cells) or '?'}` · **seeds** `{', '.join(seeds) or '?'}`"
+            f"{seed_note} · **rows** {len(rows)}")
         if frames:
             add(f"- **frames** {frames[0]:,} → {frames[-1]:,} ({len(frames)} distinct)")
         add(f"- **phases** {dict(phases)}")

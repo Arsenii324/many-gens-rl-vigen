@@ -159,7 +159,13 @@ _TERMINAL_HINTS = ("fail", "complete", "done", "collected", "stopped", "yield", 
 
 
 def _host_attempts() -> dict[tuple[str, object], list[tuple[str, str]]]:
-    """{(baseline, seed): [(run_id, status), ...]} ordered oldest first."""
+    """{(baseline, seed): [(run_id, status), ...]} ordered oldest first.
+
+    [Claude 2026-09-20] A row with no parseable `seed` used to key as `(baseline, None)` -- which
+    does not collide with a real seed's own key, but DOES silently merge every such row for one
+    baseline together, as if they were repeated attempts of one (nonexistent) cell. See
+    `_host_attempts_unkeyable()` for those rows, counted and reported by `main()` instead.
+    """
     out: dict[tuple[str, object], list[tuple[str, str]]] = collections.defaultdict(list)
     if not HOST_LEDGER.is_file():
         return out
@@ -170,10 +176,33 @@ def _host_attempts() -> dict[tuple[str, object], list[tuple[str, str]]]:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        key = (row.get("baseline"), row.get("seed"))
+        try:
+            seed = int(row.get("seed"))
+        except (TypeError, ValueError):
+            continue
+        key = (row.get("baseline"), seed)
         out[key].append((str(row.get("run_id") or "?"), str(row.get("status") or "")))
     for key in out:
         out[key].sort(key=lambda pair: pair[0])
+    return out
+
+
+def _host_attempts_unkeyable() -> list[dict]:
+    """Host-ledger rows excluded from `_host_attempts()` because their seed did not parse."""
+    out: list[dict] = []
+    if not HOST_LEDGER.is_file():
+        return out
+    for line in HOST_LEDGER.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        try:
+            int(row.get("seed"))
+        except (TypeError, ValueError):
+            out.append(row)
     return out
 
 
@@ -263,9 +292,16 @@ def main() -> int:
 
     host = _host_attempts()
     host_problems = _host_problems()
+    host_unkeyable = _host_attempts_unkeyable()
     print()
     print(f"  HOST attempts (results/host-runs.jsonl): {sum(len(v) for v in host.values())} run(s) "
           f"across {len(host)} (baseline, seed) pair(s).")
+    if host_unkeyable:
+        print(f"    WARNING: {len(host_unkeyable)} row(s) have no parseable seed and are EXCLUDED "
+              "above -- never merged into any (baseline, seed):")
+        for row in host_unkeyable[:10]:
+            print(f"      run_id={row.get('run_id')!r} baseline={row.get('baseline')!r} "
+                  f"seed={row.get('seed')!r}")
     if host_problems:
         for prob in host_problems:
             print(f"    REFUSING: {prob}")

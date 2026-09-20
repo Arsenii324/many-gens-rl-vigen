@@ -94,6 +94,38 @@ def test_the_curve_summary_appears_when_curve_rows_exist(tmp_path, monkeypatch):
     assert "ends below its peak" in text, "a run that falls back must say so"
 
 
+def test_a_row_with_no_seed_is_counted_not_silently_omitted(tmp_path, monkeypatch):
+    """[2026-09-20] `seeds = {... if r.get("seed") is not None}` correctly excludes a seedless row
+    from the displayed seed list, but never said how many rows it excluded -- so a job whose
+    recorder dropped a hydra-style seed (record_host_run.py's bug, fixed in commit 415687c) looked
+    identical to a job where every row simply agreed on one seed."""
+    import importlib.util, json
+    spec = importlib.util.spec_from_file_location("_reg_seed", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    recs = tmp_path / "records"
+    recs.mkdir()
+
+    def row(seed):
+        entry = {"baseline": "svea", "cell": "svea-s101", "frame": 600000,
+                 "regime": "train", "episodes": 20, "episode_return_mean": 1.0,
+                 "phase": "offline-eval", "evaluator_scope": {}}
+        if seed is not None:
+            entry["seed"] = seed
+        return json.dumps(entry)
+
+    (recs / "card1-x__records.jsonl").write_text(
+        "\n".join(row(s) for s in (101, None, None)) + "\n")
+    monkeypatch.setattr(mod, "RECORDS", recs)
+    monkeypatch.setattr(mod, "LOGS", tmp_path / "logs")
+    monkeypatch.setattr(mod, "ROOT", tmp_path)
+    text = mod.build()
+    line = [ln for ln in text.splitlines() if "**seeds**" in ln][0]
+    assert "101" in line
+    assert "+2 row(s) with no seed" in line, line
+
+
 def test_the_register_states_which_half_check_covers():
     text = REGISTER.read_text()
     assert "Derived versus asserted" in text

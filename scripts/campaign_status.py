@@ -125,6 +125,49 @@ def _submitted() -> set[tuple[str, int]]:
     return out
 
 
+def _host_ledger_snapshot() -> tuple[dict[tuple[str, int], tuple[str, str]], list[dict]]:
+    """Parse results/host-runs.jsonl once: (newest-per-key, rows with no parseable seed).
+
+    [Claude 2026-09-20] `int(row.get("seed") or 0)` used to fold a MISSING or unparseable seed
+    into literal seed 0 and merge it into `newest` alongside any genuine (baseline, 0) attempt --
+    a fabricated cell, indistinguishable from a real one, that could win the "newest" comparison
+    and silently override a real attempt's status. On 2026-09-19 `record_host_run.py` wrote
+    exactly such a row (a hydra-style seed dropped by the recorder, fixed in commit 415687c) --
+    this file's own read of that bug never noticed, because it never looked. A row that cannot be
+    keyed is now excluded from every (baseline, seed) set entirely and returned separately so a
+    caller can count and report it, rather than merged where it can silently displace a real
+    result.
+    """
+    import json
+    newest: dict[tuple[str, int], tuple[str, str]] = {}
+    unkeyable: list[dict] = []
+    path = ROOT / "results" / "host-runs.jsonl"
+    if not path.is_file():
+        return newest, unkeyable
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        try:
+            seed = int(row.get("seed"))
+        except (TypeError, ValueError):
+            unkeyable.append(row)
+            continue
+        key = (row.get("baseline"), seed)
+        run = str(row.get("run_id") or "")
+        if key not in newest or run > newest[key][0]:
+            newest[key] = (run, str(row.get("status") or "").lower())
+    return newest, unkeyable
+
+
+def _host_ledger_unkeyable() -> list[dict]:
+    """Host-ledger rows excluded from _host_ended/_host_running because their seed did not parse."""
+    return _host_ledger_snapshot()[1]
+
+
 def _host_ended() -> set[tuple[str, int]]:
     """(baseline, seed) whose NEWEST host attempt carries a terminal status.
 
@@ -135,23 +178,11 @@ def _host_ended() -> set[tuple[str, int]]:
     are indistinguishable") and resolves it against the DataSphere submission ledger. Host cells are
     not DataSphere jobs, so for them it was never resolved, and a stopped run read as running
     indefinitely. results/host-runs.jsonl records what became of each host attempt.
+
+    A row with no parseable seed contributes to neither this set nor `_host_running()` -- see
+    `_host_ledger_snapshot()`.
     """
-    import json
-    path = ROOT / "results" / "host-runs.jsonl"
-    if not path.is_file():
-        return set()
-    newest: dict[tuple[str, int], tuple[str, str]] = {}
-    for line in path.read_text().splitlines():
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        key = (row.get("baseline"), int(row.get("seed") or 0))
-        run = str(row.get("run_id") or "")
-        if key not in newest or run > newest[key][0]:
-            newest[key] = (run, str(row.get("status") or "").lower())
+    newest, _ = _host_ledger_snapshot()
     terminal = ("fail", "yield", "stopped", "abandon", "cancel")
     return {k for k, (_r, status) in newest.items() if any(w in status for w in terminal)}
 
@@ -163,22 +194,7 @@ def _host_running() -> set[tuple[str, int]]:
     records yet reads MISSING, because RUNNING was only ever inferred from DataSphere submissions or
     from records -- ibac_sni seed 101 read MISSING while at 27% of 600k on 2026-09-16.
     """
-    import json
-    path = ROOT / "results" / "host-runs.jsonl"
-    if not path.is_file():
-        return set()
-    newest: dict[tuple[str, int], tuple[str, str]] = {}
-    for line in path.read_text().splitlines():
-        if not line.strip():
-            continue
-        try:
-            row = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        key = (row.get("baseline"), int(row.get("seed") or 0))
-        run = str(row.get("run_id") or "")
-        if key not in newest or run > newest[key][0]:
-            newest[key] = (run, str(row.get("status") or "").lower())
+    newest, _ = _host_ledger_snapshot()
     return {k for k, (_r, status) in newest.items() if status.startswith("running")}
 
 
@@ -242,11 +258,22 @@ def main() -> int:
     records, submitted = _records_index(), _submitted()
     ended = _host_ended()
     running = _host_running()
+    unkeyable = _host_ledger_unkeyable()
 
     rows = schedule.get("rows", [])
     seeds = schedule.get("seeds", [])
     print(f"CAMPAIGN STATUS -- {pathlib.Path(args.schedule).name}, "
           f"host_profile={schedule.get('host_profile')}, {schedule.get('frames')} frames\n")
+    if unkeyable:
+        print(f"  WARNING: {len(unkeyable)} row(s) in results/host-runs.jsonl have no parseable "
+              "seed and were EXCLUDED from every (baseline, seed) lookup below, never merged into "
+              "seed 0:")
+        for row in unkeyable[:10]:
+            print(f"    run_id={row.get('run_id')!r} baseline={row.get('baseline')!r} "
+                  f"seed={row.get('seed')!r} status={row.get('status')!r}")
+        if len(unkeyable) > 10:
+            print(f"    ... and {len(unkeyable) - 10} more")
+        print()
     print(f"  {'baseline':10} {'family':10} " + " ".join(f"seed {s}" for s in seeds))
 
     tally: collections.Counter = collections.Counter()

@@ -61,7 +61,22 @@ def resolved_descriptor(family: str, path: Path | None = None,
                         profile: str | None = None) -> dict:
     """Apply the selected host's declared overrides without mutating the source descriptor."""
     entry = descriptor(family, path)
-    override = entry.get("host_profiles", {}).get(host_profile(path, profile), {})
+    selected = host_profile(path, profile)
+    override = entry.get("host_profiles", {}).get(selected, {})
+    # [Claude 2026-09-20] A non-default profile with no matching override used to resolve
+    # silently to the family's base `constants`/`production`/`environment`, indistinguishable
+    # from a family that was deliberately tuned and happens to need no change. Four of seven
+    # families (`dmc_gb`, `idaac`, `alda`, `ppg` -- confirmed by reading `families.json`) declare
+    # no `host_profiles` block at all, so every V100 production run of those four uses whatever
+    # profile-agnostic values were authored, unchanged, with nothing saying so. Printed rather
+    # than raised: a family with genuinely nothing to override for a profile is not an error, and
+    # `datasphere` (the probe-safe default) is expected to have no override for most families, so
+    # this stays silent for it and speaks only when a NAMED, non-default profile changes nothing.
+    if selected != "datasphere" and not override:
+        import sys as _sys
+        print(f"NATIVE_HOST_PROFILE_NO_OVERRIDE family={family} profile={selected} -- "
+              f"families.json declares no host_profiles.{selected} block for it; base "
+              "constants/production/environment apply unchanged", file=_sys.stderr)
     unknown = set(override) - {
         "constants", "production", "environment",
         "constants_reason", "production_reason", "environment_reason",
