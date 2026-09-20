@@ -78,12 +78,25 @@ def test_v100_schedule_is_resolved_from_its_profile_and_makes_throughput_unknown
     assert "tiers" not in generated, "DataSphere billing tiers do not describe the V100 host"
 
     rows = {row["baseline"]: row for row in generated["rows"]}
-    for row in rows.values():
-        assert row["v100_completed_frames_per_second"] is None
-        assert row["throughput_source"] == "UNMEASURED_ON_V100"
+    # [Claude 2026-09-20] `measured-v100-throughput.json` now supplies a real rate for baselines
+    # with a usable measured/doc-quoted cell (drqv2, idaac, ppg, ibac_sni); every other baseline,
+    # including `svea` -- whose only sample is flagged defective in that file -- must still read
+    # as unmeasured. A blanket "every row is None" assertion would silently pass even if the read
+    # path broke, so this checks both halves explicitly rather than one relaxed to fit the other.
+    measured_baselines = {"drqv2", "idaac", "ppg", "ibac_sni"}
+    for baseline, row in rows.items():
+        if baseline in measured_baselines:
+            assert row["v100_completed_frames_per_second"] is not None, baseline
+            assert row["v100_completed_frames_per_second"] > 0, baseline
+            assert row["throughput_source"] not in (None, "UNMEASURED_ON_V100"), baseline
+        else:
+            assert row["v100_completed_frames_per_second"] is None, baseline
+            assert row["throughput_source"] == "UNMEASURED_ON_V100", baseline
         assert row["endpoint_eval_episodes"] == 20
         assert row["curve_eval_episodes"] == 3
         assert row["save_every_frames"] == 50_000
+    assert "PARTIAL_V100_THROUGHPUT" in generated["calendar_status"], generated["calendar_status"]
+    assert f"{len(measured_baselines)}/{len(rows)}" in generated["calendar_status"]
     assert rows["drqv2"]["replay_capacity"] == 620_000
     assert rows["drqv2"]["evicts_before_endpoint"] is False
     # [Claude 2026-09-06] idaac's v100-only num_processes override (4->16) is REMOVED, not
