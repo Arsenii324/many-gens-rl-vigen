@@ -171,7 +171,11 @@ matters.
   `placement_condition_seed(eval_seed, scene_id, episode_index)` via `SeedSequence`, re-seeded
   before every episode (`eval_grid.py:230-241`). It omits the REGIME deliberately, so every regime
   sees identical initial conditions and train-vs-eval is a paired comparison.
-- **torch is NOT re-seeded per episode.** It is seeded once at family setup (`eval_grid.py:221`).
+- **torch is NOT re-seeded per episode.** [Corrected 2026-09-20: this said "seeded once at family
+  setup".] It is re-seeded at the start of every ROW — each `run_scene_*` begins with
+  `seed_the_placement_rng`, an absolute reset of `random`, `numpy` and torch (`eval_grid.py:221`) —
+  and not again between the episodes inside that row. So rows are independent of the order they run
+  in, which is what makes evaluating them in parallel possible.
   For the three SAMPLING baselines (idaac, ppg, ibac_sni) the action stream therefore depends on
   how much torch RNG was consumed before a cell.
 - **Measured consequence:** two byte-identical invocations gave 25.794515705108644 and
@@ -192,6 +196,16 @@ ENDPOINT_EVAL_POLICY_MODES = native,mode        ← TWO passes
 
 Per 600k cell: curve 13 stamps x 44 rows x 3 ep, endpoint 44 rows x 20 ep x 2 modes = **3,476
 episodes**, ~17.4 h at the measured **11.65 s/episode**.
+
+[Corrected 2026-09-20.] That count is ~10% high and the per-episode time correspondingly low: the
+11th "pooled" row per regime is a concatenation of the ten per-scene results already in hand
+(`scripts/eval_grid.py:1305`), not new rollouts, so a row set is 40 rollout rows, not 44. Real
+counts: curve 13 x 40 x 3 = 1,560; endpoint 40 x 20 = 800 per pass, and the second (`mode`) pass
+exists only for `idaac`, `ppg`, `ibac_sni`. So ~2,360 episodes for nine baselines and ~3,160 for
+those three. The measured `idaac` cell: 4.95 h training, 4.60 h curve evaluation, 5.52 h endpoint
+grid (`launch-card-cell.sh:98-105`). **Evaluation is one process on one CPU core with the GPU
+nearly idle** (841 MiB, single-digit utilisation) — that, not the grid's size, is why it costs
+twice the training time of a fast baseline.
 
 **The regimes are distributions, not a difficulty ladder.** `eval-medium` alone sets
 `except_robot=False`, randomising the robot's own appearance; easy and hard perturb background and
