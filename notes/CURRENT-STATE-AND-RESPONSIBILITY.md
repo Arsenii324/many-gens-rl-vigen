@@ -1,6 +1,6 @@
 # Current state and responsibility — read this first, especially after context loss
 
-**Last updated: 2026-09-20 23:28 MSK, by Claude** (§2 rewritten in place, its two days of appended layers moved to `production-host/40`; §4 and §7b carry the owner's rulings of 19–20 Sep; §3, §5–§7 were last reviewed 2026-09-18). This file says what is *true right now*. It is
+**Last updated: 2026-09-21 00:06 MSK, by Claude** (§2 rewritten in place, its two days of appended layers moved to `production-host/40`; §4 and §7b carry the owner's rulings of 19–20 Sep; §3, §5–§7 were last reviewed 2026-09-18). This file says what is *true right now*. It is
 **kept current, not appended to** — if you are adding a dated section to the bottom, you are using
 the wrong file; put it in [`production-host/`](production-host/) as a numbered note and update this
 one in place. [`START-HERE.md`](START-HERE.md) indexes what each surface is *for* and does not go
@@ -48,11 +48,12 @@ waiter, until `idaac` s103 ends.]
 | `drqv2` | 101 | TRAINED, evaluation deferred | none yet | 600k in 5.37 h at 31 FPS; stopped by me during curve evaluation at 17:46 on 2026-09-20 when a labmate took the card; 12 checkpoints + `snapshot.pt` kept on host and laptop |
 | `ibac_sni` | 102 | PARTIAL | 308 curve rows from seven salvaged stamps | attempt 1 stopped by the memory floor at 28,672 frames and kept nothing; attempt 2 stopped by it at 376,832 frames. The seed needs a rerun from zero (OPERATOR-GUIDE §6c) |
 
-**As of 2026-09-20 23:28 MSK. Nothing of ours runs on the host** except the read-only occupancy logger
+**As of 2026-09-21 00:06 MSK. Nothing of ours runs on the host** except the read-only occupancy logger
 (restarted 20 Sep 01:02, 40 h). No waiter is armed. **The owner has asked for no further runs for
 now.** Both cards are booked for our group for a few days under a colleague's name (use with
-consideration); card 1 is held by `rlvigen_kalugin_df` and `sg_sam2`, card 0 has been empty since
-22:33 on 20 Sep. What happened on 19–20 Sep, hour by hour, is
+consideration); card 1 is held by `rlvigen_kalugin_df` and `sg_sam2`, card 0 is used tonight by the
+owner's other project (ood-gen-study, containers `ogs-*`), which — as relayed by that session, to be
+confirmed by the owner — has first call on any free card. What happened on 19–20 Sep, hour by hour, is
 [`production-host/40`](production-host/40-19-20-september-as-it-happened.md).
 
 **What exists.** `idaac` is complete at all three seeds (reading:
@@ -65,16 +66,19 @@ from them with `host-scripts/reeval-cell*.sh` when a card is ours. `svea` s101 f
 
 **What is known to be broken or unvalidated, in order of consequence.**
 1. **An evaluating cell does not yield to the memory floor** ([`production-host/38`](production-host/38-the-memory-floor-does-not-protect-anyone-during-evaluation.md)).
-   A fix is written on the laptop and under review; until it is deployed, stop an evaluating cell by
-   hand if a co-tenant appears.
+   FIXED ON THE LAPTOP and committed (one yield poller for the whole cell; the stall watchdog also
+   covers evaluation), NOT DEPLOYED: `run_probe.sh` ships by payload, so every family needs a fresh
+   payload before its next cell. Until then, stop an evaluating cell by hand if a co-tenant appears.
 2. **No validated configuration exists for `svea`, `sgqn`, `soda`**: their scheduled throughput was
    measured with 8 overlay-loader workers, banned since 8 Sep; at 0 workers `svea` ran at ~2.4 FPS.
    The loader-worker experiment (`ACCOUNTABILITY.md` G12) is approved and waits for a card.
 3. **The prebuilt-environment hash depends on the machine's locale** (`ACCOUNTABILITY.md` G9);
    latent, because the wrappers do not use the prebuilt environment.
-4. The host's wrappers are the committed versions (they refuse a slow baseline without
-   `TIMEOUT_S`); the schedule-derived ceiling that replaces the refusal is under review and needs
-   one more host swap, only while nothing of ours runs.
+4. The host's wrappers are one version behind: they REFUSE a slow baseline without `TIMEOUT_S`;
+   the committed ones default it to max(3× scheduled training, 24 h). One more host swap is owed,
+   plus `run_on_production_host.sh` in the host checkout (two new env names on its forward list) —
+   only while nothing of ours runs. A cell that does hit its ceiling still skips retention and
+   evaluation although its checkpoints are durable; salvage-on-timeout is unbuilt.
 
 **What the campaign has taught so far.** 600,000 frames is RL-ViGen's own published budget for this
 task (paper Table 6), so for the five natives it is the faithful budget and `drqv2` shows it is
