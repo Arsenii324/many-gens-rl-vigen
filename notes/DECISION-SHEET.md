@@ -3339,3 +3339,365 @@ instrument — never quietly widen it.
 they were submitted for; the audit was hiding it.
 
 **Status: operational, not ratified.**
+
+---
+
+> **A59–A72 were filed 2026-09-20.** They bring the production-stage decisions that lived only in
+> `CURRENT-STATE-AND-RESPONSIBILITY.md` §7b into this sheet, so `scripts/open_decisions.py` lists
+> them. Drafted by an executor from §7b and `ACCOUNTABILITY.md`; every quoted owner sentence was
+> checked verbatim against those files by the lead, who corrected A59, A62 and A71 before filing.
+> The owner's standing instruction on how these are handled, same day: *"preserve the 'open
+> decisions' framing, but actually define the technical working values yourself, so tune if they're
+> bad, analyze if they're good and return with the finals for ratification."*
+
+## A59 — 600k stays the headline budget (RL-ViGen's own published Door figure); the `ibac_sni` 6M probe is approved and deferred (2026-09-20)
+
+**Question:** Given the competence-gate finding (`production-host/36`: every completed cell clears
+the random floor on shaped return but opens the door in ~0/200 episodes), is 600,000 frames the
+right training budget, or should scope narrow instead?
+
+**Working value (mine, per the owner's 2026-09-20 09:41 MSK instruction to set technical working
+values directly):** keep 600,000 as the headline budget for all twelve. Source corrected 2026-09-20:
+RL-ViGen's own paper, Table 6 p.17, sets Robosuite Door training frames at `int(6e5)` — for the five
+RL-ViGen natives this is **100% of the published budget**, not the 55% A46 stated before the
+correction (`notes/CURRENT-STATE-AND-RESPONSIBILITY.md:307-313`; `DECISION-SHEET.md` A46).
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:449-454`): *"we have slow
+algorithms and fast; if it coincides so that faster ones need more frames, naturally it's not a
+problem to run the faster ones and budget's not a thing to withhold from consideration."* Also:
+*"still not sure in the concrete values … like, 600k"* — so 600k is stated as a working value with
+its source recorded, not a ratified one.
+
+**The `ibac_sni` 6M-frame probe: APPROVED by the owner, then DEFERRED — not dropped.** Approval,
+2026-09-20 09:41 MSK (`CURRENT-STATE-AND-RESPONSIBILITY.md` §7b rulings): *"if ibac_sni is so
+fast, 6M doesn't seem a problem"*. The same afternoon the owner asked for no further runs for the
+time being (finish what must not be aborted, defer what can be done separately in a few days), so
+the probe, tracked as H7 in `notes/ACCOUNTABILITY.md`, waits. "Cancelled for now" in that file's
+17:49 wrap-up paragraph is the lead's wording for this deferral, not an owner ruling against the
+probe. [Corrected by the lead before this item was filed: the executor's draft read it as dropped.]
+
+**Status: operational, not ratified** (the 600k headline); **the 6M probe is approved and waiting
+for the owner's "no further runs" to lift.**
+
+**Reopen if:** a future session proposes extending the on-policy subfamily's budget again, or the
+6M probe is explicitly reinstated by the owner.
+
+---
+
+## A60 — Queue order: RL-ViGen natives first (2026-09-20)
+
+**Question:** Which baselines should the production queue run next — the RL-ViGen five (the only
+identified across-method contrast, per `RESEARCH-FRAME.md`, with zero production cells at the time)
+or the on-policy families already partway through the schedule?
+
+**Working value:** RL-ViGen natives first (`drqv2`, `curl`, `drq` named first in the F6 proposal,
+`notes/ACCOUNTABILITY.md:448`), Places365-dependent natives (`svea`, `sgqn`, `soda`) held pending
+the loader-worker question.
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:446-448`): *"Queue order: RL-ViGen
+natives first — accepted. Their point is reproduction: RL-ViGen already ran them, so either we
+reproduce their numbers (and learn if we are off) or, where they published none, we gather them."*
+
+**Status: DECIDED, 2026-09-20** (the ordering itself). The Places365 loader-worker experiment named
+in the same ruling (G12) was approved that morning and then **cancelled** at the 17:49 MSK wrap-up
+(`notes/ACCOUNTABILITY.md:495`) — the ordering decision stands; the specific unblocking experiment
+for the Places365-gated natives does not, for now.
+
+**Reopen if:** the Places365 loader-worker question (G10/G12) is revisited, or a native's own
+results argue for reordering within the group.
+
+---
+
+## A61 — Card-0 vacancy relaxation is future-operator guidance, not current policy (2026-09-19/20)
+
+**Question:** May the strict "no foreign holder at all" vacancy rule be relaxed for a small cell
+beside a co-tenant that is stable (not cycling), to use card 0's observed ~9.6 GiB of headroom?
+
+**Working value:** no change to the current automated waiter. The relaxation is recorded as
+guidance for a **future** operator configuring a waiter against a specific, known co-tenant — not
+something this session operationalises.
+
+**Owner, 2026-09-19** (`CURRENT-STATE-AND-RESPONSIBILITY.md:341-345`): *"this is future-operator
+guidance only"* — nothing changes "the *current* automated waiter's behaviour to push a launch onto
+a card while `rl4vla_cudagl` or any other current co-tenant is running."
+
+**Superseding context, 2026-09-20** (`CURRENT-STATE-AND-RESPONSIBILITY.md:471-474`): both cards are
+now booked for the group, under a colleague's (Kalugin's) name, for 3-4 days; card 0 is therefore
+usable now on a different basis than the vacancy question above. *"The supervisor has said the
+owner may use them, with consideration: if Kalugin's work would take the cards, give way; never OOM
+anyone."* §4's standing constraints are otherwise unchanged.
+
+**Status: operational (future-operator note only); the booking context has changed since it was
+written and should be read alongside it, not in its place.**
+
+**Reopen if:** a waiter is actually configured against a specific stable co-tenant, or the current
+booking (both cards, Kalugin's name) ends and the original card-0 co-tenancy question becomes live
+again.
+
+---
+
+## A62 — `ppg` seed 1: kept off-schedule, handled last (2026-09-19)
+
+**Question:** `ppg` seed 1 is a complete, real cell, but the schedule names `{101, 102, 103}` and
+`campaign_status.py` reads seed 1 as MISSING. Record the seed set as `{1, 102, 103}` for `ppg`
+specifically, or rerun at 101 to match the other eleven?
+
+**Working value:** neither choice is made yet; priority is set instead. A light operator note is
+the only action for now — whoever reads `campaign_status.py`'s output should know seed 1 is a real,
+complete cell reading as MISSING, and why.
+
+**Owner, 2026-09-19** (`CURRENT-STATE-AND-RESPONSIBILITY.md:349-353`): *"lowest priority — handle
+last, after everything else."* The lead's taskset carries it as `notes/ACCOUNTABILITY.md` G7, "LAST, per owner" (the lead's words, not the owner's).
+
+**Status: DECIDED (priority only, 2026-09-19)** — the underlying seed-set-vs-rerun choice is still
+open and is explicitly not to be worked before everything else is done.
+
+**Reopen if:** every other queued item is finished and this becomes the last remaining choice, per
+the owner's own ordering.
+
+---
+
+## A63 — `ctrl`'s in-loop evaluation cost: leave the algorithm code untouched (2026-09-19)
+
+**Question:** `ctrl`'s in-loop test envs roughly triple its per-step cost during training. Should
+the test-env count be reduced to cut that cost?
+
+**Working value:** no. `succ_id = [False] * FLAGS.num_envs` and the enumerate loop over
+`infos_id` both assume `env_test_ID`'s vectorised width equals `FLAGS.num_envs` exactly; shrinking
+only the test envs breaks that pairing (an index error, or a silent truncation of tracked stats) in
+upstream's own scaffolding, not code this project wrote or has stress-tested. The fix instead lives
+on this project's side: once a real `ctrl` cell runs, its watch budget and
+`production-schedule.json`'s throughput entry are re-derived from that cell's own measurement
+rather than the current cross-algorithm hardware conversion (A64 below).
+
+**Source:** `notes/CURRENT-STATE-AND-RESPONSIBILITY.md:376-388` (§7b item 5, 2026-09-19), reasoned
+by the lead, not a direct owner ruling on this specific sub-question — see A68 for the owner's
+broader 09-20 ruling on evaluation cost, which this item sits inside.
+
+**Status: operational, not ratified.**
+
+**Reopen if:** a real `ctrl` cell's measured in-loop overhead turns out to dominate the schedule
+badly enough that the owner is asked directly whether to touch upstream's test-env code.
+
+---
+
+## A64 — `ctrl`'s floor: direction decided (lower it), value still pending measurement (2026-09-19)
+
+**Question:** `ctrl`'s observed 32,435 MiB peak leaves no room for the standing 4,000 MiB
+free-memory floor on a 32,494 MiB card. Lower or waive the floor for this one family?
+
+**Working value:** the floor is lowered for `ctrl` specifically, once a real peak measurement sets
+the number; not yet run. `notes/CURRENT-STATE-AND-RESPONSIBILITY.md:203-227` (§4 item 5) already
+carries this as the one stated exception to "no room is answered by waiting, never by lowering a
+floor" — for `ctrl` only, not a precedent.
+
+**Owner, 2026-09-19** (`CURRENT-STATE-AND-RESPONSIBILITY.md:401-403`): *"no such card exists, so the
+floor has to be lowered for `ctrl`."* Direction decided; the value is not — "pick it from a real
+`ctrl` peak measurement, and keep the never-CUDA-OOM rule above it: a lowered floor only makes sense
+on a card with no co-tenant."
+
+**Status: DECIDED (direction, 2026-09-19); the numeric floor value is operational-pending, not yet
+set** — also blocked on the fourth prerequisite named in §7b item 6: a real cost/RAM measurement to
+replace `production-schedule.json`'s current `"converted from gt4i.1 x1.14"` figure, which is not a
+measurement of `ctrl` at all.
+
+**Reopen if:** a real `ctrl` peak is measured on an exclusive card (the F6 proposal named a
+`MEM_FRACTION` smoke before any floor waiver, `notes/ACCOUNTABILITY.md:448` — not yet run or
+ratified).
+
+---
+
+## A65 — Stopped-cell continuation: dropped; every stop reruns from zero (2026-09-20)
+
+**Question:** May a continued run ever stand in for a seed (an empty replay buffer restart for the
+off-policy families, or resetting Adam's state for `ibac_sni`), rather than restarting the seed from
+frame 0?
+
+**Working value:** no continuation policy is built. Every stop reruns the seed from zero, which was
+already the status quo (`notes/CURRENT-STATE-AND-RESPONSIBILITY.md:404-408`, §7b item 7).
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:461`): *"Resume: dropped —
+rerun from zero."*
+
+**Status: DECIDED, 2026-09-20.**
+
+**Reopen if:** the owner explicitly asks for a resume/continuation design later; nothing in the
+current record anticipates that.
+
+---
+
+## A66 — No licence for now; an upstream-not-redistributed notice instead (2026-09-20)
+
+**Question:** The repository is public on GitHub with no `LICENSE` file. Add one (and which), or
+leave it as is?
+
+**Working value:** no licence file, for now. A notice is added instead, stating that third-party
+algorithm code is not redistributed by this repository (each is fetched at a pinned commit and
+patched, not vendored — see §7b item 4 / A4's companion reasoning on the archive-risk question).
+
+**Path here:** the F6 proposal (`notes/ACCOUNTABILITY.md:448`, 2026-09-20 ~01:25) suggested "MIT +
+third-party notice after a licence check." The 09:41 MSK ruling left this among the "not ruled,
+questions back to me" items, naming the actual question as *"why MIT for a lab repository"*
+(`CURRENT-STATE-AND-RESPONSIBILITY.md:470`) — i.e. MIT specifically was queried, not accepted.
+
+**Owner, 2026-09-20 10:14 MSK** (`notes/ACCOUNTABILITY.md:493`): *"Upstream-not-redistributed notice
+— ok, no licence for now."* This settles the question by dropping the MIT proposal rather than
+answering "why MIT" — no licence is added at all; only the notice is.
+
+**Status: DECIDED, 2026-09-20.**
+
+**Reopen if:** the repository's public/private status changes, or the owner is asked again once a
+publication or submission plan exists.
+
+---
+
+## A67 — CI: no ruling yet; no working value proposed (2026-09-20)
+
+**Question:** The repository has no CI. Add it, or leave it as is?
+
+**Working value:** none proposed. Unlike the licence half of the same original item (§7b item 9),
+CI was not addressed in the 2026-09-20 09:41 MSK or 10:14 MSK ruling blocks, and no working value
+has been set by the lead either — checked directly: `grep -n "\bCI\b"
+notes/ACCOUNTABILITY.md notes/CURRENT-STATE-AND-RESPONSIBILITY.md` finds only the original item 9
+statement and one unrelated mention (a review-bundle note that the project "has no CI," stated
+plainly rather than acted on, `notes/ACCOUNTABILITY.md:234`).
+
+**Status: OPEN — no owner ruling, no working value.** This item is listed here only because §7b
+item 9 bundled it with the licence question, and the licence half (A66) is now closed; separating
+them keeps CI from silently inheriting a "decided" status it was never given.
+
+**Reopen if:** raised directly with the owner; nothing currently blocks on it.
+
+---
+
+## A68 — Evaluation cost: parallelise by regime, without changing what is measured (2026-09-20)
+
+**Question:** The endpoint/curve grid takes roughly 2x the training wall-clock, run serially in one
+process on one of sixteen cores while the GPU sits near idle. Cut wall time without touching an
+estimand — parallelise how, and does anything in the grid get dropped to do it?
+
+**Working value (mine, per the owner's 09:41 MSK instruction):** parallelise evaluation by
+**regime** (four processes, each running all ten scenes, so a pooled row stays intact) and run
+curve stamps alongside each other, bounded by a worker count; nothing in the grid is dropped.
+Analysed 2026-09-20 09:59 MSK (`notes/inventory-2026-09-19/eval-cost-and-timeout-trace.md`):
+every grid factor (episodes per cell, ten scenes, four regimes, two policy-mode passes, thirteen
+curve stamps) has a stated reason; the cost is serial execution of ~2,400-3,200 episodes at ~12.5 s
+each in one process; rows reseed absolutely and are order-independent, so parallelising is safe in
+principle. `ctrl`'s in-loop test envs feed logging only, have no off switch, and are left as
+upstream wrote them (see A63). Gate before adoption: on a real retained checkpoint, parallel rows
+must equal sequential rows — bit-identical for the nine mode baselines, identical or explained for
+the three sampling ones (`notes/ACCOUNTABILITY.md:482`, H1).
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:462-465`): *"I don't want
+either to drop it from a scientifically valid value … or to have it 2x since it's a random number of
+eval steps set; I don't see us approaching this problem in whole face to face."* This is what made
+the head-on analysis (H1) owed, rather than accepting the earlier `ctrl`-only note as the answer.
+
+**Status: operational, not ratified.** Implemented outside the frozen evaluator closure
+(orchestration only — `eval_grid.py` itself is untouched); not yet validated row-for-row on the host
+against an existing cell's rows, which is the condition for adoption.
+
+**Reopen if:** the row-for-row validation fails to match sequential output for any baseline.
+
+---
+
+## A69 — Training timeout: a generous, schedule-derived backstop, not an arbitrary wall clock (2026-09-20)
+
+**Question:** `run_probe.sh` wraps training in `timeout --foreground ${CELL_TIMEOUT_SECONDS}s`
+with no notice and no distinction between a hang and genuine slow progress. The wrappers' 43,200 s
+default follows from nothing stated. Redesign it how?
+
+**Working value (mine):** the ceiling becomes a generous backstop derived from the schedule (at
+least 3x the scheduled training time, never the bare 12 h default); hangs stay the stall watchdog's
+job, and the watchdog is extended to cover evaluation as well as training; a timeout gets its own
+distinct marker in the log, instead of being indistinguishable from any other failure (a timed-out
+cell currently just exits 124); the laptop-side `watch-cell.sh` heartbeat prints projected finish
+against the ceiling, so a slow cell (the 2.4 FPS `svea` cell that would have been reaped) is visible
+within its first heartbeat rather than only at the reap. Traced 2026-09-20
+(`notes/inventory-2026-09-19/eval-cost-and-timeout-trace.md`, Part 2; not yet re-checked by the
+lead).
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:466-467`): the owner doubts
+the mechanism itself — a pre-set timer with no notice and no progress/stall distinction.
+
+**Owner, 2026-09-20 10:14 MSK, approving the design** (`notes/ACCOUNTABILITY.md:493`): *"do the
+proper timeout thing not an arbitrary one that would stop jobs randomly"* — recorded as H3 approved
+as designed.
+
+**Status: DECIDED (design approved, 2026-09-20); implementation with tests is still owed**, and the
+closure-membership of `run_probe.sh` (whether changing it disturbs the frozen evaluator closure) is
+to be checked first.
+
+**Reopen if:** the implementation turns out to touch a closure-frozen file, which would need its own
+ratification separate from the design.
+
+---
+
+## A70 — Endpoint-as-headline stays conditional on data richness; the audit is done, fixes are ongoing (2026-09-20)
+
+**Question:** Is endpoint-as-headline (no selected-best column, trajectory descriptive) acceptable
+as the reporting rule, and does what a cell actually retains support recomputing other statistics
+later without a rerun?
+
+**Working value:** endpoint-as-headline stands, conditioned explicitly on retained data being rich
+enough that a later question does not force a rerun. The audit (H2, `notes/ACCOUNTABILITY.md:483`)
+found: episode-level rows DO carry per-episode lists with 14+ diagnostic fields, so distributional
+statistics are recomputable; NOT kept: per-step traces, per-episode wall time, host resource time
+series (`resources.json` is never fetched and the summariser is broken), apt package versions, the
+git commit; `ppg` has zero dense training rows in its valid closure; two completed cells' checkpoints
+were host-only and are being fetched. Fixes outside the frozen evaluator closure are assigned; the
+one gap inside the closure (per-episode wall time, inside `eval_grid.py`) is not changed mid-campaign.
+
+**Owner, 2026-09-20 09:41 MSK** (`CURRENT-STATE-AND-RESPONSIBILITY.md:456-460`): *"the metrics (at
+least the all-checkpoint runs; better, this including dense train metrics) should allow to richly
+recalculate different statistics … if the job produces, after coagulation and summing, just 2-3
+metrics but we'd secretly need a fourth, this seems chasing running the same thing again and
+again."*
+
+**Status: DECIDED (the condition itself, 2026-09-20); the audit against that condition is complete
+and shows a mixed result — operational, not fully closed** (fixes for the found gaps are in
+progress, per H2's own "what closes it" column).
+
+**Reopen if:** a later analysis needs one of the specifically-named missing fields (per-step traces,
+apt versions, the commit) and no fix has landed by then.
+
+---
+
+## A71 — Estimand passes: keep both; which one leads is NOT decided (2026-09-20)
+
+**Question:** Could reporting be mode-only, and should it be?
+
+**What is true:** it is doable without new runs. Nine baselines report the mode action natively;
+the three sampling baselines (`idaac`, `ppg`, `ibac_sni`) already get a second, mode-action
+endpoint pass (`family.py:709-710`), so a mode-only table exists for all twelve. For those three
+the SAMPLED return is their as-published estimand.
+
+**Owner, 2026-09-20** (said in the session; recorded here for the first time): first, *"If we wanted
+to mode-only, would this be doable?"*; then, on the lead's proposal to make the headline mode-only:
+*"idk, maybe some are better as sampled."*
+
+**Working value (mine):** keep both passes in the data for every baseline that has both. No single
+leading estimand is fixed now; which pass leads is decided per family when there is data to decide
+it with. The lead's earlier "headline mode-only" is withdrawn. [Corrected by the lead before this
+item was filed: the executor's draft carried the withdrawn proposal, and quoted a line of the
+lead's own taskset as if it were the owner's words.]
+
+**Status: operational, not ratified.**
+
+**Reopen if:** the sampled pass of a family is ever proposed for removal (it costs ~2.8 h per
+cell), or a table is about to be published with one estimand leading.
+
+---
+
+## A72 — Lift: not now (2026-09-20)
+
+**Question:** Is a Lift task, alongside Door, in scope for this production run?
+
+**Working value:** no. Door alone, as already recorded at `DECISION-SHEET.md` A33 and
+`CURRENT-STATE-AND-RESPONSIBILITY.md` §7b's closing external/blocked ruling.
+
+**Owner, 2026-09-20 10:14 MSK** (`notes/ACCOUNTABILITY.md:493`): *"Lift — not now."*
+
+**Status: DECIDED, 2026-09-20.**
+
+**Reopen if:** the owner names Lift as a follow-on once Door's campaign is reportable.

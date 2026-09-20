@@ -303,6 +303,31 @@ original three; 4-9 were added 2026-09-18 to consolidate everything else raised 
 previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GUIDE.md`'s O-items
 — gathered here so nothing needs to be hunted down separately.
 
+**One list, since 2026-09-20.** Each item below now also exists as an A-item in
+[`DECISION-SHEET.md`](DECISION-SHEET.md), which `python scripts/open_decisions.py` enumerates (69
+sheet items). The A-item is the enumerable record — question, working value, the owner's words,
+status, what would reopen it; the text below is kept in full as the reasoning behind it. How these
+are handled, by the owner's instruction of that day: the lead sets and tunes the working values
+and returns with finals for ratification.
+
+| §7b item | A-item | state on 2026-09-20 |
+|---|---|---|
+| 1 budget vs scope | A59 | 600k kept as the working headline (RL-ViGen Table 6); `ibac_sni` 6M probe approved, deferred |
+| — queue order | A60 | natives first, accepted by the owner |
+| 2 card-0 vacancy rule | A61 | future-operator guidance only |
+| 3 `ppg` seed 1 | A62 | handle last |
+| 4 upstream-source archive risk | — | CLOSED, risk accepted by the owner |
+| 5 `ctrl` in-loop evaluation cost | A63 | re-read in code 2026-09-20 (3× env work, logging only); first cell runs as upstream |
+| 6 `ctrl` prerequisites and floor | A64 | floor to be lowered for `ctrl` only; value pending a measurement |
+| 7 stopped-cell continuation | A65 | DROPPED by the owner: rerun from zero |
+| 8 prebuilt env (O9) | — | CLOSED; the hash seam is `ACCOUNTABILITY.md` G9 |
+| 9 licence and CI | A66, A67 | no licence for now, a not-redistributed notice; CI unruled |
+| — evaluation cost | A68 | parallelise by regime; nothing in the grid dropped |
+| — training timeout | A69 | schedule-derived backstop, owner-approved; being implemented |
+| — data richness | A70 | endpoint-as-headline is conditional on it; audited |
+| — estimand passes | A71 | keep both; which leads is not decided |
+| — Lift | A72 | not now |
+
 1. **Budget vs scope, given the competence-gate finding**
    ([`production-host/36`](production-host/36-no-completed-cell-passes-the-competence-gate.md)).
    Every completed cell sits far above the random floor on shaped return and opens the door in at
