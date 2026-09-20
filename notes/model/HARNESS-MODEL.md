@@ -176,8 +176,11 @@ matters.
   `seed_the_placement_rng`, an absolute reset of `random`, `numpy` and torch (`eval_grid.py:221`) —
   and not again between the episodes inside that row. So rows are independent of the order they run
   in, which is what makes evaluating them in parallel possible.
-  For the three SAMPLING baselines (idaac, ppg, ibac_sni) the action stream therefore depends on
-  how much torch RNG was consumed before a cell.
+  For the three SAMPLING baselines (idaac, ppg, ibac_sni) the action stream inside a row therefore
+  depends on the episodes before it in that SAME row. [2026-09-20: this sentence used to say "how
+  much torch RNG was consumed before a cell"; with an absolute reseed per row that cannot be the
+  mechanism. The measured spread below is real and its cause is now OPEN — GPU kernel
+  nondeterminism in the sampling path is the obvious candidate and is untested.]
 - **Measured consequence:** two byte-identical invocations gave 25.794515705108644 and
   26.052958893775940 — a spread of **0.095 SE** at n=20. Small, but exact reproduction is
   impossible and any claim of it is false. See `endgame/RESOLVED-ppg-reeval-is-within-evaluator-noise.md`.
