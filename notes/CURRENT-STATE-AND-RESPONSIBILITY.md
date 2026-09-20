@@ -406,6 +406,46 @@ review and verification reach, give the operator a full package, and past that p
 operator's problem, not open work here. Item 7's question about replay buffers was answered
 verbally (no family restores one; `OPERATOR-GUIDE.md` §6c has the per-family table).
 
+### Owner's rulings of 2026-09-20 09:41 MSK — on the proposals for queue order, budget and the open decisions
+
+Dated, and each an answer to the proposal put to them that night (`ACCOUNTABILITY.md` F6). Quoted
+where the wording matters.
+
+- **How open decisions are to be handled from here (this governs the rest):** *"preserve the 'open
+  decisions' framing, but actually define the technical working values yourself, so tune if they're
+  bad, analyze if they're good and return with the finals for ratification."* Formal ratification
+  is not to pull the owner back into re-deriving why each value was set. One list is fine: §7b may
+  link into what `open_decisions.py` gathers.
+- **Queue order:** RL-ViGen natives first — accepted. Their point is reproduction: RL-ViGen already
+  ran them, so either we reproduce their numbers (and learn if we are off) or, where they published
+  none, we gather them. The Places365 loader-worker experiment (G12) is approved.
+- **Budget:** keep the proposal — 600k as the headline budget, plus the `ibac_sni` 6M probe (*"if
+  ibac_sni is so fast, 6M doesn't seem a problem"*). Wider principle stated: *"we have slow
+  algorithms and fast; if it coincides so that faster ones need more frames, naturally it's not a
+  problem to run the faster ones and budget's not a thing to withhold from consideration."* The
+  owner also said they are *"still not sure in the concrete values … like, 600k"* — so 600k is a
+  working value with its source recorded (RL-ViGen Table 6), not a ratified one.
+- **n = 3:** ok, and partial results are to be analysed as they arrive, before the final set.
+- **Endpoint-as-headline:** acceptable ONLY IF the retained data allow rich recomputation: *"the
+  metrics (at least the all-checkpoint runs; better, this including dense train metrics) should
+  allow to richly recalculate different statistics … if the job produces, after coagulation and
+  summing, just 2-3 metrics but we'd secretly need a fourth, this seems chasing running the same
+  thing again and again."* → a data-richness audit of what a cell retains is owed (taskset H2).
+- **Production canary, renderer substitution:** ok. **Resume:** dropped — rerun from zero.
+- **Evaluation cost** (raised about `ctrl`'s in-training eval and about the grid taking ~2× the
+  training time): *"I don't want either to drop it from a scientifically valid value … or to have it
+  2x since it's a random number of eval steps set; I don't see us approaching this problem in whole
+  face to face."* → owed: a head-on treatment of evaluation cost (taskset H1), not another note.
+- **Training timeout:** the owner doubts the mechanism itself — a pre-set timer that stops a job,
+  with no notice and no progress/stall distinction. → owed: H3.
+- **Not ruled, questions back to me:** what the "external anchor" actually pins (RL-ViGen-supplied
+  vs algorithm-supplied parameters); whether Lift is possible; what the "estimands" question is;
+  whether each run already records its apt/pip versions; why MIT for a lab repository.
+- **The host, for the next 3–4 days:** *both cards are booked for our group, under Kalugin's name.*
+  The supervisor has said the owner may use them, with consideration: if Kalugin's work would take
+  the cards, give way; never OOM anyone. So card 0 is usable now, which the recorded 8 Sep
+  assignment ("card 1 only") did not allow. §4's constraints are unchanged.
+
 ## 8. What to do first on resume
 
 1. Re-run the five commands in §1. Do not trust the tallies above.
