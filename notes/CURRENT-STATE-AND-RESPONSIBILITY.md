@@ -386,6 +386,24 @@ previously scattered across `ACCOUNTABILITY.md`'s dated entries and `OPERATOR-GU
    watch budget and `production-schedule.json`'s throughput entry should be *re-derived from that
    measurement* rather than the current cross-algorithm hardware conversion (item 6 below) — that
    closes the actual risk (a foreseeable reap) without touching a single line of `ctrl`'s own code.
+   **Re-read by me in the code, 2026-09-20 17:53 MSK, after the owner said this had never been faced
+   head-on** (`runnable/ctrl/train_ppo.py:301-346, 384-412`): every training step takes one
+   transition in each of the 64 training envs AND steps 64 in-distribution and 64 out-of-distribution
+   test envs — **three times the environment work**. On Procgen, where CTRL was written, an env step
+   is nearly free; on Door each one is a MuJoCo step plus an EGL render, so upstream's progress
+   reporting becomes ~2/3 of the env cost. The test envs' outputs reach ONLY `wandb.log`
+   (`ep_return_200`, `ep_return_all`, the success buffers); nothing feeds a training update. One real
+   coupling: the JAX key is threaded through the test-env action sampling, so removing or thinning
+   them changes the training random stream, not the algorithm (NumPy placement is already isolated by
+   `NATIVE_ISOLATE_ONLINE_EVAL`). No switch exists for `ctrl` (`FINDING-online-eval-per-family.md`).
+   So the owner's dilemma resolves like this: dropping the in-loop test envs loses nothing
+   scientific — the offline grid measures the same quantities, better — while keeping them pays a
+   3× factor that is an artefact of Procgen's cheap envs. **Working value (mine, per the owner's
+   instruction to set these and return for ratification): run the FIRST `ctrl` cell exactly as
+   upstream, to get a faithful row and a measured cost; prepare — do not yet use — an opt-in switch
+   that steps the test envs every N-th training step, declared as a reporting-cadence change with a
+   different random stream; bring the measured cost and that switch back to the owner.** No `ctrl`
+   run is planned while the owner's "no further runs" holds.
 6. **`ctrl` at 600k needs a genuinely empty card** (its 32,435 MiB observed peak leaves no room for
    the 4,000 MiB floor on a 32,494 MiB card), **plus** an explicit decision to lower or waive the
    floor for this one family, **plus** a real RAM measurement, **plus a fourth prerequisite found
