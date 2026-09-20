@@ -58,8 +58,16 @@ what can be done separately in a few days).
   stamps begun) because a labmate's bare-host job took 26 GiB of card 0, leaving 5.4 GiB free, and
   our floor-yield watcher for that cell was no longer running. 12 checkpoints (50k–600k) plus
   `snapshot.pt` are retained in `native-out` and being copied to the laptop; the evaluation can be
-  run any day from them with `host-scripts/reeval-cell*.sh`. Why the yield watcher had exited is
-  NOT yet known.
+  run any day from them with `host-scripts/reeval-cell*.sh`. The yield watcher had exited because
+  it had FIRED: it wrote the sentinel at 16:57 and our evaluating cell ignored it — a real defect,
+  `production-host/38`. All 12 checkpoints and `snapshot.pt` are now also on the laptop
+  (`fetched/card0-20260920-094616`, 1.6 GB, three hashes checked against the host).
+  **Its training curve, read from its own `train.csv`:** mean training-episode reward 52 over the
+  first 50k frames, 266 by 100k, **457 by 150k, then 455–476 all the way to 600k** (ceiling ≈ 488;
+  random floor 1.84; `idaac` reaches ~35), at a steady 31 FPS, 5.37 h. So this native solves the
+  TRAINING scene within a quarter of the budget, as the 100k exploratory runs and RL-ViGen's own
+  published shape said it would. What it retains under the visual shifts is what the deferred
+  evaluation will show — training-episode reward says nothing about that.
 - Deployed to the host at 17:49, with the previous copies kept as `*.before-20260920-swap`: the
   fixed `wait-and-train-v4.sh` (contiguous vacancy samples) and both wrappers (refuse a slow
   baseline without `TIMEOUT_S`); hashes equal the laptop's; the refusal was exercised on the host.
